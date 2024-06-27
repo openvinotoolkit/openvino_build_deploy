@@ -1,4 +1,4 @@
-# People Counting with OpenVINO™
+# Santa Claus demo with OpenVINO™
 
 Here are the steps involved in this demo:
 
@@ -35,7 +35,7 @@ git clone -b conference-demos https://github.com/openvinotoolkit/openvino_notebo
 The above will clone the repository into a directory named "openvino_notebooks" in the current directory. It will also download a sample video. Then, navigate into the directory using the following command:
 
 ```shell
-cd openvino_notebooks/conference-demos/people_counter_demo
+cd openvino_notebooks/conference-demos/santa_claus_demo
 ```
 
 2. Create a virtual environment
