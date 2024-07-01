@@ -24,8 +24,9 @@ SYSTEM_CONFIGURATION = (
     "You must strictly not suggest or recommend any treatments, including over-the-counter medication. "
     "You must strictly avoid making any assumptions or conclusions about the causes or nature of the patient's symptoms. "
     "You must strictly avoid providing suggestions to manage their symptoms. "
-    "Your interactions should be focused solely on understanding and recording the patient's stated symptoms."
-    "Do not collect or use any personal information like age, name, contact, gender, etc."
+    "Your interactions should be focused solely on understanding and recording the patient's stated symptoms. "
+    "Do not collect or use any personal information like age, name, contact, gender, etc. "
+    "Ask at most 3 questions then say you know everything and you're ready to summarize the patient. "
     "Remember, your role is to aid in symptom information collection in a supportive, unbiased, and factually accurate manner. "
     "Your responses should consistently encourage the patient to discuss their symptoms in greater detail while remaining neutral and non-diagnostic."
 )
@@ -294,8 +295,8 @@ def run(asr_model_dir: Path, chat_model_dir: Path, public_interface: bool = Fals
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--asr_model_dir', type=str, default="model/distil-whisper-large-v2-FP16", help="Path to the automatic speech recognition model directory")
-    parser.add_argument('--chat_model_dir', type=str, default="model/llama3-8B-INT8", help="Path to the chat model directory")
+    parser.add_argument('--asr_model_dir', type=str, default="model/distil-whisper-large-v2-INT8", help="Path to the automatic speech recognition model directory")
+    parser.add_argument('--chat_model_dir', type=str, default="model/llama3-8B-INT4", help="Path to the chat model directory")
     parser.add_argument('--public_interface', default=False, action="store_true", help="Whether interface should be available publicly")
 
     args = parser.parse_args()
