@@ -1,31 +1,48 @@
-# Intelligent Queue Management with OpenVINO™
+<div id="top" align="center">
+  <h1>Intelligent Queue Management with OpenVINO™ Toolkit</h1>
+  <h4>
+    <a href="https://www.intel.com/content/www/us/en/developer/topic-technology/edge-5g/open-potential.html">🏠&nbsp;About&nbsp;the&nbsp;Kits&nbsp;·</a>
+    <a href="docs/convert-and-optimize-the-model.ipynb">📔&nbsp;Jupyter Notebook: Convert</a>,
+    <a href="docs/run-the-application.ipynb">Run&nbsp;·</a>
+    <a href="https://www.youtube.com/watch?v=fwFbl4_8jk8">📺&nbsp;Overview&nbsp;Video&nbsp;·</a>
+    <a href="https://www.youtube.com/watch?v=9E2baweCCXQ">👨‍💻&nbsp;Code&nbsp;Demo&nbsp;Video&nbsp;·</a>
+    <a href="https://www.intel.com/content/www/us/en/developer/articles/training/create-intelligent-queue-management.html">📚&nbsp;Step&#8209;by&#8209;step&nbsp;Tutorial</a>
+  </h4>
+</div>
 
-[![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/LICENSE)
+[![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/LICENSE.txt)
 
-The Intelligent Queue Management project is an application that uses OpenVINO™, a toolkit that enables developers to deploy deep learning models on a variety of hardware platforms. The application is designed to help businesses manage customer queues more effectively, by analyzing video streams from cameras and detecting the number of people in each queue. The system then uses this information to optimize the queuing process and reduce waiting times for customers.
+The Intelligent Queue Management project is an application that uses OpenVINO™, a toolkit that enables developers to deploy deep learning models on various hardware platforms. The application is designed to help businesses manage customer queues more effectively by analyzing camera video streams and detecting the number of people in each queue. The system then uses this information to optimize the queuing process and reduce customer wait times.
 
-## Table of Contents
+This kit uses the following technology stack:
+- [OpenVINO toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([Docs](https://docs.openvino.ai/))
+- [Ultralytic’s YOLOv8](https://github.com/ultralytics/ultralytics)
 
+Check out our [Edge AI Reference Kits repository](/) for other kits.
+
+![intelligent-queue-management](https://github.com/openvinotoolkit/openvino_notebooks/assets/138901786/6874cfe8-3462-4b30-8026-c14aab7b695c)
+
+### What's New
+
+New updates will be added here.
+
+<details open><summary><b>Table of Contents</b></summary>
+  
 - [Getting Started](#getting-started)
-	- [Installing Prerequisites](#installing-prerequisites)
-	- [Setting up your Environment](#setting-up-your-environment)
-		- [Cloning the Repository](#cloning-the-repository)
-		- [Creating a Virtual Environment](#creating-a-virtual-environment)
-		- [Activating the Environment](#activating-the-environment)
-		- [Installing the Packages](#installing-the-packages)
-	- [Converting and Optimizing the Model](#converting-and-optimizing-the-model)
-	- [Running the Application](#running-the-application)
+  - [Installing Prerequisites](#installing-prerequisites)
+  - [Setting up your Environment](#setting-up-your-environment)
+  - [Converting and Optimizing the Model](#converting-and-optimizing-the-model)
+  - [Running the Application](#running-the-application)
 - [Benchmarking the Model with OpenVINO's `benchmark_app`](#benchmarking-the-model-with-openvinos-benchmark_app)
-	- [Benchmark Results](#benchmark-results)
-	- [Running the Benchmark](#running-the-benchmark)
-- [Appendix](#appendix)
-- [Troubleshooting and Resources](#troubleshooting-and-resources)
+- [Additional Resources](#additional-resources)
 
-## Getting Started
+</details>
+
+# Getting Started
 
 Now, let's dive into the steps starting with installing Python. We recommend using Ubuntu to set up and run this project.
 
-### Installing Prerequisites
+## Installing Prerequisites
 
 This project requires Python 3.8 or higher and a few libraries. If you don't have Python installed on your machine, go to https://www.python.org/downloads/ and download the latest version for your operating system. Follow the prompts to install Python, making sure to check the option to add Python to your PATH environment variable.
 
@@ -37,29 +54,29 @@ sudo apt install git git-lfs gcc python3-venv python3-dev
 
 _NOTE: If you are using Windows, you will probably need to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe) also._
 
-### Setting up your Environment
+## Setting up your Environment
 
-#### Cloning the Repository
+### Cloning the Repository
 
 To clone the repository, run the following command:
 
 ```shell
-git clone -b recipes https://github.com/openvinotoolkit/openvino_notebooks.git openvino_notebooks
+git clone https://github.com/openvinotoolkit/openvino_build_deploy.git openvino_notebooks
 ```
 
 The above will clone the repository into a directory named "openvino_notebooks" in the current directory. It will also download a sample video. Then, navigate into the directory using the following command:
 
 ```shell
-cd openvino_notebooks/recipes/intelligent_queue_management
+cd openvino_notebooks/ai_ref_kits/intelligent_queue_management
 ```
 
-Then pull video sample:
+Then pull the video sample:
 
 ```shell
 git lfs pull
 ```
 
-#### Creating a Virtual Environment
+### Creating a Virtual Environment
 
 To create a virtual environment, open your terminal or command prompt and navigate to the directory where you want to create the environment. Then, run the following command:
 
@@ -73,7 +90,7 @@ This will create a new virtual environment named "venv" in the current directory
 Activate the virtual environment using the following command:
 
 ```shell
-source venv/bin/activate   # For Unix-based operating system such as Linux or macOS
+source venv/bin/activate   # For Unix-based operating systems such as Linux or macOS
 ```
 
 _NOTE: If you are using Windows, use `venv\Scripts\activate` command instead._
@@ -89,7 +106,7 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### Converting and Optimizing the Model
+## Converting and Optimizing the Model
 
 To convert and optimize the YOLOv8 model, run the following command:
 
@@ -97,9 +114,9 @@ To convert and optimize the YOLOv8 model, run the following command:
 python convert_and_optimize.py --model_name yolov8m --model_dir model --data_dir data --quantize True
 ```
 This will convert the YOLOv8 model to an OpenVINO™ Intermediate Representation (IR) format and optimize it for use with OpenVINO™.
-You can run either the python script or check out [convert-and-optimize-the-model.ipynb](docs/convert-and-optimize-the-model.ipynb) to learn more.
+You can run the Python script or check out [convert-and-optimize-the-model.ipynb](docs/convert-and-optimize-the-model.ipynb) to learn more.
 
-### Running the Application
+## Running the Application
 
 To run the application, use the following command:
 
@@ -107,7 +124,7 @@ To run the application, use the following command:
 python app.py --stream sample_video.mp4 --model_path model/yolov8m_openvino_int8_model/yolov8m.xml --zones_config_file zones.json --customers_limit 3
 ```
 This will run the application with the specified arguments. Replace "video_file.mp4" with the path to your input video file, "zones.json" with the path to your zones configuration file, and "3" with the maximum number of customers allowed in the queue.
-You can also run the [run-the-application.ipynb](docs/run-the-application.ipynb) to learn more about the inference process. To stop the application please, press 'q' or escape at any time.
+You can also run the [run-the-application.ipynb](docs/run-the-application.ipynb) to learn more about the inference process. To stop the application at any time, press 'q' or escape.
 
 _NOTE: Alternatively, you can run all steps with the following command:_
 
@@ -115,9 +132,11 @@ _NOTE: Alternatively, you can run all steps with the following command:_
 python main.py --stream sample_video.mp4
 ```
 
-## Benchmarking the Model with OpenVINO's `benchmark_app`
+<p align="right"><a href="#top">Back to top ⬆️</a></p>
 
-Benchmarking provides insight into your YOLOv8 model's real-world performance. Performance may vary based on use and configuration.
+# Benchmarking the Model with OpenVINO's `benchmark_app`
+
+Benchmarking provides insight into your model's real-world performance. Performance may vary based on use and configuration.
 
 ### Benchmark Results 
 
@@ -137,7 +156,7 @@ Replace `int8_model_det_path` with the path to your INT8 model and $device with 
 
 Congratulations! You have successfully set up and run the Intelligent Queue Management application with OpenVINO™.
 
-## Appendix
+### Appendix
 
 Platform Configurations for Performance Benchmarks for YOLOv8m Model
 
@@ -160,8 +179,8 @@ Platform Configurations for Performance Benchmarks for YOLOv8m Model
 | Benchmark Date | May 31, 2023 | May 29, 2023 | June 15, 2023 | May 29, 2023 | June 15, 2023 | May 29, 2023 
 | Benchmarked by | Intel Corporation | Intel Corporation | Intel Corporation | Intel Corporation | Intel Corporation | Intel Corporation |
 
-## Troubleshooting and Resources
-- Open a [discussion topic](https://github.com/openvinotoolkit/openvino_notebooks/discussions)
-- Create an [issue](https://github.com/openvinotoolkit/openvino_notebooks/issues)
+# Additional Resources
 - Learn more about [OpenVINO](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html)
 - Explore [OpenVINO’s documentation](https://docs.openvino.ai/2023.0/home.html)
+
+<p align="right"><a href="#top">Back to top ⬆️</a></p>
