@@ -1,49 +1,65 @@
-# Smart Meter Scanning with OpenVINO™ Toolkit
+<div id="top" align="center">
+  <h1>Smart Meter Scanning with OpenVINO™ Toolkit</h1>
+  <h4>
+    <a href="https://www.intel.com/content/www/us/en/developer/topic-technology/edge-5g/open-potential.html">🏠&nbsp;About&nbsp;the&nbsp;Kits&nbsp;·</a>
+    <a href="https://github.com/openvinotoolkit/openvino_notebooks/blob/recipes/notebooks/203-meter-reader/203-meter-reader.ipynb">📔&nbsp;Jupyter&nbsp;Notebook&nbsp;·</a>
+    <a href="https://www.youtube.com/watch?v=y2xCZYe8GAQ">📺&nbsp;Overview&nbsp;Video&nbsp;·</a>
+    <a href="https://www.youtube.com/watch?v=9jcFGzFjHXo">👨‍💻&nbsp;Code&nbsp;Demo&nbsp;Video&nbsp;·</a>
+    <a href="https://www.intel.com/content/www/us/en/developer/articles/training/create-smart-meter-scanning.html">📚&nbsp;Step&#8209;by&#8209;step&nbsp;Tutorial</a>
+  </h4>
+</div>
 
-[![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/LICENSE)
+[![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/LICENSE.txt)
 
-Smart Meter Scanning is an AI-based application that enables cameras to automatically read results from your analog meters, transforming it into digital data with accurate, near-real-time meter results. It uses computer vision, object detection, and object segmentation.
+Smart Meter Scanning is an AI-based application that enables cameras to automatically read results from analog meters, transforming those results into digital data with accurate, near-real-time meter results. It uses computer vision, object detection, and object segmentation.
 
-![workflow](https://user-images.githubusercontent.com/91237924/166137115-67284fa5-f703-4468-98f4-c43d2c584763.png)
+This kit uses the following technology stack:
+- [OpenVINO toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([Docs](https://docs.openvino.ai/))
+- [Models from PaddlePaddle](https://github.com/PaddlePaddle)
 
-## Table of Contents
+Check out our [Edge AI Reference Kits repository](/) for other kits.
 
+![smart-meter-scanning](https://github.com/openvinotoolkit/openvino_notebooks/assets/138901786/0136d123-15c9-4696-bf4d-b169b3c7db4d)
+
+### What's New
+
+New updates will be added here.
+
+<details open><summary><b>Table of Contents</b></summary>
+  
 - [Getting Started](#getting-started)
-	- [Installing Prerequisites](#installing-prerequisites)
-	- [Setting up your Environment](#setting-up-your-environment)
-		- [Cloning the Repository](#cloning-the-repository)
-		- [Creating a Virtual Environment](#creating-a-virtual-environment)
-		- [Activating the Environment](#activating-the-environment)
-		- [Installing the Packages](#installing-the-packages)
-	- [Preparing your Models](#preparing-your-models)
-	- [Running the Application](#running-the-application)
-- [Troubleshooting and Resources](#troubleshooting-and-resources)
+  - [Installing Prerequisites](#installing-prerequisites)
+  - [Setting up your Environment](#setting-up-your-environment)
+  - [Running the Application](#running-the-application)
+- [Additional Resources](#additional-resources)
 
-## Getting Started
+</details>
+
+# Getting Started
 
 Now, let's dive into the steps, starting with installing Python. 
 
-### Installing Prerequisites
+## Installing Prerequisites
 
 This project requires Python 3.7 or higher. If you don't have Python installed on your machine, go to https://www.python.org/downloads/ and download the latest version for your operating system. Follow the prompts to install Python, making sure to check the option to add Python to your PATH environment variable.
 
-### Setting up your Environment
+## Setting up your Environment
 
-#### Cloning the Repository
+### Cloning the Repository
 
 To clone the repository, run the following command:
 
 ```shell
-git clone -b recipes https://github.com/openvinotoolkit/openvino_notebooks.git openvino_notebooks
+git clone https://github.com/openvinotoolkit/openvino_build_deploy.git openvino_notebooks
 ```
 
-This will clone the repository into a directory named "meter-reader-openvino" in the current directory. Then, navigate into the directory using the following command:
+This will clone the repository into a directory named "openvino_notebooks" in the current directory. Then, navigate into the directory using the following command:
 
 ```shell
-cd openvino_notebooks/recipes/meter_reader
+cd openvino_notebooks/ai_ref_kits/meter_reader
 ```
 
-#### Creating a Virtual Environment
+### Creating a Virtual Environment
 
 To create a virtual environment, open your terminal or command prompt and navigate to the directory where you want to create the environment. Then, run the following command:
 
@@ -52,19 +68,19 @@ python3 -m venv venv
 ```
 This will create a new virtual environment named "venv" in the current directory.
 
-#### Activating the Environment
+### Activating the Environment
 
 Activate the virtual environment using the following command:
 
 ```shell
-source venv/bin/activate   # For Unix-based operating system such as Linux or macOS
+source venv/bin/activate   # For Unix-based operating systems such as Linux or macOS
 ```
 
 NOTE: If you are using Windows, use `venv\Scripts\activate` command instead.
 
 This will activate the virtual environment and change your shell's prompt to indicate that you are now working within that environment.
 
-#### Installing the Packages
+### Installing the Packages
 
 To install the required packages, run the following commands:
 
@@ -81,7 +97,7 @@ cd model
 sudo sh ./download_pdmodel.sh
 ```
 
-### Running the Application
+## Running the Application
 
 To run the application, use the following command:
 
@@ -90,12 +106,12 @@ python main.py -i data/test.jpg -c config/config.json  -t "analog"
 ```
 
 This will run the application with the specified arguments. Replace "data/test.jpg" with the path to your input image.
-The result images will be exported to same fold of test image. You can also run the [203-meter-reader.ipynb](../../notebooks/203-meter-reader/203-meter-reader.ipynb) to learn more about the inference process.
+The result images will be exported to the same test image folder. You can also run the [203-meter-reader.ipynb](../../notebooks/203-meter-reader/203-meter-reader.ipynb) to learn more about the inference process.
 
 Congratulations! You have successfully set up and run the Automatic Industrial Meter Reading application with OpenVINO™.
 
-## Troubleshooting and Resources
-- Open a [discussion topic](https://github.com/openvinotoolkit/openvino_notebooks/discussions)
-- Create an [issue](https://github.com/openvinotoolkit/openvino_notebooks/issues)
+# Additional Resources
 - Learn more about [OpenVINO](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html)
 - Explore [OpenVINO’s documentation](https://docs.openvino.ai/2023.0/home.html)
+
+<p align="right"><a href="#top">Back to top ⬆️</a></p>
