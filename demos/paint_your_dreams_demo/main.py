@@ -85,7 +85,7 @@ def build_ui():
                         minimum=1,
                         maximum=32,
                         step=1,
-                        value=10,
+                        value=5,
                     )
 
                 size = gr.Slider(
