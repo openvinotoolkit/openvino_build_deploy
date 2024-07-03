@@ -181,6 +181,6 @@ Platform Configurations for Performance Benchmarks for YOLOv8m Model
 
 # Additional Resources
 - Learn more about [OpenVINO](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html)
-- Explore [OpenVINO’s documentation](https://docs.openvino.ai/2023.0/home.html)
+- Explore [OpenVINO’s documentation](https://docs.openvino.ai/2024/home.html)
 
 <p align="right"><a href="#top">Back to top ⬆️</a></p>
