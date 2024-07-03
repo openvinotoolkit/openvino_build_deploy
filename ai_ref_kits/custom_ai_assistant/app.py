@@ -60,7 +60,7 @@ def load_asr_model(model_dir: Path) -> None:
         return
 
     # create a distil-whisper model and its processor
-    asr_model = OVModelForSpeechSeq2Seq.from_pretrained(model_dir, device="AUTO")
+    asr_model = OVModelForSpeechSeq2Seq.from_pretrained(model_dir, device="CPU")
     asr_processor = AutoProcessor.from_pretrained(model_dir)
 
 
