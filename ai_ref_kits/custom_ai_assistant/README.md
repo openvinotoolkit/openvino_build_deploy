@@ -12,7 +12,7 @@ The Custom AI Assistant utilizes the OpenVINO™ toolkit to create a streamlined
 
 This kit uses the following technology stack:
 - [OpenVINO toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([Docs](https://docs.openvino.ai/))
-- [Meta’s Llama](https://llama.meta.com/llama2/)
+- [Meta’s Llama](https://llama.meta.com/llama3/)
 
 Check out our [Edge AI Reference Kits repository](/) for other kits.
 
@@ -128,13 +128,13 @@ The application uses three separate models for its operation, each requiring con
 
 1. Automated Speech Recognition Distil-Whisper Conversion:
 ```shell
-python convert_and_optimize_asr.py --quantize_weights
+python convert_and_optimize_asr.py --precision int8
 ```
 This script will convert and optimize the automatic speech recognition (ASR) model performing weights quantization.
 
 2. Chat LLama Conversion:
 ```shell
-python convert_and_optimize_chat.py --chat_model_type llama3-8B --quantize_weights int8
+python convert_and_optimize_chat.py --chat_model_type llama3-8B --precision int4
 ```
 This script will handle the conversion and optimization of the chat model, performing weights quantization. 
 
@@ -167,6 +167,6 @@ Enjoy exploring the capabilities of your Custom AI Assistant!
 
 # Additional Resources
 - Learn more about [OpenVINO](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html)
-- Explore [OpenVINO’s documentation](https://docs.openvino.ai/2023.0/home.html)
+- Explore [OpenVINO’s documentation](https://docs.openvino.ai/2024/home.html)
 
 <p align="right"><a href="#top">Back to top ⬆️</a></p>
