@@ -1,16 +1,17 @@
 import argparse
+import logging as log
 import time
 from pathlib import Path
 from threading import Thread
-from typing import Tuple, List, Optional
+from typing import Tuple, List, Optional, Set
 
 import gradio as gr
 import librosa
 import numpy as np
+import openvino as ov
 from optimum.intel import OVModelForCausalLM, OVModelForSpeechSeq2Seq
 from transformers import AutoConfig, AutoTokenizer, AutoProcessor, PreTrainedTokenizer, TextIteratorStreamer
 from transformers.generation.streamers import BaseStreamer
-import logging as log
 
 # Global variables initialization
 TARGET_AUDIO_SAMPLE_RATE = 16000
@@ -46,6 +47,17 @@ asr_model: Optional[OVModelForSpeechSeq2Seq] = None
 asr_processor: Optional[AutoProcessor] = None
 
 
+def get_available_devices() -> Set[str]:
+    """
+    List all devices available for inference
+
+    Returns:
+        Set of available devices
+    """
+    core = ov.Core()
+    return {device.split(".")[0] for device in core.available_devices}
+
+
 def load_asr_model(model_dir: Path) -> None:
     """
     Load automatic speech recognition model and assign it to a global variable
@@ -60,7 +72,8 @@ def load_asr_model(model_dir: Path) -> None:
         return
 
     # create a distil-whisper model and its processor
-    asr_model = OVModelForSpeechSeq2Seq.from_pretrained(model_dir, device="CPU")
+    device = "GPU" if "GPU" in get_available_devices() else "CPU"
+    asr_model = OVModelForSpeechSeq2Seq.from_pretrained(model_dir, device=device)
     asr_processor = AutoProcessor.from_pretrained(model_dir)
 
 
@@ -78,8 +91,9 @@ def load_chat_model(model_dir: Path) -> None:
         return
 
     # load llama model and its tokenizer
+    device = "GPU" if "GPU" in get_available_devices() else "AUTO"
     ov_config = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1', "CACHE_DIR": ""}
-    chat_model = OVModelForCausalLM.from_pretrained(model_dir, device="AUTO", config=AutoConfig.from_pretrained(model_dir), ov_config=ov_config)
+    chat_model = OVModelForCausalLM.from_pretrained(model_dir, device=device, config=AutoConfig.from_pretrained(model_dir), ov_config=ov_config)
     chat_tokenizer = AutoTokenizer.from_pretrained(model_dir)
 
 
