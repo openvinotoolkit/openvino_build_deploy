@@ -3,7 +3,6 @@ import os
 import random
 import sys
 import time
-from functools import partial
 
 import gradio as gr
 import numpy as np
@@ -33,6 +32,8 @@ guidance_scale = 8.0
 num_inference_steps = 5
 size = 512
 images_to_generate = 1
+device = "AUTO"
+hf_model_name = None
 
 
 def get_available_devices() -> list[str]:
@@ -61,8 +62,10 @@ def stop():
 
 def generate_images():
     global stop_generating
-
     stop_generating = False
+
+    load_pipeline(hf_model_name, device)
+
     counter = 0
     while counter < images_to_generate:
         if stop_generating:
@@ -85,12 +88,12 @@ def generate_images():
         utils.draw_ov_watermark(result[0], size=0.60)
 
         processing_time = end_time - start_time
-        yield result[0], round(processing_time, 5)
+        yield result[0], round(processing_time, 5), ov_pipeline.device.upper()
 
         counter += 1
 
 
-def build_ui(model_name: str):
+def build_ui():
     examples = [
         "portrait photo of a girl, photograph, highly detailed face, depth of field, moody light, golden hour,"
         "style by Dan Winters, Russell James, Steve McCurry, centered, extremely detailed, Nikon D850, award winning photography",
@@ -161,15 +164,11 @@ def build_ui(model_name: str):
             cache_examples=False,
         )
         # clicking run
-        gr.on(triggers=[prompt_text.submit, start_button.click], fn=lambda: gr.Dropdown(interactive=False), outputs=device_dropdown) \
-            .then(generate_images, outputs=[result_img, result_time_label])
+        gr.on(triggers=[prompt_text.submit, start_button.click], fn=generate_images, outputs=[result_img, result_time_label, result_device_label])
         # clicking stop
-        stop_button.click(stop) \
-            .then(lambda: gr.Dropdown(interactive=True), outputs=device_dropdown)
+        stop_button.click(stop)
         # changing device
-        device_dropdown.change(lambda: gr.Row(visible=False), outputs=endless_gen_row) \
-            .then(partial(load_pipeline, model_name), inputs=device_dropdown, outputs=result_device_label) \
-            .then(lambda: gr.Row(visible=True), outputs=endless_gen_row)
+        device_dropdown.change(lambda x: globals().update(device=x), inputs=device_dropdown)
         # changing parameters
         endless_checkbox.change(lambda x: globals().update(images_to_generate=MAX_SEED if x else 1), inputs=endless_checkbox)
         randomize_seed_button.click(lambda _: random.randint(0, MAX_SEED), inputs=seed_slider, outputs=seed_slider)
@@ -184,9 +183,10 @@ def build_ui(model_name: str):
 
 
 def run_endless_lcm(model_name):
-    load_pipeline(model_name, "AUTO")
+    global hf_model_name
+    hf_model_name = model_name
 
-    demo = build_ui(model_name)
+    demo = build_ui()
     demo.launch(server_name="0.0.0.0")
 
 
