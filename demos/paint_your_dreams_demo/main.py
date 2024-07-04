@@ -24,7 +24,7 @@ safety_checker: StableDiffusionSafetyChecker = StableDiffusionSafetyChecker.from
 
 ov_pipelines = {}
 
-stop_generating: bool = False
+stop_generating: bool = True
 
 prompt = ""
 randomize_seed = True
@@ -32,6 +32,7 @@ seed = 0
 guidance_scale = 8.0
 num_inference_steps = 5
 size = 512
+images_to_generate = 1
 
 
 def get_available_devices() -> list[str]:
@@ -62,7 +63,8 @@ def generate_images():
     global stop_generating
 
     stop_generating = False
-    while True:
+    counter = 0
+    while counter < images_to_generate:
         if stop_generating:
             break
 
@@ -85,6 +87,8 @@ def generate_images():
         processing_time = end_time - start_time
         yield result[0], round(processing_time, 5)
 
+        counter += 1
+
 
 def build_ui(model_name: str):
     examples = [
@@ -104,23 +108,24 @@ def build_ui(model_name: str):
                     placeholder="Enter your prompt here",
                 )
             with gr.Row():
-                gr.Column(scale=1)
-                with gr.Column(scale=6):
+                with gr.Column():
                     result_img = gr.Image(label="Generated image", elem_id="output_image", format="png")
                     with gr.Row():
                         result_time_label = gr.Text("", label="Processing Time", type="text")
                         result_device_label = gr.Text("AUTO", label="Device Name", type="text")
-                    with gr.Row():
-                        run_button = gr.Button("Start generation")
-                        stop_button = gr.Button("Stop generation", interactive=False)
-                gr.Column(scale=1)
+                    with gr.Row() as endless_gen_row:
+                        start_button = gr.Button("Start generation")
+                        stop_button = gr.Button("Stop generation")
             with gr.Accordion("Advanced options", open=False):
-                device_dropdown = gr.Dropdown(
-                    choices=get_available_devices(),
-                    value="AUTO",
-                    label="Inference device",
-                    interactive=True
-                )
+                with gr.Row():
+                    device_dropdown = gr.Dropdown(
+                        choices=get_available_devices(),
+                        value="AUTO",
+                        label="Inference device",
+                        interactive=True,
+                        scale=4
+                    )
+                    endless_checkbox = gr.Checkbox(label="Generate endlessly", value=False, scale=1)
                 with gr.Row():
                     seed_slider = gr.Slider(label="Seed", minimum=0, maximum=MAX_SEED, step=1, value=seed, randomize=True, scale=1)
                     randomize_seed_checkbox = gr.Checkbox(label="Randomize seed across runs", value=randomize_seed, scale=0)
@@ -156,20 +161,17 @@ def build_ui(model_name: str):
             cache_examples=False,
         )
         # clicking run
-        gr.on(triggers=[prompt_text.submit, run_button.click], fn=lambda: gr.Button(interactive=False), outputs=run_button) \
-            .then(lambda: gr.Button(interactive=True), outputs=stop_button) \
-            .then(lambda: gr.Dropdown(interactive=False), outputs=device_dropdown) \
+        gr.on(triggers=[prompt_text.submit, start_button.click], fn=lambda: gr.Dropdown(interactive=False), outputs=device_dropdown) \
             .then(generate_images, outputs=[result_img, result_time_label])
         # clicking stop
         stop_button.click(stop) \
-            .then(lambda: gr.Button(interactive=True), outputs=run_button) \
-            .then(lambda: gr.Button(interactive=False), outputs=stop_button) \
             .then(lambda: gr.Dropdown(interactive=True), outputs=device_dropdown)
         # changing device
-        device_dropdown.change(lambda: gr.Button(interactive=False), outputs=run_button) \
+        device_dropdown.change(lambda: gr.Row(visible=False), outputs=endless_gen_row) \
             .then(partial(load_pipeline, model_name), inputs=device_dropdown, outputs=result_device_label) \
-            .then(lambda: gr.Button(interactive=True), outputs=run_button)
+            .then(lambda: gr.Row(visible=True), outputs=endless_gen_row)
         # changing parameters
+        endless_checkbox.change(lambda x: globals().update(images_to_generate=MAX_SEED if x else 1), inputs=endless_checkbox)
         randomize_seed_button.click(lambda _: random.randint(0, MAX_SEED), inputs=seed_slider, outputs=seed_slider)
         randomize_seed_checkbox.change(lambda x: globals().update(randomize_seed=x), inputs=randomize_seed_checkbox)
         size_slider.change(lambda x: globals().update(size=x), inputs=size_slider)
