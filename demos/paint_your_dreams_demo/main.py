@@ -3,9 +3,11 @@ import os
 import random
 import sys
 import time
+from functools import partial
 
 import gradio as gr
 import numpy as np
+import openvino as ov
 import torch
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 from optimum.intel.openvino import OVLatentConsistencyModelPipeline
@@ -17,21 +19,29 @@ from utils import demo_utils as utils
 
 stop_generating: bool = False
 ov_pipeline: OVLatentConsistencyModelPipeline | None = None
-safety_checker: StableDiffusionSafetyChecker | None = None
-
+safety_checker: StableDiffusionSafetyChecker = StableDiffusionSafetyChecker.from_pretrained("CompVis/stable-diffusion-safety-checker")
+ov_pipelines = {}
 
 MAX_SEED = np.iinfo(np.int32).max
 
 
-def load_pipeline(model_name, device):
-    global ov_pipeline, safety_checker
+def get_available_devices() -> list[str]:
+    core = ov.Core()
+    return ["AUTO"] + list({device.split(".")[0] for device in core.available_devices})
 
-    ov_config = {"CACHE_DIR": "cache"}
-    safety_checker = StableDiffusionSafetyChecker.from_pretrained("CompVis/stable-diffusion-safety-checker")
-    ov_pipeline = OVLatentConsistencyModelPipeline.from_pretrained(model_name, compile=False, safety_checker=safety_checker, ov_config=ov_config)
 
-    ov_pipeline.to(device)
-    ov_pipeline.compile()
+def load_pipeline(model_name: str, device: str):
+    global ov_pipeline
+
+    if device in ov_pipelines:
+        ov_pipeline = ov_pipelines[device]
+    else:
+        ov_config = {"CACHE_DIR": "cache"}
+        ov_pipeline = OVLatentConsistencyModelPipeline.from_pretrained(model_name, compile=True, device=device,
+                                                                       safety_checker=safety_checker, ov_config=ov_config)
+        ov_pipelines[device] = ov_pipeline
+
+    return device
 
 
 def randomize_seed_fn(seed: int, randomize_seed: bool = True) -> int:
@@ -53,7 +63,9 @@ def generate_images(prompt: str, seed: int, size: int, guidance_scale: float, nu
         if stop_generating:
             break
 
-        seed = randomize_seed_fn(seed, randomize_seed)
+        if randomize_seed:
+            seed = random.randint(0, MAX_SEED)
+
         torch.manual_seed(seed)
         np.random.seed(seed)
 
@@ -70,7 +82,7 @@ def generate_images(prompt: str, seed: int, size: int, guidance_scale: float, nu
         yield result[0], round(processing_time, 5), seed
 
 
-def build_ui():
+def build_ui(model_name: str):
     examples = [
         "portrait photo of a girl, photograph, highly detailed face, depth of field, moody light, golden hour,"
         "style by Dan Winters, Russell James, Steve McCurry, centered, extremely detailed, Nikon D850, award winning photography",
@@ -92,12 +104,20 @@ def build_ui():
                 gr.Column(scale=1)
                 with gr.Column(scale=6):
                     result = gr.Image(label="Generated image", elem_id="output_image", format="png")
-                    result_time_label = gr.Text("", label="Processing Time", type="text")
+                    with gr.Row():
+                        result_time_label = gr.Text("", label="Processing Time", type="text")
+                        result_device_label = gr.Text("AUTO", label="Device Name", type="text")
                     with gr.Row():
                         run_button = gr.Button("Start generation")
                         stop_button = gr.Button("Stop generation", interactive=False)
                 gr.Column(scale=1)
             with gr.Accordion("Advanced options", open=False):
+                device_dropdown = gr.Dropdown(
+                    choices=get_available_devices(),
+                    value="AUTO",
+                    label="Inference device",
+                    interactive=True
+                )
                 with gr.Row():
                     seed = gr.Slider(label="Seed", minimum=0, maximum=MAX_SEED, step=1, value=0, randomize=True,
                                      scale=1)
@@ -133,17 +153,10 @@ def build_ui():
             outputs=result,
             cache_examples=False,
         )
-        gr.on(
-            triggers=[randomize_seed_button.click],
-            fn=randomize_seed_fn,
-            inputs=[seed],
-            outputs=[seed],
-        )
-        gr.on(
-            triggers=[
-                prompt.submit,
-                run_button.click,
-            ],
+        gr.on(triggers=[prompt.submit, run_button.click], fn=lambda: gr.Button(interactive=False), outputs=run_button) \
+            .then(lambda: gr.Button(interactive=True), outputs=stop_button) \
+            .then(lambda: gr.Dropdown(interactive=False), outputs=device_dropdown) \
+            .then(
             fn=generate_images,
             inputs=[
                 prompt, seed, size, guidance_scale, num_inference_steps, randomize_seed
@@ -152,27 +165,29 @@ def build_ui():
                 result, result_time_label, seed
             ],
         )
-        run_button.click(lambda: gr.Button(interactive=False), outputs=run_button) \
-            .then(lambda: gr.Button(interactive=True), outputs=stop_button)
-        stop_button.click(lambda: gr.Button(interactive=False), outputs=stop_button) \
+        stop_button.click(stop) \
             .then(lambda: gr.Button(interactive=True), outputs=run_button) \
-            .then(stop)
+            .then(lambda: gr.Button(interactive=False), outputs=stop_button) \
+            .then(lambda: gr.Dropdown(interactive=True), outputs=device_dropdown)
+        device_dropdown.change(lambda: gr.Button(interactive=False), outputs=run_button) \
+            .then(partial(load_pipeline, model_name), inputs=device_dropdown, outputs=result_device_label) \
+            .then(lambda: gr.Button(interactive=True), outputs=run_button)
+        randomize_seed_button.click(lambda _: random.randint(0, MAX_SEED), inputs=seed, outputs=seed)
 
     return demo
 
 
-def run_endless_lcm(model_name, device):
-    load_pipeline(model_name, device)
+def run_endless_lcm(model_name):
+    load_pipeline(model_name, "AUTO")
 
-    demo = build_ui()
+    demo = build_ui(model_name)
     demo.launch(server_name="0.0.0.0")
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--device', default="GPU", type=str, help="Device to run inference on")
     parser.add_argument("--model_name", type=str, default="OpenVINO/LCM_Dreamshaper_v7-int8-ov",
                         help="Pose estimation model to be used")
 
     args = parser.parse_args()
-    run_endless_lcm(args.model_name, args.device)
+    run_endless_lcm(args.model_name)
