@@ -17,12 +17,21 @@ sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 from utils import demo_utils as utils
 
-stop_generating: bool = False
+MAX_SEED = np.iinfo(np.int32).max
+
 ov_pipeline: OVLatentConsistencyModelPipeline | None = None
 safety_checker: StableDiffusionSafetyChecker = StableDiffusionSafetyChecker.from_pretrained("CompVis/stable-diffusion-safety-checker")
+
 ov_pipelines = {}
 
-MAX_SEED = np.iinfo(np.int32).max
+stop_generating: bool = False
+
+prompt = ""
+randomize_seed = True
+seed = 0
+guidance_scale = 8.0
+num_inference_steps = 5
+size = 512
 
 
 def get_available_devices() -> list[str]:
@@ -44,18 +53,12 @@ def load_pipeline(model_name: str, device: str):
     return device
 
 
-def randomize_seed_fn(seed: int, randomize_seed: bool = True) -> int:
-    if randomize_seed:
-        seed = random.randint(0, MAX_SEED)
-    return seed
-
-
 def stop():
     global stop_generating
     stop_generating = True
 
 
-def generate_images(prompt: str, seed: int, size: int, guidance_scale: float, num_inference_steps: int, randomize_seed: bool):
+def generate_images():
     global stop_generating
 
     stop_generating = False
@@ -63,11 +66,12 @@ def generate_images(prompt: str, seed: int, size: int, guidance_scale: float, nu
         if stop_generating:
             break
 
+        local_seed = seed
         if randomize_seed:
-            seed = random.randint(0, MAX_SEED)
+            local_seed = random.randint(0, MAX_SEED)
 
-        torch.manual_seed(seed)
-        np.random.seed(seed)
+        torch.manual_seed(local_seed)
+        np.random.seed(local_seed)
 
         start_time = time.time()
         result = ov_pipeline(prompt=prompt, num_inference_steps=num_inference_steps, width=size, height=size,
@@ -79,7 +83,7 @@ def generate_images(prompt: str, seed: int, size: int, guidance_scale: float, nu
         utils.draw_ov_watermark(result[0], size=0.60)
 
         processing_time = end_time - start_time
-        yield result[0], round(processing_time, 5), seed
+        yield result[0], round(processing_time, 5)
 
 
 def build_ui(model_name: str):
@@ -94,8 +98,7 @@ def build_ui(model_name: str):
     with gr.Blocks() as demo:
         with gr.Group():
             with gr.Row():
-                prompt = gr.Text(
-                    value=examples[0],
+                prompt_text = gr.Text(
                     label="Prompt",
                     max_lines=1,
                     placeholder="Enter your prompt here",
@@ -103,7 +106,7 @@ def build_ui(model_name: str):
             with gr.Row():
                 gr.Column(scale=1)
                 with gr.Column(scale=6):
-                    result = gr.Image(label="Generated image", elem_id="output_image", format="png")
+                    result_img = gr.Image(label="Generated image", elem_id="output_image", format="png")
                     with gr.Row():
                         result_time_label = gr.Text("", label="Processing Time", type="text")
                         result_device_label = gr.Text("AUTO", label="Device Name", type="text")
@@ -119,60 +122,61 @@ def build_ui(model_name: str):
                     interactive=True
                 )
                 with gr.Row():
-                    seed = gr.Slider(label="Seed", minimum=0, maximum=MAX_SEED, step=1, value=0, randomize=True,
-                                     scale=1)
-                    randomize_seed = gr.Checkbox(label="Randomize seed across runs", value=True, scale=0)
+                    seed_slider = gr.Slider(label="Seed", minimum=0, maximum=MAX_SEED, step=1, value=seed, randomize=True, scale=1)
+                    randomize_seed_checkbox = gr.Checkbox(label="Randomize seed across runs", value=randomize_seed, scale=0)
                     randomize_seed_button = gr.Button("Randomize seed", scale=0)
                 with gr.Row():
-                    guidance_scale = gr.Slider(
+                    guidance_scale_slider = gr.Slider(
                         label="Guidance scale for base",
                         minimum=2,
                         maximum=14,
                         step=0.1,
-                        value=8.0,
+                        value=guidance_scale,
                     )
-                    num_inference_steps = gr.Slider(
+                    num_inference_steps_slider = gr.Slider(
                         label="Number of inference steps for base",
                         minimum=1,
                         maximum=32,
                         step=1,
-                        value=5,
+                        value=num_inference_steps,
                     )
 
-                size = gr.Slider(
+                size_slider = gr.Slider(
                     label="Image size",
                     minimum=256,
                     maximum=1024,
                     step=64,
-                    value=512
+                    value=size
                 )
 
         gr.Examples(
             examples=examples,
-            inputs=prompt,
-            outputs=result,
+            inputs=prompt_text,
+            outputs=result_img,
             cache_examples=False,
         )
-        gr.on(triggers=[prompt.submit, run_button.click], fn=lambda: gr.Button(interactive=False), outputs=run_button) \
+        # clicking run
+        gr.on(triggers=[prompt_text.submit, run_button.click], fn=lambda: gr.Button(interactive=False), outputs=run_button) \
             .then(lambda: gr.Button(interactive=True), outputs=stop_button) \
             .then(lambda: gr.Dropdown(interactive=False), outputs=device_dropdown) \
-            .then(
-            fn=generate_images,
-            inputs=[
-                prompt, seed, size, guidance_scale, num_inference_steps, randomize_seed
-            ],
-            outputs=[
-                result, result_time_label, seed
-            ],
-        )
+            .then(generate_images, outputs=[result_img, result_time_label])
+        # clicking stop
         stop_button.click(stop) \
             .then(lambda: gr.Button(interactive=True), outputs=run_button) \
             .then(lambda: gr.Button(interactive=False), outputs=stop_button) \
             .then(lambda: gr.Dropdown(interactive=True), outputs=device_dropdown)
+        # changing device
         device_dropdown.change(lambda: gr.Button(interactive=False), outputs=run_button) \
             .then(partial(load_pipeline, model_name), inputs=device_dropdown, outputs=result_device_label) \
             .then(lambda: gr.Button(interactive=True), outputs=run_button)
-        randomize_seed_button.click(lambda _: random.randint(0, MAX_SEED), inputs=seed, outputs=seed)
+        # changing parameters
+        randomize_seed_button.click(lambda _: random.randint(0, MAX_SEED), inputs=seed_slider, outputs=seed_slider)
+        randomize_seed_checkbox.change(lambda x: globals().update(randomize_seed=x), inputs=randomize_seed_checkbox)
+        size_slider.change(lambda x: globals().update(size=x), inputs=size_slider)
+        guidance_scale_slider.change(lambda x: globals().update(guidance_scale=x), inputs=guidance_scale_slider)
+        seed_slider.change(lambda x: globals().update(seed=x), inputs=seed_slider)
+        num_inference_steps_slider.change(lambda x: globals().update(num_inference_steps=x), inputs=num_inference_steps_slider)
+        prompt_text.change(lambda x: globals().update(prompt=x), inputs=prompt_text)
 
     return demo
 
