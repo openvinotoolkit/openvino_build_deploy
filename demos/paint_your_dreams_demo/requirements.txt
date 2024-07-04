@@ -6,4 +6,4 @@ onnx==1.16.0
 opencv-python==4.10.0.82
 tqdm==4.66.3
 requests==2.32.3
-gradio==4.37.1
+gradio==4.37.2

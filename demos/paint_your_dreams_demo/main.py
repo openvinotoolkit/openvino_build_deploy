@@ -1,10 +1,17 @@
 import argparse
+import os
+import sys
 import time
 
 import gradio as gr
 import numpy as np
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 from optimum.intel.openvino import OVLatentConsistencyModelPipeline
+
+SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "utils")
+sys.path.append(os.path.dirname(SCRIPT_DIR))
+
+from utils import demo_utils as utils
 
 stop_generating: bool = False
 ov_pipeline: OVLatentConsistencyModelPipeline | None = None
@@ -39,6 +46,8 @@ def generate_images(prompt: str, size: int, guidance_scale: float, num_inference
         end_time = time.time()
 
         result, nsfw = safety_checker(ov_pipeline.feature_extractor(result, return_tensors="pt").pixel_values, np.array(result))
+
+        utils.draw_ov_watermark(result[0], size=0.60)
 
         processing_time = end_time - start_time
         yield result[0], round(processing_time, 5)
