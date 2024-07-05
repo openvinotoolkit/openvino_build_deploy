@@ -44,7 +44,7 @@ def convert(det_model_name: str, model_dir: Path) -> tuple[Path, Path]:
         ov_model_path = det_model.export(format="openvino", dynamic=False, half=True)
     if not ov_int8_model_path.exists():
         ov_int8_model_path = det_model.export(format="openvino", dynamic=False, half=True, int8=True)
-    return ov_model_path / f"{det_model_name}.xml", ov_int8_model_path / f"{det_model_name}.xml"
+    return Path(ov_model_path) / f"{det_model_name}.xml", Path(ov_int8_model_path) / f"{det_model_name}.xml"
 
 
 def letterbox(img: np.ndarray, new_shape: Tuple[int, int]) -> Tuple[np.ndarray, Tuple[float, float], Tuple[int, int]]:
