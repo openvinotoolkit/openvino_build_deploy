@@ -9,7 +9,7 @@ from openvino import runtime as ov
 from torch.utils.data import DataLoader
 from torchvision import datasets
 from ultralytics import YOLO
-from ultralytics.yolo.data import augment
+from ultralytics.data import augment
 
 import utils
 
@@ -97,9 +97,9 @@ def quantize(data_dir: Path, converted_model_path: Path) -> Path:
         ignored_scope = nncf.IgnoredScope(
             types=["Multiply", "Subtract", "Sigmoid"],  # ignore operations
             names=[
-                "/model.22/dfl/conv/Conv",  # in the post-processing subgraph
-                "/model.22/Add",
-                "/model.22/Add_1"
+                "__module.model.22.dfl.conv/aten::_convolution/Convolution",  # in the post-processing subgraph
+                "__module.model.22/aten::add/Add",
+                "__module.model.22/aten::add/Add_1"
             ]
         )
 

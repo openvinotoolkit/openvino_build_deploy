@@ -10,7 +10,7 @@ import numpy as np
 import supervision as sv
 import torch
 from openvino import runtime as ov
-from ultralytics.yolo.utils import ops
+from ultralytics.utils import ops
 
 import utils
 
