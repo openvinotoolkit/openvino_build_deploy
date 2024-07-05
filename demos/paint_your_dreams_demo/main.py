@@ -115,15 +115,15 @@ def build_ui():
                     result_img = gr.Image(label="Generated image", elem_id="output_image", format="png")
                     with gr.Row():
                         result_time_label = gr.Text("", label="Processing Time", type="text")
-                        result_device_label = gr.Text("AUTO", label="Device Name", type="text")
-                    with gr.Row() as endless_gen_row:
+                        result_device_label = gr.Text("", label="Device Name", type="text")
+                    with gr.Row():
                         start_button = gr.Button("Start generation")
                         stop_button = gr.Button("Stop generation")
             with gr.Accordion("Advanced options", open=False):
                 with gr.Row():
                     device_dropdown = gr.Dropdown(
                         choices=get_available_devices(),
-                        value="AUTO",
+                        value=device,
                         label="Inference device",
                         interactive=True,
                         scale=4
@@ -182,18 +182,21 @@ def build_ui():
     return demo
 
 
-def run_endless_lcm(model_name):
+def run_endless_lcm(model_name: str, local_network: bool):
     global hf_model_name
     hf_model_name = model_name
+    server_name = "0.0.0.0" if local_network else None
 
     demo = build_ui()
-    demo.launch(server_name="0.0.0.0")
+    demo.launch(server_name=server_name)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name", type=str, default="OpenVINO/LCM_Dreamshaper_v7-int8-ov",
-                        help="Pose estimation model to be used")
+    parser.add_argument("--model_name", type=str, default="OpenVINO/LCM_Dreamshaper_v7-fp16-ov",
+                        choices=["OpenVINO/LCM_Dreamshaper_v7-int8-ov", "OpenVINO/LCM_Dreamshaper_v7-fp16-ov"], help="Visual GenAI model to be used")
+    parser.add_argument("--local_network", action="store_true", help="Whether demo should be available in local network")
+
 
     args = parser.parse_args()
-    run_endless_lcm(args.model_name)
+    run_endless_lcm(args.model_name, args.local_network)
