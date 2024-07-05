@@ -125,6 +125,7 @@ class VideoPlayer:
         self.__interpolation = None
         if size is not None:
             self.__size = size
+            self.__cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc(*"MJPG"))
             self.__cap.set(cv2.CAP_PROP_FRAME_WIDTH, size[0])
             self.__cap.set(cv2.CAP_PROP_FRAME_HEIGHT, size[1])
             # AREA better for shrinking, LINEAR better for enlarging
