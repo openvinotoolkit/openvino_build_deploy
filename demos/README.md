@@ -70,6 +70,10 @@ The demo detects people in front of the webcam and changes them into Santa Claus
 | Platforms                            | Client (CPU, GPU, NPU), Edge (CPU)                         |
 | Owner                                | [@adrianboguszewski](https://github.com/adrianboguszewski) |
 
+## Contributing
+
+Please follow the rules defined in the [contributing guide](CONTRIBUTING.md) to add a demo to this repository.
+
 ## Troubleshooting and Resources
 - Open a [discussion topic](https://github.com/openvinotoolkit/openvino_build_deploy/discussions)
 - Create an [issue](https://github.com/openvinotoolkit/openvino_build_deploy/issues)
