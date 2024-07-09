@@ -217,7 +217,7 @@ def run_demo(source, model_name, model_precision, device, flip):
         if isinstance(source, str) and source.isnumeric():
             source = int(source)
         # Create a video player to play with target fps.
-        player = utils.VideoPlayer(source, flip=flip, fps=30, size=(1280, 720))
+        player = utils.VideoPlayer(source, flip=flip, fps=30, size=(1920, 1080))
         # Start capturing.
         player.start()
         title = "Press ESC to Exit"
@@ -232,10 +232,6 @@ def run_demo(source, model_name, model_precision, device, flip):
             if frame is None:
                 print("Source ended")
                 break
-            # If the frame is larger than full HD, reduce size to improve the performance.
-            scale = 1280 / max(frame.shape)
-            if scale < 1:
-                frame = cv2.resize(frame, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
 
             # Resize the image and change dims to fit neural network input.
             # (see https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/intel/human-pose-estimation-0001)
