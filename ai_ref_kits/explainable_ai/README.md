@@ -56,13 +56,13 @@ _NOTE: If you are using Windows, you will probably need to install [Microsoft Vi
 To clone the repository, run the following command:
 
 ```shell
-git clone https://github.com/openvinotoolkit/openvino_build_deploy.git openvino_notebooks
+git clone https://github.com/openvinotoolkit/openvino_build_deploy.git
 ```
 
-The above will clone the repository into a directory named "openvino_notebooks" in the current directory. It will also download a sample video. Then, navigate into the directory using the following command:
+The above will clone the repository into a directory named "openvino_build_deploy" in the current directory. It will also download a sample video. Then, navigate into the directory using the following command:
 
 ```shell
-cd openvino_notebooks/ai_ref_kits/explainable_ai
+cd openvino_build_deploy/ai_ref_kits/explainable_ai
 ```
 
 Then pull the video sample:

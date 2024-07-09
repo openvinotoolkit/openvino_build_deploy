@@ -1,6 +1,6 @@
 # Build and Deploy AI Solutions with the OpenVINO™ Toolkit
 
-[![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/LICENSE)
+[![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/LICENSE.txt)
 
 Welcome to the **Build and Deploy AI Solutions** repository! This repository contains pre-built components and code samples designed to accelerate the development and deployment of production-grade AI applications across various industries, such as retail, healthcare, and manufacturing. With the OpenVINO™ Toolkit from Intel, you can enhance the capabilities of both Intel and non-Intel hardware to meet your specific needs.
 

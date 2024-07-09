@@ -1,6 +1,6 @@
 # Edge AI Reference Kits for OpenVINO™ Toolkit
 
-[![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/LICENSE)
+[![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/LICENSE.txt)
 
 [Edge AI Reference Kits](https://www.intel.com/content/www/us/en/developer/topic-technology/edge-5g/open-potential.html) are fully functioning applications demonstrating deep learning AI use cases. You can leverage these pre-built components and code samples as the basis for solutions in industries like retail, healthcare, manufacturing, and more. Start development of your AI application on top of our kits, or integrate into your existing apps. 
 
@@ -102,7 +102,7 @@ This is a list of Edge AI Reference kits that are planned or are in development.
 Kit that explores the potential of generative AI with OpenVINO.
 
 ## Troubleshooting and Resources
-- Open a [discussion topic](https://github.com/openvinotoolkit/openvino_notebooks/discussions)
-- Create an [issue](https://github.com/openvinotoolkit/openvino_notebooks/issues)
+- Open a [discussion topic](https://github.com/openvinotoolkit/openvino_build_deploy/discussions)
+- Create an [issue](https://github.com/openvinotoolkit/openvino_build_deploy/issues)
 - Learn more about [OpenVINO](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html)
-- Explore [OpenVINO’s documentation](https://docs.openvino.ai/2023.0/home.html)
+- Explore [OpenVINO’s documentation](https://docs.openvino.ai/2024/home.html)
