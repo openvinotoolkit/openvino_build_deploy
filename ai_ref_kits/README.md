@@ -102,7 +102,7 @@ This is a list of Edge AI Reference kits that are planned or are in development.
 Kit that explores the potential of generative AI with OpenVINO.
 
 ## Troubleshooting and Resources
-- Open a [discussion topic](https://github.com/openvinotoolkit/openvino_notebooks/discussions)
-- Create an [issue](https://github.com/openvinotoolkit/openvino_notebooks/issues)
+- Open a [discussion topic](https://github.com/openvinotoolkit/openvino_build_deploy/discussions)
+- Create an [issue](https://github.com/openvinotoolkit/openvino_build_deploy/issues)
 - Learn more about [OpenVINO](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html)
-- Explore [OpenVINO’s documentation](https://docs.openvino.ai/2023.0/home.html)
+- Explore [OpenVINO’s documentation](https://docs.openvino.ai/2024/home.html)
