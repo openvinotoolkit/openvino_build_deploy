@@ -32,7 +32,7 @@ To clone the repository, run the following command:
 git clone https://github.com/openvinotoolkit/openvino_build_deploy.git
 ```
 
-The above will clone the repository into a directory named "openvino_notebooks" in the current directory. It will also download a sample video. Then, navigate into the directory using the following command:
+The above will clone the repository into a directory named "openvino_build_deploy" in the current directory. It will also download a sample video. Then, navigate into the directory using the following command:
 
 ```shell
 cd openvino_build_deploy/demos/people_counter_demo

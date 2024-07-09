@@ -1,6 +1,6 @@
 # Interactive Demos for OpenVINO™ Toolkit
 
-[![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/LICENSE)
+[![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/LICENSE.txt)
 
 This directory contains interactive demos aimed at demonstrating how OpenVINO performs as an AI optimization and inference engine (cloud, client, and edge), and attracting more people to Intel's booth at events. 
 
