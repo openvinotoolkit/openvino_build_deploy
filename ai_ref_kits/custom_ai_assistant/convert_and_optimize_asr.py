@@ -6,6 +6,7 @@ from transformers import AutoProcessor
 
 MODEL_MAPPING = {
     "distil-whisper-large-v2": "distil-whisper/distil-large-v2",
+    "Belle-distilwhisper-large-v2-zh": "BELLE-2/Belle-distilwhisper-large-v2-zh",
 }
 
 
