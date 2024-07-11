@@ -20,11 +20,24 @@ from pathlib import Path
 from pipelines.nano_llava_utils import OVLlavaQwen2ForCausalLM
 from threading import Thread
 from optimum.intel.openvino import OVLatentConsistencyModelPipeline
+from utils import patch_whisper_for_ov_inference, OpenVINOAudioEncoder, OpenVINOTextDecoder, resample_wav
+
+import whisper
 
 
+core = ov.Core()
+whisper_model = whisper.load_model("base", "cpu")
+whisper_model.eval()
+
+patch_whisper_for_ov_inference(whisper_model)
+WHISPER_ENCODER_OV = Path(f"dnd_models/ggml-base-encoder-openvino.xml")
+WHISPER_DECODER_OV = Path(f"dnd_models/whisper_base_decoder.xml")
+
+whisper_model.encoder = OpenVINOAudioEncoder(core, WHISPER_ENCODER_OV, device="NPU")
+whisper_model.decoder = OpenVINOTextDecoder(core, WHISPER_DECODER_OV, device="GPU")
+print("Whisper Model loaded..")
 
 OCR = True
-model_path = Path(f"dnd_models/square_lcm") 
 f = open(r"locations.json")
 locations_json = json.load(f)
 
@@ -37,7 +50,7 @@ def ready_ocr_model():
     return ocr_ov_model, ocr_tokenizer, streamer
 
 def ready_llm_model():
-    model_dir = r"C:\Users\riach\openvino_notebooks\notebooks\llm-chatbot\llama-3-8b-instruct\INT4_compressed_weights" #r"dnd_models\llama-3-8b-instruct\INT4_compressed_weights"
+    model_dir = r"dnd_models\llama-3-8b-instruct\INT4_compressed_weights"
     print(f"Loading model from {model_dir}")
     ov_config = {"PERFORMANCE_HINT": "LATENCY", "NUM_STREAMS": "1", "CACHE_DIR": "temp/"}
     model_configuration = SUPPORTED_LLM_MODELS["English"]["llama-3-8b-instruct"]
@@ -55,17 +68,18 @@ def ready_llm_model():
 print("Application Set Up - Please wait")
 model_path_sr = Path(f"dnd_models/single-image-super-resolution-1033.xml") #realesrgan.xml")
 
-#engine = LatentConsistencyEngine(
-#model = model_path,
-#device = ["CPU", "GPU", "GPU"] 
-#)
-model_path_lcm = Path(f"dnd_models/openvino_ir_lcm") 
-engine_lcm = OVLatentConsistencyModelPipeline.from_pretrained(model_path_lcm, export=False, compile=False)
+model_path = Path(f"dnd_models/sd-1.5-lcm-openvino-npu") 
+engine = LatentConsistencyEngine(
+model = model_path,
+device = ["GPU", "GPU", "GPU"]  #"CPU", "GPU"
+)
+#model_path_lcm = Path("dnd_models/sd-1.5-lcm-openvino-npu") #Path(f"dnd_models/openvino_ir_lcm") 
+#engine_lcm = OVLatentConsistencyModelPipeline.from_pretrained(model_path_lcm, export=False, compile=False)
 
-engine_lcm.reshape(batch_size=1, height=512, width=512, num_images_per_prompt=1)
+#engine_lcm.reshape(batch_size=1, height=512, width=512, num_images_per_prompt=1)
 
-engine_lcm.to("GPU.0")
-engine_lcm.compile()
+#engine_lcm.to("NPU")
+#engine_lcm.compile()
 
 
 llm_model, llm_tokenizer, model_configuration = ready_llm_model()
@@ -76,7 +90,6 @@ if OCR is True:
 print("Ready to launch")
 
 def ocr_dice_roll(image, ocr_radio=False):
-    #print("OCR RADIO: ", ocr_radio)
     if ocr_radio == "yes":
         prompt = "What number did I just roll using the dice from the picture?"
     else:
@@ -167,8 +180,9 @@ def llama(text, random_num=None):
     #if first_run is True:
     tokenizer_kwargs = model_configuration.get("tokenizer_kwargs", {})
     test_string = f"""You are a Dungeons and Dragons prompt assistant who reads prompts and turns them into short prompts \
-        for an image-generator. Rephrase the following sentence to be a descriptive prompt that is one short sentence only\
-        and easy for a image generation model to understand, ending with proper punctuation. Add the theme to the prompt.): \
+        for an model that generates portrait images from prompts. Rephrase the following sentence to be a descriptive prompt that is one short sentence only\
+        and easy for a image generation model to understand, ending with proper punctuation, for a portrait.\
+        Add the theme to the prompt.): \
         ### Prompt: {text} \
         ### Theme: {random_num}
         ### Rephrased Prompt: """
@@ -216,23 +230,23 @@ def generate_from_text(theme, orig_prompt, llm_prompt, seed, num_steps,guidance_
        text = orig_prompt # + locations_json[str(dice_roll_num)]
    else:
        text = llm_prompt
-   output = engine_lcm(
+   """output = engine_lcm(
     prompt = text,
     num_inference_steps = num_steps,
     guidance_scale = guidance_input,
     height=512, width=512
-    ).images[0]
+    ).images[0]"""
 
 
-#   output = engine(
-#   prompt = text,
-#   num_inference_steps = num_steps,
-#   guidance_scale = guidance_input,
-#   scheduler = scheduler,
-#   lcm_origin_steps = 50,
-#   model = model_path,
-#   seed = seed
-#)
+   output = engine(
+   prompt = text,
+   num_inference_steps = num_steps,
+   guidance_scale = guidance_input,
+   scheduler = scheduler,
+   lcm_origin_steps = 50,
+   model = model_path,
+   seed = seed
+)
 
    img= cv2.cvtColor(np.array(output), cv2.COLOR_RGB2BGR)
    out = run_sr(img)
@@ -240,54 +254,23 @@ def generate_from_text(theme, orig_prompt, llm_prompt, seed, num_steps,guidance_
    return img  
 
 
-def start(progress=gr.Progress()):
+def transcribe(audio_data, progress=gr.Progress()):
+   
+    # Convert in-ram buffer to something the model can use directly without needing a temp file.
+    # Convert data from 16 bit wide integers to floating point with a width of 32 bits.
+    # Clamp the audio stream frequency to a PCM wavelength compatible default of 32768hz max.
+    #audio_np = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
+    #energy = audioop.rms(audio_np, 4)
+    # Read the transcription.
+    audio = resample_wav(audio_data)
+    result = whisper_model.transcribe(audio, beam_size=5, best_of=5, task="transcribe")
     
-    HOST = "127.0.0.1" #"192.168.4.60"  # The server's hostname or IP address
-    PORT = 65432  # The port used by the server
-   
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.connect((HOST, PORT))
-        s.sendall(b"start")
-        data = s.recv(1024)
-     
-
-    print(f"Received {data!r}")
-    progress(0, desc="Getting Ready - Please wait")
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s_en:
-        s_en.connect((HOST, 65433))
-        data = s_en.recv(1024)
-        if data.decode()=="speak":
-
-            for i in progress.tqdm(range(100), desc="Listening", total=None, unit=""):
-                data = s_en.recv(1024)
-            
-  
-                if data.decode()=="continue": 
-                     
-                     print("updated progress continue")
-                     continue
-   
-                if data.decode()=="stop_speak":
-                    
-                    break
-
-def stop():
-   
-    HOST = "127.0.0.1"  #"192.168.4.60"  # The server's hostname or IP address
-    PORT = 65432  # The port used by the server
-
-
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        print("now stop")
-        s.connect((HOST, PORT))
-        s.sendall(b"stop")
-        print("data sent")
-        data = s.recv(1024)
-        print("final data",data.decode())
-   
-     
-
-    return data.decode()
+    #print("length of audio_np", audio_np)
+    #wave = main_note(audio_data)
+    #print(wave)
+    text = result['text'].strip()    
+    print("Whisper incorporated text: ", text)
+    return text
 
 def update_visibility(radio):  # Accept the event argument, even if not used
         value = radio  # Get the selected value from the radio button
@@ -330,17 +313,15 @@ with gr.Blocks(css=css_code, js=_js, theme=theme) as demo:
 
     with gr.Row():
         with gr.Column(scale=1):
-            i = gr.Image(sources="webcam", label="Step 1: Roll Die / Dream", type="pil")
+            i = gr.Image(sources="webcam", label="Step 1: Get Inspired", type="pil")
             ocr_output = gr.Textbox(label="Output of OCR Model", visible=False)
             #out = gr.Textbox(label="Number typed in", elem_id="visible")
             with gr.Row():
-                dice_roll_input = gr.Textbox(lines=2, label="20-side Die Roll", container=True, placeholder="0", visible=True)
+                dice_roll_input = gr.Textbox(lines=2, label="20-side Die Roll", container=True, placeholder="0", visible=False)
                 dice_roll_theme = gr.Textbox(label="Theme", visible=True)
             with gr.Row():
                 with gr.Row():
-                    btn = gr.Button(value="Step 2: Start Rec", variant="primary")
-                    stop_btn = gr.Button(value="Step 3: Stop Rec", variant="primary")
-                text2 = gr.Textbox(label="Recording")
+                    audio_prompt = gr.Audio(type="filepath")
             #Prompts
             text_input = gr.Textbox(lines=3, label="Step 4.1: Your prompt",container=True,placeholder="Prompt")
             with gr.Row():
@@ -349,9 +330,9 @@ with gr.Blocks(css=css_code, js=_js, theme=theme) as demo:
             text_output = gr.Textbox(lines=3, label="LLM Prompt + Theme (or leave empty)", type="text", container=True, placeholder="LLM Prompt (Leave Empty to Discard)")
             #theme_options = gr.Dropdown(['None', 'Dark', 'Happy', 'Nostalgic'], label="Theme")
             image_btn = gr.Button(value="Step 6: Generate Image", variant="primary")
-            radio = gr.Radio(["yes", "no"], label="Please Select: Recognize Dice?")
-            #Parameters for LCM
+            #Parameters for multimodal model and LCM
             with gr.Accordion("Advanced Parameters", open=False):
+                radio = gr.Radio(["yes", "no"], value="no", label="Please Select: Recognize Dice?")
                 seed_input = gr.Slider(0, 10000000, value=34, label="Seed")
                 steps_input = gr.Slider(1, 50, value=5, step=1, label="Steps")
                 guidance_input = gr.Slider(0, 15, value=2.0, label="Guidance")
@@ -363,8 +344,7 @@ with gr.Blocks(css=css_code, js=_js, theme=theme) as demo:
     #the following lines of code only apply if we are looking at a dice roll
     ocr_output.change(parse_ocr_output, ocr_output, dice_roll_input)
     dice_roll_input.change(adjust_theme, [ocr_output, dice_roll_input], dice_roll_theme)
-    btn.click(start,outputs=text2)
-    stop_btn.click(stop,outputs=text_input)
+    audio_prompt.stop_recording(transcribe, audio_prompt, outputs=text_input)
     add_theme_button.click(add_theme, [text_input, dice_roll_theme], text_input)
     llm_button.click(generate_llm_prompt, [text_input, dice_roll_input], text_output)
     #The LLM Generated Prompt can be left empty, and the image will be generated with the original prompt + theme
