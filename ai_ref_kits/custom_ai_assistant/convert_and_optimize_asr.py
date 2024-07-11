@@ -48,7 +48,7 @@ def convert_asr_model(model_type: str, precision: str, model_dir: Path) -> Path:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--asr_model_type", type=str, choices=["distil-whisper-large-v2"],
+    parser.add_argument("--asr_model_type", type=str, choices=["distil-whisper-large-v2", "Belle-distilwhisper-large-v2-zh"],
                         default="distil-whisper-large-v2", help="Speech recognition model to be converted")
     parser.add_argument("--precision", type=str, default="int8", choices=["fp16", "int8"], help="Model precision")
     parser.add_argument("--model_dir", type=str, default="model", help="Directory to place the model in")
