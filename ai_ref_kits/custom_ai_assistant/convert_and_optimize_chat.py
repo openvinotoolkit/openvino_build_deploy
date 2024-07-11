@@ -8,6 +8,7 @@ MODEL_MAPPING = {
     "llama2-7B": "meta-llama/Llama-2-7b-chat-hf",
     "llama2-13B": "meta-llama/Llama-2-13b-chat-hf",
     "llama3-8B": "meta-llama/Meta-Llama-3-8B-Instruct",
+    "Qwen2-7B": "Qwen/Qwen2-7B-Instruct", 
 }
 
 
@@ -56,7 +57,7 @@ def convert_chat_model(model_type: str, precision: str, model_dir: Path) -> Path
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--chat_model_type", type=str, choices=["llama2-7B", "llama2-13B", "llama3-8B"],
+    parser.add_argument("--chat_model_type", type=str, choices=["llama2-7B", "llama2-13B", "llama3-8B", "Qwen2-7B"],
                         default="llama3-8B", help="Chat model to be converted")
     parser.add_argument("--precision", type=str, default="int4", choices=["fp16", "int8", "int4"], help="Model precision")
     parser.add_argument("--model_dir", type=str, default="model", help="Directory to place the model in")
