@@ -21,7 +21,8 @@ from pipelines.nano_llava_utils import OVLlavaQwen2ForCausalLM
 from threading import Thread
 from optimum.intel.openvino import OVLatentConsistencyModelPipeline
 from utils import patch_whisper_for_ov_inference, OpenVINOAudioEncoder, OpenVINOTextDecoder, resample_wav
-
+from depth_anything_v2_util_transform import Resize, NormalizeImage, PrepareForNet
+from torchvision.transforms import Compose
 import whisper
 
 
@@ -68,10 +69,10 @@ def ready_llm_model():
 print("Application Set Up - Please wait")
 model_path_sr = Path(f"dnd_models/single-image-super-resolution-1033.xml") #realesrgan.xml")
 
-model_path = Path(f"dnd_models/sd-1.5-lcm-openvino-npu") 
+model_path = Path(f"dnd_models/square_lcm") 
 engine = LatentConsistencyEngine(
 model = model_path,
-device = ["GPU", "GPU", "GPU"]  #"CPU", "GPU"
+device = ["NPU", "NPU", "GPU"]  #"CPU", "GPU"
 )
 #model_path_lcm = Path("dnd_models/sd-1.5-lcm-openvino-npu") #Path(f"dnd_models/openvino_ir_lcm") 
 #engine_lcm = OVLatentConsistencyModelPipeline.from_pretrained(model_path_lcm, export=False, compile=False)
@@ -179,6 +180,8 @@ def run_sr(img):
 def llama(text, random_num=None):
     #if first_run is True:
     tokenizer_kwargs = model_configuration.get("tokenizer_kwargs", {})
+    history_template = model_configuration.get("history_template")
+
     test_string = f"""You are a Dungeons and Dragons prompt assistant who reads prompts and turns them into short prompts \
         for an model that generates portrait images from prompts. Rephrase the following sentence to be a descriptive prompt that is one short sentence only\
         and easy for a image generation model to understand, ending with proper punctuation, for a portrait.\
@@ -209,11 +212,49 @@ def parse_ocr_output(text):
         #Detection did not work or image is empty
         return 0
 
-def depth_map_parallax():
+def depth_map_parallax(image):
     #This function will load the OV Depth Anything model
     #and create a 3D parallax between the depth map and the input image
     #TBD how to create a GIF of the 3D parallax
-    print("Depth Map WIP")
+    image.save("original_image.png")
+    image = np.array(image)
+
+    h, w = image.shape[:2]
+
+    transform = Compose(
+        [
+            Resize(
+                width=518,
+                height=518,
+                resize_target=False,
+                ensure_multiple_of=14,
+                resize_method="lower_bound",
+                image_interpolation_method=cv2.INTER_CUBIC,
+            ),
+            NormalizeImage(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            PrepareForNet(),
+        ]
+    )
+    def predict_depth(model, image):
+        return model(image)[0]
+
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB) / 255.0
+    image = transform({"image": image})["image"]
+    image = np.expand_dims(image, 0)
+
+    OV_DEPTH_ANYTHING_PATH = Path(f"dnd_models/depth_anything_v2/depth_anything_v2_vits_int8.xml")
+    compiled_model = core.compile_model(OV_DEPTH_ANYTHING_PATH, "CPU")
+    depth = predict_depth(compiled_model, image)
+    depth = cv2.resize(depth[0], (w, h), interpolation=cv2.INTER_LINEAR)
+
+    depth = (depth - depth.min()) / (depth.max() - depth.min()) * 255.0
+    depth = depth.astype(np.uint8)
+    colored_depth = cv2.applyColorMap(depth, cv2.COLORMAP_INFERNO)[:, :, ::-1]
+    #TBD save images locally
+    #Have web server pick them up and serve them
+    im = Image.fromarray(colored_depth)
+    im.save("depth_map.png")
+    return colored_depth
 
 def generate_llm_prompt(text, dice_roll, _=gr.Progress(track_tqdm=True)):
    
@@ -338,6 +379,7 @@ with gr.Blocks(css=css_code, js=_js, theme=theme) as demo:
                 guidance_input = gr.Slider(0, 15, value=2.0, label="Guidance")
         with gr.Column(scale=3):
             out = gr.Image(label="Result", type="pil", elem_id="visible")
+            depth_map = gr.Image(label="Depth Map", type="pil", elem_id="visible")
 
     radio.change(update_visibility, radio, [ocr_output, dice_roll_input])        
     i.change(ocr_dice_roll, [i, radio], [ocr_output, dice_roll_theme])
@@ -349,7 +391,7 @@ with gr.Blocks(css=css_code, js=_js, theme=theme) as demo:
     llm_button.click(generate_llm_prompt, [text_input, dice_roll_input], text_output)
     #The LLM Generated Prompt can be left empty, and the image will be generated with the original prompt + theme
     image_btn.click(generate_from_text, [dice_roll_theme, text_input, text_output, seed_input, steps_input, guidance_input], out)
-    
+    out.change(depth_map_parallax, out, depth_map)
     #with gr.Row():
         #with gr.Column(scale=1):
             #Image.fromarray(out).save("output.png")
