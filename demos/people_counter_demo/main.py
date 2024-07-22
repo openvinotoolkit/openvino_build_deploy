@@ -205,8 +205,6 @@ def get_annotators(json_path: str, resolution_wh: Tuple[int, int]) -> Tuple[List
         # a zone to count people in
         zone = sv.PolygonZone(polygon=polygon, frame_resolution_wh=resolution_wh)
         zones.append(zone)
-        # the annotator - visual part of the zone
-        zone_annotators.append(sv.PolygonZoneAnnotator(zone=zone, color=colors.by_idx(index), thickness=4))
         # box annotator, showing boxes around people
         box_annotators.append(sv.BoxAnnotator(color=colors.by_idx(index)))
         # mask annotator, showing transparent mask
@@ -289,7 +287,7 @@ def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str,
     # initialize video player to deliver frames
     if isinstance(video_path, str) and video_path.isnumeric():
         video_path = int(video_path)
-    player = utils.VideoPlayer(video_path, size=(1920, 1080), fps=60)
+    player = utils.VideoPlayer(video_path, size=(1920, 1080), fps=60, flip=True)
 
     # get zones, and zone and box annotators for zones
     zones, zone_annotators, box_annotators, masks_annotators = get_annotators(json_path=zones_config_file,
