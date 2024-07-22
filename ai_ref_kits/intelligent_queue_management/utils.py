@@ -8,6 +8,7 @@ from pathlib import Path
 import cv2
 import tqdm
 
+
 class VideoPlayer:
     """
     Custom video player to fulfill FPS requirements. You can set target FPS and output size,
@@ -39,6 +40,9 @@ class VideoPlayer:
         self.__interpolation = None
         if size is not None:
             self.__size = size
+            self.__cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc(*"MJPG"))
+            self.__cap.set(cv2.CAP_PROP_FRAME_WIDTH, size[0])
+            self.__cap.set(cv2.CAP_PROP_FRAME_HEIGHT, size[1])
             # AREA better for shrinking, LINEAR better for enlarging
             self.__interpolation = (
                 cv2.INTER_AREA
@@ -112,6 +116,7 @@ class VideoPlayer:
         if self.__flip:
             frame = cv2.flip(frame, 1)
         return frame
+
 
 def download_file(
     url: PathLike,
