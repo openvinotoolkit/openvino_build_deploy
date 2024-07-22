@@ -128,7 +128,7 @@ The application uses three separate models for its operation, each requiring con
 
 1. Automated Speech Recognition Distil-Whisper Conversion:
 ```shell
-python convert_and_optimize_asr.py --precision int8
+python convert_and_optimize_asr.py --asr_model_type distil-whisper-large-v2 --precision int8
 ```
 This script will convert and optimize the automatic speech recognition (ASR) model performing weights quantization.
 If you want to convert speech to text in Chinese, you could choose the Chinese fine-tuned ASR model with the following:
