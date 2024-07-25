@@ -13,7 +13,7 @@ Rules:
 - The demo should provide a nice UI (Gradio is preferred)
 - The demo should use utils for playing video streams, downloading files, and adding the watermark
 - The demo should work and be tested for Windows and Linux
-- 
+
 ## Merging
 
 All updates are to be provided as a PR, which then should be reviewed by original authors (update of existing demo) or demos owners ([@adrianboguszewski](https://github.com/adrianboguszewski), [@zhuo-yoyowz](https://github.com/zhuo-yoyowz)) in case of a new contribution.
