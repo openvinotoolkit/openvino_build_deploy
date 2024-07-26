@@ -1,5 +1,9 @@
 # Santa Claus demo with OpenVINO™
 
+The demo detects people in front of the webcam and changes them into Santa Claus (the biggest face) and reindeer (all other faces). The name of the reindeer depends on the face expression (emotion).
+
+[![image](https://github.com/openvinotoolkit/openvino_build_deploy/assets/4547501/0cbf768c-0260-41bc-af64-00dfdaa9110c)](santa_claus_demo)
+
 Here are the steps involved in this demo:
 
 Step 0: Install Python and prerequisites
@@ -74,4 +78,10 @@ To run the application, use the following command:
 
 ```shell
 python main.py --stream 0
+```
+
+To change the models, precision or device use:
+
+```shell
+python main.py --stream 0 --device AUTO --detection_model_name face-detection-adas-0001 --landmarks_model_name landmarks-regression-retail-0009 --emotions_model_name emotions-recognition-retail-0003 --model_precision FP16-INT8
 ```

@@ -305,7 +305,7 @@ if __name__ == '__main__':
     parser.add_argument("--detection_model_name", type=str, default="face-detection-adas-0001", help="Face detection model to be used")
     parser.add_argument("--landmarks_model_name", type=str, default="landmarks-regression-retail-0009", help="Face landmarks regression model to be used")
     parser.add_argument("--emotions_model_name", type=str, default="emotions-recognition-retail-0003", help="Face emotions recognition model to be used")
-    parser.add_argument("--model_precision", type=str, default="FP16-INT8", choices=["FP16-INT8", "FP16", "FP32"], help="Pose estimation model precision")
+    parser.add_argument("--model_precision", type=str, default="FP16-INT8", choices=["FP16-INT8", "FP16", "FP32"], help="All models precision")
     parser.add_argument("--flip", type=bool, default=True, help="Mirror input video")
 
     args = parser.parse_args()
