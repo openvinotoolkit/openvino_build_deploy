@@ -2,7 +2,7 @@
 
 The demo detects people in front of the webcam and changes them into skeletons with a pumpkin head.
 
-[![image](https://github.com/openvinotoolkit/openvino_build_deploy/assets/4547501/b289b9f0-1c5b-4cae-ae0b-ea905d05d5e5)](spooky_demo)
+![image](https://github.com/openvinotoolkit/openvino_build_deploy/assets/4547501/b289b9f0-1c5b-4cae-ae0b-ea905d05d5e5)
 
 Here are the steps involved in this demo:
 

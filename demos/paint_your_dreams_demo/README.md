@@ -9,7 +9,7 @@ The demo generates images in a reasonable time (seconds) on Intel hardware. Ther
 
 Check "Generate endlessly" to generate a new image just after the previous has appeared (a very attention-bringing thing).
 
-[![image](https://github.com/openvinotoolkit/openvino_build_deploy/assets/4547501/a7f53cf2-a40b-4eb2-bb9a-72969ce8ad04)](paint_your_dreams_demo)
+![image](https://github.com/openvinotoolkit/openvino_build_deploy/assets/4547501/a7f53cf2-a40b-4eb2-bb9a-72969ce8ad04)
 
 Here are the steps involved in this demo:
 
@@ -23,7 +23,7 @@ Now, let's dive into the steps starting with installing Python.
 
 **Input text:** a beautiful pink unicorn, 8k
 
-![](https://user-images.githubusercontent.com/29454499/277367065-13a8f622-8ea7-4d12-b3f8-241d4499305e.png)
+![unicorn](https://user-images.githubusercontent.com/29454499/277367065-13a8f622-8ea7-4d12-b3f8-241d4499305e.png)
 
 ## Step 0
 
