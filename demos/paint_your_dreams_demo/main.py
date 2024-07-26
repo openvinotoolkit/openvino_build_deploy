@@ -3,12 +3,14 @@ import os
 import random
 import sys
 import time
+from pathlib import Path
 
 import gradio as gr
 import numpy as np
 import openvino as ov
 import torch
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
+from huggingface_hub.utils import LocalEntryNotFoundError
 from optimum.intel.openvino import OVLatentConsistencyModelPipeline
 
 SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "utils")
@@ -17,9 +19,15 @@ sys.path.append(os.path.dirname(SCRIPT_DIR))
 from utils import demo_utils as utils
 
 MAX_SEED = np.iinfo(np.int32).max
+MODEL_DIR = Path("model")
 
 ov_pipeline: OVLatentConsistencyModelPipeline | None = None
-safety_checker: StableDiffusionSafetyChecker = StableDiffusionSafetyChecker.from_pretrained("CompVis/stable-diffusion-safety-checker")
+safety_checker: StableDiffusionSafetyChecker | None = None
+
+try:
+    safety_checker = StableDiffusionSafetyChecker.from_pretrained("CompVis/stable-diffusion-safety-checker", local_files_only=True)
+except (LocalEntryNotFoundError, EnvironmentError):
+    safety_checker = StableDiffusionSafetyChecker.from_pretrained("CompVis/stable-diffusion-safety-checker")
 
 ov_pipelines = {}
 
