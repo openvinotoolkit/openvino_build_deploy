@@ -23,16 +23,6 @@ from utils import demo_utils as utils
 
 
 def convert(det_model_name: str, model_dir: Path) -> tuple[Path, Path]:
-    """
-    Convert YOLO model
-
-    Params:
-        det_model_name: name of the YOLO model we want to use
-        model_dir: dir to export model
-        quantize: whether to quantize
-    Returns:
-       Path to exported model
-    """
     model_path = model_dir / f"{det_model_name}.pt"
     # create a YOLO object detection model
     det_model = YOLO(model_path)
@@ -48,18 +38,6 @@ def convert(det_model_name: str, model_dir: Path) -> tuple[Path, Path]:
 
 
 def letterbox(img: np.ndarray, new_shape: Tuple[int, int]) -> Tuple[np.ndarray, Tuple[float, float], Tuple[int, int]]:
-    """
-        Resize image and padding for detection. Takes image as input,
-         resizes image to fit into new shape with saving original aspect ratio and pads it to meet stride-multiple constraints
-
-        Parameters:
-          img: image for preprocessing
-          new_shape: image size after preprocessing in format [width, height]
-        Returns:
-          img: image after preprocessing
-          ratio: hight and width scaling ratio
-          padding_size: height and width padding size
-    """
     # Resize and pad image while meeting stride-multiple constraints
     shape = img.shape[1::-1]  # current shape [width, height]
 
@@ -83,15 +61,6 @@ def letterbox(img: np.ndarray, new_shape: Tuple[int, int]) -> Tuple[np.ndarray, 
 
 
 def preprocess(image: np.ndarray, input_size: Tuple[int, int]) -> np.ndarray:
-    """
-        Preprocess image according to YOLOv8 input requirements.
-
-        Parameters:
-          image: image for preprocessing
-          input_size: image size after preprocessing in format [width, height]
-        Returns:
-          img: image after preprocessing
-    """
     # add padding to the image
     image, _, padding = letterbox(image, new_shape=input_size)
     # convert to float32
@@ -106,22 +75,6 @@ def preprocess(image: np.ndarray, input_size: Tuple[int, int]) -> np.ndarray:
 
 
 def postprocess(pred_boxes: np.ndarray, pred_masks: np.ndarray, input_size: Tuple[int, int], orig_img, padding, min_conf_threshold=0.25, nms_iou_threshold=0.75, agnostic_nms=False, max_detections=100) -> sv.Detections:
-    """
-        YOLOv8 model postprocessing function. Applied non-maximum supression algorithm to detections and rescale boxes to original image size,
-         filtering out other classes than person
-
-         Parameters:
-            pred_boxes: model output prediction boxes
-            pred_masks: model output prediction masks
-            input_size: image size after preprocessing in format [width, height]
-            orig_img: image before preprocessing
-            min_conf_threshold: minimal accepted confidence for object filtering
-            nms_iou_threshold: minimal overlap score for removing objects duplicates in NMS
-            agnostic_nms: apply class agnostinc NMS approach or not
-            max_detections:  maximum detections after NMS
-         Returns:
-            det: list of detected boxes in sv.Detections format
-    """
     nms_kwargs = {"agnostic": agnostic_nms, "max_det": max_detections}
     # non-maximum suppression
     pred = ops.non_max_suppression(torch.from_numpy(pred_boxes), min_conf_threshold, nms_iou_threshold, nc=80, **nms_kwargs)[0]
@@ -146,14 +99,6 @@ def postprocess(pred_boxes: np.ndarray, pred_masks: np.ndarray, input_size: Tupl
 
 
 def get_model(model_path: str, device: str = "AUTO") -> ov.CompiledModel:
-    """
-        Initialize OpenVINO and compile model for latency processing
-
-        Parameters:
-            model_path: path to the model to load
-        Returns:
-           model: compiled and ready OpenVINO model
-    """
     # initialize OpenVINO
     core = ov.Core()
     # read the model from file
@@ -165,14 +110,6 @@ def get_model(model_path: str, device: str = "AUTO") -> ov.CompiledModel:
 
 
 def load_zones(json_path: str) -> List[np.ndarray]:
-    """
-        Load zones specified in an external json file
-
-        Parameters:
-            json_path: path to the json file with defined zones
-        Returns:
-           zones: a list of arrays with zone points
-    """
     # load json file
     with open(json_path) as f:
         zones_dict = json.load(f)
@@ -182,15 +119,6 @@ def load_zones(json_path: str) -> List[np.ndarray]:
 
 
 def get_annotators(json_path: str, resolution_wh: Tuple[int, int]) -> Tuple[List, List, List]:
-    """
-        Load zones specified in an external json file
-
-        Parameters:
-            json_path: path to the json file with defined zones
-            resolution_wh: width and height of the frame
-        Returns:
-           zones, zone_annotators, box_annotators: lists of zones and their annotators
-    """
     # list of points
     polygons = load_zones(json_path)
 
@@ -205,6 +133,8 @@ def get_annotators(json_path: str, resolution_wh: Tuple[int, int]) -> Tuple[List
         # a zone to count people in
         zone = sv.PolygonZone(polygon=polygon, frame_resolution_wh=resolution_wh)
         zones.append(zone)
+        # the annotator - visual part of the zone
+        zone_annotators.append(sv.PolygonZoneAnnotator(zone=zone, color=colors.by_idx(index), thickness=0))
         # box annotator, showing boxes around people
         box_annotators.append(sv.BoxAnnotator(color=colors.by_idx(index)))
         # mask annotator, showing transparent mask
@@ -213,52 +143,18 @@ def get_annotators(json_path: str, resolution_wh: Tuple[int, int]) -> Tuple[List
     return zones, zone_annotators, box_annotators, masks_annotators
 
 
-def draw_text(image, text, point, color=(255, 255, 255)) -> None:
-    """
-    Draws "Store assistant required" in the bottom-right corner
-
-    Parameters:
-        image: image to draw on
-        text: text to draw
-        point: top left corner of the text
-        color: text color
-    """
-    _, f_width = image.shape[:2]
-    text_size, _ = cv2.getTextSize(text, fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=f_width / 2000, thickness=2)
-
-    rect_width = text_size[0] + 50
-    rect_height = text_size[1] + 30
-    rect_x, rect_y = point
-
-    cv2.rectangle(image, pt1=(rect_x, rect_y), pt2=(rect_x + rect_width, rect_y + rect_height), color=(0, 0, 0), thickness=cv2.FILLED)
-
-    text_x = rect_x + (rect_width - text_size[0]) // 2
-    text_y = rect_y + (rect_height + text_size[1]) // 2
-
-    cv2.putText(image, text=text, org=(text_x, text_y), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=f_width / 2000, color=color, thickness=1, lineType=cv2.LINE_AA)
-
-
 def draw_info(image, device_mapping):
     h, w = image.shape[:2]
     line_space = 40
     start_y = (len(device_mapping) + 3) * line_space + 20
-    draw_text(image, "Control panel. Press:", (10, h - start_y))
-    draw_text(image, "f: FP16 model", (10, h - start_y + line_space))
-    draw_text(image, "i: INT8 model", (10, h - start_y + 2 * line_space))
+    utils.draw_text(image, "Control panel. Press:", (10, h - start_y))
+    utils.draw_text(image, "f: FP16 model", (10, h - start_y + line_space))
+    utils.draw_text(image, "i: INT8 model", (10, h - start_y + 2 * line_space))
     for i, (device_name, device_info) in enumerate(device_mapping.items(), start=1):
-        draw_text(image, f"{i}: {device_name} - {device_info}", (10, h - start_y + (i + 2) * line_space))
+        utils.draw_text(image, f"{i}: {device_name} - {device_info}", (10, h - start_y + (i + 2) * line_space))
 
 
 def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str, people_limit: int = 3, last_frames: int = 50, model_name: str = "") -> None:
-    """
-    Runs main app
-
-    Parameters:
-        video_path: video path or camera number
-        model_paths: paths to the exported models
-        zones_config_file: path to config file for zones
-        customers_limit: limit of customers in the queue
-    """
     # set up logging
     log.getLogger().setLevel(log.INFO)
 
@@ -290,9 +186,7 @@ def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str,
     player = utils.VideoPlayer(video_path, size=(1920, 1080), fps=60, flip=True)
 
     # get zones, and zone and box annotators for zones
-    zones, zone_annotators, box_annotators, masks_annotators = get_annotators(json_path=zones_config_file,
-                                                                              resolution_wh=(
-                                                                              player.width, player.height))
+    zones, zone_annotators, box_annotators, masks_annotators = get_annotators(json_path=zones_config_file, resolution_wh=(player.width, player.height))
 
     # people counter
     queue_count = defaultdict(lambda: deque(maxlen=last_frames))
@@ -349,7 +243,7 @@ def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str,
 
             # add alert text to the frame if necessary, flash every second
             if mean_customer_count > people_limit and time.time() % 2 > 1:
-                draw_text(frame, text=f"Intel employee required in zone {zone_id}!", point=(20, 20), color=(0, 0, 255))
+                utils.draw_text(frame, text=f"Intel employee required in zone {zone_id}!", point=(20, 20), font_color=(0, 0, 255))
 
             # print an info about number of customers in the queue, ask for the more assistants if required
             log.info(
@@ -359,9 +253,8 @@ def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str,
         processing_time = np.mean(processing_times) * 1000
 
         fps = 1000 / processing_time
-        draw_text(frame, text=f"Inference time: {processing_time:.0f}ms ({fps:.1f} FPS)", point=(f_width * 3 // 5, 10))
-        draw_text(frame, text=f"Currently running {model_name} ({model_type}) on {device_type}",
-                  point=(f_width * 3 // 5, 50))
+        utils.draw_text(frame, text=f"Inference time: {processing_time:.0f}ms ({fps:.1f} FPS)", point=(f_width * 3 // 5, 10))
+        utils.draw_text(frame, text=f"Currently running {model_name} ({model_type}) on {device_type}", point=(f_width * 3 // 5, 50))
 
         draw_info(frame, DEVICE_MAPPING)
         utils.draw_ov_watermark(frame)
