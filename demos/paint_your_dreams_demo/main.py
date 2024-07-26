@@ -32,16 +32,7 @@ except (LocalEntryNotFoundError, EnvironmentError):
 ov_pipelines = {}
 
 stop_generating: bool = True
-
-prompt = ""
-randomize_seed = True
-seed = 0
-guidance_scale = 8.0
-num_inference_steps = 5
-size = 512
-images_to_generate = 1
-device = "AUTO"
-hf_model_name = None
+hf_model_name: str | None = None
 
 
 def get_available_devices() -> list[str]:
@@ -68,17 +59,13 @@ def stop():
     stop_generating = True
 
 
-def generate_images():
+def generate_images(prompt: str, seed: int, size: int, guidance_scale: float, num_inference_steps: int, randomize_seed: bool, device: str, endless_generation: bool):
     global stop_generating
-    stop_generating = False
+    stop_generating = False if endless_generation else True
 
     load_pipeline(hf_model_name, device)
 
-    counter = 0
-    while counter < images_to_generate:
-        if stop_generating:
-            break
-
+    while True:
         local_seed = seed
         if randomize_seed:
             local_seed = random.randint(0, MAX_SEED)
@@ -103,7 +90,8 @@ def generate_images():
         processing_time = end_time - start_time
         yield result, round(processing_time, 5), ov_pipeline.device.upper()
 
-        counter += 1
+        if stop_generating:
+            break
 
 
 def build_ui():
@@ -120,7 +108,6 @@ def build_ui():
             with gr.Row():
                 prompt_text = gr.Text(
                     label="Prompt",
-                    max_lines=1,
                     placeholder="Enter your prompt here",
                 )
             with gr.Row():
@@ -136,15 +123,15 @@ def build_ui():
                 with gr.Row():
                     device_dropdown = gr.Dropdown(
                         choices=get_available_devices(),
-                        value=device,
+                        value="AUTO",
                         label="Inference device",
                         interactive=True,
                         scale=4
                     )
                     endless_checkbox = gr.Checkbox(label="Generate endlessly", value=False, scale=1)
                 with gr.Row():
-                    seed_slider = gr.Slider(label="Seed", minimum=0, maximum=MAX_SEED, step=1, value=seed, randomize=True, scale=1)
-                    randomize_seed_checkbox = gr.Checkbox(label="Randomize seed across runs", value=randomize_seed, scale=0)
+                    seed_slider = gr.Slider(label="Seed", minimum=0, maximum=MAX_SEED, step=1, value=0, randomize=True, scale=1)
+                    randomize_seed_checkbox = gr.Checkbox(label="Randomize seed across runs", value=True, scale=0)
                     randomize_seed_button = gr.Button("Randomize seed", scale=0)
                 with gr.Row():
                     guidance_scale_slider = gr.Slider(
@@ -152,14 +139,14 @@ def build_ui():
                         minimum=2,
                         maximum=14,
                         step=0.1,
-                        value=guidance_scale,
+                        value=8.0,
                     )
                     num_inference_steps_slider = gr.Slider(
                         label="Number of inference steps for base",
                         minimum=1,
                         maximum=32,
                         step=1,
-                        value=num_inference_steps,
+                        value=5,
                     )
 
                 size_slider = gr.Slider(
@@ -167,7 +154,7 @@ def build_ui():
                     minimum=256,
                     maximum=1024,
                     step=64,
-                    value=size
+                    value=512
                 )
 
         gr.Examples(
@@ -177,20 +164,14 @@ def build_ui():
             cache_examples=False,
         )
         # clicking run
-        gr.on(triggers=[prompt_text.submit, start_button.click], fn=generate_images, outputs=[result_img, result_time_label, result_device_label])
+        gr.on(triggers=[prompt_text.submit, start_button.click],
+              fn=generate_images,
+              inputs=[prompt_text, seed_slider, size_slider, guidance_scale_slider, num_inference_steps_slider, randomize_seed_checkbox, device_dropdown, endless_checkbox],
+              outputs=[result_img, result_time_label, result_device_label]
+              )
         # clicking stop
         stop_button.click(stop)
-        # changing device
-        device_dropdown.change(lambda x: globals().update(device=x), inputs=device_dropdown)
-        # changing parameters
-        endless_checkbox.change(lambda x: globals().update(images_to_generate=MAX_SEED if x else 1), inputs=endless_checkbox)
         randomize_seed_button.click(lambda _: random.randint(0, MAX_SEED), inputs=seed_slider, outputs=seed_slider)
-        randomize_seed_checkbox.change(lambda x: globals().update(randomize_seed=x), inputs=randomize_seed_checkbox)
-        size_slider.change(lambda x: globals().update(size=x), inputs=size_slider)
-        guidance_scale_slider.change(lambda x: globals().update(guidance_scale=x), inputs=guidance_scale_slider)
-        seed_slider.change(lambda x: globals().update(seed=x), inputs=seed_slider)
-        num_inference_steps_slider.change(lambda x: globals().update(num_inference_steps=x), inputs=num_inference_steps_slider)
-        prompt_text.change(lambda x: globals().update(prompt=x), inputs=prompt_text)
 
     return demo
 
@@ -209,7 +190,6 @@ if __name__ == '__main__':
     parser.add_argument("--model_name", type=str, default="OpenVINO/LCM_Dreamshaper_v7-fp16-ov",
                         choices=["OpenVINO/LCM_Dreamshaper_v7-int8-ov", "OpenVINO/LCM_Dreamshaper_v7-fp16-ov"], help="Visual GenAI model to be used")
     parser.add_argument("--local_network", action="store_true", help="Whether demo should be available in local network")
-
 
     args = parser.parse_args()
     run_endless_lcm(args.model_name, args.local_network)
