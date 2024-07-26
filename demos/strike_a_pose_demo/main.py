@@ -189,10 +189,7 @@ def run_pose_estimation(source, model_name, model_precision, device, flip):
             # mean processing time [ms]
             processing_time = np.mean(processing_times) * 1000
             fps = 1000 / processing_time
-            cv2.putText(frame, f"Inference time: {processing_time:.1f}ms ({fps:.1f} FPS)", (20, 40),
-                        cv2.FONT_HERSHEY_COMPLEX, f_width / 1500, (0, 0, 0), 2, cv2.LINE_AA)
-            cv2.putText(frame, f"Inference time: {processing_time:.1f}ms ({fps:.1f} FPS)", (20, 40),
-                        cv2.FONT_HERSHEY_COMPLEX, f_width / 1500, (255, 255, 255), 1, cv2.LINE_AA)
+            utils.draw_text(frame, f"Inference time: {processing_time:.1f}ms ({fps:.1f} FPS)", (20, 20))
 
             cv2.imshow(title, frame)
             key = cv2.waitKey(1)
