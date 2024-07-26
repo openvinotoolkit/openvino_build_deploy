@@ -92,11 +92,16 @@ def generate_images():
         end_time = time.time()
 
         result, nsfw = safety_checker(ov_pipeline.feature_extractor(result, return_tensors="pt").pixel_values, np.array(result))
+        result, nsfw = result[0], nsfw[0]
 
-        utils.draw_ov_watermark(result[0], size=0.60)
+        if nsfw:
+            h, w = result.shape[:2]
+            utils.draw_text(result, "Potential NSFW content", (w // 2, h // 2), center=True, font_scale=3.0)
+
+        utils.draw_ov_watermark(result, size=0.60)
 
         processing_time = end_time - start_time
-        yield result[0], round(processing_time, 5), ov_pipeline.device.upper()
+        yield result, round(processing_time, 5), ov_pipeline.device.upper()
 
         counter += 1
 

@@ -226,7 +226,7 @@ def draw_text(image: ndarray, text: str, point: Tuple[int, int], center: bool = 
 
     rect_width = text_size[0] + 50
     rect_height = text_size[1] + 30
-    rect_x, rect_y = point
+    rect_x, rect_y = point[0] - rect_width // 2, point[1] - rect_height // 2 if center else point
 
     cv2.rectangle(image, pt1=(rect_x, rect_y), pt2=(rect_x + rect_width, rect_y + rect_height), color=(0, 0, 0), thickness=cv2.FILLED)
 
