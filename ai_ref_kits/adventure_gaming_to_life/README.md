@@ -30,7 +30,7 @@
 	After model installation, you can remove the virtual environment as it isn't needed anymore.
 
 
-3. Create a virtual env and install the required python packages <br>
+3. Create a virtual env and install the required python packages. Your requirements.txt file will depend on the Python version you're using (3.11 or 3.12) <br>
     ```
     	python -m venv dnd_env
 	dnd_env\Scripts\activate
@@ -42,11 +42,11 @@
 
 Run the following command to start an HTTP server within the repository. You can customize index.html with any additional elements as you'd like.
 ```
-http_server
+http-server
 ``` 
 5. Open a terminal or you can use the existing one with dnd_env environment activated and start the Gradio GUI - <br>
 ```
-python gradio_ui.py
+python gradio_ui.py 
 ```
 Click on the web link to open the GUI in the web browser <br>
 

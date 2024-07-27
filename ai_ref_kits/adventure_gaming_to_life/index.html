@@ -19,12 +19,12 @@
 
       container.appendChild(app.view);
 
-      const img = new PIXI.Sprite.from("original_image.png");
+      const img = new PIXI.Sprite.from("results/original_image.png");
       img.width = IMG_WIDTH;
       img.height = IMG_HEIGHT;
       app.stage.addChild(img);
 
-      depthMap = new PIXI.Sprite.from("depth_map.png");
+      depthMap = new PIXI.Sprite.from("results/depth_map.png");
       depthMap.width = IMG_WIDTH;
       depthMap.height = IMG_HEIGHT;
       app.stage.addChild(depthMap);

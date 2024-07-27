@@ -229,6 +229,24 @@ def patch_whisper_for_ov_inference(model):
     model.decode = partial(decode, model)
     model.logits = partial(logits, model)
 
+def resample_wav(wav_file):
+    """
+    Resample the wav file to the expected sample rate
+
+    Parameters:
+        wav_file: path to input video file
+    Returns:
+      resampled_audio: mono-channel float audio signal with 16000 Hz sample rate 
+                       extracted from wav_file  
+    """
+    sample_rate, audio = wavfile.read(
+        io.BytesIO(open(wav_file, 'rb').read()))
+    audio = audio_to_float(audio)
+    if audio.ndim == 2:
+        audio = audio.mean(axis=1)
+    resampled_audio = resample(audio, sample_rate, 16000)
+    return resampled_audio
+
 
 def resample(audio, src_sample_rate, dst_sample_rate):
     """
