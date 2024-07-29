@@ -2,7 +2,7 @@
 
 The demo detects people in front of the webcam and changes them into Santa Claus (the biggest face) and reindeer (all other faces). The name of the reindeer depends on the face expression (emotion).
 
-[image](https://github.com/openvinotoolkit/openvino_build_deploy/assets/4547501/0cbf768c-0260-41bc-af64-00dfdaa9110c)
+![image](https://github.com/openvinotoolkit/openvino_build_deploy/assets/4547501/0cbf768c-0260-41bc-af64-00dfdaa9110c)
 
 Here are the steps involved in this demo:
 
