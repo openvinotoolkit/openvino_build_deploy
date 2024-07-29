@@ -1,4 +1,4 @@
-# Image generation with Latent Consistency Model and OpenVINO™
+# Paint Your Dreams with OpenVINO™
 
 The demo generates images in a reasonable time (seconds) on Intel hardware. There are many options to customize the demo behaviour:
 - inference device
