@@ -128,7 +128,6 @@ def get_annotators(json_path: str, resolution_wh: Tuple[int, int]) -> Tuple[List
     zones = []
     zone_annotators = []
     box_annotators = []
-    masks_annotators = []
     for index, polygon in enumerate(polygons):
         # a zone to count people in
         zone = sv.PolygonZone(polygon=polygon, frame_resolution_wh=resolution_wh)
@@ -137,10 +136,8 @@ def get_annotators(json_path: str, resolution_wh: Tuple[int, int]) -> Tuple[List
         zone_annotators.append(sv.PolygonZoneAnnotator(zone=zone, color=colors.by_idx(index), thickness=0))
         # box annotator, showing boxes around people
         box_annotators.append(sv.BoxAnnotator(color=colors.by_idx(index)))
-        # mask annotator, showing transparent mask
-        masks_annotators.append(sv.MaskAnnotator(color=colors.by_idx(index)))
 
-    return zones, zone_annotators, box_annotators, masks_annotators
+    return zones, zone_annotators, box_annotators
 
 
 def draw_info(image, device_mapping):
@@ -186,7 +183,7 @@ def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str,
     player = utils.VideoPlayer(video_path, size=(1920, 1080), fps=60, flip=True)
 
     # get zones, and zone and box annotators for zones
-    zones, zone_annotators, box_annotators, masks_annotators = get_annotators(json_path=zones_config_file, resolution_wh=(player.width, player.height))
+    zones, zone_annotators, box_annotators = get_annotators(json_path=zones_config_file, resolution_wh=(player.width, player.height))
 
     # people counter
     queue_count = defaultdict(lambda: deque(maxlen=last_frames))
@@ -222,16 +219,15 @@ def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str,
                                  padding=padding)
 
         # annotate the frame with the detected persons within each zone
-        for zone_id, (zone, zone_annotator, box_annotator, masks_annotator) in enumerate(
-                zip(zones, zone_annotators, box_annotators, masks_annotators), start=1):
+        for zone_id, (zone, zone_annotator, box_annotator) in enumerate(
+                zip(zones, zone_annotators, box_annotators), start=1):
             # visualize polygon for the zone
             frame = zone_annotator.annotate(scene=frame)
 
             # get detections relevant only for the zone
             mask = zone.trigger(detections=detections)
             detections_filtered = detections[mask]
-            # visualize boxes around people in the zone - uncomment if you want to draw masks
-            # frame = masks_annotator.annotate(scene=frame, detections=detections_filtered)
+            # visualize boxes around people in the zone
             frame = box_annotator.annotate(scene=frame, detections=detections_filtered)
             # count how many people detected
             det_count = len(detections_filtered)
