@@ -123,7 +123,7 @@ def get_annotators(json_path: str, resolution_wh: Tuple[int, int]) -> Tuple[List
     polygons = load_zones(json_path)
 
     # colors for zones
-    colors = sv.ColorPalette.default()
+    colors = sv.ColorPalette([sv.Color.RED])
 
     zones = []
     zone_annotators = []
@@ -232,7 +232,7 @@ def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str,
             detections_filtered = detections[mask]
             # visualize boxes around people in the zone - uncomment if you want to draw masks
             # frame = masks_annotator.annotate(scene=frame, detections=detections_filtered)
-            frame = box_annotator.annotate(scene=frame, detections=detections_filtered, skip_label=True)
+            frame = box_annotator.annotate(scene=frame, detections=detections_filtered)
             # count how many people detected
             det_count = len(detections_filtered)
 
