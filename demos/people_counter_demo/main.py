@@ -22,19 +22,19 @@ sys.path.append(os.path.dirname(SCRIPT_DIR))
 from utils import demo_utils as utils
 
 
-def convert(det_model_name: str, model_dir: Path) -> tuple[Path, Path]:
-    model_path = model_dir / f"{det_model_name}.pt"
+def convert(model_name: str, model_dir: Path) -> tuple[Path, Path]:
+    model_path = model_dir / f"{model_name}.pt"
     # create a YOLO object detection model
-    det_model = YOLO(model_path)
+    yolo_model = YOLO(model_path)
 
-    ov_model_path = model_dir / f"{det_model_name}_openvino_model"
-    ov_int8_model_path = model_dir / f"{det_model_name}_int8_openvino_model"
+    ov_model_path = model_dir / f"{model_name}_openvino_model"
+    ov_int8_model_path = model_dir / f"{model_name}_int8_openvino_model"
     # export the model to OpenVINO format (FP16 and INT8)
     if not ov_model_path.exists():
-        ov_model_path = det_model.export(format="openvino", dynamic=False, half=True)
+        ov_model_path = yolo_model.export(format="openvino", dynamic=False, half=True)
     if not ov_int8_model_path.exists():
-        ov_int8_model_path = det_model.export(format="openvino", dynamic=False, half=True, int8=True)
-    return Path(ov_model_path) / f"{det_model_name}.xml", Path(ov_int8_model_path) / f"{det_model_name}.xml"
+        ov_int8_model_path = yolo_model.export(format="openvino", dynamic=False, half=True, int8=True)
+    return Path(ov_model_path) / f"{model_name}.xml", Path(ov_int8_model_path) / f"{model_name}.xml"
 
 
 def letterbox(img: np.ndarray, new_shape: Tuple[int, int]) -> Tuple[np.ndarray, Tuple[float, float], Tuple[int, int]]:
@@ -88,6 +88,7 @@ def postprocess(pred_boxes: np.ndarray, pred_masks: np.ndarray, input_size: Tupl
         # upscale masks
         masks = np.array(ops.process_mask(torch.from_numpy(pred_masks[0]), pred[:, 6:], pred[:, :4], input_size, upsample=True))
         masks = np.array([cv2.resize(mask[padding[1]:-padding[1] - 1, padding[0]:-padding[0] - 1], orig_img.shape[:2][::-1], interpolation=cv2.INTER_AREA) for mask in masks])
+        masks = masks.astype(np.bool_)
     # transform boxes to pixel coordinates
     pred[:, :4] = ops.scale_boxes(input_size, pred[:, :4], orig_img.shape).round()
     # numpy array from torch tensor
@@ -123,13 +124,13 @@ def get_annotators(json_path: str, resolution_wh: Tuple[int, int]) -> Tuple[List
     polygons = load_zones(json_path)
 
     # colors for zones
-    colors = sv.ColorPalette.default()
+    colors = sv.ColorPalette.DEFAULT
 
     zones = []
     zone_annotators = []
     box_annotators = []
     masks_annotators = []
-    for index, polygon in enumerate(polygons):
+    for index, polygon in enumerate(polygons, start=1):
         # a zone to count people in
         zone = sv.PolygonZone(polygon=polygon, frame_resolution_wh=resolution_wh)
         zones.append(zone)
@@ -218,8 +219,7 @@ def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str,
         boxes = results[model.outputs[0]]
         masks = results[model.outputs[1]] if len(model.outputs) > 1 else None
         # postprocessing
-        detections = postprocess(pred_boxes=boxes, pred_masks=masks, input_size=input_shape[:2], orig_img=frame,
-                                 padding=padding)
+        detections = postprocess(pred_boxes=boxes, pred_masks=masks, input_size=input_shape[:2], orig_img=frame, padding=padding)
 
         # annotate the frame with the detected persons within each zone
         for zone_id, (zone, zone_annotator, box_annotator, masks_annotator) in enumerate(
@@ -230,9 +230,9 @@ def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str,
             # get detections relevant only for the zone
             mask = zone.trigger(detections=detections)
             detections_filtered = detections[mask]
-            # visualize boxes around people in the zone - uncomment if you want to draw masks
-            # frame = masks_annotator.annotate(scene=frame, detections=detections_filtered)
-            frame = box_annotator.annotate(scene=frame, detections=detections_filtered, skip_label=True)
+            # visualize boxes around people in the zone
+            frame = masks_annotator.annotate(scene=frame, detections=detections_filtered)
+            frame = box_annotator.annotate(scene=frame, detections=detections_filtered)
             # count how many people detected
             det_count = len(detections_filtered)
 
@@ -291,8 +291,8 @@ def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str,
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--stream', default="0", type=str, help="Path to a video file or the webcam number")
-    parser.add_argument("--model_name", type=str, choices=["yolov8n", "yolov8s", "yolov8m", "yolov8l", "yolov8x"],
-                        default="yolov8n", help="Model version to be converted")
+    parser.add_argument("--model_name", type=str, default="yolov8n", help="Model version to be converted",
+                        choices=["yolov8n", "yolov8s", "yolov8m", "yolov8l", "yolov8x", "yolov8n-seg", "yolov8s-seg", "yolov8m-seg", "yolov8l-seg", "yolov8x-seg"])
     parser.add_argument("--model_dir", type=str, default="model", help="Directory to place the model in")
     parser.add_argument('--zones_config_file', type=str, default="zones.json", help="Path to the zone config file (json)")
     parser.add_argument('--people_limit', type=int, default=3, help="The maximum number of people in the area")
