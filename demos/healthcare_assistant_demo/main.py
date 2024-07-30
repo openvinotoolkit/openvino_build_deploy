@@ -147,35 +147,40 @@ def chat(history: List[List[str]]) -> List[List[str]]:
     thread.join()
 
 
-def transcribe(audio: Tuple[int, np.ndarray], conversation: List[List[str]]) -> List[List[str]]:
-    start_time = time.time()  # Start time for ASR process
+def transcribe(audio: Tuple[int, np.ndarray], prompt: str, conversation: List[List[str]]) -> List[List[str]]:
+    # if audio is available, use audio, otherwise, use given text
+    if audio:
+        start_time = time.time()  # Start time for ASR process
 
-    sample_rate, audio = audio
-    # the whisper model requires 16000Hz, not 44100Hz
-    audio = librosa.resample(audio.astype(np.float32), orig_sr=sample_rate, target_sr=TARGET_AUDIO_SAMPLE_RATE).astype(np.int16)
+        sample_rate, audio = audio
+        # the whisper model requires 16000Hz, not 44100Hz
+        audio = librosa.resample(audio.astype(np.float32), orig_sr=sample_rate, target_sr=TARGET_AUDIO_SAMPLE_RATE).astype(np.int16)
 
-    # get input features from the audio
-    input_features = asr_processor(audio, sampling_rate=TARGET_AUDIO_SAMPLE_RATE, return_tensors="pt").input_features
+        # get input features from the audio
+        input_features = asr_processor(audio, sampling_rate=TARGET_AUDIO_SAMPLE_RATE, return_tensors="pt").input_features
 
-    # use streamer to show transcription word by word
-    text_streamer = TextIteratorStreamer(asr_processor, skip_prompt=True, skip_special_tokens=True)
+        # use streamer to show transcription word by word
+        text_streamer = TextIteratorStreamer(asr_processor, skip_prompt=True, skip_special_tokens=True)
 
-    # transcribe in the background to deliver response token by token
-    thread = Thread(target=asr_model.generate, kwargs={"input_features": input_features, "streamer": text_streamer})
-    thread.start()
+        # transcribe in the background to deliver response token by token
+        thread = Thread(target=asr_model.generate, kwargs={"input_features": input_features, "streamer": text_streamer})
+        thread.start()
 
-    conversation.append(["", None])
-    # get token by token and merge to the final response
-    for partial_text in text_streamer:
-        conversation[-1][0] += partial_text
-        # "return" partial response
+        conversation.append(["", None])
+        # get token by token and merge to the final response
+        for partial_text in text_streamer:
+            conversation[-1][0] += partial_text
+            # "return" partial response
+            yield conversation
+
+        end_time = time.time()  # End time for ASR process
+        log.info(f"ASR model response time: {end_time - start_time:.2f} seconds")  # Print the ASR processing time
+
+        # wait for the thread
+        thread.join()
+    else:
+        conversation.append([prompt, None])
         yield conversation
-
-    end_time = time.time()  # End time for ASR process
-    log.info(f"ASR model response time: {end_time - start_time:.2f} seconds")  # Print the ASR processing time
-
-    # wait for the thread
-    thread.join()
 
     return conversation
 
@@ -197,8 +202,10 @@ def create_UI(initial_message: str) -> gr.Blocks:
         - click summarize button to make a summary
         """)
         with gr.Row():
-            # user's input
-            input_audio_ui = gr.Audio(sources=["microphone"], scale=5, label="Your voice input")
+            with gr.Column(scale=5):
+                # user's inputs
+                input_audio_ui = gr.Audio(sources=["microphone"], label="Your voice input")
+                input_text_ui = gr.Textbox(label="Your text input")
             # submit button
             submit_audio_btn = gr.Button("Submit", variant="primary", scale=1, interactive=False)
 
@@ -210,15 +217,16 @@ def create_UI(initial_message: str) -> gr.Blocks:
         summary_ui = gr.Textbox(label="Summary", interactive=False)
 
         # events
-        # block submit button when no audio input
-        input_audio_ui.change(lambda x: gr.Button(interactive=False) if x is None else gr.Button(interactive=True), inputs=input_audio_ui, outputs=submit_audio_btn)
+        # block submit button when no audio or text input
+        gr.on(triggers=[input_audio_ui.change, input_text_ui.change], inputs=[input_audio_ui, input_text_ui], outputs=submit_audio_btn,
+              fn=lambda x, y: gr.Button(interactive=True) if x or y else gr.Button(interactive=False))
 
         # block buttons, do the transcription and conversation, clear audio, unblock buttons
         submit_audio_btn.click(lambda: gr.Button(interactive=False), outputs=submit_audio_btn) \
             .then(lambda: gr.Button(interactive=False), outputs=summarize_button)\
-            .then(transcribe, inputs=[input_audio_ui, chatbot_ui], outputs=chatbot_ui)\
+            .then(transcribe, inputs=[input_audio_ui, input_text_ui, chatbot_ui], outputs=chatbot_ui)\
             .then(chat, chatbot_ui, chatbot_ui)\
-            .then(lambda: None, inputs=[], outputs=[input_audio_ui])\
+            .then(lambda: (None, None), inputs=[], outputs=[input_audio_ui, input_text_ui])\
             .then(lambda: gr.Button(interactive=True), outputs=summarize_button)
 
         # block button, do the summarization, unblock button
