@@ -19,8 +19,10 @@ SYSTEM_CONFIGURATION = (
     "You are Adrishuo - a helpful, respectful, and honest virtual doctor assistant. "
     "Your role is talking to a patient who just came in."
     "Your primary role is to assist in the collection of Symptom information from patients. "
-    "Focus solely on gathering symptom details without offering treatment or medical advice."
-    "You must only ask follow-up questions based on the patient's initial descriptions to clarify and gather more details about their symtpoms. "
+    "The patient may attach prior examination report related to their health, which is available after 'additional context' keywords. "
+    "Even the report is attached, you still must continue the conversation. "
+    "Focus solely on gathering symptom details without offering treatment or medical advice. "
+    "You must only ask follow-up questions based on the patient's initial descriptions and optional report to clarify and gather more details about their symtpoms. "
     "You must not attempt to diagnose, treat, or offer health advice. "
     "Ask one and only the symptom related followup questions and keep it short. "
     "You must strictly not suggest or recommend any treatments, including over-the-counter medication. "
@@ -39,6 +41,7 @@ SUMMARIZE_THE_CUSTOMER = (
     "Warn the patients for immediate medical seeking in case they exhibit symptoms indicative of critical conditions such as heart attacks, strokes, severe allergic reactions, breathing difficulties, high fever with severe symptoms, significant burns, or severe injuries."
     "Summarize the health-related concerns mentioned by the patient in this conversation, focusing only on the information explicitly provided, without adding any assumptions or unrelated symptoms."
 )
+ADDITIONAL_CONTEXT_TEMPLATE = "{}\nAdditional context: {}"
 
 MODEL_DIR = Path("model")
 
@@ -47,6 +50,8 @@ chat_model: Optional[OVModelForCausalLM] = None
 chat_tokenizer: Optional[PreTrainedTokenizer] = None
 asr_model: Optional[OVModelForSpeechSeq2Seq] = None
 asr_processor: Optional[AutoProcessor] = None
+
+context = ""
 
 
 def get_available_devices() -> Set[str]:
@@ -89,13 +94,26 @@ def load_chat_model(model_name: str) -> None:
         chat_tokenizer = AutoTokenizer.from_pretrained(str(model_path))
 
 
+def load_context(file_path: str) -> str:
+    global context
+
+    if not file_path:
+        context = ""
+        return "No report loaded"
+
+    with open(file_path) as f:
+        context = f.read()
+
+    return "Report loaded!"
+
+
 def respond(prompt: str, streamer: BaseStreamer | None = None) -> str:
     start_time = time.time()  # Start time
     # tokenize input text
     inputs = chat_tokenizer(prompt, return_tensors="pt").to(chat_model.device)
     input_length = inputs.input_ids.shape[1]
     # generate response tokens
-    outputs = chat_model.generate(**inputs, max_new_tokens=256, do_sample=True, temperature=0.6, top_p=0.9, top_k=50, streamer=streamer)
+    outputs = chat_model.generate(**inputs, max_new_tokens=512, do_sample=True, temperature=0.6, top_p=0.9, top_k=50, streamer=streamer)
     tokens = outputs[0, input_length:]
     end_time = time.time()  # End time
     log.info("Chat model response time: {:.2f} seconds".format(end_time - start_time))
@@ -112,6 +130,7 @@ def get_conversation(history: List[List[str]]) -> str:
     # add prompts to the conversation
     for user_prompt, assistant_response in history:
         if user_prompt:
+            user_prompt = ADDITIONAL_CONTEXT_TEMPLATE.format(user_prompt, context) if context else user_prompt
             conversation.append({"role": "user", "content": user_prompt})
         if assistant_response:
             conversation.append({"role": "assistant", "content": assistant_response})
@@ -197,11 +216,16 @@ def create_UI(initial_message: str) -> gr.Blocks:
         # Talk to Adrishuo - a custom AI assistant working today as a healthcare assistant
 
         Instructions for use:
-        - record your question/comment using the first audio widget ("Your voice input")
+        - attach the PDF or TXT file with the prior examination report (optional)
+        - record your question/comment using the first audio widget ("Your voice input") or type it in the textbox ("Your text input"), then click Submit
         - wait for the chatbot to response ("Chatbot")
+        - discuss with the chatbot
         - click summarize button to make a summary
         """)
         with gr.Row():
+            with gr.Column(scale=1):
+                file_uploader_ui = gr.File(label="Prior examination report", file_types=[".pdf", ".txt"])
+                context_label = gr.Label(label="Report status", value="No report loaded")
             with gr.Column(scale=5):
                 # user's inputs
                 input_audio_ui = gr.Audio(sources=["microphone"], label="Your voice input")
@@ -220,6 +244,8 @@ def create_UI(initial_message: str) -> gr.Blocks:
         # block submit button when no audio or text input
         gr.on(triggers=[input_audio_ui.change, input_text_ui.change], inputs=[input_audio_ui, input_text_ui], outputs=submit_audio_btn,
               fn=lambda x, y: gr.Button(interactive=True) if x or y else gr.Button(interactive=False))
+
+        file_uploader_ui.change(load_context, inputs=file_uploader_ui, outputs=context_label)
 
         # block buttons, do the transcription and conversation, clear audio, unblock buttons
         submit_audio_btn.click(lambda: gr.Button(interactive=False), outputs=submit_audio_btn) \
