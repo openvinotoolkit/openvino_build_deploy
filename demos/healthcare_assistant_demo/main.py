@@ -9,7 +9,14 @@ import gradio as gr
 import librosa
 import numpy as np
 import openvino as ov
-from optimum.intel import OVModelForCausalLM, OVModelForSpeechSeq2Seq
+from llama_index.core import Document, VectorStoreIndex, Settings
+from llama_index.core.base.base_query_engine import BaseQueryEngine
+from llama_index.embeddings.huggingface_openvino import OpenVINOEmbedding
+from llama_index.llms.openvino import OpenVINOLLM
+from llama_index.postprocessor.openvino_rerank import OpenVINORerank
+from llama_index.readers.file import PDFReader
+from optimum.intel import OVModelForCausalLM, OVModelForSpeechSeq2Seq, OVModelForFeatureExtraction, \
+    OVModelForSequenceClassification
 from transformers import AutoConfig, AutoTokenizer, AutoProcessor, PreTrainedTokenizer, TextIteratorStreamer
 from transformers.generation.streamers import BaseStreamer
 
@@ -19,7 +26,7 @@ SYSTEM_CONFIGURATION = (
     "You are Adrishuo - a helpful, respectful, and honest virtual doctor assistant. "
     "Your role is talking to a patient who just came in."
     "Your primary role is to assist in the collection of Symptom information from patients. "
-    "The patient may attach prior examination report related to their health, which is available after 'additional context' keywords. "
+    "The patient may attach prior examination report related to their health, which is available as a context information. "
     "Even the report is attached, you still must continue the conversation. "
     "Focus solely on gathering symptom details without offering treatment or medical advice. "
     "You must only ask follow-up questions based on the patient's initial descriptions and optional report to clarify and gather more details about their symtpoms. "
@@ -50,8 +57,10 @@ chat_model: Optional[OVModelForCausalLM] = None
 chat_tokenizer: Optional[PreTrainedTokenizer] = None
 asr_model: Optional[OVModelForSpeechSeq2Seq] = None
 asr_processor: Optional[AutoProcessor] = None
-
-context = ""
+llm: Optional[OpenVINOLLM] = None
+embedding: Optional[OpenVINOEmbedding] = None
+reranker: Optional[OpenVINORerank] = None
+query_engine: Optional[BaseQueryEngine] = None
 
 
 def get_available_devices() -> Set[str]:
@@ -76,7 +85,7 @@ def load_asr_model(model_name: str) -> None:
         asr_processor = AutoProcessor.from_pretrained(str(model_name))
 
 
-def load_chat_model(model_name: str) -> None:
+def load_chat_model(model_name: str) -> OpenVINOLLM:
     global chat_model, chat_tokenizer
 
     model_path = MODEL_DIR / model_name
@@ -90,19 +99,63 @@ def load_chat_model(model_name: str) -> None:
         chat_tokenizer = AutoTokenizer.from_pretrained(model_name)
         chat_tokenizer.save_pretrained(model_path)
     else:
-        chat_model = OVModelForCausalLM.from_pretrained(str(model_path), device=device, config=AutoConfig.from_pretrained(model_name, trust_remote_code=True), ov_config=ov_config)
         chat_tokenizer = AutoTokenizer.from_pretrained(str(model_path))
+
+    return OpenVINOLLM(model_name=str(model_path), tokenizer_name=str(model_path), max_new_tokens=512, device_map=device, model_kwargs={"ov_config": ov_config}, generate_kwargs={"temperature": 0.7, "top_k": 50, "top_p": 0.95})
+
+
+def load_embedding_model(model_name: str) -> OpenVINOEmbedding:
+    model_path = MODEL_DIR / model_name
+
+    if not model_path.exists():
+        embedding_model = OVModelForFeatureExtraction.from_pretrained(model_name, export=True, device="AUTO")
+        embedding_model.save_pretrained(model_path)
+        embedding_tokenizer = AutoTokenizer.from_pretrained(model_name)
+        embedding_tokenizer.save_pretrained(model_path)
+
+    return OpenVINOEmbedding(str(model_path))
+
+
+def load_reranker_model(model_name: str) -> OpenVINORerank:
+    model_path = MODEL_DIR / model_name
+
+    if not model_path.exists():
+        reranker_model = OVModelForSequenceClassification.from_pretrained(model_name, export=True, device="AUTO")
+        reranker_model.save_pretrained(model_path)
+
+    return OpenVINORerank(model=str(model_path))
+
+
+def load_chat_models(chat_model_name: str, embedding_model_name: str, reranker_model_name: str) -> None:
+    global llm, reranker, embedding
+    embedding = load_embedding_model(embedding_model_name)
+    reranker = load_reranker_model(reranker_model_name)
+    llm = load_chat_model(chat_model_name)
+
+
+def load_file(file_path: Path) -> Document:
+    ext = file_path.suffix
+    if ext == ".pdf":
+        reader = PDFReader()
+        return reader.load_data(file_path)[0]
+    elif ext == ".txt":
+        with open(file_path) as f:
+            content = f.read()
+            return Document(text=content)
+    else:
+        raise ValueError(f"{ext} file is not supported for now")
 
 
 def load_context(file_path: str) -> str:
-    global context
-
+    global query_engine
     if not file_path:
-        context = ""
+        query_engine = None
         return "No report loaded"
 
-    with open(file_path) as f:
-        context = f.read()
+    document = load_file(Path(file_path))
+    Settings.embed_model = embedding
+    index = VectorStoreIndex.from_documents([document])
+    query_engine = index.as_query_engine(llm, streaming=True)
 
     return "Report loaded!"
 
@@ -130,7 +183,6 @@ def get_conversation(history: List[List[str]]) -> str:
     # add prompts to the conversation
     for user_prompt, assistant_response in history:
         if user_prompt:
-            user_prompt = ADDITIONAL_CONTEXT_TEMPLATE.format(user_prompt, context) if context else user_prompt
             conversation.append({"role": "user", "content": user_prompt})
         if assistant_response:
             conversation.append({"role": "assistant", "content": assistant_response})
@@ -141,20 +193,23 @@ def get_conversation(history: List[List[str]]) -> str:
 
 def generate_initial_greeting() -> str:
     conv = get_conversation([[None, None]])
-    return respond(conv)
+    return llm.complete(conv).text
 
 
 def chat(history: List[List[str]]) -> List[List[str]]:
     # convert list of message to conversation string
     conversation = get_conversation(history)
 
-    # use streamer to show response word by word
-    chat_streamer = TextIteratorStreamer(chat_tokenizer, skip_prompt=True, skip_special_tokens=True)
-
-    # generate response for the conversation in a new thread to deliver response token by token
-    thread = Thread(target=respond, args=[conversation, chat_streamer])
-    thread.start()
-
+    # # use streamer to show response word by word
+    # chat_streamer = TextIteratorStreamer(chat_tokenizer, skip_prompt=True, skip_special_tokens=True)
+    #
+    # # generate response for the conversation in a new thread to deliver response token by token
+    # thread = Thread(target=respond, args=[conversation, chat_streamer])
+    # thread.start()
+    if query_engine:
+        chat_streamer = query_engine.query(history[-1][0]).response_gen
+    else:
+        chat_streamer = map(lambda x: x.delta, llm.stream_complete(conversation))
     # get token by token and merge to the final response
     history[-1][1] = ""
     for partial_text in chat_streamer:
@@ -163,7 +218,7 @@ def chat(history: List[List[str]]) -> List[List[str]]:
         yield history
 
     # wait for the thread
-    thread.join()
+    # thread.join()
 
 
 def transcribe(audio: Tuple[int, np.ndarray], prompt: str, conversation: List[List[str]]) -> List[List[str]]:
@@ -263,18 +318,18 @@ def create_UI(initial_message: str) -> gr.Blocks:
     return demo
 
 
-def run(asr_model_name: Path, chat_model_name: Path, public_interface: bool = False) -> None:
+def run(asr_model_name: str, chat_model_name: str, embedding_model_name: str, reranker_model_name: str, public_interface: bool = False) -> None:
     # set up logging
     log.getLogger().setLevel(log.INFO)
 
     # load whisper model
     load_asr_model(asr_model_name)
-    # load chat model
-    load_chat_model(chat_model_name)
+    # load chat models
+    load_chat_models(chat_model_name, embedding_model_name, reranker_model_name)
 
-    if chat_model is None or asr_model is None:
-        log.error("Required models are not loaded. Exiting...")
-        return
+    # if chat_model is None or asr_model is None:
+    #     log.error("Required models are not loaded. Exiting...")
+    #     return
 
     # get initial greeting
     initial_message = generate_initial_greeting()
@@ -288,8 +343,10 @@ def run(asr_model_name: Path, chat_model_name: Path, public_interface: bool = Fa
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--asr_model", type=str, default="distil-whisper/distil-large-v2", help="Path/name of the automatic speech recognition model")
-    parser.add_argument("--chat_model", type=str, default="OpenVINO/Phi-3-medium-4k-instruct-int8-ov", help="Path/name of the chat model")
+    parser.add_argument("--chat_model", type=str, default="OpenVINO/llama3-8B-INT4", help="Path/name of the chat model")
+    parser.add_argument("--embedding_model", type=str, default="BAAI/bge-small-en-v1.5", help="Path/name of the model for embeddings")
+    parser.add_argument("--reranker_model", type=str, default="BAAI/bge-reranker-large", help="Path/name of the model for reranking")
     parser.add_argument("--public", default=False, action="store_true", help="Whether interface should be available publicly")
 
     args = parser.parse_args()
-    run(Path(args.asr_model), Path(args.chat_model), args.public)
+    run(args.asr_model, args.chat_model, args.embedding_model, args.reranker_model, args.public)

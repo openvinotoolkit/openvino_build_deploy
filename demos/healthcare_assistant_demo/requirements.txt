@@ -1,11 +1,17 @@
-openvino==2024.2
+openvino==2024.3.0
 optimum-intel==1.18.1
 nncf==2.11.0
+
+llama-index==0.10.58
+llama-index-llms-openvino==0.1.1
+llama-index-embeddings-openvino==0.1.7
+llama-index-postprocessor-openvino-rerank==0.1.6
 
 onnx==1.16.0
 onnxruntime==1.16.0
 
 transformers==4.40.2
 librosa==0.10.2
+pypdf==4.3.1
 
 gradio==4.39.0
