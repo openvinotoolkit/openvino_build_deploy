@@ -79,7 +79,13 @@ python main.py
 You can also change chat and asr model:
 
 ```shell
-python main.py --asr_model distil-whisper/distil-large-v2 --chat_model OpenVINO/Phi-3-medium-4k-instruct-int4-ov
+python main.py --asr_model distil-whisper/distil-large-v2 --chat_model OpenVINO/Phi-3-medium-4k-instruct-int4-ov --hf_token 
+```
+
+If you want to use a restricted models e.g. LLama3, you must provide your HuggingFace access token:
+
+```shell
+python main.py --hf_token hf_abcdefghijklmnopqrstuvwxyz
 ```
 
 Running with `--public` will allow you to access from any computer:
