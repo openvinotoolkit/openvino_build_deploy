@@ -16,9 +16,8 @@ from llama_index.llms.openvino import OpenVINOLLM
 from llama_index.postprocessor.openvino_rerank import OpenVINORerank
 from llama_index.readers.file import PDFReader
 from optimum.intel import OVModelForCausalLM, OVModelForSpeechSeq2Seq, OVModelForFeatureExtraction, \
-    OVModelForSequenceClassification
-from transformers import AutoConfig, AutoTokenizer, AutoProcessor, PreTrainedTokenizer, TextIteratorStreamer
-from transformers.generation.streamers import BaseStreamer
+    OVModelForSequenceClassification, OVWeightQuantizationConfig, OVConfig, OVQuantizer
+from transformers import AutoTokenizer, AutoProcessor, PreTrainedTokenizer, TextIteratorStreamer
 
 # Global variables initialization
 TARGET_AUDIO_SAMPLE_RATE = 16000
@@ -53,14 +52,13 @@ ADDITIONAL_CONTEXT_TEMPLATE = "{}\nAdditional context: {}"
 MODEL_DIR = Path("model")
 
 # Initialize Model variables
-chat_model: Optional[OVModelForCausalLM] = None
 chat_tokenizer: Optional[PreTrainedTokenizer] = None
 asr_model: Optional[OVModelForSpeechSeq2Seq] = None
 asr_processor: Optional[AutoProcessor] = None
-llm: Optional[OpenVINOLLM] = None
-embedding: Optional[OpenVINOEmbedding] = None
-reranker: Optional[OpenVINORerank] = None
-query_engine: Optional[BaseQueryEngine] = None
+ov_llm: Optional[OpenVINOLLM] = None
+ov_embedding: Optional[OpenVINOEmbedding] = None
+ov_reranker: Optional[OpenVINORerank] = None
+ov_query_engine: Optional[BaseQueryEngine] = None
 
 
 def get_available_devices() -> Set[str]:
@@ -85,8 +83,8 @@ def load_asr_model(model_name: str) -> None:
         asr_processor = AutoProcessor.from_pretrained(str(model_name))
 
 
-def load_chat_model(model_name: str) -> OpenVINOLLM:
-    global chat_model, chat_tokenizer
+def load_chat_model(model_name: str, token: str = None) -> OpenVINOLLM:
+    global chat_tokenizer
 
     model_path = MODEL_DIR / model_name
 
@@ -94,9 +92,15 @@ def load_chat_model(model_name: str) -> OpenVINOLLM:
     ov_config = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1', "CACHE_DIR": ""}
     # load llama model and its tokenizer
     if not model_path.exists():
-        chat_model = OVModelForCausalLM.from_pretrained(model_name, device=device, config=AutoConfig.from_pretrained(model_name, trust_remote_code=True), ov_config=ov_config)
-        chat_model.save_pretrained(model_path)
-        chat_tokenizer = AutoTokenizer.from_pretrained(model_name)
+        chat_model = OVModelForCausalLM.from_pretrained(model_name, export=True, compile=False, load_in_8bit=False, token=token)
+
+        quant_config = OVWeightQuantizationConfig(bits=4, sym=False, ratio=0.8)
+        config = OVConfig(quantization_config=quant_config)
+
+        quantizer = OVQuantizer.from_pretrained(chat_model, task="text-generation")
+        quantizer.quantize(save_directory=model_path, weights_only=True, ov_config=config)
+
+        chat_tokenizer = AutoTokenizer.from_pretrained(model_name, token=token)
         chat_tokenizer.save_pretrained(model_path)
     else:
         chat_tokenizer = AutoTokenizer.from_pretrained(str(model_path))
@@ -126,11 +130,11 @@ def load_reranker_model(model_name: str) -> OpenVINORerank:
     return OpenVINORerank(model=str(model_path))
 
 
-def load_chat_models(chat_model_name: str, embedding_model_name: str, reranker_model_name: str) -> None:
-    global llm, reranker, embedding
-    embedding = load_embedding_model(embedding_model_name)
-    reranker = load_reranker_model(reranker_model_name)
-    llm = load_chat_model(chat_model_name)
+def load_chat_models(chat_model_name: str, embedding_model_name: str, reranker_model_name: str, auth_token: str = None) -> None:
+    global ov_llm, ov_reranker, ov_embedding
+    ov_embedding = load_embedding_model(embedding_model_name)
+    ov_reranker = load_reranker_model(reranker_model_name)
+    ov_llm = load_chat_model(chat_model_name, auth_token)
 
 
 def load_file(file_path: Path) -> Document:
@@ -147,31 +151,17 @@ def load_file(file_path: Path) -> Document:
 
 
 def load_context(file_path: str) -> str:
-    global query_engine
+    global ov_query_engine
     if not file_path:
-        query_engine = None
+        ov_query_engine = None
         return "No report loaded"
 
     document = load_file(Path(file_path))
-    Settings.embed_model = embedding
+    Settings.embed_model = ov_embedding
     index = VectorStoreIndex.from_documents([document])
-    query_engine = index.as_query_engine(llm, streaming=True)
+    ov_query_engine = index.as_query_engine(ov_llm, streaming=True)
 
     return "Report loaded!"
-
-
-def respond(prompt: str, streamer: BaseStreamer | None = None) -> str:
-    start_time = time.time()  # Start time
-    # tokenize input text
-    inputs = chat_tokenizer(prompt, return_tensors="pt").to(chat_model.device)
-    input_length = inputs.input_ids.shape[1]
-    # generate response tokens
-    outputs = chat_model.generate(**inputs, max_new_tokens=512, do_sample=True, temperature=0.6, top_p=0.9, top_k=50, streamer=streamer)
-    tokens = outputs[0, input_length:]
-    end_time = time.time()  # End time
-    log.info("Chat model response time: {:.2f} seconds".format(end_time - start_time))
-    # decode tokens into text
-    return chat_tokenizer.decode(tokens, skip_special_tokens=True)
 
 
 def get_conversation(history: List[List[str]]) -> str:
@@ -193,32 +183,23 @@ def get_conversation(history: List[List[str]]) -> str:
 
 def generate_initial_greeting() -> str:
     conv = get_conversation([[None, None]])
-    return llm.complete(conv).text
+    return ov_llm.complete(conv).text
 
 
 def chat(history: List[List[str]]) -> List[List[str]]:
     # convert list of message to conversation string
     conversation = get_conversation(history)
 
-    # # use streamer to show response word by word
-    # chat_streamer = TextIteratorStreamer(chat_tokenizer, skip_prompt=True, skip_special_tokens=True)
-    #
-    # # generate response for the conversation in a new thread to deliver response token by token
-    # thread = Thread(target=respond, args=[conversation, chat_streamer])
-    # thread.start()
-    if query_engine:
-        chat_streamer = query_engine.query(history[-1][0]).response_gen
+    if ov_query_engine:
+        chat_streamer = ov_query_engine.query(history[-1][0]).response_gen
     else:
-        chat_streamer = map(lambda x: x.delta, llm.stream_complete(conversation))
+        chat_streamer = map(lambda x: x.delta, ov_llm.stream_complete(conversation))
     # get token by token and merge to the final response
     history[-1][1] = ""
     for partial_text in chat_streamer:
         history[-1][1] += partial_text
         # "return" partial response
         yield history
-
-    # wait for the thread
-    # thread.join()
 
 
 def transcribe(audio: Tuple[int, np.ndarray], prompt: str, conversation: List[List[str]]) -> List[List[str]]:
@@ -318,18 +299,14 @@ def create_UI(initial_message: str) -> gr.Blocks:
     return demo
 
 
-def run(asr_model_name: str, chat_model_name: str, embedding_model_name: str, reranker_model_name: str, public_interface: bool = False) -> None:
+def run(asr_model_name: str, chat_model_name: str, embedding_model_name: str, reranker_model_name: str, hf_token: str = None, public_interface: bool = False) -> None:
     # set up logging
     log.getLogger().setLevel(log.INFO)
 
     # load whisper model
     load_asr_model(asr_model_name)
     # load chat models
-    load_chat_models(chat_model_name, embedding_model_name, reranker_model_name)
-
-    # if chat_model is None or asr_model is None:
-    #     log.error("Required models are not loaded. Exiting...")
-    #     return
+    load_chat_models(chat_model_name, embedding_model_name, reranker_model_name, hf_token)
 
     # get initial greeting
     initial_message = generate_initial_greeting()
@@ -343,10 +320,11 @@ def run(asr_model_name: str, chat_model_name: str, embedding_model_name: str, re
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--asr_model", type=str, default="distil-whisper/distil-large-v2", help="Path/name of the automatic speech recognition model")
-    parser.add_argument("--chat_model", type=str, default="OpenVINO/llama3-8B-INT4", help="Path/name of the chat model")
+    parser.add_argument("--chat_model", type=str, default="meta-llama/Meta-Llama-3-8B-Instruct", help="Path/name of the chat model")
     parser.add_argument("--embedding_model", type=str, default="BAAI/bge-small-en-v1.5", help="Path/name of the model for embeddings")
     parser.add_argument("--reranker_model", type=str, default="BAAI/bge-reranker-large", help="Path/name of the model for reranking")
+    parser.add_argument("--hf_token", type=str, help="HuggingFace access token to get Llama3")
     parser.add_argument("--public", default=False, action="store_true", help="Whether interface should be available publicly")
 
     args = parser.parse_args()
-    run(args.asr_model, args.chat_model, args.embedding_model, args.reranker_model, args.public)
+    run(args.asr_model, args.chat_model, args.embedding_model, args.reranker_model, args.hf_token, args.public)
