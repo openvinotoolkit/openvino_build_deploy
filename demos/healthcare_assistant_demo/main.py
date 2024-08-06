@@ -1,16 +1,19 @@
 import argparse
 import logging as log
+import threading
 import time
 from pathlib import Path
 from threading import Thread
-from typing import Tuple, List, Optional, Set
+from typing import Tuple, List, Optional, Set, Sequence
 
 import gradio as gr
 import librosa
 import numpy as np
 import openvino as ov
 from llama_index.core import Document, VectorStoreIndex, Settings
-from llama_index.core.base.base_query_engine import BaseQueryEngine
+from llama_index.core.base.llms.types import ChatMessage
+from llama_index.core.chat_engine import SimpleChatEngine
+from llama_index.core.chat_engine.types import BaseChatEngine, ChatMode
 from llama_index.embeddings.huggingface_openvino import OpenVINOEmbedding
 from llama_index.llms.openvino import OpenVINOLLM
 from llama_index.postprocessor.openvino_rerank import OpenVINORerank
@@ -50,6 +53,7 @@ SUMMARIZE_THE_CUSTOMER = (
 ADDITIONAL_CONTEXT_TEMPLATE = "{}\nAdditional context: {}"
 
 MODEL_DIR = Path("model")
+inference_lock = threading.Lock()
 
 # Initialize Model variables
 chat_tokenizer: Optional[PreTrainedTokenizer] = None
@@ -58,7 +62,7 @@ asr_processor: Optional[AutoProcessor] = None
 ov_llm: Optional[OpenVINOLLM] = None
 ov_embedding: Optional[OpenVINOEmbedding] = None
 ov_reranker: Optional[OpenVINORerank] = None
-ov_query_engine: Optional[BaseQueryEngine] = None
+ov_chat_engine: Optional[BaseChatEngine] = None
 
 
 def get_available_devices() -> Set[str]:
@@ -92,7 +96,8 @@ def load_chat_model(model_name: str, token: str = None) -> OpenVINOLLM:
     ov_config = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1', "CACHE_DIR": ""}
     # load llama model and its tokenizer
     if not model_path.exists():
-        chat_model = OVModelForCausalLM.from_pretrained(model_name, export=True, compile=False, load_in_8bit=False, token=token)
+        chat_model = OVModelForCausalLM.from_pretrained(model_name, export=True, compile=False, load_in_8bit=False,
+                                                        token=token)
 
         quant_config = OVWeightQuantizationConfig(bits=4, sym=False, ratio=0.8)
         config = OVConfig(quantization_config=quant_config)
@@ -105,7 +110,10 @@ def load_chat_model(model_name: str, token: str = None) -> OpenVINOLLM:
     else:
         chat_tokenizer = AutoTokenizer.from_pretrained(str(model_path))
 
-    return OpenVINOLLM(model_name=str(model_path), tokenizer_name=str(model_path), max_new_tokens=512, device_map=device, model_kwargs={"ov_config": ov_config}, generate_kwargs={"temperature": 0.7, "top_k": 50, "top_p": 0.95})
+    return OpenVINOLLM(context_window=2048, model_name=str(model_path), tokenizer_name=str(model_path),
+                       max_new_tokens=512, device_map=device, model_kwargs={"ov_config": ov_config},
+                       generate_kwargs={"do_sample": True, "temperature": 0.7, "top_k": 50, "top_p": 0.95},
+                       messages_to_prompt=get_conversation)
 
 
 def load_embedding_model(model_name: str) -> OpenVINOEmbedding:
@@ -131,10 +139,13 @@ def load_reranker_model(model_name: str) -> OpenVINORerank:
 
 
 def load_chat_models(chat_model_name: str, embedding_model_name: str, reranker_model_name: str, auth_token: str = None) -> None:
-    global ov_llm, ov_reranker, ov_embedding
+    global ov_llm, ov_chat_engine
     ov_embedding = load_embedding_model(embedding_model_name)
     ov_reranker = load_reranker_model(reranker_model_name)
     ov_llm = load_chat_model(chat_model_name, auth_token)
+
+    Settings.embed_model = ov_embedding
+    ov_chat_engine = SimpleChatEngine.from_defaults(llm=ov_llm, system_prompt=SYSTEM_CONFIGURATION)
 
 
 def load_file(file_path: Path) -> Document:
@@ -151,55 +162,39 @@ def load_file(file_path: Path) -> Document:
 
 
 def load_context(file_path: str) -> str:
-    global ov_query_engine
+    global ov_chat_engine
     if not file_path:
-        ov_query_engine = None
+        ov_chat_engine = SimpleChatEngine.from_defaults(llm=ov_llm, system_prompt=SYSTEM_CONFIGURATION)
         return "No report loaded"
 
     document = load_file(Path(file_path))
-    Settings.embed_model = ov_embedding
     index = VectorStoreIndex.from_documents([document])
-    ov_query_engine = index.as_query_engine(ov_llm, streaming=True)
+    ov_chat_engine = index.as_chat_engine(llm=ov_llm, chat_mode=ChatMode.CONTEXT, system_prompt=SYSTEM_CONFIGURATION)
 
     return "Report loaded!"
 
 
-def get_conversation(history: List[List[str]]) -> str:
+def get_conversation(messages: Sequence[ChatMessage]) -> str:
     # the conversation must be in that format to use chat template
-    conversation = [
-        {"role": "system", "content": SYSTEM_CONFIGURATION},
-        {"role": "user", "content": GREET_THE_CUSTOMER}
-    ]
-    # add prompts to the conversation
-    for user_prompt, assistant_response in history:
-        if user_prompt:
-            conversation.append({"role": "user", "content": user_prompt})
-        if assistant_response:
-            conversation.append({"role": "assistant", "content": assistant_response})
+    conversation = [{"role": message.role.value, "content": message.content} for message in messages]
 
     # use a template specific to the model
     return chat_tokenizer.apply_chat_template(conversation, add_generation_prompt=True, tokenize=False)
 
 
 def generate_initial_greeting() -> str:
-    conv = get_conversation([[None, None]])
-    return ov_llm.complete(conv).text
+    return ov_chat_engine.chat(GREET_THE_CUSTOMER).response
 
 
 def chat(history: List[List[str]]) -> List[List[str]]:
-    # convert list of message to conversation string
-    conversation = get_conversation(history)
-
-    if ov_query_engine:
-        chat_streamer = ov_query_engine.query(history[-1][0]).response_gen
-    else:
-        chat_streamer = map(lambda x: x.delta, ov_llm.stream_complete(conversation))
     # get token by token and merge to the final response
     history[-1][1] = ""
-    for partial_text in chat_streamer:
-        history[-1][1] += partial_text
-        # "return" partial response
-        yield history
+    with inference_lock:
+        chat_streamer = ov_chat_engine.stream_chat(history[-1][0]).response_gen
+        for partial_text in chat_streamer:
+            history[-1][1] += partial_text
+            # "return" partial response
+            yield history
 
 
 def transcribe(audio: Tuple[int, np.ndarray], prompt: str, conversation: List[List[str]]) -> List[List[str]]:
@@ -209,7 +204,8 @@ def transcribe(audio: Tuple[int, np.ndarray], prompt: str, conversation: List[Li
 
         sample_rate, audio = audio
         # the whisper model requires 16000Hz, not 44100Hz
-        audio = librosa.resample(audio.astype(np.float32), orig_sr=sample_rate, target_sr=TARGET_AUDIO_SAMPLE_RATE).astype(np.int16)
+        audio = librosa.resample(audio.astype(np.float32), orig_sr=sample_rate, target_sr=TARGET_AUDIO_SAMPLE_RATE)\
+            .astype(np.int16)
 
         # get input features from the audio
         input_features = asr_processor(audio, sampling_rate=TARGET_AUDIO_SAMPLE_RATE, return_tensors="pt").input_features
@@ -279,7 +275,7 @@ def create_UI(initial_message: str) -> gr.Blocks:
         # events
         # block submit button when no audio or text input
         gr.on(triggers=[input_audio_ui.change, input_text_ui.change], inputs=[input_audio_ui, input_text_ui], outputs=submit_audio_btn,
-              fn=lambda x, y: gr.Button(interactive=True) if x or y else gr.Button(interactive=False))
+              fn=lambda x, y: gr.Button(interactive=True) if bool(x) ^ bool(y) else gr.Button(interactive=False))
 
         file_uploader_ui.change(load_context, inputs=file_uploader_ui, outputs=context_label)
 
