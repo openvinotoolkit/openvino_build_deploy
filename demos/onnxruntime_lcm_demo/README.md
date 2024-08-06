@@ -13,8 +13,6 @@ Latent Diffusion models (LDMs) have achieved remarkable results in synthesizing 
 
 This notebook demonstrates how to  run [LCM_Dreamshaper_v7](https://huggingface.co/SimianLuo/LCM_Dreamshaper_v7) using ONNX Runtime and OpenVINO Execution Provider on iGPU of AI PC 
 
-
-
 ## Installation Instructions
 - Create a virtual environment using 
   ```sh  
