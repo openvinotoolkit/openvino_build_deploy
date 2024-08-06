@@ -275,10 +275,7 @@ def run_demo(source, face_detection_model, face_landmarks_model, face_emotions_m
             # Mean processing time [ms].
             processing_time = np.mean(processing_times) * 1000
             fps = 1000 / processing_time
-            cv2.putText(frame, f"Inference time: {processing_time:.1f}ms ({fps:.1f} FPS)", (20, 40),
-                        cv2.FONT_HERSHEY_COMPLEX, f_width / 1500, (0, 0, 0), 2, cv2.LINE_AA)
-            cv2.putText(frame, f"Inference time: {processing_time:.1f}ms ({fps:.1f} FPS)", (20, 40),
-                        cv2.FONT_HERSHEY_COMPLEX, f_width / 1500, (255, 255, 255), 1, cv2.LINE_AA)
+            utils.draw_text(frame, f"Inference time: {processing_time:.1f}ms ({fps:.1f} FPS)", (20, 20))
 
             cv2.imshow(winname=title, mat=frame)
             key = cv2.waitKey(1)
@@ -305,7 +302,7 @@ if __name__ == '__main__':
     parser.add_argument("--detection_model_name", type=str, default="face-detection-adas-0001", help="Face detection model to be used")
     parser.add_argument("--landmarks_model_name", type=str, default="landmarks-regression-retail-0009", help="Face landmarks regression model to be used")
     parser.add_argument("--emotions_model_name", type=str, default="emotions-recognition-retail-0003", help="Face emotions recognition model to be used")
-    parser.add_argument("--model_precision", type=str, default="FP16-INT8", choices=["FP16-INT8", "FP16", "FP32"], help="Pose estimation model precision")
+    parser.add_argument("--model_precision", type=str, default="FP16-INT8", choices=["FP16-INT8", "FP16", "FP32"], help="All models precision")
     parser.add_argument("--flip", type=bool, default=True, help="Mirror input video")
 
     args = parser.parse_args()

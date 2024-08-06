@@ -1,6 +1,7 @@
 import os.path
 import threading
 import time
+from typing import Tuple
 
 import cv2
 
@@ -8,6 +9,8 @@ import os
 import urllib.parse
 from os import PathLike
 from pathlib import Path
+
+from numpy import ndarray
 
 
 def download_file(
@@ -206,7 +209,7 @@ class VideoPlayer:
 logo_img = cv2.imread(os.path.join(os.path.dirname(__file__), "openvino-logo.png"), cv2.IMREAD_UNCHANGED)
 
 
-def draw_ov_watermark(frame, alpha=0.35, size=0.15):
+def draw_ov_watermark(frame: ndarray, alpha: float = 0.35, size: float = 0.15) -> None:
     scale = size * frame.shape[1] / logo_img.shape[1]
     watermark = cv2.resize(logo_img, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
 
@@ -215,3 +218,19 @@ def draw_ov_watermark(frame, alpha=0.35, size=0.15):
     patch = frame[frame.shape[0] - watermark.shape[0]:, frame.shape[1] - watermark.shape[1]:]
 
     patch[:] = alpha_channel * watermark[:, :, :3] + ((1.0 - alpha_channel) * patch)
+
+
+def draw_text(image: ndarray, text: str, point: Tuple[int, int], center: bool = False, font_scale: float = 1.0, font_color: Tuple[int, int, int] = (255, 255, 255)) -> None:
+    _, f_width = image.shape[:2]
+    text_size, _ = cv2.getTextSize(text, fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=font_scale * f_width / 2000, thickness=2)
+
+    rect_width = text_size[0] + 50
+    rect_height = text_size[1] + 30
+    rect_x, rect_y = (point[0] - rect_width // 2, point[1] - rect_height // 2) if center else point
+
+    cv2.rectangle(image, pt1=(rect_x, rect_y), pt2=(rect_x + rect_width, rect_y + rect_height), color=(0, 0, 0), thickness=cv2.FILLED)
+
+    text_x = rect_x + (rect_width - text_size[0]) // 2
+    text_y = rect_y + (rect_height + text_size[1]) // 2
+
+    cv2.putText(image, text=text, org=(text_x, text_y), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=font_scale * f_width / 2000, color=font_color, thickness=1, lineType=cv2.LINE_AA)

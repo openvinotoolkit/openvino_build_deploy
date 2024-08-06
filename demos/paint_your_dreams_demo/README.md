@@ -1,4 +1,15 @@
-# Image generation with Latent Consistency Model and OpenVINO™
+# Paint Your Dreams with OpenVINO™
+
+The demo generates images in a reasonable time (seconds) on Intel hardware. There are many options to customize the demo behaviour:
+- inference device
+- number of steps
+- image size
+- guidance scale
+- seed and its randomization
+
+Check "Generate endlessly" to generate a new image just after the previous has appeared (a very attention-bringing thing).
+
+![image](https://github.com/openvinotoolkit/openvino_build_deploy/assets/4547501/a7f53cf2-a40b-4eb2-bb9a-72969ce8ad04)
 
 Here are the steps involved in this demo:
 
@@ -12,7 +23,7 @@ Now, let's dive into the steps starting with installing Python.
 
 **Input text:** a beautiful pink unicorn, 8k
 
-![](https://user-images.githubusercontent.com/29454499/277367065-13a8f622-8ea7-4d12-b3f8-241d4499305e.png)
+![unicorn](https://user-images.githubusercontent.com/29454499/277367065-13a8f622-8ea7-4d12-b3f8-241d4499305e.png)
 
 ## Step 0
 
@@ -78,4 +89,16 @@ To run the application, use the following command:
 
 ```shell
 python main.py
+```
+
+To change the model precision, run:
+
+```shell
+python main.py --model_name OpenVINO/LCM_Dreamshaper_v7-int8-ov
+```
+
+The demo will available for localhost only. To make it available in the local network use:
+
+```shell
+python main.py --local_network
 ```

@@ -1,5 +1,9 @@
 # Strike a pose with OpenVINO™
 
+The demo estimates poses of all people standing in front of the webcam. It's good especially where there are many people.
+
+![image](https://github.com/openvinotoolkit/openvino_build_deploy/assets/4547501/3bff0def-9050-450f-8699-389defec4136)
+
 Here are the steps involved in this demo:
 
 Step 0: Install Python and prerequisites
@@ -74,4 +78,10 @@ To run the application, use the following command:
 
 ```shell
 python main.py --stream 0
+```
+
+To change the model, precision or device use:
+
+```shell
+python main.py --stream 0 --device AUTO --model_name human-pose-estimation-0001 --model_precision FP16-INT8
 ```

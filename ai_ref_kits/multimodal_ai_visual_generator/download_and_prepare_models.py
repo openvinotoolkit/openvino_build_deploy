@@ -29,6 +29,8 @@ def prepare_lcm_model() :
     ov_pipeline = OVLatentConsistencyModelPipeline.from_pretrained("SimianLuo/LCM_Dreamshaper_v7", height=512, width=512, export=True, compile=False)
     ov_pipeline.save_pretrained(model_dir+"/openvino_ir_lcm")
 
+def prepare_depth_anythingv2_model():
+    pass
 
 def prepare_llm_model():
     cmd = "optimum-cli export openvino --model meta-llama/Meta-Llama-3-8B-Instruct --task text-generation-with-past --weight-format int4 --group-size 128 --ratio 0.8 --sym " + model_dir + "/llama-3-8b-instruct/INT4_compressed_weights"

@@ -39,6 +39,7 @@ whisper_model.decoder = OpenVINOTextDecoder(core, WHISPER_DECODER_OV, device="GP
 print("Whisper Model loaded..")
 
 OCR = True
+prev_history = "None"
 f = open(r"locations.json")
 locations_json = json.load(f)
 
@@ -74,14 +75,12 @@ engine = LatentConsistencyEngine(
 model = model_path,
 device = ["NPU", "NPU", "GPU"]  #"CPU", "GPU"
 )
+
 #model_path_lcm = Path("dnd_models/sd-1.5-lcm-openvino-npu") #Path(f"dnd_models/openvino_ir_lcm") 
 #engine_lcm = OVLatentConsistencyModelPipeline.from_pretrained(model_path_lcm, export=False, compile=False)
-
 #engine_lcm.reshape(batch_size=1, height=512, width=512, num_images_per_prompt=1)
-
 #engine_lcm.to("NPU")
 #engine_lcm.compile()
-
 
 llm_model, llm_tokenizer, model_configuration = ready_llm_model()
 
@@ -94,7 +93,8 @@ def ocr_dice_roll(image, ocr_radio=False):
     if ocr_radio == "yes":
         prompt = "What number did I just roll using the dice from the picture?"
     else:
-        prompt= "Describe what you see in the image in 6 words ONLY."
+        prompt = "Describe what you see in the image in 6 words ONLY"
+        #prompt= "Describe the style of the image (example: photo-realistic, realistic lighting, natural colors) in a few words ONLY." #
     messages = [{"role": "user", "content": f"<image>\n{prompt}"}]
     text = ocr_tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
     text_chunks = [ocr_tokenizer(chunk).input_ids for chunk in text.split("<image>")]
@@ -114,7 +114,7 @@ def ocr_dice_roll(image, ocr_radio=False):
     if ocr_radio == "yes":
         return generated_text_without_prompt, None
     else: 
-        print("Doing this")
+        print("Generated prompt", generated_text_without_prompt)
         return None, generated_text_without_prompt
 
 def add_theme(prompt, location):
@@ -122,11 +122,14 @@ def add_theme(prompt, location):
         return f"{prompt} - {location}"
     
 def adjust_theme(text, dice_roll_number, prompt=None):
-    indexed_location = locations_json[str(dice_roll_number)]
-    try:
-        return indexed_location
-    except:
-        return "No theme"
+    if dice_roll_number != "00":
+        indexed_location = locations_json[str(dice_roll_number)]
+        try:
+            return indexed_location
+        except:
+            return "No theme"
+    else:
+        return text
 
 def progress_callback(i, conn):
     tosend = bytes(str(i), 'utf-8')
@@ -177,17 +180,20 @@ def run_sr(img):
 
     return result_image
 
+
 def llama(text, random_num=None):
     #if first_run is True:
+    global prev_history
     tokenizer_kwargs = model_configuration.get("tokenizer_kwargs", {})
-    history_template = model_configuration.get("history_template")
-
+    #history_template = model_configuration.get("history_template")
+    #has_chat_template = model_configuration.get("has_chat_template", history_template is None)
     test_string = f"""You are a Dungeons and Dragons prompt assistant who reads prompts and turns them into short prompts \
         for an model that generates portrait images from prompts. Rephrase the following sentence to be a descriptive prompt that is one short sentence only\
         and easy for a image generation model to understand, ending with proper punctuation, for a portrait.\
-        Add the theme to the prompt.): \
+        Add the theme to the prompt. You MUST involve the context in your answer, if it is present: \
+        ### Context: {prev_history if 'prev_history' in globals() else None} \
         ### Prompt: {text} \
-        ### Theme: {random_num}
+        ### Theme: {random_num} \
         ### Rephrased Prompt: """
     input_tokens = llm_tokenizer(test_string, return_tensors="pt", **tokenizer_kwargs)
     answer = llm_model.generate(**input_tokens, max_new_tokens=45)
@@ -197,26 +203,27 @@ def llama(text, random_num=None):
     result = result.split('.')[0]
     #We can also ensure that the theme is infused, by manually adding the phrase to the end again
     #result = result + " (" + locations_json[str(random_num)] + ") "
+    prev_history = result
     print(result)
     return result
 
 def parse_ocr_output(text):
-    try:
-        detected_roll = int(''.join(filter(str.isdigit, text)))
-        if 0 <= detected_roll <= 20:
-            #Detected number is out of range
+    if text is not None:
+        try:
+            detected_roll = int(''.join(filter(str.isdigit, text)))
+            if 0 <= detected_roll <= 20:
+                #Detected number is out of range
+                return 0
+            else:
+                return detected_roll
+        except:
+            #Detection did not work or image is empty
             return 0
-        else:
-            return detected_roll
-    except:
-        #Detection did not work or image is empty
-        return 0
 
 def depth_map_parallax(image):
     #This function will load the OV Depth Anything model
     #and create a 3D parallax between the depth map and the input image
-    #TBD how to create a GIF of the 3D parallax
-    image.save("original_image.png")
+    image.save("results/original_image.png")
     image = np.array(image)
 
     h, w = image.shape[:2]
@@ -250,10 +257,9 @@ def depth_map_parallax(image):
     depth = (depth - depth.min()) / (depth.max() - depth.min()) * 255.0
     depth = depth.astype(np.uint8)
     colored_depth = cv2.applyColorMap(depth, cv2.COLORMAP_INFERNO)[:, :, ::-1]
-    #TBD save images locally
-    #Have web server pick them up and serve them
+    #Have web server pick up images and serve them
     im = Image.fromarray(colored_depth)
-    im.save("depth_map.png")
+    im.save("results/depth_map.png")
     return colored_depth
 
 def generate_llm_prompt(text, dice_roll, _=gr.Progress(track_tqdm=True)):
@@ -271,6 +277,9 @@ def generate_from_text(theme, orig_prompt, llm_prompt, seed, num_steps,guidance_
        text = orig_prompt # + locations_json[str(dice_roll_num)]
    else:
        text = llm_prompt
+    
+   text = text + ", portrait, 8k, detailed face"
+
    """output = engine_lcm(
     prompt = text,
     num_inference_steps = num_steps,
@@ -292,8 +301,11 @@ def generate_from_text(theme, orig_prompt, llm_prompt, seed, num_steps,guidance_
    img= cv2.cvtColor(np.array(output), cv2.COLOR_RGB2BGR)
    out = run_sr(img)
    img= cv2.cvtColor(np.array(out), cv2.COLOR_RGB2BGR)
-   return img  
+   return img #, "downloaded_result.png"  
 
+def clear_context():
+    global prev_history
+    prev_history = "None"
 
 def transcribe(audio_data, progress=gr.Progress()):
    
@@ -354,11 +366,11 @@ with gr.Blocks(css=css_code, js=_js, theme=theme) as demo:
 
     with gr.Row():
         with gr.Column(scale=1):
-            i = gr.Image(sources="webcam", label="Step 1: Get Inspired", type="pil")
+            i = gr.Image(sources=["webcam", "upload"], label="Step 1: Get Inspired", type="pil")
             ocr_output = gr.Textbox(label="Output of OCR Model", visible=False)
             #out = gr.Textbox(label="Number typed in", elem_id="visible")
             with gr.Row():
-                dice_roll_input = gr.Textbox(lines=2, label="20-side Die Roll", container=True, placeholder="0", visible=False)
+                dice_roll_input = gr.Textbox(lines=2, label="20-side Die Roll", container=True, placeholder="00", visible=False)
                 dice_roll_theme = gr.Textbox(label="Theme", visible=True)
             with gr.Row():
                 with gr.Row():
@@ -368,35 +380,36 @@ with gr.Blocks(css=css_code, js=_js, theme=theme) as demo:
             with gr.Row():
                 add_theme_button = gr.Button(value="Step 4.2: Add theme to prompt", variant="primary")
                 llm_button = gr.Button(value="Step 5: Refine Prompt with LLM", variant="primary")
-            text_output = gr.Textbox(lines=3, label="LLM Prompt + Theme (or leave empty)", type="text", container=True, placeholder="LLM Prompt (Leave Empty to Discard)")
+            text_output = gr.Textbox(lines=3, label="LLM Prompt + Theme", type="text", container=True, placeholder="LLM Prompt (Leave Empty to Discard). Context enabled by default.")
             #theme_options = gr.Dropdown(['None', 'Dark', 'Happy', 'Nostalgic'], label="Theme")
             image_btn = gr.Button(value="Step 6: Generate Image", variant="primary")
             #Parameters for multimodal model and LCM
             with gr.Accordion("Advanced Parameters", open=False):
+                context_button = gr.Button(value="Clear Context?", variant="primary")
                 radio = gr.Radio(["yes", "no"], value="no", label="Please Select: Recognize Dice?")
-                seed_input = gr.Slider(0, 10000000, value=34, label="Seed")
+                seed_input = gr.Slider(0, 10000000, value=2200000, label="Seed")
                 steps_input = gr.Slider(1, 50, value=5, step=1, label="Steps")
-                guidance_input = gr.Slider(0, 15, value=2.0, label="Guidance")
+                guidance_input = gr.Slider(0, 15, value=10.2, label="Guidance")
         with gr.Column(scale=3):
             out = gr.Image(label="Result", type="pil", elem_id="visible")
             depth_map = gr.Image(label="Depth Map", type="pil", elem_id="visible")
 
     radio.change(update_visibility, radio, [ocr_output, dice_roll_input])        
-    i.change(ocr_dice_roll, [i, radio], [ocr_output, dice_roll_theme])
+    try:
+        i.change(ocr_dice_roll, [i, radio], [ocr_output, dice_roll_theme])
+    except ValueError:
+        pass
     #the following lines of code only apply if we are looking at a dice roll
     ocr_output.change(parse_ocr_output, ocr_output, dice_roll_input)
     dice_roll_input.change(adjust_theme, [ocr_output, dice_roll_input], dice_roll_theme)
     audio_prompt.stop_recording(transcribe, audio_prompt, outputs=text_input)
     add_theme_button.click(add_theme, [text_input, dice_roll_theme], text_input)
     llm_button.click(generate_llm_prompt, [text_input, dice_roll_input], text_output)
+    context_button.click(clear_context)
     #The LLM Generated Prompt can be left empty, and the image will be generated with the original prompt + theme
     image_btn.click(generate_from_text, [dice_roll_theme, text_input, text_output, seed_input, steps_input, guidance_input], out)
     out.change(depth_map_parallax, out, depth_map)
-    #with gr.Row():
-        #with gr.Column(scale=1):
-            #Image.fromarray(out).save("output.png")
-            #filepath = Path("output.PNG").name
-            #d = gr.DownloadButton("Download Smaller Image", value = filepath, visible=True)
+
 if __name__ == "__main__":
     demo.launch(share=True,server_port=7960, debug=True,allowed_paths=['assets/image_opt.jpg',])
 #try:

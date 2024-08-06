@@ -1,5 +1,9 @@
 # Spooky demo with OpenVINO™
 
+The demo detects people in front of the webcam and changes them into skeletons with a pumpkin head.
+
+![image](https://github.com/openvinotoolkit/openvino_build_deploy/assets/4547501/b289b9f0-1c5b-4cae-ae0b-ea905d05d5e5)
+
 Here are the steps involved in this demo:
 
 Step 0: Install Python and prerequisites
@@ -74,4 +78,10 @@ To run the application, use the following command:
 
 ```shell
 python main.py --stream 0
+```
+
+To change the model, precision or device use:
+
+```shell
+python main.py --stream 0 --device AUTO --model_name human-pose-estimation-0001 --model_precision FP16-INT8
 ```
