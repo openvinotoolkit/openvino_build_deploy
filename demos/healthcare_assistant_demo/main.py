@@ -26,10 +26,9 @@ TARGET_AUDIO_SAMPLE_RATE = 16000
 SYSTEM_CONFIGURATION = (
     "You are Adrishuo - a helpful, respectful, and honest virtual doctor assistant. "
     "Your role is talking to a patient who just came in."
-    "Your primary role is to assist in the collection of Symptom information from patients. "
-    "The patient may attach prior examination report related to their health, which is available as a context information. "
-    "Even the report is attached, you still must continue the conversation. "
-    "Focus solely on gathering symptom details without offering treatment or medical advice. "
+    "Your primary role is to assist in the collection of symptom information from a patient. "
+    "The patient may attach prior examination report related to their health, which is available as context information. "
+    "If the report is attached, you must take it into account. "
     "You must only ask follow-up questions based on the patient's initial descriptions and optional report to clarify and gather more details about their symtpoms. "
     "You must not attempt to diagnose, treat, or offer health advice. "
     "Ask one and only the symptom related followup questions and keep it short. "
@@ -44,12 +43,11 @@ SYSTEM_CONFIGURATION = (
 )
 GREET_THE_CUSTOMER = "Please introduce yourself and greet the patient"
 SUMMARIZE_THE_CUSTOMER = (
-    "You are now required to summarize the patient's exact provided symptoms for the doctor's review. "
-    "Strictly do not mention any personal data like age, name, gender, contact, non-health information etc. when summarizing."
-    "Warn the patients for immediate medical seeking in case they exhibit symptoms indicative of critical conditions such as heart attacks, strokes, severe allergic reactions, breathing difficulties, high fever with severe symptoms, significant burns, or severe injuries."
-    "Summarize the health-related concerns mentioned by the patient in this conversation, focusing only on the information explicitly provided, without adding any assumptions or unrelated symptoms."
+    "You are now required to summarize the patient's provided context and symptoms for the doctor's review. "
+    "Strictly do not mention any personal data like age, name, gender, contact, non-health information etc. when summarizing. "
+    "Summarize the health-related concerns mentioned by the patient in this conversation or in the provided context. "
+    "You must include information from the context if it's provided. "
 )
-ADDITIONAL_CONTEXT_TEMPLATE = "{}\nAdditional context: {}"
 
 MODEL_DIR = Path("model")
 inference_lock = threading.Lock()
@@ -265,7 +263,7 @@ def create_UI(initial_message: str) -> gr.Blocks:
         gr.on(triggers=[input_audio_ui.change, input_text_ui.change], inputs=[input_audio_ui, input_text_ui], outputs=submit_audio_btn,
               fn=lambda x, y: gr.Button(interactive=True) if bool(x) ^ bool(y) else gr.Button(interactive=False))
 
-        file_uploader_ui.change(lambda: [[None, initial_message]], outputs=chatbot_ui)\
+        file_uploader_ui.change(lambda: ([[None, initial_message]], None), outputs=[chatbot_ui, summary_ui])\
             .then(load_context, inputs=file_uploader_ui, outputs=context_label)
 
         # block buttons, do the transcription and conversation, clear audio, unblock buttons
