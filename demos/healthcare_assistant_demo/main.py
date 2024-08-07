@@ -156,7 +156,7 @@ def load_file(file_path: Path) -> Document:
     elif ext == ".txt":
         with open(file_path) as f:
             content = f.read()
-            return Document(text=content)
+            return Document(text=content, metadata={"file_name": file_path.name})
     else:
         raise ValueError(f"{ext} file is not supported for now")
 
@@ -190,11 +190,16 @@ def chat(history: List[List[str]]) -> List[List[str]]:
     # get token by token and merge to the final response
     history[-1][1] = ""
     with inference_lock:
+        start_time = time.time()
+
         chat_streamer = ov_chat_engine.stream_chat(history[-1][0]).response_gen
         for partial_text in chat_streamer:
             history[-1][1] += partial_text
             # "return" partial response
             yield history
+
+        end_time = time.time()
+        log.info(f"Chat model response time: {end_time - start_time:.2f} seconds")
 
 
 def transcribe(audio: Tuple[int, np.ndarray], prompt: str, conversation: List[List[str]]) -> List[List[str]]:
@@ -255,13 +260,13 @@ def create_UI(initial_message: str) -> gr.Blocks:
         - click summarize button to make a summary
         """)
         with gr.Row():
-            with gr.Column(scale=1):
-                file_uploader_ui = gr.File(label="Prior examination report", file_types=[".pdf", ".txt"])
-                context_label = gr.Label(label="Report status", value="No report loaded")
             with gr.Column(scale=5):
                 # user's inputs
                 input_audio_ui = gr.Audio(sources=["microphone"], label="Your voice input")
                 input_text_ui = gr.Textbox(label="Your text input")
+            with gr.Column(scale=1):
+                file_uploader_ui = gr.File(label="Prior examination report", file_types=[".pdf", ".txt"])
+                context_label = gr.Label(label="Report status", value="No report loaded")
             # submit button
             submit_audio_btn = gr.Button("Submit", variant="primary", scale=1, interactive=False)
 
@@ -277,7 +282,8 @@ def create_UI(initial_message: str) -> gr.Blocks:
         gr.on(triggers=[input_audio_ui.change, input_text_ui.change], inputs=[input_audio_ui, input_text_ui], outputs=submit_audio_btn,
               fn=lambda x, y: gr.Button(interactive=True) if bool(x) ^ bool(y) else gr.Button(interactive=False))
 
-        file_uploader_ui.change(load_context, inputs=file_uploader_ui, outputs=context_label)
+        file_uploader_ui.change(lambda: [[None, initial_message]], outputs=chatbot_ui)\
+            .then(load_context, inputs=file_uploader_ui, outputs=context_label)
 
         # block buttons, do the transcription and conversation, clear audio, unblock buttons
         submit_audio_btn.click(lambda: gr.Button(interactive=False), outputs=submit_audio_btn) \
