@@ -320,7 +320,7 @@ def run(asr_model_dir: Path, chat_model_dir: Path, public_interface: bool = Fals
     # create user interface
     demo = create_UI(initial_message)
     # launch demo
-    demo.launch(share=public_interface)
+    demo.queue().launch(share=public_interface)
 
 
 if __name__ == '__main__':
