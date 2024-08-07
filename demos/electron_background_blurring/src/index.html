@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Webcam</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <h1>Webcam APP</h1>
+  <div id="container">
+    <div id="leftSide">
+      <div id="webcamContainer">
+        <button id="toggleWebcamButton">Start Webcam 1</button>
+      </div>
+      <div id="webcamViewer">
+        <video id="webcam" autoplay playsinline></video>
+      </div>
+      <div id="photoContainer">
+        <button id="takePhotoButton">Take Photo</button>
+      </div>
+      <div id="photoViewer1">
+        <img id="photo1" src="" alt="Captured Photo 1">
+      </div>
+      <div id="savbePhotoContainer1">
+        <button id="savePhotoButton1">Save Photo 1</button>
+      </div>
+    </div>
+    <div id="rightSide">
+      <div id="webcamContainer2">
+        <button id="toggleWebcamButton2">Start Webcam 2</button>
+      </div>
+      <div id="webcamViewer2">
+        <video id="webcam2" autoplay playsinline></video>
+      </div>
+      <div id="photoContainer2">
+        <button id="takePhotoButton2">Take Photo</button>
+      </div>
+      <div id="photoViewer2">
+        <img id="photo2" src="" alt="Captured Photo 2">
+      </div>
+      <div id="savbePhotoContainer2">
+        <button id="savePhotoButton2">Save Photo 2</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

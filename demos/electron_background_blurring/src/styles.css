@@ -1,0 +1,113 @@
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+
+
+#buttonContainer {
+  margin-bottom: 20px;
+}
+
+#webcamContainer {
+  margin-top: 20px;
+}
+
+#webcamContainer2 {
+  margin-top: 20px;
+}
+
+#toggleWebcamButton {
+  font-size: 20px;
+  background-color: #00008B;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  cursor: pointer;
+}
+
+#toggleWebcamButton:hover {
+  background-color: #ADD8E6;
+  color: black;
+}
+
+#webcam {
+  margin-top: 20px;
+  width: 480px;
+  height: 360px;
+  background: black;
+  transform: scaleX(-1);
+}
+
+#toggleWebcamButton2 {
+  font-size: 20px;
+  background-color: #00008B;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  cursor: pointer;
+}
+
+#container {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+}
+
+#leftSide, #rightSide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 50%;
+}
+
+#toggleWebcamButton2:hover {
+  background-color: #ADD8E6;
+  color: black;
+}
+
+#webcam2 {
+  margin-top: 20px;
+  width: 480px;
+  height: 360px;
+  background: black;
+  transform: scaleX(-1);
+}
+
+#savePhotoButton1, #savePhotoButton2, #takePhotoButton, #takePhotoButton2 {
+  font-size: 20px;
+  background-color: #00008B; 
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+
+#savePhotoButton1:hover, #savePhotoButton2:hover, #takePhotoButton:hover, #takePhotoButton2:hover {
+  background-color: #ADD8E6;
+  color: black;
+}
+
+#photoViewer1, #photoViewer2 {
+  text-align: center;
+  width: 480px;
+  height: 360px;
+  margin-top: 10px;
+  background: black;
+  transform: scaleX(-1);
+}
+
+video {
+  width: 100%;
+  height: auto;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
