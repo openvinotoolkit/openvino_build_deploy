@@ -297,7 +297,7 @@ def run(asr_model_name: str, chat_model_name: str, embedding_model_name: str, hf
     # create user interface
     demo = create_UI(initial_message)
     # launch demo
-    demo.launch(share=public_interface)
+    demo.queue().launch(share=public_interface)
 
 
 if __name__ == "__main__":

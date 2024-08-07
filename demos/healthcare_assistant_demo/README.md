@@ -1,5 +1,9 @@
 # Healthcare Assistant with OpenVINO™
 
+The demo works as a virtual healthcare assistant, whose task is to greet the patient and summarize the patient's condition based on the conversation and uploaded examination report. 
+
+![](https://github.com/user-attachments/assets/28e66746-1f6c-4dfc-b345-ae9f0e003e76)
+
 Here are the steps involved in this demo:
 
 Step 0: Install Python and prerequisites
@@ -79,7 +83,7 @@ python main.py
 You can also change chat and asr model:
 
 ```shell
-python main.py --asr_model distil-whisper/distil-large-v2 --chat_model OpenVINO/Phi-3-medium-4k-instruct-int4-ov --hf_token 
+python main.py --asr_model distil-whisper/distil-large-v2 --chat_model OpenVINO/Phi-3-medium-4k-instruct-int4-ov
 ```
 
 If you want to use a restricted models e.g. LLama3, you must provide your HuggingFace access token:
