@@ -16,11 +16,10 @@ from llama_index.core.chat_engine import SimpleChatEngine
 from llama_index.core.chat_engine.types import BaseChatEngine, ChatMode
 from llama_index.embeddings.huggingface_openvino import OpenVINOEmbedding
 from llama_index.llms.openvino import OpenVINOLLM
-from llama_index.postprocessor.openvino_rerank import OpenVINORerank
 from llama_index.readers.file import PDFReader
 from optimum.intel import OVModelForCausalLM, OVModelForSpeechSeq2Seq, OVModelForFeatureExtraction, \
-    OVModelForSequenceClassification, OVWeightQuantizationConfig, OVConfig, OVQuantizer
-from transformers import AutoTokenizer, AutoProcessor, PreTrainedTokenizer, TextIteratorStreamer
+    OVWeightQuantizationConfig, OVConfig, OVQuantizer
+from transformers import AutoTokenizer, AutoProcessor, TextIteratorStreamer
 
 # Global variables initialization
 TARGET_AUDIO_SAMPLE_RATE = 16000
@@ -56,12 +55,10 @@ MODEL_DIR = Path("model")
 inference_lock = threading.Lock()
 
 # Initialize Model variables
-chat_tokenizer: Optional[PreTrainedTokenizer] = None
 asr_model: Optional[OVModelForSpeechSeq2Seq] = None
 asr_processor: Optional[AutoProcessor] = None
 ov_llm: Optional[OpenVINOLLM] = None
 ov_embedding: Optional[OpenVINOEmbedding] = None
-ov_reranker: Optional[OpenVINORerank] = None
 ov_chat_engine: Optional[BaseChatEngine] = None
 
 
@@ -88,8 +85,6 @@ def load_asr_model(model_name: str) -> None:
 
 
 def load_chat_model(model_name: str, token: str = None) -> OpenVINOLLM:
-    global chat_tokenizer
-
     model_path = MODEL_DIR / model_name
 
     device = "GPU" if "GPU" in get_available_devices() else "AUTO"
@@ -107,8 +102,6 @@ def load_chat_model(model_name: str, token: str = None) -> OpenVINOLLM:
 
         chat_tokenizer = AutoTokenizer.from_pretrained(model_name, token=token)
         chat_tokenizer.save_pretrained(model_path)
-    else:
-        chat_tokenizer = AutoTokenizer.from_pretrained(str(model_path))
 
     return OpenVINOLLM(context_window=2048, model_name=str(model_path), tokenizer_name=str(model_path),
                        max_new_tokens=512, device_map=device, model_kwargs={"ov_config": ov_config},
@@ -128,23 +121,11 @@ def load_embedding_model(model_name: str) -> OpenVINOEmbedding:
     return OpenVINOEmbedding(str(model_path))
 
 
-def load_reranker_model(model_name: str) -> OpenVINORerank:
-    model_path = MODEL_DIR / model_name
-
-    if not model_path.exists():
-        reranker_model = OVModelForSequenceClassification.from_pretrained(model_name, export=True, device="AUTO")
-        reranker_model.save_pretrained(model_path)
-
-    return OpenVINORerank(model=str(model_path))
-
-
-def load_chat_models(chat_model_name: str, embedding_model_name: str, reranker_model_name: str, auth_token: str = None) -> None:
-    global ov_llm, ov_chat_engine
+def load_chat_models(chat_model_name: str, embedding_model_name: str, auth_token: str = None) -> None:
+    global ov_llm, ov_chat_engine, ov_embedding
     ov_embedding = load_embedding_model(embedding_model_name)
-    ov_reranker = load_reranker_model(reranker_model_name)
     ov_llm = load_chat_model(chat_model_name, auth_token)
 
-    Settings.embed_model = ov_embedding
     ov_chat_engine = SimpleChatEngine.from_defaults(llm=ov_llm, system_prompt=SYSTEM_CONFIGURATION)
 
 
@@ -168,6 +149,8 @@ def load_context(file_path: str) -> str:
         return "No report loaded"
 
     document = load_file(Path(file_path))
+
+    Settings.embed_model = ov_embedding
     index = VectorStoreIndex.from_documents([document])
     ov_chat_engine = index.as_chat_engine(llm=ov_llm, chat_mode=ChatMode.CONTEXT, system_prompt=SYSTEM_CONFIGURATION)
 
@@ -179,7 +162,7 @@ def get_conversation(messages: Sequence[ChatMessage]) -> str:
     conversation = [{"role": message.role.value, "content": message.content} for message in messages]
 
     # use a template specific to the model
-    return chat_tokenizer.apply_chat_template(conversation, add_generation_prompt=True, tokenize=False)
+    return ov_llm._tokenizer.apply_chat_template(conversation, add_generation_prompt=True, tokenize=False)
 
 
 def generate_initial_greeting() -> str:
@@ -301,14 +284,14 @@ def create_UI(initial_message: str) -> gr.Blocks:
     return demo
 
 
-def run(asr_model_name: str, chat_model_name: str, embedding_model_name: str, reranker_model_name: str, hf_token: str = None, public_interface: bool = False) -> None:
+def run(asr_model_name: str, chat_model_name: str, embedding_model_name: str, hf_token: str = None, public_interface: bool = False) -> None:
     # set up logging
     log.getLogger().setLevel(log.INFO)
 
     # load whisper model
     load_asr_model(asr_model_name)
     # load chat models
-    load_chat_models(chat_model_name, embedding_model_name, reranker_model_name, hf_token)
+    load_chat_models(chat_model_name, embedding_model_name, hf_token)
 
     # get initial greeting
     initial_message = generate_initial_greeting()
@@ -324,9 +307,8 @@ if __name__ == "__main__":
     parser.add_argument("--asr_model", type=str, default="distil-whisper/distil-large-v2", help="Path/name of the automatic speech recognition model")
     parser.add_argument("--chat_model", type=str, default="meta-llama/Meta-Llama-3-8B-Instruct", help="Path/name of the chat model")
     parser.add_argument("--embedding_model", type=str, default="BAAI/bge-small-en-v1.5", help="Path/name of the model for embeddings")
-    parser.add_argument("--reranker_model", type=str, default="BAAI/bge-reranker-large", help="Path/name of the model for reranking")
     parser.add_argument("--hf_token", type=str, help="HuggingFace access token to get Llama3")
     parser.add_argument("--public", default=False, action="store_true", help="Whether interface should be available publicly")
 
     args = parser.parse_args()
-    run(args.asr_model, args.chat_model, args.embedding_model, args.reranker_model, args.hf_token, args.public)
+    run(args.asr_model, args.chat_model, args.embedding_model, args.hf_token, args.public)
