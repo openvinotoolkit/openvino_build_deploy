@@ -15,7 +15,6 @@ from llama_index.core.base.llms.types import ChatMessage
 from llama_index.core.chat_engine import SimpleChatEngine
 from llama_index.core.chat_engine.types import BaseChatEngine, ChatMode
 from llama_index.core.memory import ChatMemoryBuffer
-from llama_index.core.storage.chat_store import SimpleChatStore
 from llama_index.embeddings.huggingface_openvino import OpenVINOEmbedding
 from llama_index.llms.openvino import OpenVINOLLM
 from llama_index.readers.file import PDFReader
@@ -255,14 +254,15 @@ def create_UI(initial_message: str) -> gr.Blocks:
             with gr.Column(scale=1):
                 file_uploader_ui = gr.File(label="Prior examination report", file_types=[".pdf", ".txt"])
                 context_label = gr.Label(label="Report status", value="No report loaded")
-            # submit button
             submit_audio_btn = gr.Button("Submit", variant="primary", scale=1, interactive=False)
 
         # chatbot
         chatbot_ui = gr.Chatbot(value=[[None, initial_message]], label="Chatbot")
 
         # summarize
-        summarize_button = gr.Button("Summarize", variant="primary", interactive=False)
+        with gr.Row():
+            clear_btn = gr.Button("Start over", variant="secondary")
+            summarize_button = gr.Button("Summarize", variant="primary", interactive=False)
         summary_ui = gr.Textbox(label="Summary", interactive=False)
 
         # events
@@ -272,6 +272,8 @@ def create_UI(initial_message: str) -> gr.Blocks:
 
         file_uploader_ui.change(lambda: ([[None, initial_message]], None), outputs=[chatbot_ui, summary_ui])\
             .then(load_context, inputs=file_uploader_ui, outputs=context_label)
+
+        clear_btn.click(lambda: ([[None, initial_message]], None), outputs=[chatbot_ui, summary_ui])
 
         # block buttons, do the transcription and conversation, clear audio, unblock buttons
         submit_audio_btn.click(lambda: gr.Button(interactive=False), outputs=submit_audio_btn) \
