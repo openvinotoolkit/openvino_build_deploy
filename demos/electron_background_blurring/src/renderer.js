@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
+  updateDeviceSelect();
   const toggleWebcamButton = document.getElementById('toggleWebcamButton');
   const webcamElement = document.getElementById('webcam');
   let webcamStream = null;
@@ -18,6 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let capturedPhotoBlob1 = null;
   let capturedPhotoBlob2 = null;
+
+  
 
   toggleWebcamButton.addEventListener('click', () => {
     if (webcamStream) {
@@ -111,4 +114,21 @@ document.addEventListener('DOMContentLoaded', () => {
     reader.readAsArrayBuffer(blob);
   }
 });
+
+async function updateDeviceSelect() {
+  const devices = await window.electron.detectDevices();
+  const deviceSelect = document.getElementById('deviceSelect');
+
+  deviceSelect.innerHTML = '';
+  const option = document.createElement('option');
+  option.value = "AUTO";
+  option.text = "AUTO";
+  deviceSelect.appendChild(option);
+  devices.forEach(device => {
+      const option = document.createElement('option');
+      option.value = device;
+      option.text = device;
+      deviceSelect.appendChild(option);
+  });
+}
 

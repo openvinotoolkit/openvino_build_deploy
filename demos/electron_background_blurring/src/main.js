@@ -2,6 +2,8 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
+const { detectDevices } = require('./ovJobs')
+
 function createWindow() {
   const mainWindow = new BrowserWindow({
     width: 800,
@@ -50,3 +52,10 @@ ipcMain.on('save-photo', (event, buffer) => {
     console.error('Error during save dialog:', err);
   });
 });
+
+ipcMain.handle('detect-devices', async () => {
+  const devices = detectDevices();
+  console.log("Devices:", devices);
+  return devices;
+});
+
