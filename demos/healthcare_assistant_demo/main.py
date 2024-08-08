@@ -14,6 +14,8 @@ from llama_index.core import Document, VectorStoreIndex, Settings
 from llama_index.core.base.llms.types import ChatMessage
 from llama_index.core.chat_engine import SimpleChatEngine
 from llama_index.core.chat_engine.types import BaseChatEngine, ChatMode
+from llama_index.core.memory import ChatMemoryBuffer
+from llama_index.core.storage.chat_store import SimpleChatStore
 from llama_index.embeddings.huggingface_openvino import OpenVINOEmbedding
 from llama_index.llms.openvino import OpenVINOLLM
 from llama_index.readers.file import PDFReader
@@ -124,7 +126,8 @@ def load_chat_models(chat_model_name: str, embedding_model_name: str, auth_token
     ov_embedding = load_embedding_model(embedding_model_name)
     ov_llm = load_chat_model(chat_model_name, auth_token)
 
-    ov_chat_engine = SimpleChatEngine.from_defaults(llm=ov_llm, system_prompt=SYSTEM_CONFIGURATION)
+    ov_chat_engine = SimpleChatEngine.from_defaults(llm=ov_llm, system_prompt=SYSTEM_CONFIGURATION,
+                                                    memory=ChatMemoryBuffer.from_defaults())
 
 
 def load_file(file_path: Path) -> Document:
@@ -142,15 +145,19 @@ def load_file(file_path: Path) -> Document:
 
 def load_context(file_path: str) -> str:
     global ov_chat_engine
+
+    # limit chat history to 3000 tokens
+    memory = ChatMemoryBuffer.from_defaults()
+
     if not file_path:
-        ov_chat_engine = SimpleChatEngine.from_defaults(llm=ov_llm, system_prompt=SYSTEM_CONFIGURATION)
+        ov_chat_engine = SimpleChatEngine.from_defaults(llm=ov_llm, system_prompt=SYSTEM_CONFIGURATION, memory=memory)
         return "No report loaded"
 
     document = load_file(Path(file_path))
-
     Settings.embed_model = ov_embedding
     index = VectorStoreIndex.from_documents([document])
-    ov_chat_engine = index.as_chat_engine(llm=ov_llm, chat_mode=ChatMode.CONTEXT, system_prompt=SYSTEM_CONFIGURATION)
+    ov_chat_engine = index.as_chat_engine(llm=ov_llm, chat_mode=ChatMode.CONTEXT, system_prompt=SYSTEM_CONFIGURATION,
+                                          memory=memory)
 
     return "Report loaded!"
 
