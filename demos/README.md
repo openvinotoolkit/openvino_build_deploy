@@ -34,6 +34,18 @@ The demo counts people standing in front of the webcam, presenting differences i
 | Platforms                             | Client (CPU, GPU, NPU), Edge (CPU)                         |
 | Owner                                 | [@adrianboguszewski](https://github.com/adrianboguszewski) |
 
+### 🏥 Healthcare Assistant
+
+The demo works as a virtual healthcare assistant, whose task is to greet the patient and summarize the patient's condition based on the conversation and uploaded examination report. 
+
+[![image](https://github.com/user-attachments/assets/28e66746-1f6c-4dfc-b345-ae9f0e003e76)](healthcare_assistant_demo)
+
+| [Healthcare Assistant](healthcare_assistant_demo) |                                                            |
+|---------------------------|------------------------------------------------------------|
+| Related AI concepts       | LLM, RAG, ASR, GenAI, Llama3, Whisper                      |
+| Platforms                 | Client (CPU, GPU), Cloud (CPU, GPU)                        |
+| Owner                     | [@adrianboguszewski](https://github.com/adrianboguszewski) |
+
 ### 💃 Strike a pose
 
 The demo estimates poses of all people standing in front of the webcam.
