@@ -55,7 +55,6 @@ ipcMain.on('save-photo', (event, buffer) => {
 
 ipcMain.handle('detect-devices', async () => {
   const devices = detectDevices();
-  console.log("Devices:", devices);
   return devices;
 });
 

@@ -4,18 +4,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const webcamElement = document.getElementById('webcam');
   let webcamStream = null;
 
-  const toggleWebcamButton2 = document.getElementById('toggleWebcamButton2');
-  const webcamElement2 = document.getElementById('webcam2');
-  let webcamStream2 = null;
-
   const takePhotoButton = document.getElementById('takePhotoButton');
   const takePhotoButton2 = document.getElementById('takePhotoButton2');
 
   const photoElement1 = document.getElementById('photo1');
-  const photoElement2 = document.getElementById('photo2');
 
   const savePhotoButton1 = document.getElementById('savePhotoButton1');
-  const savePhotoButton2 = document.getElementById('savePhotoButton2');
 
   let capturedPhotoBlob1 = null;
   let capturedPhotoBlob2 = null;
@@ -24,24 +18,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   toggleWebcamButton.addEventListener('click', () => {
     if (webcamStream) {
-      stopWebcam(webcamElement, webcamStream, toggleWebcamButton, "1");
+      stopWebcam(webcamElement, webcamStream, toggleWebcamButton);
       webcamStream = null;
     } else {
       startWebcam(webcamElement, stream => {
         webcamStream = stream;
-        toggleWebcamButton.textContent = 'Stop Webcam 1';
-      });
-    }
-  });
-
-  toggleWebcamButton2.addEventListener('click', () => {
-    if (webcamStream2) {
-      stopWebcam(webcamElement2, webcamStream2, toggleWebcamButton2, "2");
-      webcamStream2 = null;
-    } else {
-      startWebcam(webcamElement2, stream => {
-        webcamStream2 = stream;
-        toggleWebcamButton2.textContent = 'Stop Webcam 2';
+        toggleWebcamButton.textContent = 'Stop';
       });
     }
   });
@@ -50,21 +32,9 @@ document.addEventListener('DOMContentLoaded', () => {
     takePhoto(webcamElement, photoElement1, 1);
   });
 
-  takePhotoButton2.addEventListener('click', () => {
-    takePhoto(webcamElement2, photoElement2, 2);
-  });
-
   savePhotoButton1.addEventListener('click', () => {
     if (capturedPhotoBlob1) {
       savePhoto(capturedPhotoBlob1);
-    } else {
-      alert('No photo captured yet!');
-    }
-  });
-
-  savePhotoButton2.addEventListener('click', () => {
-    if (capturedPhotoBlob2) {
-      savePhoto(capturedPhotoBlob2);
     } else {
       alert('No photo captured yet!');
     }
@@ -81,10 +51,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
   }
 
-  function stopWebcam(videoElement, stream, buttonElement, number) {
+  function stopWebcam(videoElement, stream, buttonElement) {
     stream.getTracks().forEach(track => track.stop());
     videoElement.srcObject = null;
-    buttonElement.textContent = 'Start Webcam ' + number;
+    buttonElement.textContent = 'Start';
   }
 
   function takePhoto(videoElement, photoElement, webcamNumber) {
