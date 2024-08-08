@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const toggleWebcamButton = document.getElementById('toggleWebcamButton');
   const webcamElement = document.getElementById('webcam');
   let webcamStream = null;
-  
+
   const toggleWebcamButton2 = document.getElementById('toggleWebcamButton2');
   const webcamElement2 = document.getElementById('webcam2');
   let webcamStream2 = null;
@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let capturedPhotoBlob1 = null;
   let capturedPhotoBlob2 = null;
 
-  
+
 
   toggleWebcamButton.addEventListener('click', () => {
     if (webcamStream) {
@@ -72,13 +72,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function startWebcam(videoElement, onStreamReady) {
     navigator.mediaDevices.getUserMedia({ video: true , audio : false })
-      .then(stream => {
-        videoElement.srcObject = stream;
-        onStreamReady(stream);
-      })
-      .catch(error => {
-        console.error('Error accessing webcam:', error);
-      });
+        .then(stream => {
+          videoElement.srcObject = stream;
+          onStreamReady(stream);
+        })
+        .catch(error => {
+          console.error('Error accessing webcam:', error);
+        });
   }
 
   function stopWebcam(videoElement, stream, buttonElement, number) {
@@ -115,20 +115,16 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-async function updateDeviceSelect() {
-  const devices = await window.electron.detectDevices();
+function updateDeviceSelect() {
   const deviceSelect = document.getElementById('deviceSelect');
 
-  deviceSelect.innerHTML = '';
-  const option = document.createElement('option');
-  option.value = "AUTO";
-  option.text = "AUTO";
-  deviceSelect.appendChild(option);
-  devices.forEach(device => {
-      const option = document.createElement('option');
-      option.value = device;
-      option.text = device;
-      deviceSelect.appendChild(option);
-  });
+  window.electron.detectDevices().then( devices =>
+      devices.forEach(device => {
+        const option = document.createElement('option');
+        option.value = device;
+        option.text = device;
+        deviceSelect.appendChild(option);
+      })
+  );
 }
 

@@ -8,6 +8,5 @@ module.exports = { detectDevices }
 const core = new ov.Core();
 
 async function detectDevices() {
-    const devices = core.getAvailableDevices();
-    return devices;
+    return ["AUTO"].concat(core.getAvailableDevices());
 }
