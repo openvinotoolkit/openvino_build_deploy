@@ -1,8 +1,7 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
-const fs = require('fs');
 
-const { detectDevices } = require('./ovJobs')
+const { detectDevices } = require('./ov-jobs')
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -33,28 +32,7 @@ app.on('activate', () => {
   }
 });
 
-ipcMain.on('save-photo', (event, buffer) => {
-  dialog.showSaveDialog({
-    title: 'Save Photo',
-    defaultPath: 'photo.png',
-    filters: [
-      { name: 'Images', extensions: ['png'] }
-    ]
-  }).then(result => {
-    if (!result.canceled) {
-      fs.writeFile(result.filePath, buffer, (err) => {
-        if (err) {
-          console.error('Error saving photo:', err);
-        }
-      });
-    }
-  }).catch(err => {
-    console.error('Error during save dialog:', err);
-  });
-});
-
 ipcMain.handle('detect-devices', async () => {
-  const devices = detectDevices();
-  return devices;
+  return detectDevices();
 });
 
