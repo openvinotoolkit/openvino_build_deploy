@@ -25,11 +25,19 @@ document.addEventListener('DOMContentLoaded', () => {
       .then(stream => {
         webcamStream = stream;
         videoElement.srcObject = stream;
+
+        videoElement.addEventListener('loadedmetadata', () => {
+          // Ustawiamy wymiary canvas na podstawie strumienia wideo
+          canvasElement.width = videoElement.videoWidth;
+          canvasElement.height = videoElement.videoHeight;
+        });
+
         videoElement.play();
 
         captureInterval = setInterval(() => {
           ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
           tempImg = canvasElement.toDataURL('image/jpeg');
+
           imgElement.src = tempImg;
         }, 30); // number here means delay (33FPS)
 
