@@ -9,19 +9,19 @@
   "build": {
     "appId": "com.example.webcamapp",
     "mac": {
-      "icon": "assets/icons/icon.ico"
+      "icon": "assets/icons/icon.png"
     },
     "win": {
       "target": "nsis",
       "icon": "assets/icons/icon.ico"
     },
     "linux": {
-      "target": "deb",
+      "target": ["deb", "rpm", "zip"],
       "icon": "assets/icons/icon.png",
       "category": "Utility"
     },
     "files": [
-      "src/*.js",
+      "src/**/*.js",
       "src/index.html",
       "src/styles.css",
       "package.json",
