@@ -1,11 +1,14 @@
 const { contextBridge, ipcRenderer } = require('electron');
 const { Buffer } = require('buffer');
+const NodeWebcam = require('node-webcam');
 
-contextBridge.exposeInMainWorld('electron', {
+contextBridge.exposeInMainWorld('electronAPI', {
   ipcRenderer: {
     send: (channel, data) => ipcRenderer.send(channel, data),
     on: (channel, func) => ipcRenderer.on(channel, (event, ...args) => func(event, ...args))
   },
   Buffer: Buffer,
-  detectDevices: () => ipcRenderer.invoke('detect-devices')
+  detectDevices: () => ipcRenderer.invoke('detect-devices'),
+  NodeWebcam : NodeWebcam,
+  runWebcam: (Webcam, inferenceOn) => ipcRenderer.invoke('run-webcam', Webcam, inferenceOn)
 });
