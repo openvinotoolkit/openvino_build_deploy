@@ -10,13 +10,15 @@
 <div id="mainContainer">
   <div id="webcamViewer">
     <img id="webcam" autoplay playsinline></img>
-  </div>
-  <div id="buttonContainer">
-    <div>
-      <label for="deviceSelect">Inference Device:</label>
-      <select id="deviceSelect"></select>
+    <div id="controlPanelContainer">
+      <div class="controlPanelWidget">
+        <label for="deviceSelect">Inference Device:</label>
+        <select id="deviceSelect"></select>
+      </div>
+      <div class="controlPanelWidget">
+        <button id="toggleWebcamButton">Start</button>
+      </div>
     </div>
-    <button id="toggleWebcamButton">Start</button>
   </div>
 </div>
 

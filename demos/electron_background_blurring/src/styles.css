@@ -1,30 +1,61 @@
 body {
+  display: flex;
   align-items: center;
   justify-content: center;
   height: 100vh;
-  margin: 0;
   font-family: Arial, sans-serif;
-}
-
-#buttonContainer {
-  margin: 20px;
-}
-
-#webcamViewer {
-  margin: 20px;
-}
-
-#webcam {
-  margin-top: 20px;
-  width: 480px;
-  height: 360px;
-  background: black;
-  transform: scaleX(-1);
+  margin: 0;
 }
 
 #mainContainer {
   width: 100%;
-  justify-content: space-between;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#webcamViewer {
+  display: flex;
+  justify-content: center;
+  margin: 20px;
+  position: relative;
+}
+
+#webcam {
+  width: 480px;
+  height: 360px;
+  background: black;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  transform: scaleX(-1);
+}
+
+#controlPanelContainer {
+  display: flex;
+  position: absolute;
+  width: 480px; /* Match the width of the webcam */
+  top: 100%; /* Position below the webcam */
+  left: 0;
+  right: 0;
+  justify-content: space-between; /* Distribute space between label/select and button */
+  align-items: center; /* Vertically align items in the center */
+  gap: 10px; /* Add space between the elements */
+}
+
+.controlPanelWidget {
+  display: flex;
+  align-items: center; /* Vertically center items within the widget */
+  padding: 10px;
+}
+
+.controlPanelWidget label {
+  margin-right: 10px; /* Add space between the label and the select element */
+}
+
+#toggleWebcamButton {
+  padding: 8px 16px;
+  cursor: pointer;
 }
 
 video {
