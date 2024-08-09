@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Background Blurring with OpenVINO</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="mainContainer">
+    <div id="webcamViewer">
+      <div id="processingTimeContainer">
+        <p id="processingTime">Processing Time: 0 ms</p>
+      </div>
+      <img id="webcam"></img>
+      <div id="controlPanelContainer">
+        <div id="controlPanelRow">
+          <div class="controlPanelWidget">
+            <label for="deviceSelect">Inference Device:</label>
+            <select id="deviceSelect"></select>
+          </div>
+          <div class="controlPanelWidget">
+            <button id="toggleWebcamButton">Start</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
