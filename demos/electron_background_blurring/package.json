@@ -16,16 +16,14 @@
       "icon": "assets/icons/icon.ico"
     },
     "linux": {
-      "icon": "assets/icons/icon.png"
+      "target": "deb",
+      "icon": "assets/icons/icon.png",
+      "category": "Utility"
     },
     "files": [
-      "src/main.js",
-      "src/ov-jobs.js",
-      "src/helpers.js",
+      "src/*.js",
       "src/index.html",
-      "src/renderer.js",
       "src/styles.css",
-      "src/preload.js",
       "package.json",
       "assets/**/*"
     ]
@@ -42,7 +40,9 @@
     "node-webcam": "^0.8.2"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": ""
+  "author": "Mikołaj Roszczyk <mikolaj.roszczyk@intel.com>",
+  "contributors": ["Adrian Boguszewski"],
+  "homepage": "https://github.com/openvinotoolkit/openvino_build_deploy",
+  "license": "Apache-2.0",
+  "description": "An application to present background blurring with OpenVINO"
 }
