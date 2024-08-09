@@ -27,7 +27,6 @@ document.addEventListener('DOMContentLoaded', () => {
         videoElement.srcObject = stream;
 
         videoElement.addEventListener('loadedmetadata', () => {
-          // Ustawiamy wymiary canvas na podstawie strumienia wideo
           canvasElement.width = videoElement.videoWidth;
           canvasElement.height = videoElement.videoHeight;
         });
@@ -37,7 +36,8 @@ document.addEventListener('DOMContentLoaded', () => {
         captureInterval = setInterval(() => {
           ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
           tempImg = canvasElement.toDataURL('image/jpeg');
-
+          
+          // imgElement.src = window.electronAPI.runModel(tempImg); ===> TO DO: passing img to function in ov-jobs.js (for now there's some problem with local resources)
           imgElement.src = tempImg;
         }, 30); // number here means delay (33FPS)
 
