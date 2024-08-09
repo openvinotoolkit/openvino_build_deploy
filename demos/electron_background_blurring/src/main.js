@@ -40,23 +40,3 @@ ipcMain.handle('detect-devices', async () => {
   return detectDevices();
 });
 
-ipcMain.handle('run-webcam', async(event, webcam, inferenceOn) => {
-  console.log("\n\nWEBCAM\n\n",webcam);
-  let resultElement = null;
-  webcam.snap(function(err, data) {
-    if (err) {
-      console.error('Error capturing frame:', err);
-      return;
-    }
-
-    const imageBlob = new Blob([data], { type: 'image/jpeg' });
-    const imageUrl = URL.createObjectURL(imageBlob);
-
-    resultElement = imageUrl;
-  });
-  if (inferenceOn){
-    resultElement = runModel(resultElement);
-  }
-  return resultElement;
-})
-

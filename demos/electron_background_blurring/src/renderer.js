@@ -2,48 +2,50 @@ document.addEventListener('DOMContentLoaded', () => {
 
   updateDeviceSelect();
 
-  const webcamOpts = {
-    width: 1280,
-    height: 720,
-    quality: 100,
-    output: "jpeg",
-    device: false, 
-    callbackReturn: "buffer",
-    verbose: false
-  };
-
-  const webcamElement = document.getElementById('webcam');
+  const videoElement = document.createElement('video');
+  const canvasElement = document.createElement('canvas');
+  const ctx = canvasElement.getContext('2d');
+  const imgElement = document.getElementById('webcam');
   const toggleWebcamButton = document.getElementById('toggleWebcamButton');
   let webcamStream = null;
   let captureInterval = null;
 
   toggleWebcamButton.addEventListener('click', () => {
     if (webcamStream) {
-      stopWebcam(webcamElement, webcamStream, toggleWebcamButton);
+      stopWebcam();
       webcamStream = null;
     } else {
-      startWebcam(webcamElement, stream => {
-        webcamStream = stream;
-        toggleWebcamButton.textContent = 'Stop';
-      });
+      startWebcam();
     }
   });
 
-  function startWebcam(videoElement, onStreamReady) {
-    navigator.mediaDevices.getUserMedia({ video: true , audio : false })
+  function startWebcam() {
+    let tempImg = null;
+    navigator.mediaDevices.getUserMedia({ video: true })
       .then(stream => {
+        webcamStream = stream;
         videoElement.srcObject = stream;
-        onStreamReady(stream);
+        videoElement.play();
+
+        captureInterval = setInterval(() => {
+          ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+          tempImg = canvasElement.toDataURL('image/jpeg');
+          imgElement.src = tempImg;
+        }, 30); // number here means delay (33FPS)
+
+        toggleWebcamButton.textContent = 'Stop';
       })
       .catch(error => {
         console.error('Error accessing webcam:', error);
       });
   }
 
-  function stopWebcam(videoElement, stream, buttonElement) {
-    stream.getTracks().forEach(track => track.stop());
+  function stopWebcam() {
+    clearInterval(captureInterval);
+    webcamStream.getTracks().forEach(track => track.stop());
     videoElement.srcObject = null;
-    buttonElement.textContent = 'Start';
+    imgElement.src = '';
+    toggleWebcamButton.textContent = 'Start';
   }
 });
 
