@@ -1,5 +1,5 @@
 {
-  "name": "webcam-app",
+  "name": "ov-background-blurring",
   "version": "1.0.0",
   "main": "src/main.js",
   "scripts": {
@@ -8,19 +8,26 @@
   },
   "build": {
     "appId": "com.example.webcamapp",
+    "mac": {
+      "icon": "assets/icons/icon.ico"
+    },
     "win": {
       "target": "nsis",
-      "icon": "icon.ico"
+      "icon": "assets/icons/icon.ico"
+    },
+    "linux": {
+      "icon": "assets/icons/icon.png"
     },
     "files": [
       "src/main.js",
-      "src/ovJobs.js",
+      "src/ov-jobs.js",
       "src/helpers.js",
       "src/index.html",
       "src/renderer.js",
       "src/styles.css",
       "src/preload.js",
-      "package.json"
+      "package.json",
+      "assets/**/*"
     ]
   },
   "devDependencies": {
