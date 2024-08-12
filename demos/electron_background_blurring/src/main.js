@@ -43,3 +43,8 @@ ipcMain.handle('detect-devices', async () => {
 ipcMain.handle('run-model', async (event, img) => {
   return runModel(img);
 })
+
+ipcMain.handle('detect-webcam', async () => {
+  console.log(navigator.mediaDevices.enumerateDevices());
+  return navigator.mediaDevices.enumerateDevices();
+});

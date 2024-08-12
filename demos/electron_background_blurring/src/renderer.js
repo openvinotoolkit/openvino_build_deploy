@@ -1,6 +1,16 @@
 document.addEventListener('DOMContentLoaded', () => {
 
+  const webcamSelect = document.getElementById('webcamSelect');
+
   updateDeviceSelect();
+  updateWebcamSelect();
+
+  webcamSelect.addEventListener('change', () => {
+    if (webcamStream) {
+      stopWebcam();
+      startWebcam(webcamSelect.value);
+    }
+  });
 
   const videoElement = document.createElement('video');
   const canvasElement = document.createElement('canvas');
@@ -15,13 +25,14 @@ document.addEventListener('DOMContentLoaded', () => {
       stopWebcam();
       webcamStream = null;
     } else {
-      startWebcam();
+      startWebcam(webcamSelect.value);
     }
   });
 
-  function startWebcam() {
+  function startWebcam(deviceId) {
     let tempImg = null;
     navigator.mediaDevices.getUserMedia({ video: {
+        deviceId : deviceId,
         width : {ideal: 1920},
         height : {ideal: 1080}
     } })
@@ -73,3 +84,17 @@ function updateDeviceSelect() {
   );
 }
 
+function updateWebcamSelect() {
+  const webcamSelect = document.getElementById('webcamSelect');
+
+  navigator.mediaDevices.enumerateDevices().then( devices =>
+      devices.forEach(device => {
+        if (device.kind == "videoinput"){
+        const option = document.createElement('option');
+        option.value = device.deviceId;
+        option.text =  device.label || `Camera ${device.deviceId}`;
+        webcamSelect.appendChild(option);
+        }
+      })
+  );
+}
