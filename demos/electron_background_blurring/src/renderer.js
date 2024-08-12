@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
           ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
           tempImg = canvasElement.toDataURL('image/jpeg');
           
-          // imgElement.src = window.electronAPI.runModel(tempImg); ===> TO DO: passing img to function in ov-jobs.js (for now there's some problem with local resources)
+          imgElement.src = window.electronAPI.runModel(tempImg); 
           imgElement.src = tempImg;
         }, 25); // number here means delay in ms
 
