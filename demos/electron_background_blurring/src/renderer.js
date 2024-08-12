@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
     clearInterval(captureInterval);
     webcamStream.getTracks().forEach(track => track.stop());
     videoElement.srcObject = null;
-    imgElement.src = '';
+    imgElement.src = '../assets/webcam_placeholder.png';
     toggleWebcamButton.textContent = 'Start';
   }
 });
