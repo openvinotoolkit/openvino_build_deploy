@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const canvasElement = document.createElement('canvas');
   const ctx = canvasElement.getContext('2d');
   const imgElement = document.getElementById('webcam');
+  const deviceSelect = document.getElementById("deviceSelect")
   const toggleWebcamButton = document.getElementById('toggleWebcamButton');
   let webcamStream = null;
   let captureInterval = null;
@@ -30,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function startWebcam(deviceId) {
-    let tempImg = null;
+    let tempImg, ovDevice = null;
     navigator.mediaDevices.getUserMedia({ video: {
         deviceId : deviceId,
         width : {ideal: 1920},
@@ -45,14 +46,16 @@ document.addEventListener('DOMContentLoaded', () => {
           canvasElement.height = videoElement.videoHeight;
         });
 
-        videoElement.play();
+        videoElement.play().then();
 
         captureInterval = setInterval(() => {
           ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
           tempImg = canvasElement.toDataURL('image/jpeg');
-          
-          imgElement.src = window.electronAPI.runModel(tempImg); 
-          imgElement.src = tempImg;
+          ovDevice = deviceSelect.value
+
+          const img = window.electronAPI.runModel(tempImg, ovDevice);
+
+          imgElement.src = tempImg
         }, 25); // number here means delay in ms
 
         toggleWebcamButton.textContent = 'Stop';
@@ -77,12 +80,12 @@ function updateDeviceSelect() {
   const deviceSelect = document.getElementById('deviceSelect');
 
   window.electronAPI.detectDevices().then( devices =>
-      devices.forEach(device => {
-        const option = document.createElement('option');
-        option.value = device;
-        option.text = device;
-        deviceSelect.appendChild(option);
-      })
+    devices.forEach(device => {
+      const option = document.createElement('option');
+      option.value = device;
+      option.text = device;
+      deviceSelect.appendChild(option);
+    })
   );
 }
 
@@ -90,8 +93,8 @@ function updateWebcamSelect() {
   const webcamSelect = document.getElementById('webcamSelect');
 
   navigator.mediaDevices.enumerateDevices().then( devices =>
-      devices.forEach(device => {
-        if (device.kind == "videoinput"){
+    devices.forEach(device => {
+      if (device.kind === "videoinput") {
         const option = document.createElement('option');
         option.value = device.deviceId;
         option.text =  device.label || `Camera ${device.deviceId}`;

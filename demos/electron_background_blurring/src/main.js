@@ -40,8 +40,8 @@ ipcMain.handle('detect-devices', async () => {
   return detectDevices();
 });
 
-ipcMain.handle('run-model', async (event, img) => {
-  return runModel(img);
+ipcMain.handle('run-model', async (event, img, device) => {
+  return runModel(img, device);
 })
 
 ipcMain.handle('detect-webcam', async () => {
