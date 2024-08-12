@@ -21,7 +21,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function startWebcam() {
     let tempImg = null;
-    navigator.mediaDevices.getUserMedia({ video: true })
+    navigator.mediaDevices.getUserMedia({ video: {
+        width : {ideal: 1920},
+        height : {ideal: 1080}
+    } })
       .then(stream => {
         webcamStream = stream;
         videoElement.srcObject = stream;
@@ -39,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
           
           // imgElement.src = window.electronAPI.runModel(tempImg); ===> TO DO: passing img to function in ov-jobs.js (for now there's some problem with local resources)
           imgElement.src = tempImg;
-        }, 30); // number here means delay (33FPS)
+        }, 25); // number here means delay in ms
 
         toggleWebcamButton.textContent = 'Stop';
       })
