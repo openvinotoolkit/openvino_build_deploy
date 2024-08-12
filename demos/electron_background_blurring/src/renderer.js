@@ -53,7 +53,10 @@ document.addEventListener('DOMContentLoaded', () => {
           tempImg = canvasElement.toDataURL('image/jpeg');
           ovDevice = deviceSelect.value
 
-          const img = window.electronAPI.runModel(tempImg, ovDevice);
+          var resultOfInference = window.electronAPI.runModel(tempImg, ovDevice);
+
+          tempImg = resultOfInference.img;
+          document.getElementById('processingTime').innerText = `Processing time: ${resultOfInference.inferenceTime} ms`;
 
           imgElement.src = tempImg
         }, 25); // number here means delay in ms
