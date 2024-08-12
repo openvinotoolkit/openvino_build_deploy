@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   webcamSelect.addEventListener('change', () => {
     if (webcamStream) {
-      stopWebcam();
+      stopWebcam(true);
       startWebcam(webcamSelect.value);
     }
   });
@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   toggleWebcamButton.addEventListener('click', () => {
     if (webcamStream) {
-      stopWebcam();
+      stopWebcam(false);
       webcamStream = null;
     } else {
       startWebcam(webcamSelect.value);
@@ -62,12 +62,14 @@ document.addEventListener('DOMContentLoaded', () => {
       });
   }
 
-  function stopWebcam() {
+  function stopWebcam(keepActive) {
     clearInterval(captureInterval);
     webcamStream.getTracks().forEach(track => track.stop());
     videoElement.srcObject = null;
     imgElement.src = '../assets/webcam_placeholder.png';
-    toggleWebcamButton.textContent = 'Start';
+    if (!keepActive){
+      toggleWebcamButton.textContent = 'Start';
+    }
   }
 });
 
