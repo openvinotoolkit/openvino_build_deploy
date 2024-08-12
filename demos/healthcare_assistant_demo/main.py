@@ -102,10 +102,8 @@ def load_chat_model(model_name: str, token: str = None) -> OpenVINOLLM:
         chat_tokenizer = AutoTokenizer.from_pretrained(model_name, token=token)
         chat_tokenizer.save_pretrained(model_path)
 
-    return OpenVINOLLM(context_window=2048, model_name=str(model_path), tokenizer_name=str(model_path),
-                       max_new_tokens=512, device_map=device, model_kwargs={"ov_config": ov_config},
-                       generate_kwargs={"do_sample": True, "temperature": 0.7, "top_k": 50, "top_p": 0.95},
-                       messages_to_prompt=get_conversation)
+    return OpenVINOLLM(context_window=2048, model_id_or_path=str(model_path), max_new_tokens=512, device_map=device,
+                       model_kwargs={"ov_config": ov_config}, generate_kwargs={"do_sample": True, "temperature": 0.7, "top_k": 50, "top_p": 0.95})
 
 
 def load_embedding_model(model_name: str) -> OpenVINOEmbedding:
@@ -159,14 +157,6 @@ def load_context(file_path: str) -> str:
                                           memory=memory)
 
     return "Report loaded!"
-
-
-def get_conversation(messages: Sequence[ChatMessage]) -> str:
-    # the conversation must be in that format to use chat template
-    conversation = [{"role": message.role.value, "content": message.content} for message in messages]
-
-    # use a template specific to the model
-    return ov_llm._tokenizer.apply_chat_template(conversation, add_generation_prompt=True, tokenize=False)
 
 
 def generate_initial_greeting() -> str:
