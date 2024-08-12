@@ -1,7 +1,7 @@
-const path = require('node:path');
+const path = require('path');
 const { cv } = require('opencv-wasm');
-const { createWriteStream } = require('node:fs');
-const { mkdir, stat } = require('node:fs/promises');
+const { createWriteStream } = require('fs');
+const { mkdir, stat } = require('fs/promises');
 const { HttpsProxyAgent } = require('https-proxy-agent');
 
 const {

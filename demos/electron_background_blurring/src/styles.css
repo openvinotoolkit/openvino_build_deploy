@@ -66,7 +66,7 @@ body {
   margin-right: 10px; /* Space between label and select element */
 }
 
-#deviceSelect {
+#webcamSelect, #deviceSelect {
   font-size: 14pt; /* Adjust font size as needed */
 }
 

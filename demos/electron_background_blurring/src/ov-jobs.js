@@ -9,6 +9,5 @@ async function detectDevices() {
 }
 
 async function runModel(img){
-    console.log(img);
     return img;
 }
