@@ -54,11 +54,12 @@ document.addEventListener('DOMContentLoaded', () => {
           ovDevice = deviceSelect.value;
 
           window.electronAPI.runModel(tempImg, ovDevice).then(result => {
-            document.getElementById('processingTime').innerText = `Processing time: ${result.inferenceTime} ms`; 
+            inferenceTime = result.inferenceTime;
             tempImg = result.img;
           });
           
           imgElement.src = tempImg;
+          document.getElementById('processingTime').innerText = `Processing time: ${inferenceTime} ms`;
 
         }, 25); // number here means delay in ms
 
@@ -74,6 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
     webcamStream.getTracks().forEach(track => track.stop());
     videoElement.srcObject = null;
     imgElement.src = '../assets/webcam_placeholder.png';
+    document.getElementById('processingTime').innerText = `Processing time: 0 ms`; 
     if (!keepActive){
       toggleWebcamButton.textContent = 'Start';
     }
