@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const toggleWebcamButton = document.getElementById('toggleWebcamButton');
   let webcamStream = null;
   let captureInterval = null;
+  let inferenceTime = null;
 
   toggleWebcamButton.addEventListener('click', () => {
     if (webcamStream) {
@@ -30,7 +31,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+
   function startWebcam(deviceId) {
+
     let ovDevice = null;
     navigator.mediaDevices.getUserMedia({ video: {
         deviceId : deviceId,
@@ -53,6 +56,8 @@ document.addEventListener('DOMContentLoaded', () => {
           tempImg = canvasElement.toDataURL('image/jpeg');
           ovDevice = deviceSelect.value;
 
+        // var tempImg = wCap.read();
+
           window.electronAPI.runModel(tempImg, ovDevice).then(result => {
             inferenceTime = result.inferenceTime;
             tempImg = result.img;
@@ -64,7 +69,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 25); // number here means delay in ms
 
         toggleWebcamButton.textContent = 'Stop';
-      })
+      }
+    )
       .catch(error => {
         console.error('Error accessing webcam:', error);
       });
