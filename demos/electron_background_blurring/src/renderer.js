@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function startWebcam(deviceId) {
-    let tempImg, ovDevice = null;
+    let ovDevice = null;
     navigator.mediaDevices.getUserMedia({ video: {
         deviceId : deviceId,
         width : {ideal: 1920},
@@ -53,12 +53,11 @@ document.addEventListener('DOMContentLoaded', () => {
           tempImg = canvasElement.toDataURL('image/jpeg');
           ovDevice = deviceSelect.value
 
-          var resultOfInference = window.electronAPI.runModel(tempImg, ovDevice);
+          window.electronAPI.runModel(tempImg, ovDevice).then(result => {
+            document.getElementById('processingTime').innerText = `Processing time: ${result.inferenceTime} ms`; 
+            imgElement.src = result.img;
+          });
 
-          tempImg = resultOfInference.img;
-          document.getElementById('processingTime').innerText = `Processing time: ${resultOfInference.inferenceTime} ms`;
-
-          imgElement.src = tempImg
         }, 25); // number here means delay in ms
 
         toggleWebcamButton.textContent = 'Stop';

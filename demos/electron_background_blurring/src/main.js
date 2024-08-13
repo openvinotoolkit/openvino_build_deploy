@@ -41,7 +41,7 @@ ipcMain.handle('detect-devices', async () => {
 });
 
 ipcMain.handle('run-model', async (event, img, device) => {
-  const result = runModel(img, device);
+  const result = await runModel(img, device);
   return result;
 })
 

@@ -11,10 +11,9 @@ async function detectDevices() {
     return ["AUTO"].concat(core.getAvailableDevices());
 }
 
-function runModel(img, device){
+async function runModel(img, device){
     // if device in ovModels, use precompiled model, otherwise load and compile model and ut to the map
     const startTime = performance.now();
-    img = img;
     var i = 3000;
     while(i>0){
         i--;
