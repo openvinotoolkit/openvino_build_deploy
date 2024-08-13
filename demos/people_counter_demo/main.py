@@ -33,7 +33,7 @@ def convert(model_name: str, model_dir: Path) -> tuple[Path, Path]:
     if not ov_model_path.exists():
         ov_model_path = yolo_model.export(format="openvino", dynamic=False, half=True)
     if not ov_int8_model_path.exists():
-        ov_int8_model_path = yolo_model.export(format="openvino", dynamic=False, half=True, int8=True)
+        ov_int8_model_path = yolo_model.export(format="openvino", dynamic=False, half=True, int8=True, data="coco128.yaml")
     return Path(ov_model_path) / f"{model_name}.xml", Path(ov_int8_model_path) / f"{model_name}.xml"
 
 
