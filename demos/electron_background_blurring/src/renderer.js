@@ -51,12 +51,14 @@ document.addEventListener('DOMContentLoaded', () => {
         captureInterval = setInterval(() => {
           ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
           tempImg = canvasElement.toDataURL('image/jpeg');
-          ovDevice = deviceSelect.value
+          ovDevice = deviceSelect.value;
 
           window.electronAPI.runModel(tempImg, ovDevice).then(result => {
             document.getElementById('processingTime').innerText = `Processing time: ${result.inferenceTime} ms`; 
-            imgElement.src = result.img;
+            tempImg = result.img;
           });
+          
+          imgElement.src = tempImg;
 
         }, 25); // number here means delay in ms
 
