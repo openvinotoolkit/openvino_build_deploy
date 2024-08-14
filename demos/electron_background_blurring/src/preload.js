@@ -8,5 +8,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   Buffer: Buffer,
   detectDevices: () => ipcRenderer.invoke('detect-devices'),
-  runModel: (img, device) => ipcRenderer.invoke('run-model', img, device)
+  runModel: (img, device) => ipcRenderer.invoke('run-model', img, device),
+  takeTime: () => ipcRenderer.invoke('detect-devices')
 });

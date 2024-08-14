@@ -1,7 +1,7 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 
-const { detectDevices, runModel } = require('./ov-jobs')
+const { detectDevices, runModel, takeTime } = require('./ov-jobs')
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -47,3 +47,8 @@ ipcMain.handle('run-model', async (event, img, device) => {
 ipcMain.handle('detect-webcam', async () => {
   return navigator.mediaDevices.enumerateDevices();
 });
+
+ipcMain.handle('take-time', async () => {
+  return takeTime();
+});
+

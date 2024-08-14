@@ -6,7 +6,7 @@ const path = require('path');
 const { Buffer } = require('buffer');
 const { getImageData } = require('./helpers.js');
 
-module.exports = { detectDevices, runModel }
+module.exports = { detectDevices, runModel, takeTime }
 
 const core = new ov.Core();
 const ovModels = new Map();
@@ -29,7 +29,7 @@ function resizeAndPad(image, targetHeight = 256, targetWidth = 256) {
         newHeight = targetHeight;
         newWidth = Math.floor(width / (height / targetHeight));
     }
- 
+
     let resizedImg = new cv.Mat();
     let newSize = new cv.Size(newWidth, newHeight);
     cv.resize(image, resizedImg, newSize, 0, 0, cv.INTER_LINEAR);
@@ -50,15 +50,22 @@ function resizeAndPad(image, targetHeight = 256, targetWidth = 256) {
 async function runModel(img, device){
     // if device in ovModels, use precompiled model, otherwise load and compile model and ut to the map
     const startTime = performance.now();
-
-    getImageData(img).then(result => {
-        let mat = cv.matFromImageData(result);
-    });
-
+    // console.log(img);
+    // const mat = cv.matFromImageData(img);
     const endTime = performance.now();
     const inferenceTime = endTime - startTime;
     return {
         img : img, 
         inferenceTime : inferenceTime.toFixed(2).toString()
     };
+}
+
+function processVideo(video){
+    let src = new cv.Mat(video.height, video.width, cv.CV_8UC4);
+    let dst = new cv.Mat(video.height, video.width, cv.CV_8UC1);
+    let cap = new cv.VideoCapture(video);
+}
+
+function takeTime(){
+    return performance.now();
 }

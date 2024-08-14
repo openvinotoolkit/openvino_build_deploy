@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let webcamStream = null;
   let captureInterval = null;
   let inferenceTime = null;
+  let begin = null;
 
   toggleWebcamButton.addEventListener('click', () => {
     if (webcamStream) {
@@ -39,7 +40,8 @@ document.addEventListener('DOMContentLoaded', () => {
         deviceId : deviceId,
         width : {ideal: 1920},
         height : {ideal: 1080}
-    } })
+    },
+    audio : false })
       .then(stream => {
         webcamStream = stream;
         videoElement.srcObject = stream;
@@ -52,21 +54,25 @@ document.addEventListener('DOMContentLoaded', () => {
         videoElement.play().then();
 
         captureInterval = setInterval(() => {
+
+          begin = window.electronAPI.takeTime();
+
           ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
-          tempImg = canvasElement.toDataURL('image/jpeg');
+          const imageData = ctx.getImageData(0,0,canvasElement.width, canvasElement.height);
           ovDevice = deviceSelect.value;
 
         // var tempImg = wCap.read();
 
-          window.electronAPI.runModel(tempImg, ovDevice).then(result => {
+          window.electronAPI.runModel(imageData, ovDevice).then(result => {
             inferenceTime = result.inferenceTime;
             tempImg = result.img;
           });
+          tempImg = canvasElement.toDataURL('image/jpeg');
           
           imgElement.src = tempImg;
           document.getElementById('processingTime').innerText = `Processing time: ${inferenceTime} ms`;
 
-        }, 25); // number here means delay in ms
+        }, 25-(window.electronAPI.takeTime()-begin)); // number here means delay in ms
 
         toggleWebcamButton.textContent = 'Stop';
       }
