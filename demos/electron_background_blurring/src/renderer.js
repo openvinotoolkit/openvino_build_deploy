@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // var tempImg = wCap.read();
 
-          window.electronAPI.runModel(imageData, ovDevice).then(result => {
+          window.electronAPI.runModel(imageData, canvasElement.width, canvasElement.height, ovDevice).then(result => {
             inferenceTime = result.inferenceTime;
             tempImg = result.img;
           });

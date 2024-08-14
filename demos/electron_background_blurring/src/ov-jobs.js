@@ -47,11 +47,14 @@ function resizeAndPad(image, targetHeight = 256, targetWidth = 256) {
 }
 
 
-async function runModel(img, device){
+async function runModel(img, width, height, device){
     // if device in ovModels, use precompiled model, otherwise load and compile model and ut to the map
     const startTime = performance.now();
-    // console.log(img);
-    // const mat = cv.matFromImageData(img);
+
+    // CONVERTION TO MAT:
+    const mat = new cv.Mat(height, width, cv.CV_8UC4);
+    mat.data.set(img.data);
+    
     const endTime = performance.now();
     const inferenceTime = endTime - startTime;
     return {
@@ -60,11 +63,6 @@ async function runModel(img, device){
     };
 }
 
-function processVideo(video){
-    let src = new cv.Mat(video.height, video.width, cv.CV_8UC4);
-    let dst = new cv.Mat(video.height, video.width, cv.CV_8UC1);
-    let cap = new cv.VideoCapture(video);
-}
 
 function takeTime(){
     return performance.now();
