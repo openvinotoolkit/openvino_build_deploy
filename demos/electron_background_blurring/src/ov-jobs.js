@@ -54,7 +54,7 @@ async function runModel(img, width, height, device){
     // CONVERTION TO MAT:
     const mat = new cv.Mat(height, width, cv.CV_8UC4);
     mat.data.set(img.data);
-    
+
     const endTime = performance.now();
     const inferenceTime = endTime - startTime;
     return {

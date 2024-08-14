@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let captureInterval = null;
   let inferenceTime = null;
   let begin = null;
+  let endTime = null;
 
   toggleWebcamButton.addEventListener('click', () => {
     if (webcamStream) {
@@ -55,7 +56,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         captureInterval = setInterval(() => {
 
-          begin = window.electronAPI.takeTime();
+          window.electronAPI.takeTime().then(result => {
+            begin = result;
+          });
 
           ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
           const imageData = ctx.getImageData(0,0,canvasElement.width, canvasElement.height);
@@ -71,8 +74,12 @@ document.addEventListener('DOMContentLoaded', () => {
           
           imgElement.src = tempImg;
           document.getElementById('processingTime').innerText = `Processing time: ${inferenceTime} ms`;
+          
+          window.electronAPI.takeTime().then(result => {
+            endTime = result;
+          });
 
-        }, 25-(window.electronAPI.takeTime()-begin)); // number here means delay in ms
+        }, 20-(endTime-begin)); // number here means delay in ms
 
         toggleWebcamButton.textContent = 'Stop';
       }
