@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
           tempImg = canvasElement.toDataURL('image/jpeg');
           
           imgElement.src = tempImg;
-          document.getElementById('processingTime').innerText = `Processing time: ${inferenceTime} ms`;
+          document.getElementById('processingTime').innerText = `Processing time: ${inferenceTime} ms (${(1000 / inferenceTime).toFixed(1)} FPS)`;
           
           window.electronAPI.takeTime().then(result => {
             endTime = result;
@@ -94,7 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
     webcamStream.getTracks().forEach(track => track.stop());
     videoElement.srcObject = null;
     imgElement.src = '../assets/webcam_placeholder.png';
-    document.getElementById('processingTime').innerText = `Processing time: 0 ms`; 
+    document.getElementById('processingTime').innerText = `Processing time: 0 ms (0 FPS)`;
     if (!keepActive){
       toggleWebcamButton.textContent = 'Start';
     }
