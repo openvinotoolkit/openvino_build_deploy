@@ -1,10 +1,7 @@
 const { addon: ov } = require('openvino-node');
-const { createCanvas, loadImage } = require('@napi-rs/canvas');
 const { cv } = require('opencv-wasm');
 const { performance } = require('perf_hooks');
 const path = require('path');
-const { Buffer } = require('buffer');
-const { getImageData } = require('./helpers.js');
 
 module.exports = { detectDevices, runModel, takeTime }
 
@@ -52,10 +49,11 @@ async function runModel(img, width, height, device){
     // if device in ovModels, use precompiled model, otherwise load and compile model and ut to the map
 
     // CONVERTION TO MAT:
+
     if (mat == null){
         mat = new cv.Mat(height, width, cv.CV_8UC4);
     }
-    if (mat != null && mat.data.length == img.data.length){
+    else if (mat.data.length == img.data.length){
         mat.data.set(img.data);
     }
 

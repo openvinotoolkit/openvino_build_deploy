@@ -1,5 +1,9 @@
-To run the demo you have to have NodeJS installed. Before you run the app you have to 
-- init electron project:
+## Requirements
+
+To run the demo you have to have NodeJS (with npm) installed. The app was developed and tested using npm 10.8.2 and node v20.15.0.
+
+
+- initialize electron project:
 ```bash
 npm init -y
 ```
