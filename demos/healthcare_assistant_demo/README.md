@@ -77,7 +77,7 @@ pip install -r requirements.txt
 To run the application, use the following command:
 
 ```shell
-python main.py  --hf_token 
+python main.py  --hf_token [replace-with-tokenz]
 ```
 The application will start by downloading Llama 3, and Dist-Whispers by default.
 To use LLama3, you must provide your [HuggingFace access token](https://huggingface.co/docs/hub/en/security-tokens) as input. 
