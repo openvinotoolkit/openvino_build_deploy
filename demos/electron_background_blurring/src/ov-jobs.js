@@ -55,7 +55,9 @@ async function runModel(img, width, height, device){
     if (mat == null){
         mat = new cv.Mat(height, width, cv.CV_8UC4);
     }
-    mat.data.set(img.data);
+    if (mat != null && mat.data.length == img.data.length){
+        mat.data.set(img.data);
+    }
 
 
     const startTime = performance.now();
