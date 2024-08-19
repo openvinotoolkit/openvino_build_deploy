@@ -49,12 +49,14 @@ function resizeAndPad(image, targetHeight = 256, targetWidth = 256) {
 
 async function runModel(img, width, height, device){
     // if device in ovModels, use precompiled model, otherwise load and compile model and ut to the map
-    const startTime = performance.now();
 
     // CONVERTION TO MAT:
-    const mat = new cv.Mat(height, width, cv.CV_8UC4);
-    mat.data.set(img.data);
+    // const mat = new cv.Mat(height, width, cv.CV_8UC4);
+    // mat.data.set(img.data);
 
+
+    const startTime = performance.now();
+    // INFERENCE OpenVINO (TODO)
     const endTime = performance.now();
     const inferenceTime = endTime - startTime;
     return {
