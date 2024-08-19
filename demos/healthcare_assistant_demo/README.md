@@ -74,6 +74,9 @@ pip install -r requirements.txt
 
 ## Step 2
 
+To download the models, ...
+[@Adrian?]
+
 To run the application, use the following command:
 
 ```shell
