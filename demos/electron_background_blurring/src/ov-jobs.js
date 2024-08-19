@@ -10,6 +10,8 @@ module.exports = { detectDevices, runModel, takeTime }
 
 const core = new ov.Core();
 const ovModels = new Map();
+let iter = 0;
+let mat = null;
 
 const model = core.readModel(path.join(__dirname, "../models/selfie_multiclass_256x256.xml"));
 
@@ -51,8 +53,12 @@ async function runModel(img, width, height, device){
     // if device in ovModels, use precompiled model, otherwise load and compile model and ut to the map
 
     // CONVERTION TO MAT:
-    // const mat = new cv.Mat(height, width, cv.CV_8UC4);
-    // mat.data.set(img.data);
+    console.log(iter);
+    iter++;
+    if (mat == null){
+        mat = new cv.Mat(height, width, cv.CV_8UC4);
+    }
+    mat.data.set(img.data);
 
 
     const startTime = performance.now();
