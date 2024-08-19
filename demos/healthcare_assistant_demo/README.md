@@ -74,14 +74,15 @@ pip install -r requirements.txt
 
 ## Step 2
 
-To download the models, ...
-[@Adrian?]
-
 To run the application, use the following command:
 
 ```shell
-python main.py
+python main.py  --hf_token 
 ```
+The application will start by downloading Llama 3, and Dist-Whispers by default.
+To use LLama3, you must provide your [HuggingFace access token](https://huggingface.co/docs/hub/en/security-tokens) as input. 
+It will take up to an hour (depending on your internet speed), for the first time running this application due to the large downloads and conversion of the models. Once the models are cached, the subsequent executions will be much faster. 
+
 
 You can also change chat and asr model:
 
@@ -89,11 +90,7 @@ You can also change chat and asr model:
 python main.py --asr_model distil-whisper/distil-large-v2 --chat_model OpenVINO/Phi-3-medium-4k-instruct-int4-ov
 ```
 
-If you want to use restricted models e.g. LLama3, you must provide your [HuggingFace access token](https://huggingface.co/docs/hub/en/security-tokens):
 
-```shell
-python main.py --hf_token hf_abcdefghijklmnopqrstuvwxyz
-```
 
 Running with `--public` will allow you to access from any computer:
 
