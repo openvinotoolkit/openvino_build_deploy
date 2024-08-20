@@ -4,7 +4,7 @@
 
 This demo demonstrates how to use OpenVINO framework in NodeJS to blur the background of video. 
 
-[comment]: <> (TODO: Description how to use the app (manual) and used technologies.)
+[//]: <> (TODO: Description how to use the app (manual) and used technologies.)
 
 
 ## Requirements

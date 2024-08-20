@@ -8,6 +8,8 @@ module.exports = { detectDevices, runModel, takeTime }
 const core = new ov.Core();
 const ovModels = new Map();
 let mat = null;
+let resizedMat = null;
+let paddedImg = null;
 
 const model = core.readModel(path.join(__dirname, "../models/selfie_multiclass_256x256.xml"));
 
@@ -15,33 +17,53 @@ async function detectDevices() {
     return ["AUTO"].concat(core.getAvailableDevices());
 }
 
-function resizeAndPad(image, targetHeight = 256, targetWidth = 256) {
-    let height = image.rows;
-    let width = image.cols;
+function preprocessMat(image, targetHeight = 256, targetWidth = 256) {
+    // rows == height
+    // cols == width
 
-    let newWidth, newHeight;
-    if (height < width) {
-        newWidth = targetWidth;
-        newHeight = Math.floor(height / (width / targetWidth));
+    // RESIZING
+    if (image.rows < image.cols){
+        const height = Math.floor(image.rows / (image.cols / targetWidth));
+        if (resizedMat == null || resizedMat.size().width != targetWidth || resizedMat.size().height != height){
+            resizedMat = new cv.Mat(height, targetWidth, cv.CV_8UC3);
+        }
+        console.log(resizedMat.size().height);
+        cv.resize(image, resizedMat, resizedMat.size());
     } else {
-        newHeight = targetHeight;
-        newWidth = Math.floor(width / (height / targetHeight));
+        const width = Math.floor(image.cols / (image.rows / targetHeight));
+        if (resizedMat == null || resizedMat.size().width != width || resizedMat.size().height != targetHeight){
+            resizedMat = new cv.Mat(targetHeight, width, cv.CV_8UC3);
+        }
+        console.log(resizedMat.size().height);
+        cv.resize(image, resizedMat, resizedMat.size());
     }
 
-    let resizedImg = new cv.Mat();
-    let newSize = new cv.Size(newWidth, newHeight);
-    cv.resize(image, resizedImg, newSize, 0, 0, cv.INTER_LINEAR);
+    //CHANGING FROM 4-CHANNEL BGRA TO 3-CHANNEL RGB
+    cv.cvtColor(resizedMat, resizedMat, cv.COLOR_BGRA2RGB);
 
-    let rightPadding = targetWidth - newWidth;
-    let bottomPadding = targetHeight - newHeight;
+    // PADDING
+    const rightPadding = Math.max(0,targetWidth - image.cols);
+    const bottomPadding = Math.max(0,targetHeight - image.rows);
 
-    let paddedImg = new cv.Mat();
-    let black = new cv.Scalar(0, 0, 0, 255);
-    cv.copyMakeBorder(resizedImg, paddedImg, 0, bottomPadding, 0, rightPadding, cv.BORDER_CONSTANT, black);
+    if (paddedImg == null){
+        paddedImg = new cv.Mat(targetHeight,targetWidth,cv.CV_8UC3);
+    }
+    
+    cv.copyMakeBorder(
+        resizedMat,
+        paddedImg,
+        0,
+        bottomPadding,
+        0,
+        rightPadding,
+        cv.BORDER_CONSTANT,
+        [0,0,0,0]    
+    );
 
-    resizedImg.delete();
-
-    return { paddedImg: paddedImg, paddingInfo: { bottomPadding: bottomPadding, rightPadding: rightPadding } };
+    return {
+        image : paddedImg,
+        paddingInfo : { bottomPadding, rightPadding }
+    };
 }
 
 
@@ -50,13 +72,15 @@ async function runModel(img, width, height, device){
 
     // CONVERTION TO MAT:
 
-    if (mat == null){
+    if (mat == null || mat.data.length != img.data.length){
         mat = new cv.Mat(height, width, cv.CV_8UC4);
     }
-    else if (mat.data.length == img.data.length){
-        mat.data.set(img.data);
-    }
+    mat.data.set(img.data);
 
+    // PREPROCESSING:
+    let processedImage = preprocessMat(mat);
+
+    console.log(mat.data.length, img.data.length);
 
     const startTime = performance.now();
     // INFERENCE OpenVINO (TODO)
