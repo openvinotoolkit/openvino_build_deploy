@@ -6,6 +6,7 @@ const path = require('path');
 module.exports = { detectDevices, runModel, takeTime }
 
 const core = new ov.Core();
+let compiledModel = null;
 const ovModels = new Map();
 let mat = null;
 let resizedMat = null;
@@ -68,8 +69,7 @@ function preprocessMat(image, targetHeight = 256, targetWidth = 256) {
 async function runModel(img, width, height, device){
     // if device in ovModels, use precompiled model, otherwise load and compile model and ut to the map
 
-    // CONVERTION TO MAT:
-
+    // CANVAS TO MAT CONVERSION:
     if (mat == null || mat.data.length != img.data.length){
         mat = new cv.Mat(height, width, cv.CV_8UC4);
     }
@@ -80,13 +80,16 @@ async function runModel(img, width, height, device){
     let preprocessedImage = preprocessingResult.image;
     let paddingInfo = preprocessingResult.paddingInfo;
 
-    // MAT TO OPENVINO TENSOR:
+    // MAT TO OpenVINO TENSOR CONVERSION:
     const tensorData = new Float32Array(preprocessedImage.data);
     const shape = [1, preprocessedImage.rows, preprocessedImage.cols, 3];
     const inputTensor = new ov.Tensor(ov.element.f32, shape, tensorData);
 
+    // MAP -> set (add to map), has (check if map has saved), get (take item from map), key-value type
+
+    // OpenVINO INFERENCE (TO DO)
     const startTime = performance.now();
-    // INFERENCE OpenVINO (TODO)
+    // inference here
     const endTime = performance.now();
     const inferenceTime = endTime - startTime;
     return {
