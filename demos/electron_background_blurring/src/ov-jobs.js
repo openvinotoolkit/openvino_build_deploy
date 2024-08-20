@@ -55,7 +55,7 @@ function preprocessMat(image, targetHeight = 256, targetWidth = 256) {
         0,
         rightPadding,
         cv.BORDER_CONSTANT,
-        [0,0,0,0]    
+        [0,0,0,0]
     );
 
     return {
@@ -80,7 +80,10 @@ async function runModel(img, width, height, device){
     let preprocessedImage = preprocessingResult.image;
     let paddingInfo = preprocessingResult.paddingInfo;
 
-    console.log(paddingInfo);
+    // MAT TO OPENVINO TENSOR:
+    const tensorData = new Float32Array(preprocessedImage.data);
+    const shape = [1, preprocessedImage.rows, preprocessedImage.cols, 3];
+    const inputTensor = new ov.Tensor(ov.element.f32, shape, tensorData);
 
     const startTime = performance.now();
     // INFERENCE OpenVINO (TODO)
