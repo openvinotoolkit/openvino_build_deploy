@@ -225,35 +225,34 @@ def summarize(conversation: List) -> str:
 
 
 def create_UI(initial_message: str) -> gr.Blocks:
-    with gr.Blocks(title="Talk to Adrishuo - a custom AI assistant working as a healthcare assistant") as demo:
+    with gr.Blocks(title="Adrishuo, the AI Assistant") as demo:
         gr.Markdown("""
-        # Talk to Adrishuo - a custom AI assistant working today as a healthcare assistant
+        # Adrishuo: A Custom Healthcare AI assistant with OpenVINO
 
         Instructions for use:
-        - attach the PDF or TXT file with the prior examination report (optional)
-        - record your question/comment using the first audio widget ("Your voice input") or type it in the textbox ("Your text input"), then click Submit
-        - wait for the chatbot to response ("Chatbot")
-        - discuss with the chatbot
-        - click summarize button to make a summary
+        1. Attach the PDF or TXT file with the prior examination report (optional - see "Sample LLM Patient Records" as an example)
+        2. Record your question/comment using the first audio widget ("Your voice input") or type it in the textbox ("Your text input"), then click Submit
+        3. Wait for the chatbot to response ("Chatbot")
+        4. Discuss with the chatbot
+        5. Click the "Summarize" button to make a summary
+                    
+        **Note: This chatbot application is not intended to be used for medical purposes. It is for demonstration purposes only.**
         """)
         with gr.Row():
             with gr.Column(scale=5):
-                # user's inputs
-                input_audio_ui = gr.Audio(sources=["microphone"], label="Your voice input")
-                input_text_ui = gr.Textbox(label="Your text input")
-            with gr.Column(scale=1):
-                file_uploader_ui = gr.File(label="Prior examination report", file_types=[".pdf", ".txt"])
-                context_label = gr.Label(label="Report status", value="No report loaded")
-            submit_audio_btn = gr.Button("Submit", variant="primary", scale=1, interactive=False)
-
-        # chatbot
-        chatbot_ui = gr.Chatbot(value=[[None, initial_message]], label="Chatbot")
-
-        # summarize
-        with gr.Row():
-            clear_btn = gr.Button("Start over", variant="secondary")
-            summarize_button = gr.Button("Summarize", variant="primary", interactive=False)
-        summary_ui = gr.Textbox(label="Summary", interactive=False)
+                with gr.Row():
+                    input_audio_ui = gr.Audio(sources=["microphone"], label="Your voice input")
+                    input_text_ui = gr.Textbox(label="Your text input")
+                with gr.Row():
+                    file_uploader_ui = gr.File(label="Prior examination report", file_types=[".pdf", ".txt"])
+                submit_audio_btn = gr.Button("Submit", variant="primary", interactive=False)
+            with gr.Column(scale=5): 
+                with gr.Column(scale=5): 
+                    chatbot_ui = gr.Chatbot(value=[[None, initial_message]], label="Chatbot")
+                    summary_ui = gr.Textbox(label="Summary (Click 'Summarize' to trigger)", interactive=False)
+                with gr.Column(scale=5): 
+                    clear_btn = gr.Button("Start over", variant="secondary")
+                    summarize_button = gr.Button("Summarize", variant="primary", interactive=False)
 
         # events
         # block submit button when no audio or text input
