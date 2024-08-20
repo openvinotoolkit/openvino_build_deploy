@@ -27,14 +27,12 @@ function preprocessMat(image, targetHeight = 256, targetWidth = 256) {
         if (resizedMat == null || resizedMat.size().width != targetWidth || resizedMat.size().height != height){
             resizedMat = new cv.Mat(height, targetWidth, cv.CV_8UC3);
         }
-        console.log(resizedMat.size().height);
         cv.resize(image, resizedMat, resizedMat.size());
     } else {
         const width = Math.floor(image.cols / (image.rows / targetHeight));
         if (resizedMat == null || resizedMat.size().width != width || resizedMat.size().height != targetHeight){
             resizedMat = new cv.Mat(targetHeight, width, cv.CV_8UC3);
         }
-        console.log(resizedMat.size().height);
         cv.resize(image, resizedMat, resizedMat.size());
     }
 
@@ -42,8 +40,8 @@ function preprocessMat(image, targetHeight = 256, targetWidth = 256) {
     cv.cvtColor(resizedMat, resizedMat, cv.COLOR_BGRA2RGB);
 
     // PADDING
-    const rightPadding = Math.max(0,targetWidth - image.cols);
-    const bottomPadding = Math.max(0,targetHeight - image.rows);
+    const rightPadding = Math.max(0,targetWidth - resizedMat.cols);
+    const bottomPadding = Math.max(0,targetHeight - resizedMat.rows);
 
     if (paddedImg == null){
         paddedImg = new cv.Mat(targetHeight,targetWidth,cv.CV_8UC3);
@@ -77,10 +75,12 @@ async function runModel(img, width, height, device){
     }
     mat.data.set(img.data);
 
-    // PREPROCESSING:
-    let processedImage = preprocessMat(mat);
+    // MAT PREPROCESSING:
+    let preprocessingResult = preprocessMat(mat);
+    let preprocessedImage = preprocessingResult.image;
+    let paddingInfo = preprocessingResult.paddingInfo;
 
-    console.log(mat.data.length, img.data.length);
+    console.log(paddingInfo);
 
     const startTime = performance.now();
     // INFERENCE OpenVINO (TODO)
