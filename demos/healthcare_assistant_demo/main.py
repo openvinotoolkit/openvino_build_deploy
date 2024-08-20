@@ -4,14 +4,13 @@ import threading
 import time
 from pathlib import Path
 from threading import Thread
-from typing import Tuple, List, Optional, Set, Sequence
+from typing import Tuple, List, Optional, Set
 
 import gradio as gr
 import librosa
 import numpy as np
 import openvino as ov
 from llama_index.core import Document, VectorStoreIndex, Settings
-from llama_index.core.base.llms.types import ChatMessage
 from llama_index.core.chat_engine import SimpleChatEngine
 from llama_index.core.chat_engine.types import BaseChatEngine, ChatMode
 from llama_index.core.memory import ChatMemoryBuffer
@@ -71,23 +70,23 @@ def load_asr_model(model_name: str) -> None:
 
     model_path = MODEL_DIR / model_name
 
-    device = "GPU" if "GPU" in get_available_devices() else "CPU"
     # create a distil-whisper model and its processor
     if not model_path.exists():
         log.info(f"Downloading {model_name}... It may take up to 1h depending on your Internet connection.")
-        asr_model = OVModelForSpeechSeq2Seq.from_pretrained(model_name, device=device, export=True, load_in_8bit=True)
+        asr_model = OVModelForSpeechSeq2Seq.from_pretrained(model_name, export=True, load_in_8bit=True)
         asr_model.save_pretrained(model_path)
         asr_processor = AutoProcessor.from_pretrained(model_name)
         asr_processor.save_pretrained(model_path)
     else:
-        asr_model = OVModelForSpeechSeq2Seq.from_pretrained(str(model_path), device=device)
+        asr_model = OVModelForSpeechSeq2Seq.from_pretrained(str(model_path), device="AUTO:GPU,CPU")
         asr_processor = AutoProcessor.from_pretrained(str(model_name))
+
+    log.info(f"Running {model_name} on {','.join(asr_model.encoder.request.get_property('EXECUTION_DEVICES'))}")
 
 
 def load_chat_model(model_name: str, token: str = None) -> OpenVINOLLM:
     model_path = MODEL_DIR / model_name
 
-    device = "GPU" if "GPU" in get_available_devices() else "AUTO"
     ov_config = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1', "CACHE_DIR": ""}
     # load llama model and its tokenizer
     if not model_path.exists():
@@ -105,7 +104,7 @@ def load_chat_model(model_name: str, token: str = None) -> OpenVINOLLM:
         chat_tokenizer = AutoTokenizer.from_pretrained(model_name, token=token)
         chat_tokenizer.save_pretrained(model_path)
 
-    return OpenVINOLLM(context_window=2048, model_id_or_path=str(model_path), max_new_tokens=512, device_map=device,
+    return OpenVINOLLM(context_window=2048, model_id_or_path=str(model_path), max_new_tokens=512, device_map="AUTO:GPU,CPU",
                        model_kwargs={"ov_config": ov_config}, generate_kwargs={"do_sample": True, "temperature": 0.7, "top_k": 50, "top_p": 0.95})
 
 
@@ -113,18 +112,20 @@ def load_embedding_model(model_name: str) -> OpenVINOEmbedding:
     model_path = MODEL_DIR / model_name
 
     if not model_path.exists():
-        embedding_model = OVModelForFeatureExtraction.from_pretrained(model_name, export=True, device="AUTO")
+        embedding_model = OVModelForFeatureExtraction.from_pretrained(model_name, export=True)
         embedding_model.save_pretrained(model_path)
         embedding_tokenizer = AutoTokenizer.from_pretrained(model_name)
         embedding_tokenizer.save_pretrained(model_path)
 
-    return OpenVINOEmbedding(str(model_path))
+    return OpenVINOEmbedding(str(model_path), device="AUTO:NPU,CPU")
 
 
 def load_chat_models(chat_model_name: str, embedding_model_name: str, auth_token: str = None) -> None:
     global ov_llm, ov_chat_engine, ov_embedding
     ov_embedding = load_embedding_model(embedding_model_name)
+    log.info(f"Running {embedding_model_name} on {','.join(ov_embedding._model.request.get_property('EXECUTION_DEVICES'))}")
     ov_llm = load_chat_model(chat_model_name, auth_token)
+    log.info(f"Running {chat_model_name} on {','.join(ov_llm._model.request.get_compiled_model().get_property('EXECUTION_DEVICES'))}")
 
     ov_chat_engine = SimpleChatEngine.from_defaults(llm=ov_llm, system_prompt=SYSTEM_CONFIGURATION,
                                                     memory=ChatMemoryBuffer.from_defaults())
