@@ -74,6 +74,7 @@ def load_asr_model(model_name: str) -> None:
     device = "GPU" if "GPU" in get_available_devices() else "CPU"
     # create a distil-whisper model and its processor
     if not model_path.exists():
+        log.info(f"Downloading {model_name}... It may take up to 1h depending on your Internet connection.")
         asr_model = OVModelForSpeechSeq2Seq.from_pretrained(model_name, device=device, export=True, load_in_8bit=True)
         asr_model.save_pretrained(model_path)
         asr_processor = AutoProcessor.from_pretrained(model_name)
@@ -90,12 +91,14 @@ def load_chat_model(model_name: str, token: str = None) -> OpenVINOLLM:
     ov_config = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1', "CACHE_DIR": ""}
     # load llama model and its tokenizer
     if not model_path.exists():
+        log.info(f"Downloading {model_name}... It may take up to 1h depending on your Internet connection.")
         chat_model = OVModelForCausalLM.from_pretrained(model_name, export=True, compile=False, load_in_8bit=False,
                                                         token=token)
 
         quant_config = OVWeightQuantizationConfig(bits=4, sym=False, ratio=0.8)
         config = OVConfig(quantization_config=quant_config)
 
+        log.info(f"Quantizing {model_name} to INT4... It may take significant amount of time depending on your machine power.")
         quantizer = OVQuantizer.from_pretrained(chat_model, task="text-generation")
         quantizer.quantize(save_directory=model_path, weights_only=True, ov_config=config)
 
