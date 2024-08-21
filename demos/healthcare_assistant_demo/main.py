@@ -17,6 +17,8 @@ from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.embeddings.huggingface_openvino import OpenVINOEmbedding
 from llama_index.llms.openvino import OpenVINOLLM
 from llama_index.readers.file import PDFReader
+from openvino.runtime import opset10 as ops
+from openvino.runtime import passes
 from optimum.intel import OVModelForCausalLM, OVModelForSpeechSeq2Seq, OVModelForFeatureExtraction, \
     OVWeightQuantizationConfig, OVConfig, OVQuantizer
 from transformers import AutoTokenizer, AutoProcessor, TextIteratorStreamer
@@ -108,16 +110,50 @@ def load_chat_model(model_name: str, token: str = None) -> OpenVINOLLM:
                        model_kwargs={"ov_config": ov_config}, generate_kwargs={"do_sample": True, "temperature": 0.7, "top_k": 50, "top_p": 0.95})
 
 
+def optimize_model_for_npu(model: OVModelForFeatureExtraction):
+    class ReplaceTensor(passes.MatcherPass):
+        def __init__(self, packed_layername_tensor_dict_list):
+            super().__init__()
+            self.model_changed = False
+
+            param = passes.WrapType("opset10.Multiply")
+
+            def callback(matcher: passes.Matcher) -> bool:
+                root = matcher.get_match_root()
+                if root is None:
+                    return False
+                for y in packed_layername_tensor_dict_list:
+                    root_name = root.get_friendly_name()
+                    if root_name.find(y["name"]) != -1:
+                        max_fp16 = np.array([[[[-np.finfo(np.float16).max]]]]).astype(np.float32)
+                        new_tenser = ops.constant(max_fp16, ov.Type.f32, name="Constant_4431")
+                        root.set_arguments([root.input_value(0).node, new_tenser])
+                        packed_layername_tensor_dict_list.remove(y)
+
+                return True
+
+            self.register_matcher(passes.Matcher(param, "ReplaceTensor"), callback)
+
+    packed_layer_tensor_dict_list = [{"name": "aten::mul/Multiply"}]
+
+    manager = passes.Manager()
+    manager.register_pass(ReplaceTensor(packed_layer_tensor_dict_list))
+    manager.run_passes(model.model)
+    model.reshape(1, 512)
+
+
 def load_embedding_model(model_name: str) -> OpenVINOEmbedding:
     model_path = MODEL_DIR / model_name
 
     if not model_path.exists():
         embedding_model = OVModelForFeatureExtraction.from_pretrained(model_name, export=True)
+        optimize_model_for_npu(embedding_model)
         embedding_model.save_pretrained(model_path)
         embedding_tokenizer = AutoTokenizer.from_pretrained(model_name)
         embedding_tokenizer.save_pretrained(model_path)
 
-    return OpenVINOEmbedding(str(model_path), device="AUTO:NPU,CPU")
+    device = "AUTO:NPU" if "NPU" in get_available_devices() else "AUTO:CPU"
+    return OpenVINOEmbedding(str(model_path), device=device, embed_batch_size=1, model_kwargs={"dynamic_shapes": False})
 
 
 def load_chat_models(chat_model_name: str, embedding_model_name: str, auth_token: str = None) -> None:
