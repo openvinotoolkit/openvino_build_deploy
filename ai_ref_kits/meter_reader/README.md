@@ -108,6 +108,12 @@ python main.py -i data/test.jpg -c config/config.json  -t "analog"
 This will run the application with the specified arguments. Replace "data/test.jpg" with the path to your input image.
 The result images will be exported to the same test image folder. You can also run the [203-meter-reader.ipynb](../../notebooks/203-meter-reader/203-meter-reader.ipynb) to learn more about the inference process.
 
+In case you have trouble downloading the detection and segmentation models from PaddlePaddle, we have also provided YOLOV8 and deeplabv3 as the detection and segmentation models in the "model" folder. You could then run the application using these two models by swtiching the configuration file to "config/yolov8.json" with the following command:
+
+```shell
+python main.py -i data/test.jpg -c config/yolov8.json  -t "analog"
+```
+
 Congratulations! You have successfully set up and run the Automatic Industrial Meter Reading application with OpenVINO™.
 
 # Additional Resources
