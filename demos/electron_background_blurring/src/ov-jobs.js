@@ -6,13 +6,12 @@ const path = require('path');
 module.exports = { detectDevices, runModel, takeTime }
 
 const core = new ov.Core();
-let compiledModel = null;
 const ovModels = new Map();
 let mat = null;
 let resizedMat = null;
 let paddedImg = null;
 
-const model = core.readModel(path.join(__dirname, "../models/selfie_multiclass_256x256.xml"));
+let model = null;
 
 async function detectDevices() {
     return ["AUTO"].concat(core.getAvailableDevices());
@@ -88,10 +87,27 @@ async function runModel(img, width, height, device){
     // MAP -> set (add to map), has (check if map has saved), get (take item from map), key-value type
 
     // OpenVINO INFERENCE (TO DO)
+    let compiledModel = null;
     const startTime = performance.now();
-    // inference here
+    if (model == null){
+        model = await core.readModel(path.join(__dirname, "../models/selfie_multiclass_256x256.xml"));
+        console.log("model declared");
+    }
+    if (!ovModels.has(device)){
+        compiledModel = await core.compileModel(model, device);
+        ovModels.set(device, compiledModel);
+        console.log("new device");
+    } else {
+        compiledModel = ovModels.get(device);
+        console.log("has in map");
+    }
+    inferRequest = compiledModel.createInferRequest();
+    // inferRequest.setInputTensor(inputTensor);
+    // inferRequest.infer();
     const endTime = performance.now();
     const inferenceTime = endTime - startTime;
+
+
     return {
         img : img, 
         inferenceTime : inferenceTime.toFixed(2).toString()
