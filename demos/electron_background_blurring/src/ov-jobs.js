@@ -18,9 +18,6 @@ async function detectDevices() {
 }
 
 function preprocessMat(image, targetHeight = 256, targetWidth = 256) {
-    // rows == height
-    // cols == width
-
     // RESIZING
     if (image.rows < image.cols){
         const height = Math.floor(image.rows / (image.cols / targetWidth));
@@ -64,6 +61,14 @@ function preprocessMat(image, targetHeight = 256, targetWidth = 256) {
     };
 }
 
+function postprocessMask (mask, pad_info, originalHeight, originalWidth){
+    // TAKE OUT LABELS (TO DO)
+    
+    // UNPADDING (TO DO)
+
+    // RESIZING (TO DO)
+}
+
 let semaphore = false; 
 
 async function runModel(img, width, height, device){
@@ -92,14 +97,14 @@ async function runModel(img, width, height, device){
         const inputTensor = new ov.Tensor(ov.element.f32, shape, tensorData);
 
         // OpenVINO INFERENCE
-        const startTime = performance.now();
+        const startTime = performance.now();            // TIME MEASURING : START
         let compiledModel = null;
         if (model == null){
             model = await core.readModel(path.join(__dirname, "../models/selfie_multiclass_256x256.xml"));
         }
         if (!ovModels.has(device)){
             compiledModel = await core.compileModel(model, device);
-            await ovModels.set(device, compiledModel);
+            ovModels.set(device, compiledModel);
         } else {
             compiledModel = ovModels.get(device);
         }    
@@ -110,13 +115,19 @@ async function runModel(img, width, height, device){
         const resultInfer = inferRequest.getTensor(outputLayer);
 
         const endTime = performance.now();
-        const inferenceTime = endTime - startTime;
+        const inferenceTime = endTime - startTime;      // TIME MEASURING : END
+
+        // BLURRING IMAGE (TO DO)
+        const postprocessedMask = postprocessMask(resultInfer, paddingInfo, height, width);
+        // const blurredImage = new Mat(height, width, cv.CV_8UC3)
+        // cv.GaussianBlur(img, )
 
 
         return {
             img : img, 
             inferenceTime : inferenceTime.toFixed(2).toString()
         };
+
     } finally {
         semaphore = false;
     }
