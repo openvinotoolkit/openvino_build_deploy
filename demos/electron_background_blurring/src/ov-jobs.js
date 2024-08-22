@@ -68,16 +68,12 @@ async function createInferRequest(device){
     let compiledModel = null;
     if (model == null){
         model = await core.readModel(path.join(__dirname, "../models/selfie_multiclass_256x256.xml"));
-        console.log("model declared");
     }
-    console.log(ovModels.has(device));
     if (!ovModels.has(device)){
         compiledModel = await core.compileModel(model, device);
-        console.log("new device ", ovModels.has(device));
         await ovModels.set(device, compiledModel);
     } else {
         compiledModel = ovModels.get(device);
-        console.log("has in map");
     }    
     inferRequest = compiledModel.createInferRequest();
     return inferRequest;
@@ -111,13 +107,11 @@ async function runModel(img, width, height, device){
         const shape = [1, preprocessedImage.rows, preprocessedImage.cols, 3];
         const inputTensor = new ov.Tensor(ov.element.f32, shape, tensorData);
 
-        // MAP -> set (add to map), has (check if map has saved), get (take item from map), key-value type
-
-        // OpenVINO INFERENCE (TO DO)
+        // OpenVINO INFERENCE
         const startTime = performance.now();
         inferRequest = await createInferRequest(device);
-        // inferRequest.setInputTensor(inputTensor);
-        // inferRequest.infer();
+        inferRequest.setInputTensor(inputTensor);
+        inferRequest.infer();
         const endTime = performance.now();
         const inferenceTime = endTime - startTime;
 
