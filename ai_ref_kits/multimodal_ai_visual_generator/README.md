@@ -2,7 +2,7 @@
   <h1>Multimodal AI Visual Generator with OpenVINO™ Toolkit</h1>
   <h4>
     <a href="https://www.intel.com/content/www/us/en/developer/topic-technology/edge-5g/open-potential.html">🏠&nbsp;About&nbsp;the&nbsp;Kits&nbsp;·</a>
-    <a href="#">👨‍💻&nbsp;Code&nbsp;Demo&nbsp;Video&nbsp;(Coming Soon)·</a>
+    <a href="https://www.youtube.com/watch?v=kn1jZ2nLFMY">👨‍💻&nbsp;Code&nbsp;Demo&nbsp;Video&nbsp;·</a>
   </h4>
 </div>
 
