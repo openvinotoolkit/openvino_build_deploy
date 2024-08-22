@@ -57,7 +57,7 @@ def optimize_model_for_npu(model: OVModelForFeatureExtraction):
     model.reshape(1, 512)
 
 
-def convert_chat_model(model_type: str, precision: str, model_dir: Path) -> Path:
+def convert_chat_model(model_type: str, precision: str, model_dir: Path, access_token: str) -> Path:
     """
     Convert chat model
 
@@ -65,6 +65,7 @@ def convert_chat_model(model_type: str, precision: str, model_dir: Path) -> Path
         model_type: selected mode type and size
         precision: model precision
         model_dir: dir to export model
+        access_token: access token from Hugging Face to download gated models
     Returns:
        Path to exported model
     """
@@ -72,7 +73,7 @@ def convert_chat_model(model_type: str, precision: str, model_dir: Path) -> Path
     model_name = MODEL_MAPPING[model_type]
 
     # load model and convert it to OpenVINO
-    model = OVModelForCausalLM.from_pretrained(model_name, export=True, compile=False, load_in_8bit=False)
+    model = OVModelForCausalLM.from_pretrained(model_name, export=True, compile=False, load_in_8bit=False, token=access_token)
     # change precision to FP16
     model.half()
 
@@ -138,4 +139,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     convert_embedding_model(args.embedding_model_type, Path(args.model_dir))
-    convert_chat_model(args.chat_model_type, args.precision, Path(args.model_dir))
+    convert_chat_model(args.chat_model_type, args.precision, Path(args.model_dir), args.hf_token)
