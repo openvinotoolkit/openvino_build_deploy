@@ -64,28 +64,12 @@ function preprocessMat(image, targetHeight = 256, targetWidth = 256) {
     };
 }
 
-async function createInferRequest(device){ 
-    let compiledModel = null;
-    if (model == null){
-        model = await core.readModel(path.join(__dirname, "../models/selfie_multiclass_256x256.xml"));
-    }
-    if (!ovModels.has(device)){
-        compiledModel = await core.compileModel(model, device);
-        await ovModels.set(device, compiledModel);
-    } else {
-        compiledModel = ovModels.get(device);
-    }    
-    inferRequest = compiledModel.createInferRequest();
-    return inferRequest;
-}
-
-let semaphore = false; //semaphore
+let semaphore = false; 
 
 async function runModel(img, width, height, device){
-    // if device in ovModels, use precompiled model, otherwise load and compile model and ut to the map
 
     while (semaphore) {
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise(resolve => setTimeout(resolve, 3));
     }
 
     semaphore = true;
@@ -109,9 +93,22 @@ async function runModel(img, width, height, device){
 
         // OpenVINO INFERENCE
         const startTime = performance.now();
-        inferRequest = await createInferRequest(device);
+        let compiledModel = null;
+        if (model == null){
+            model = await core.readModel(path.join(__dirname, "../models/selfie_multiclass_256x256.xml"));
+        }
+        if (!ovModels.has(device)){
+            compiledModel = await core.compileModel(model, device);
+            await ovModels.set(device, compiledModel);
+        } else {
+            compiledModel = ovModels.get(device);
+        }    
+        inferRequest = compiledModel.createInferRequest();
         inferRequest.setInputTensor(inputTensor);
         inferRequest.infer();
+        const outputLayer = compiledModel.outputs[0];
+        const resultInfer = inferRequest.getTensor(outputLayer);
+
         const endTime = performance.now();
         const inferenceTime = endTime - startTime;
 
