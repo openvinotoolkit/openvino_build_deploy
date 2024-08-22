@@ -123,7 +123,7 @@ To interact with the animated GIF outputs, host a simple web server on your syst
 Run the following command to start an HTTP server within the repository. You can customize index.html with any additional elements you'd like.
 
 ```shell
-http-server
+http-server -c10
 ``` 
 
 Open a terminal or you can use the existing one with `dnd_env` environment activated and start the Gradio GUI - <br>
