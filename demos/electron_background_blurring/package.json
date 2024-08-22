@@ -16,7 +16,11 @@
       "icon": "assets/icons/icon.ico"
     },
     "linux": {
-      "target": ["deb", "rpm", "zip"],
+      "target": [
+        "deb",
+        "rpm",
+        "zip"
+      ],
       "icon": "assets/icons/icon.png",
       "category": "Utility"
     },
@@ -40,7 +44,11 @@
   },
   "keywords": [],
   "author": "Mikołaj Roszczyk <mikolaj.roszczyk@intel.com>",
-  "contributors": ["Adrian Boguszewski"],
+  "contributors": [
+    {
+      "name": "Adrian Boguszewski"
+    }
+  ],
   "homepage": "https://github.com/openvinotoolkit/openvino_build_deploy",
   "license": "Apache-2.0",
   "description": "An application to present background blurring with OpenVINO"

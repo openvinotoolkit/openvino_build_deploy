@@ -64,54 +64,71 @@ function preprocessMat(image, targetHeight = 256, targetWidth = 256) {
     };
 }
 
-
-async function runModel(img, width, height, device){
-    // if device in ovModels, use precompiled model, otherwise load and compile model and ut to the map
-
-    // CANVAS TO MAT CONVERSION:
-    if (mat == null || mat.data.length != img.data.length){
-        mat = new cv.Mat(height, width, cv.CV_8UC4);
-    }
-    mat.data.set(img.data);
-
-    // MAT PREPROCESSING:
-    let preprocessingResult = preprocessMat(mat);
-    let preprocessedImage = preprocessingResult.image;
-    let paddingInfo = preprocessingResult.paddingInfo;
-
-    // MAT TO OpenVINO TENSOR CONVERSION:
-    const tensorData = new Float32Array(preprocessedImage.data);
-    const shape = [1, preprocessedImage.rows, preprocessedImage.cols, 3];
-    const inputTensor = new ov.Tensor(ov.element.f32, shape, tensorData);
-
-    // MAP -> set (add to map), has (check if map has saved), get (take item from map), key-value type
-
-    // OpenVINO INFERENCE (TO DO)
+async function createInferRequest(device){ 
     let compiledModel = null;
-    const startTime = performance.now();
     if (model == null){
         model = await core.readModel(path.join(__dirname, "../models/selfie_multiclass_256x256.xml"));
         console.log("model declared");
     }
+    console.log(ovModels.has(device));
     if (!ovModels.has(device)){
         compiledModel = await core.compileModel(model, device);
-        ovModels.set(device, compiledModel);
-        console.log("new device");
+        console.log("new device ", ovModels.has(device));
+        await ovModels.set(device, compiledModel);
     } else {
         compiledModel = ovModels.get(device);
         console.log("has in map");
-    }
+    }    
     inferRequest = compiledModel.createInferRequest();
-    // inferRequest.setInputTensor(inputTensor);
-    // inferRequest.infer();
-    const endTime = performance.now();
-    const inferenceTime = endTime - startTime;
+    return inferRequest;
+}
+
+let semaphore = false; //semaphore
+
+async function runModel(img, width, height, device){
+    // if device in ovModels, use precompiled model, otherwise load and compile model and ut to the map
+
+    while (semaphore) {
+        await new Promise(resolve => setTimeout(resolve, 10));
+    }
+
+    semaphore = true;
+
+    try{
+        // CANVAS TO MAT CONVERSION:
+        if (mat == null || mat.data.length != img.data.length){
+            mat = new cv.Mat(height, width, cv.CV_8UC4);
+        }
+        mat.data.set(img.data);
+
+        // MAT PREPROCESSING:
+        let preprocessingResult = preprocessMat(mat);
+        let preprocessedImage = preprocessingResult.image;
+        let paddingInfo = preprocessingResult.paddingInfo;
+
+        // MAT TO OpenVINO TENSOR CONVERSION:
+        const tensorData = new Float32Array(preprocessedImage.data);
+        const shape = [1, preprocessedImage.rows, preprocessedImage.cols, 3];
+        const inputTensor = new ov.Tensor(ov.element.f32, shape, tensorData);
+
+        // MAP -> set (add to map), has (check if map has saved), get (take item from map), key-value type
+
+        // OpenVINO INFERENCE (TO DO)
+        const startTime = performance.now();
+        inferRequest = await createInferRequest(device);
+        // inferRequest.setInputTensor(inputTensor);
+        // inferRequest.infer();
+        const endTime = performance.now();
+        const inferenceTime = endTime - startTime;
 
 
-    return {
-        img : img, 
-        inferenceTime : inferenceTime.toFixed(2).toString()
-    };
+        return {
+            img : img, 
+            inferenceTime : inferenceTime.toFixed(2).toString()
+        };
+    } finally {
+        semaphore = false;
+    }
 }
 
 
