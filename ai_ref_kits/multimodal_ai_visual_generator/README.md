@@ -2,7 +2,7 @@
   <h1>Multimodal AI Visual Generator with OpenVINO™ Toolkit</h1>
   <h4>
     <a href="https://www.intel.com/content/www/us/en/developer/topic-technology/edge-5g/open-potential.html">🏠&nbsp;About&nbsp;the&nbsp;Kits&nbsp;·</a>
-    <a href="#">👨‍💻&nbsp;Code&nbsp;Demo&nbsp;Video&nbsp;(Coming Soon)·</a>
+    <a href="https://www.youtube.com/watch?v=kn1jZ2nLFMY">👨‍💻&nbsp;Code&nbsp;Demo&nbsp;Video&nbsp;·</a>
   </h4>
 </div>
 
@@ -23,6 +23,8 @@ This kit uses the following technology stack:
 Check out our [Edge AI Reference Kits repository](/) for other kits.
 
 ![kit-gif](https://github.com/user-attachments/assets/f113a126-4b44-4488-be4e-e4bf52a6cebc)
+
+Contributors: Garth Long, Arisha Kumar, Paula Ramos, Dmitriy Pastushenkov, Zhuo Wu, and Raymond Lo.
 
 ### What's New
 
@@ -74,6 +76,9 @@ Next, you’ll download and optimize the required models. This will involve the 
 - Whisper: Speech recognition
 - Llama3-8b-instruct: Prompt refinement
 - Latent Consistency Models: Image generation
+  
+**Note:** If you would like to run Latent Consistency Models on the NPU, as shown in the demo above, please follow the following steps: Download the model from this location "https://huggingface.co/Intel/sd-1.5-lcm-openvino" and compile it via the steps located at https://github.com/intel/openvino-ai-plugins-gimp/blob/v2.99-R3-staging/model_setup.py. 
+
 - AI Super Resolution: Increase the resolution of the generated image
 - Depth Anything v2: Create 3d parallax animations
     
@@ -123,7 +128,7 @@ To interact with the animated GIF outputs, host a simple web server on your syst
 Run the following command to start an HTTP server within the repository. You can customize index.html with any additional elements you'd like.
 
 ```shell
-http-server
+http-server -c10
 ``` 
 
 Open a terminal or you can use the existing one with `dnd_env` environment activated and start the Gradio GUI - <br>
