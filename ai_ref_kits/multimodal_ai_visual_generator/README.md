@@ -76,6 +76,9 @@ Next, you’ll download and optimize the required models. This will involve the 
 - Whisper: Speech recognition
 - Llama3-8b-instruct: Prompt refinement
 - Latent Consistency Models: Image generation
+  
+**Note:** If you would like to run Latent Consistency Models on the NPU, as shown in the demo above, please follow the following steps: Download the model from this location "https://huggingface.co/Intel/sd-1.5-lcm-openvino" and compile it via the steps located at https://github.com/intel/openvino-ai-plugins-gimp/blob/v2.99-R3-staging/model_setup.py. 
+
 - AI Super Resolution: Increase the resolution of the generated image
 - Depth Anything v2: Create 3d parallax animations
     
