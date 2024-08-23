@@ -10,6 +10,7 @@ const ovModels = new Map();
 let mat = null;
 let resizedMat = null;
 let paddedImg = null;
+let blurredImage = null;
 
 let model = null;
 
@@ -63,8 +64,12 @@ function preprocessMat(image, targetHeight = 256, targetWidth = 256) {
 
 function postprocessMask (mask, pad_info, originalHeight, originalWidth){
     // TAKE OUT LABELS (TO DO)
-    
+    // let labelMask = argmaxAlongLastAxis(Array.from(mask.data));
+    // console.log(labelMask);
+    let maskArray = Array.from(mask.data);
+
     // UNPADDING (TO DO)
+
 
     // RESIZING (TO DO)
 }
@@ -92,9 +97,13 @@ async function runModel(img, width, height, device){
         let paddingInfo = preprocessingResult.paddingInfo;
 
         // MAT TO OpenVINO TENSOR CONVERSION:
-        const tensorData = new Float32Array(preprocessedImage.data);
+        const tensorData = new Float32Array(preprocessedImage.data.length);
+        for (let i = 0; i < preprocessedImage.data.length; i++) {
+            tensorData[i] = preprocessedImage.data[i] / 255.0;
+        }
         const shape = [1, preprocessedImage.rows, preprocessedImage.cols, 3];
         const inputTensor = new ov.Tensor(ov.element.f32, shape, tensorData);
+        console.log(inputTensor.data);
 
         // OpenVINO INFERENCE
         const startTime = performance.now();            // TIME MEASURING : START
@@ -118,9 +127,11 @@ async function runModel(img, width, height, device){
         const inferenceTime = endTime - startTime;      // TIME MEASURING : END
 
         // BLURRING IMAGE (TO DO)
-        const postprocessedMask = postprocessMask(resultInfer, paddingInfo, height, width);
-        // const blurredImage = new Mat(height, width, cv.CV_8UC3)
-        // cv.GaussianBlur(img, )
+        // const maskAfterPostprocessing = postprocessMask(resultInfer, paddingInfo, height, width);
+        if (blurredImage == null){
+            blurredImage = new cv.Mat(height, width, cv.CV_8UC3);
+        }
+        // cv.GaussianBlur(mat, blurredImage, blurredImage.size(), 0);
 
 
         return {
