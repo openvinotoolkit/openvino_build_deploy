@@ -11,6 +11,8 @@ let mat = null;
 let resizedMat = null;
 let paddedImg = null;
 let blurredImage = null;
+let maskMatSmall = null
+let maskMatOrg = null
 
 let model = null;
 
@@ -62,16 +64,46 @@ function preprocessMat(image, targetHeight = 256, targetWidth = 256) {
     };
 }
 
-function postprocessMask (mask, pad_info, originalHeight, originalWidth){
+function getTensorIndex(n, h, w, c) {
+    return ((n * shape[1] + h) * shape[2] + w) * shape[3] + c;
+}
+
+function convertToMultiDimensionalArray(tensor, shape) {
+    function createArray(dim, idx) {
+        if (dim >= shape.length) {
+            return tensor[idx];
+        }
+        
+        let arr = [];
+        let size = shape.slice(dim + 1).reduce((a, b) => a * b, 1);
+        
+        for (let i = 0; i < shape[dim]; i++) {
+            arr.push(createArray(dim + 1, idx + i * size));
+        }
+        return arr;
+    }
+    
+    return createArray(0, 0);
+}
+
+
+function postprocessMask (mask, padInfo, originalHeight, originalWidth){
     // TAKE OUT LABELS (TO DO)
-    // let labelMask = argmaxAlongLastAxis(Array.from(mask.data));
-    // console.log(labelMask);
-    let maskArray = Array.from(mask.data);
+    const maskShape = mask.getShape();
+    const multidimArray = convertToMultiDimensionalArray(mask, maskShape);
+    const labelMask = multidimArray[0].map(row => row.map(pixel => pixel.indexOf(Math.max(...pixel))));    
 
     // UNPADDING (TO DO)
+    const unpadH = maskShape[1] - padInfo.bottomPadding;
+    const unpadW = maskShape[2] - padInfo.rightPadding;
+    const labelMaskUnpadded = labelMask.slice(0, unpadH).map(row => row.slice(0, unpadW));
 
 
     // RESIZING (TO DO)
+    if (maskMatSmall == null){
+        maskMatSmall = new cv.Mat(labelMaskUnpadded.length, labelMaskUnpadded[0].length, cv.CV_8UC1);
+    }
+    cv.resize(maskMatSmall, maskMatOrg, maskMatOrg.size(), interpolaton=cv.INTER_NEAREST);
 }
 
 let semaphore = false; 
@@ -79,7 +111,7 @@ let semaphore = false;
 async function runModel(img, width, height, device){
 
     while (semaphore) {
-        await new Promise(resolve => setTimeout(resolve, 3));
+        await new Promise(resolve => setTimeout(resolve, 7));
     }
 
     semaphore = true;
@@ -103,7 +135,6 @@ async function runModel(img, width, height, device){
         }
         const shape = [1, preprocessedImage.rows, preprocessedImage.cols, 3];
         const inputTensor = new ov.Tensor(ov.element.f32, shape, tensorData);
-        console.log(inputTensor.data);
 
         // OpenVINO INFERENCE
         const startTime = performance.now();            // TIME MEASURING : START
@@ -127,7 +158,10 @@ async function runModel(img, width, height, device){
         const inferenceTime = endTime - startTime;      // TIME MEASURING : END
 
         // BLURRING IMAGE (TO DO)
-        // const maskAfterPostprocessing = postprocessMask(resultInfer, paddingInfo, height, width);
+        if (maskMatOrg == null){
+            maskMatOrg = new cv.Mat(height, width, cv.CV_8UC1);
+        }
+        postprocessMask(resultInfer, paddingInfo, height, width);
         if (blurredImage == null){
             blurredImage = new cv.Mat(height, width, cv.CV_8UC3);
         }
