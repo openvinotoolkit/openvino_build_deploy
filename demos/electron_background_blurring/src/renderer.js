@@ -63,8 +63,6 @@ document.addEventListener('DOMContentLoaded', () => {
           ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
           const imageData = ctx.getImageData(0,0,canvasElement.width, canvasElement.height);
           ovDevice = deviceSelect.value;
-
-        // var tempImg = wCap.read();
  
           window.electronAPI.runModel(imageData, canvasElement.width, canvasElement.height, ovDevice).then(result => {
             inferenceTime = result.inferenceTime;

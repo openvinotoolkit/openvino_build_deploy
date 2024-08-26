@@ -11,8 +11,9 @@ let mat = null;
 let resizedMat = null;
 let paddedImg = null;
 let blurredImage = null;
-let maskMatSmall = null
-let maskMatOrg = null
+let maskMatOrg = null;
+let conditionMat = null;
+let finalMat = null;
 
 let model = null;
 
@@ -108,6 +109,23 @@ function postprocessMask (mask, padInfo){
     */
 }
 
+function matToImageData(mat) {
+    const imgData = new ImageData(mat.cols, mat.rows);
+    const data = mat.data;
+
+    for (let i = 0; i < data.length; i += 3) {
+        const x = (i / 3) % mat.cols;
+        const y = Math.floor((i / 3) / mat.cols);
+        
+        imgData.data[(y * mat.cols + x) * 4] = data[i];       // R
+        imgData.data[(y * mat.cols + x) * 4 + 1] = data[i + 1]; // G
+        imgData.data[(y * mat.cols + x) * 4 + 2] = data[i + 2]; // B
+        imgData.data[(y * mat.cols + x) * 4 + 3] = 255;        // A
+    }
+    
+    return imgData;
+}
+
 let semaphore = false; 
 
 async function runModel(img, width, height, device){
@@ -119,15 +137,18 @@ async function runModel(img, width, height, device){
     semaphore = true;
 
     try{
+        const begin = performance.now();
         // CANVAS TO MAT CONVERSION:
         if (mat == null || mat.data.length != img.data.length){
             mat = new cv.Mat(height, width, cv.CV_8UC4);
         }
         mat.data.set(img.data);
+        console.log(performance.now()-begin, "canvas to mat converted");
 
         // MAT PREPROCESSING:
         let preprocessingResult = preprocessMat(mat);
         let preprocessedImage = preprocessingResult.image;
+        console.log(performance.now()-begin, "mat preprocessed");
 
         // MAT TO OpenVINO TENSOR CONVERSION:
         const tensorData = new Float32Array(preprocessedImage.data.length);
@@ -136,6 +157,7 @@ async function runModel(img, width, height, device){
         }
         const shape = [1, preprocessedImage.rows, preprocessedImage.cols, 3];
         const inputTensor = new ov.Tensor(ov.element.f32, shape, tensorData);
+        console.log(performance.now()-begin, "mat to tensor");
 
         // OpenVINO INFERENCE
         const startTime = performance.now();            // TIME MEASURING : START
@@ -158,19 +180,44 @@ async function runModel(img, width, height, device){
         const endTime = performance.now();
         const inferenceTime = endTime - startTime;      // TIME MEASURING : END
 
-        // BLURRING IMAGE (TO DO)
+        console.log(performance.now()-begin, "inference");
+
+        // BLURRING IMAGE
         if (maskMatOrg == null){
             maskMatOrg = new cv.Mat(height, width, cv.CV_8UC1);
         }
         postprocessMask(resultInfer, preprocessingResult.paddingInfo);
-        // if (blurredImage == null){
-        //     blurredImage = new cv.Mat(height, width, cv.CV_8UC3);
-        // }
-        // cv.GaussianBlur(mat, blurredImage, new cv.Size(55,55), 0);
+        if (blurredImage == null){
+            blurredImage = new cv.Mat(height, width, cv.CV_8UC3);
+        }
+        cv.GaussianBlur(mat, blurredImage, new cv.Size(55,55), 0);
+        console.log(performance.now()-begin, "gaussian blur");
+
+        if (conditionMat == null){
+            conditionMat = new cv.Mat(height, width, cv.CV_8UC3);
+        }
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                let maskValue = maskMatOrg.ucharAt(y, x);
+                conditionMat.ucharPtr(y, x)[0] = maskValue > 0 ? 255 : 0;
+                conditionMat.ucharPtr(y, x)[1] = maskValue > 0 ? 255 : 0;
+                conditionMat.ucharPtr(y, x)[2] = maskValue > 0 ? 255 : 0;
+            }
+        }
+
+        if (finalMat == null) {
+            finalMat = new cv.Mat();
+        }
+        cv.bitwise_and(mat, conditionMat, finalMat);
+        let inverseConditionMat = new cv.Mat();
+        cv.bitwise_not(conditionMat, inverseConditionMat);
+        cv.bitwise_and(blurredImage, inverseConditionMat, blurredImage);
+        cv.add(finalMat, blurredImage, finalMat);
+        console.log(performance.now()-begin, "blurred merged");
 
 
         return {
-            img : img, 
+            img : matToImageData(finalMat), 
             inferenceTime : inferenceTime.toFixed(2).toString()
         };
 
