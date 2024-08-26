@@ -213,20 +213,20 @@ async function runModel(img, width, height, device){
             finalMat = new cv.Mat();
         }
         console.log(performance.now()-begin, "final mat created");
-        cv.bitwise_and(mat, conditionMat, finalMat);
-        console.log(performance.now()-begin, "bitwise and");
-        if (inverseConditionMat == null){
-            inverseConditionMat = new cv.Mat();
-        }
-        console.log(performance.now()-begin, "inverse condition mat created");
-        cv.bitwise_not(conditionMat, inverseConditionMat);
-        cv.bitwise_and(blurredImage, inverseConditionMat, blurredImage);
-        cv.add(finalMat, blurredImage, finalMat);
-        console.log(performance.now()-begin, "blurred merged");
+        // cv.bitwise_and(mat, conditionMat, finalMat);
+        // console.log(performance.now()-begin, "bitwise and");
+        // if (inverseConditionMat == null){
+        //     inverseConditionMat = new cv.Mat();
+        // }
+        // console.log(performance.now()-begin, "inverse condition mat created");
+        // cv.bitwise_not(conditionMat, inverseConditionMat);
+        // cv.bitwise_and(blurredImage, inverseConditionMat, blurredImage);
+        // cv.add(finalMat, blurredImage, finalMat);
+        // console.log(performance.now()-begin, "blurred merged");
 
 
         return {
-            img : matToImageData(finalMat), 
+            img : mat,      // for tests, later change for finalMat
             inferenceTime : inferenceTime.toFixed(2).toString()
         };
 

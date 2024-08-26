@@ -33,6 +33,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  let tempImg = null;
+
 
   function startWebcam(deviceId) {
 
@@ -66,18 +68,19 @@ document.addEventListener('DOMContentLoaded', () => {
  
           window.electronAPI.runModel(imageData, canvasElement.width, canvasElement.height, ovDevice).then(result => {
             inferenceTime = result.inferenceTime;
-            tempImg = result.img;
+            tempImg = result.img;     // now mat here
+                      
+            imgElement.src = tempImg.data;
+            document.getElementById('processingTime').innerText = `Inference time: ${inferenceTime} ms (${(1000 / inferenceTime).toFixed(1)} FPS)`;
           });
           // tempImg = canvasElement.toDataURL('image/jpeg');
-          
-          imgElement.src = tempImg;
-          document.getElementById('processingTime').innerText = `Inference time: ${inferenceTime} ms (${(1000 / inferenceTime).toFixed(1)} FPS)`;
+
           
           window.electronAPI.takeTime().then(result => {
             endTime = result;
           });
 
-        }, 60-(endTime-begin)); // number here means delay in ms
+        }, 100-(endTime-begin)); // number here means delay in ms
 
         toggleWebcamButton.textContent = 'Stop';
       }
