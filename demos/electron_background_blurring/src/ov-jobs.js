@@ -14,6 +14,7 @@ let blurredImage = null;
 let maskMatOrg = null;
 let conditionMat = null;
 let finalMat = null;
+let inverseConditionMat = null;
 
 let model = null;
 
@@ -190,12 +191,14 @@ async function runModel(img, width, height, device){
         if (blurredImage == null){
             blurredImage = new cv.Mat(height, width, cv.CV_8UC3);
         }
-        cv.GaussianBlur(mat, blurredImage, new cv.Size(55,55), 0);
+        cv.GaussianBlur(mat, blurredImage, new cv.Size(15,15), 0);
         console.log(performance.now()-begin, "gaussian blur");
 
         if (conditionMat == null){
             conditionMat = new cv.Mat(height, width, cv.CV_8UC3);
         }
+        console.log(performance.now()-begin, "condition mat created");
+        
         for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {
                 let maskValue = maskMatOrg.ucharAt(y, x);
@@ -204,12 +207,18 @@ async function runModel(img, width, height, device){
                 conditionMat.ucharPtr(y, x)[2] = maskValue > 0 ? 255 : 0;
             }
         }
+        console.log(performance.now()-begin, "condition mat filled");
 
         if (finalMat == null) {
             finalMat = new cv.Mat();
         }
+        console.log(performance.now()-begin, "final mat created");
         cv.bitwise_and(mat, conditionMat, finalMat);
-        let inverseConditionMat = new cv.Mat();
+        console.log(performance.now()-begin, "bitwise and");
+        if (inverseConditionMat == null){
+            inverseConditionMat = new cv.Mat();
+        }
+        console.log(performance.now()-begin, "inverse condition mat created");
         cv.bitwise_not(conditionMat, inverseConditionMat);
         cv.bitwise_and(blurredImage, inverseConditionMat, blurredImage);
         cv.add(finalMat, blurredImage, finalMat);

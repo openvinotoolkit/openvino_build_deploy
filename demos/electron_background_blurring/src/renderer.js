@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
             inferenceTime = result.inferenceTime;
             tempImg = result.img;
           });
-          tempImg = canvasElement.toDataURL('image/jpeg');
+          // tempImg = canvasElement.toDataURL('image/jpeg');
           
           imgElement.src = tempImg;
           document.getElementById('processingTime').innerText = `Inference time: ${inferenceTime} ms (${(1000 / inferenceTime).toFixed(1)} FPS)`;
