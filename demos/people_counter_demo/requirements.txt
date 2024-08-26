@@ -5,7 +5,7 @@ numpy==1.23.5
 pillow==10.3.0
 opencv-python==4.10.0.84
 onnx==1.16.0
-torch==2.1.2
+torch==2.2.0
 torchvision==0.16.2
 supervision==0.22.0
 tqdm==4.66.3
