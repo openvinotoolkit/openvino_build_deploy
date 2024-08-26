@@ -87,7 +87,7 @@ function convertToMultiDimensionalArray(tensor, shape) {
 }
 
 
-function postprocessMask (mask, padInfo, originalHeight, originalWidth){
+function postprocessMask (mask, padInfo){
     // TAKE OUT LABELS
     const maskShape = mask.getShape();
     const multidimArray = convertToMultiDimensionalArray(mask, maskShape);
@@ -99,11 +99,17 @@ function postprocessMask (mask, padInfo, originalHeight, originalWidth){
     const labelMaskUnpadded = labelMask.slice(0, unpadH).map(row => row.slice(0, unpadW));
 
 
-    // RESIZING
-    if (maskMatSmall == null){
-        maskMatSmall = new cv.Mat(labelMaskUnpadded.length, labelMaskUnpadded[0].length, cv.CV_8UC1);
-    }
-    cv.resize(maskMatSmall, maskMatOrg, maskMatOrg.size(), interpolaton=cv.INTER_NEAREST);
+    // RESIZING - check with version is better
+
+    // mat resizing with cv:
+    // if (maskMatSmall == null){
+    //     maskMatSmall = new cv.Mat(labelMaskUnpadded.length, labelMaskUnpadded[0].length, cv.CV_8UC1);
+    // }
+    // cv.resize(maskMatSmall, maskMatOrg, maskMatOrg.size(), interpolaton=cv.INTER_NEAREST);
+
+    // array resizing and adding to mat:
+    const labelMaskResized = new Array(maskMatOrg.size()[0]).fill(0).map(() => new Array(maskMatOrg.size()[1]).fill(0));
+    maskMatOrg.data.set(labelMaskResized);
 }
 
 let semaphore = false; 
@@ -161,7 +167,7 @@ async function runModel(img, width, height, device){
         if (maskMatOrg == null){
             maskMatOrg = new cv.Mat(height, width, cv.CV_8UC1);
         }
-        postprocessMask(resultInfer, paddingInfo, height, width);
+        postprocessMask(resultInfer, paddingInfo);
         if (blurredImage == null){
             blurredImage = new cv.Mat(height, width, cv.CV_8UC3);
         }
