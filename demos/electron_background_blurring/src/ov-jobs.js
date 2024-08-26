@@ -102,6 +102,10 @@ function postprocessMask (mask, padInfo){
     // RESIZING
     const labelMaskResized = new Array(maskMatOrg.size()[0]).fill(0).map(() => new Array(maskMatOrg.size()[1]).fill(0));
     maskMatOrg.data.set(labelMaskResized);
+    /*
+    mat resize:  5.1266000010073185
+    array resize:  0.07750000059604645
+    */
 }
 
 let semaphore = false; 
