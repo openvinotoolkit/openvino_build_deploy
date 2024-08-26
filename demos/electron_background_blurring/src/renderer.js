@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
             endTime = result;
           });
 
-        }, 35-(endTime-begin)); // number here means delay in ms
+        }, 60-(endTime-begin)); // number here means delay in ms
 
         toggleWebcamButton.textContent = 'Stop';
       }

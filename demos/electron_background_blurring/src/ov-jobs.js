@@ -88,18 +88,18 @@ function convertToMultiDimensionalArray(tensor, shape) {
 
 
 function postprocessMask (mask, padInfo, originalHeight, originalWidth){
-    // TAKE OUT LABELS (TO DO)
+    // TAKE OUT LABELS
     const maskShape = mask.getShape();
     const multidimArray = convertToMultiDimensionalArray(mask, maskShape);
     const labelMask = multidimArray[0].map(row => row.map(pixel => pixel.indexOf(Math.max(...pixel))));    
 
-    // UNPADDING (TO DO)
+    // UNPADDING
     const unpadH = maskShape[1] - padInfo.bottomPadding;
     const unpadW = maskShape[2] - padInfo.rightPadding;
     const labelMaskUnpadded = labelMask.slice(0, unpadH).map(row => row.slice(0, unpadW));
 
 
-    // RESIZING (TO DO)
+    // RESIZING
     if (maskMatSmall == null){
         maskMatSmall = new cv.Mat(labelMaskUnpadded.length, labelMaskUnpadded[0].length, cv.CV_8UC1);
     }
@@ -165,7 +165,7 @@ async function runModel(img, width, height, device){
         if (blurredImage == null){
             blurredImage = new cv.Mat(height, width, cv.CV_8UC3);
         }
-        // cv.GaussianBlur(mat, blurredImage, blurredImage.size(), 0);
+        cv.GaussianBlur(mat, blurredImage, new cv.Size(55,55), 0);
 
 
         return {
