@@ -112,46 +112,6 @@ def load_chat_model(model_dir: Path) -> Optional[OpenVINOLLM]:
                        model_kwargs={"ov_config": ov_config}, generate_kwargs={"do_sample": True, "temperature": 0.7, "top_k": 50, "top_p": 0.95})
 
 
-def optimize_model_for_npu(model: OVModelForFeatureExtraction) -> None:
-    """
-    Fix some layers to be able to run NPU inference
-
-    Params:
-        model: model to fix
-    """
-    class ReplaceTensor(passes.MatcherPass):
-        def __init__(self, packed_layername_tensor_dict_list):
-            super().__init__()
-            self.model_changed = False
-
-            param = passes.WrapType("opset10.Multiply")
-
-            def callback(matcher: passes.Matcher) -> bool:
-                root = matcher.get_match_root()
-                if root is None:
-                    return False
-                for y in packed_layername_tensor_dict_list:
-                    root_name = root.get_friendly_name()
-                    if root_name.find(y["name"]) != -1:
-                        max_fp16 = np.array([[[[-np.finfo(np.float16).max]]]]).astype(np.float32)
-                        new_tenser = ops.constant(max_fp16, ov.Type.f32, name="Constant_4431")
-                        root.set_arguments([root.input_value(0).node, new_tenser])
-                        packed_layername_tensor_dict_list.remove(y)
-
-                return True
-
-            self.register_matcher(passes.Matcher(param, "ReplaceTensor"), callback)
-
-    # the list of layers to replace
-    packed_layer_tensor_dict_list = [{"name": "aten::mul/Multiply"}]
-
-    manager = passes.Manager()
-    manager.register_pass(ReplaceTensor(packed_layer_tensor_dict_list))
-    manager.run_passes(model.model)
-    # make model fixed input shape (NPU compatible)
-    model.reshape(1, 512)
-
-
 def load_embedding_model(model_dir: Path) -> Optional[OpenVINOEmbedding]:
     """
     Load embedding model
