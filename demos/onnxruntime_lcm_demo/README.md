@@ -22,9 +22,10 @@ This notebook demonstrates how to  run [LCM_Dreamshaper_v7](https://huggingface.
   ```sh
   \<venv-name>\Scripts\activate
   ```
-- Install onnxruntime-openvino 1.18.0 :
+- Install the Packages
   ```sh
-  pip install onnxruntime_openvino-1.18.0-cp311-cp311-win_amd64.whl
+  python -m pip install --upgrade pip 
+  pip install -r requirements.txt
   ```
 - Install OpenVINO 2024.1 on Windows from an Archive File as described here https://docs.openvino.ai/2024/get-started/install-openvino/install-openvino-archive-windows.html 
 - In Command Prompt initialize OpenVINO, for example using
@@ -33,39 +34,3 @@ This notebook demonstrates how to  run [LCM_Dreamshaper_v7](https://huggingface.
   ```
 - Now you only need a Jupyter server to start.
 - All other dependencies are installed in the notebook itself
-- For details, please refer to [Installation Guide](../../README.md#-installation-guide).
-
-
-## How to build onnxruntime_openvino 
-- onnxruntime_openvino-1.18 is used along with OpenVINO 2024.1 
-
-- Ensure Visual Studio is installed 
-
-- Ensure Python version is 3.11 
-
-- Ensure OpenVINO is installed from the archive (OpenVINO 2024.1 for onnxruntime_openvino-1.18) 
-
-- Build a wheel
-      
-    ```sh
-    git clone https://github.com/microsoft/onnxruntime.git 
-    ```
-    ```sh
-    cd onnxruntime && mkdir build 
-    ```
-    In Command Prompt initialize OpenVINO, for example using
-    ```sh
-    "C:\Program Files (x86)\Intel\openvino_2024\setupvars.bat"
-    ``` 
-    Build in Windows:
-    ```sh
-    .\build.bat --config Debug --use_openvino CPU --build_shared_lib --build_wheel --parallel --skip_tests
-    ```
-    Discover the wheel file in the path - e.g.: 
-    ```sh
-    \onnxruntime\build\Windows\Debug\Debug\dist\ 
-    ```
-
-
-
-
