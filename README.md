@@ -10,13 +10,13 @@ If you're looking for code samples or tutorials: You can find tutorial-based con
 
 ## Table of Contents
 
-- [➡️ Repo Contents](#➡️-repo-contents)
+- [➡️ Repo Contents](#repo-contents)
 - [📚 Additional Resources](#additional-resources)
 - [🌳 How to Contribute](#contribute)
 - [❓ Troubleshooting and Resources](#troubleshooting-and-resources)
 - [🧑‍💻 Team](#team)
   
-## ➡️ Repo Contents
+## Repo Contents
 
 ### [Edge AI Reference Kits](https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/ai_ref_kits): Production-Ready OpenVINO Code
 
