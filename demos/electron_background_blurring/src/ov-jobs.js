@@ -188,11 +188,12 @@ async function runModel(img, width, height, device){
             maskMatOrg = new cv.Mat(height, width, cv.CV_8UC1);
         }
         postprocessMask(resultInfer, preprocessingResult.paddingInfo);
+        console.log(performance.now()-begin, "postprocessing");
         if (blurredImage == null){
             blurredImage = new cv.Mat(height, width, cv.CV_8UC3);
         }
-        cv.GaussianBlur(mat, blurredImage, new cv.Size(15,15), 0);
-        console.log(performance.now()-begin, "gaussian blur");
+        cv.blur(mat, blurredImage, new cv.Size(15,15));
+        console.log(performance.now()-begin, "blur");
 
         if (conditionMat == null){
             conditionMat = new cv.Mat(height, width, cv.CV_8UC3);
@@ -226,7 +227,7 @@ async function runModel(img, width, height, device){
 
 
         return {
-            img : mat,      // for tests, later change for finalMat
+            img : img,      // for tests, later change for finalMat
             inferenceTime : inferenceTime.toFixed(2).toString()
         };
 
