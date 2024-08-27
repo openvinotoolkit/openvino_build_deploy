@@ -200,20 +200,20 @@ async function runModel(img, width, height, device){
         }
         console.log(performance.now()-begin, "condition mat created");
         
-        for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-                let maskValue = maskMatOrg.ucharAt(y, x);
-                conditionMat.ucharPtr(y, x)[0] = maskValue > 0 ? 255 : 0;
-                conditionMat.ucharPtr(y, x)[1] = maskValue > 0 ? 255 : 0;
-                conditionMat.ucharPtr(y, x)[2] = maskValue > 0 ? 255 : 0;
-            }
-        }
-        console.log(performance.now()-begin, "condition mat filled");
+        // for (let y = 0; y < height; y++) {
+        //     for (let x = 0; x < width; x++) {
+        //         let maskValue = maskMatOrg.ucharAt(y, x);
+        //         conditionMat.ucharPtr(y, x)[0] = maskValue > 0 ? 255 : 0;
+        //         conditionMat.ucharPtr(y, x)[1] = maskValue > 0 ? 255 : 0;
+        //         conditionMat.ucharPtr(y, x)[2] = maskValue > 0 ? 255 : 0;
+        //     }
+        // }
+        // console.log(performance.now()-begin, "condition mat filled");
 
-        if (finalMat == null) {
-            finalMat = new cv.Mat();
-        }
-        console.log(performance.now()-begin, "final mat created");
+        // if (finalMat == null) {
+        //     finalMat = new cv.Mat();
+        // }
+        // console.log(performance.now()-begin, "final mat created");
         // cv.bitwise_and(mat, conditionMat, finalMat);
         // console.log(performance.now()-begin, "bitwise and");
         // if (inverseConditionMat == null){
