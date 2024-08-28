@@ -6,8 +6,6 @@ Welcome to the **Build and Deploy AI Solutions** repository! This repository con
 
 > Material and dependencies are self-contained, so you can get started building easily.
 
-If you're looking for code samples or tutorials: You can find tutorial-based content at the [OpenVINO Notebooks]() repository, and hands-on Gen AI samples for Python and C++ at the OpenVINO.GenAI repository (see Additional Resources for more information).
-
 ## Table of Contents
 
 - [➡️ Repo Contents](#repo-contents)
