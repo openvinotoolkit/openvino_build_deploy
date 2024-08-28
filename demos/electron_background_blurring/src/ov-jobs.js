@@ -2,6 +2,7 @@ const { addon: ov } = require('openvino-node');
 const { cv } = require('opencv-wasm');
 const { performance } = require('perf_hooks');
 const path = require('path');
+const { ImageData } = require('@napi-rs/canvas');
 
 module.exports = { detectDevices, runModel, takeTime }
 
@@ -194,6 +195,7 @@ async function runModel(img, width, height, device){
         // if (finalMat == null) {
         //     finalMat = new cv.Mat();
         // }
+
         // console.log(performance.now()-begin, "final mat created");
         // cv.bitwise_and(mat, conditionMat, finalMat);
         // console.log(performance.now()-begin, "bitwise and");
@@ -206,8 +208,14 @@ async function runModel(img, width, height, device){
         // cv.add(finalMat, blurredImage, finalMat);
         // console.log(performance.now()-begin, "blurred merged");
 
+        const imageData = new ImageData(
+            new Uint8ClampedArray(mat.data),
+            mat.cols,
+            mat.rows
+        )
+
         return {
-            img : mat.toString('base64'),      // for tests, later change for finalMat
+            img : imageData,      // for tests, later change for finalMat
             inferenceTime : inferenceTime.toFixed(2).toString()
         };
 
