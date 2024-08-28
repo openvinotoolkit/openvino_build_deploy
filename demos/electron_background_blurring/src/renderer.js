@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let inferenceTime = null;
   let begin = null;
   let endTime = null;
-  let processingActive = false; // Flaga do kontroli przetwarzania
+  let processingActive = false;
 
   toggleWebcamButton.addEventListener('click', () => {
     if (webcamStream) {
@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
           const result = await window.electronAPI.runModel(imageData, canvasElement.width, canvasElement.height, ovDevice);
           inferenceTime = result.inferenceTime;
-          tempImg = result.img;
+          tempImg = result;
 
           imgElement.src = tempImg;
           document.getElementById('processingTime').innerText = `Inference time: ${inferenceTime} ms (${(1000 / inferenceTime).toFixed(1)} FPS)`;

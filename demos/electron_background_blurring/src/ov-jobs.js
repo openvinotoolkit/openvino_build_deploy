@@ -2,6 +2,7 @@ const { addon: ov } = require('openvino-node');
 const { cv } = require('opencv-wasm');
 const { performance } = require('perf_hooks');
 const path = require('path');
+const { Buffer } = require('buffer');
 
 module.exports = { detectDevices, runModel, takeTime }
 
@@ -110,23 +111,6 @@ function postprocessMask (mask, padInfo){
     */
 }
 
-function matToImageData(mat) {
-    const imgData = new ImageData(mat.cols, mat.rows);
-    const data = mat.data;
-
-    for (let i = 0; i < data.length; i += 3) {
-        const x = (i / 3) % mat.cols;
-        const y = Math.floor((i / 3) / mat.cols);
-        
-        imgData.data[(y * mat.cols + x) * 4] = data[i];       // R
-        imgData.data[(y * mat.cols + x) * 4 + 1] = data[i + 1]; // G
-        imgData.data[(y * mat.cols + x) * 4 + 2] = data[i + 2]; // B
-        imgData.data[(y * mat.cols + x) * 4 + 3] = 255;        // A
-    }
-    
-    return imgData;
-}
-
 let semaphore = false; 
 
 async function runModel(img, width, height, device){
@@ -195,10 +179,10 @@ async function runModel(img, width, height, device){
         cv.blur(mat, blurredImage, new cv.Size(15,15));
         console.log(performance.now()-begin, "blur");
 
-        if (conditionMat == null){
-            conditionMat = new cv.Mat(height, width, cv.CV_8UC3);
-        }
-        console.log(performance.now()-begin, "condition mat created");
+        // if (conditionMat == null){
+        //     conditionMat = new cv.Mat(height, width, cv.CV_8UC3);
+        // }
+        // console.log(performance.now()-begin, "condition mat created");
         
         // for (let y = 0; y < height; y++) {
         //     for (let x = 0; x < width; x++) {
@@ -225,9 +209,8 @@ async function runModel(img, width, height, device){
         // cv.add(finalMat, blurredImage, finalMat);
         // console.log(performance.now()-begin, "blurred merged");
 
-
         return {
-            img : img,      // for tests, later change for finalMat
+            img : mat.toString('base64'),      // for tests, later change for finalMat
             inferenceTime : inferenceTime.toFixed(2).toString()
         };
 
