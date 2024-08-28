@@ -2,7 +2,6 @@ const { addon: ov } = require('openvino-node');
 const { cv } = require('opencv-wasm');
 const { performance } = require('perf_hooks');
 const path = require('path');
-const { Buffer } = require('buffer');
 
 module.exports = { detectDevices, runModel, takeTime }
 
@@ -179,10 +178,8 @@ async function runModel(img, width, height, device){
         cv.blur(mat, blurredImage, new cv.Size(15,15));
         console.log(performance.now()-begin, "blur");
 
-        // if (conditionMat == null){
-        //     conditionMat = new cv.Mat(height, width, cv.CV_8UC3);
-        // }
-        // console.log(performance.now()-begin, "condition mat created");
+        cv.threshold(maskMatOrg, maskMatOrg, thresh=0, maxval=1, type=cv.THRESH_BINARY);
+        console.log(maskMatOrg.data);
         
         // for (let y = 0; y < height; y++) {
         //     for (let x = 0; x < width; x++) {
