@@ -3,6 +3,7 @@ const { cv } = require('opencv-wasm');
 const { performance } = require('perf_hooks');
 const path = require('path');
 const { ImageData } = require('@napi-rs/canvas');
+const { getImageBuffer } = require('./helpers.js')
 
 module.exports = { detectDevices, runModel, takeTime }
 
@@ -67,10 +68,6 @@ function preprocessMat(image, targetHeight = 256, targetWidth = 256) {
     };
 }
 
-function getTensorIndex(n, h, w, c) {
-    return ((n * shape[1] + h) * shape[2] + w) * shape[3] + c;
-}
-
 function convertToMultiDimensionalArray(tensor, shape) {
     function createArray(dim, idx) {
         if (dim >= shape.length) {
@@ -103,8 +100,10 @@ function postprocessMask (mask, padInfo){
 
 
     // RESIZING
+    console.log(maskMatOrg.size(), maskMatOrg.data.length, labelMaskUnpadded.length, labelMaskUnpadded[0].length);
     const labelMaskResized = new Array(maskMatOrg.size()[0]).fill(0).map(() => new Array(maskMatOrg.size()[1]).fill(0));
     maskMatOrg.data.set(labelMaskResized);
+    console.log(maskMatOrg.size(), maskMatOrg.data.length)
     /*
     mat resize:  5.1266000010073185
     array resize:  0.07750000059604645
@@ -123,6 +122,9 @@ async function runModel(img, width, height, device){
 
     try{
         const begin = performance.now();
+        console.log("img: ", img instanceof ImageData);
+        console.log(img.data);
+
         // CANVAS TO MAT CONVERSION:
         if (mat == null || mat.data.length != img.data.length){
             mat = new cv.Mat(height, width, cv.CV_8UC4);
@@ -208,14 +210,15 @@ async function runModel(img, width, height, device){
         // cv.add(finalMat, blurredImage, finalMat);
         // console.log(performance.now()-begin, "blurred merged");
 
-        const imageData = new ImageData(
-            new Uint8ClampedArray(mat.data),
-            mat.cols,
-            mat.rows
-        )
+        const imageData = new ImageData(new Uint8ClampedArray(mat.data), mat.cols, mat.rows);
+
+        // console.log("imageData: ",imageData instanceof ImageData);
+        // console.log(imageData);
+
+        // const buf = getImageBuffer(imageData);
 
         return {
-            img : imageData,      // for tests, later change for finalMat
+            img : mat,      // for tests, later change for finalMat
             inferenceTime : inferenceTime.toFixed(2).toString()
         };
 

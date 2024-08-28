@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
+const { ImageData } = require('@napi-rs/canvas');
 
 const { detectDevices, runModel, takeTime } = require('./ov-jobs')
 
@@ -41,7 +42,9 @@ ipcMain.handle('detect-devices', async () => {
 });
 
 ipcMain.handle('run-model', async (event, img, width, height, device) => {
-  return await runModel(img, width, height, device);
+  result = await runModel(img, width, height, device);
+  console.log("main handle, type", result.img instanceof ImageData);
+  return result;
 })
 
 ipcMain.handle('detect-webcam', async () => {
