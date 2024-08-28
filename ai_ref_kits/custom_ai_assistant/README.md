@@ -128,7 +128,7 @@ The application uses three separate models for its operation, each requiring con
 
 1. Automated Speech Recognition Distil-Whisper Conversion:
 ```shell
-python convert_and_optimize_asr.py --asr_model_type distil-whisper-large-v2 --precision int8
+python convert_and_optimize_asr.py --asr_model_type distil-whisper-large-v3 --precision int8
 ```
 This script will convert and optimize the automatic speech recognition (ASR) model performing weights quantization.
 If you want to convert speech to text in Chinese, you could choose the Chinese fine-tuned ASR model with the following:
@@ -138,7 +138,7 @@ python convert_and_optimize_asr.py --asr_model_type belle-distilwhisper-large-v2
 
 2. Chat LLama Conversion:
 ```shell
-python convert_and_optimize_chat.py --chat_model_type llama3-8B --precision int4
+python convert_and_optimize_chat.py --chat_model_type llama3.1-8B --precision int4
 ```
 This script will handle the conversion and optimization of the chat model, performing weights quantization. 
 If you want to perform the conversation in Chinese, you could choose the Chinese LLM Qwen2-7B-instruct model with the following:
