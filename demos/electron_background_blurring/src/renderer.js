@@ -38,7 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function startWebcam(deviceId) {
     try {
-      let ovDevice = null;
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           deviceId: deviceId,
@@ -57,53 +56,56 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       await videoElement.play();
-      processingActive = true; 
+      processingActive = true;
 
-      async function captureFrame() {
-        if (!processingActive) return; 
-        try {
-          begin = await window.electronAPI.takeTime();
-
-          ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
-          const imageData = ctx.getImageData(0, 0, canvasElement.width, canvasElement.height);
-          ovDevice = deviceSelect.value;
-
-
-          const result = await window.electronAPI.runModel(imageData, canvasElement.width, canvasElement.height, ovDevice);
-          inferenceTime = result.inferenceTime;
-          tempImg = new ImageData(result.img, result.width, result.height);
-
-          ctx.putImageData(tempImg, 0, 0);
-
-          imgElement.src = canvasElement.toDataURL('image/jpeg');
-          document.getElementById('processingTime').innerText = `Inference time: ${inferenceTime} ms (${(1000 / inferenceTime).toFixed(1)} FPS)`;
-          endTime = await window.electronAPI.takeTime();
-
-          const delay = Math.max(0, 50 - (endTime - begin));
-          if (processingActive) {
-            setTimeout(captureFrame, delay);
-          }
-        } catch (error) {
-          console.error('Error during capture:', error);
-        }
-      }
+      toggleWebcamButton.textContent = 'Stop';
 
       await captureFrame();
-      toggleWebcamButton.textContent = 'Stop';
     } catch (error) {
       console.error('Error accessing webcam:', error);
     }
   }
 
-  function stopWebcam(keepActive) {
+  async function captureFrame() {
+    if (!processingActive) return;
+    let ovDevice;
+    try {
+      begin = await window.electronAPI.takeTime();
+
+      ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+      const imageData = ctx.getImageData(0, 0, canvasElement.width, canvasElement.height);
+
+      ovDevice = deviceSelect.value;
+      const result = await window.electronAPI.runModel(imageData, canvasElement.width, canvasElement.height, ovDevice);
+
+      tempImg = new ImageData(result.img, result.width, result.height);
+      ctx.putImageData(tempImg, 0, 0);
+      imgElement.src = canvasElement.toDataURL('image/jpeg');
+
+      inferenceTime = result.inferenceTime;
+      document.getElementById('processingTime').innerText = `Inference time: ${inferenceTime} ms (${(1000 / inferenceTime).toFixed(1)} FPS)`;
+
+      endTime = await window.electronAPI.takeTime();
+      const delay = Math.max(0, 50 - (endTime - begin));
+      if (processingActive) {
+        setTimeout(captureFrame, delay);
+      }
+    } catch (error) {
+      console.error('Error during capture:', error);
+    }
+  }
+
+  async function stopWebcam(keepActive) {
     processingActive = false; 
     clearInterval(captureInterval);
     if (webcamStream) {
       webcamStream.getTracks().forEach(track => track.stop());
     }
+
     videoElement.srcObject = null;
     imgElement.src = '../assets/webcam_placeholder.png';
     document.getElementById('processingTime').innerText = `Inference time: 0 ms (0 FPS)`;
+
     if (!keepActive) {
       toggleWebcamButton.textContent = 'Start';
     }
