@@ -4,6 +4,7 @@ nncf==2.11.0
 
 onnx==1.16.0
 onnxruntime==1.17.0
+torch==2.4.0
 
 transformers==4.43.4
 librosa==0.10.2

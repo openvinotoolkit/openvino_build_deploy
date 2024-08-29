@@ -72,7 +72,7 @@ def load_asr_model(model_dir: Path) -> None:
         return
 
     # create a distil-whisper model and its processor
-    device = "GPU" if "GPU" in get_available_devices() else "CPU"
+    device = "GPU" if "GPU" in get_available_devices() and ov.__version__ < "2024.3" else "CPU"
     asr_model = OVModelForSpeechSeq2Seq.from_pretrained(model_dir, device=device)
     asr_processor = AutoProcessor.from_pretrained(model_dir)
 
