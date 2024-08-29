@@ -16,10 +16,9 @@ from llama_index.core.chat_engine.types import BaseChatEngine, ChatMode
 from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.embeddings.huggingface_openvino import OpenVINOEmbedding
 from llama_index.llms.openvino import OpenVINOLLM
+from llama_index.postprocessor.openvino_rerank import OpenVINORerank
 from llama_index.readers.file import PDFReader
-from openvino.runtime import opset10 as ops
-from openvino.runtime import passes
-from optimum.intel import OVModelForSpeechSeq2Seq, OVModelForFeatureExtraction
+from optimum.intel import OVModelForSpeechSeq2Seq
 from transformers import AutoProcessor, TextIteratorStreamer
 
 # Global variables initialization
@@ -58,6 +57,7 @@ asr_model: Optional[OVModelForSpeechSeq2Seq] = None
 asr_processor: Optional[AutoProcessor] = None
 ov_llm: Optional[OpenVINOLLM] = None
 ov_embedding: Optional[OpenVINOEmbedding] = None
+ov_reranker: Optional[OpenVINORerank] = None
 ov_chat_engine: Optional[BaseChatEngine] = None
 
 
@@ -127,23 +127,45 @@ def load_embedding_model(model_dir: Path) -> Optional[OpenVINOEmbedding]:
         return None
 
     device = "AUTO:NPU" if "NPU" in get_available_devices() else "AUTO:CPU"
-    # load Embedding model in the format of Llama Index
+    # load embedding model in the format of Llama Index
     return OpenVINOEmbedding(str(model_dir), device=device, embed_batch_size=1, model_kwargs={"dynamic_shapes": False})
 
 
-def load_rag_models(chat_model_dir: Path, embedding_model_dir: Path) -> None:
+def load_reranker_model(model_dir: Path) -> Optional[OpenVINORerank]:
+    """
+    Load embedding model
+
+    Params:
+        model_dir: dir with the reranker model
+    Returns:
+        OpenVINO Reranker model in LLama Index
+    """
+    if not model_dir.exists():
+        log.error(f"Cannot find {model_dir}")
+        return None
+
+    # load reranker model in the format of Llama Index
+    return OpenVINORerank(model_id_or_path=str(model_dir), device="AUTO:CPU", top_n=3)
+
+
+def load_rag_models(chat_model_dir: Path, embedding_model_dir: Path, reranker_model_dir: Path) -> None:
     """
     Load all models required in RAG pipeline
 
     Params:
         chat_model_dir: dir with the chat model
         embedding_model_dir: dir with the embedding model
+        reranker_model_dir: dir with the reranker model
     """
-    global ov_llm, ov_embedding, ov_chat_engine
+    global ov_llm, ov_embedding, ov_reranker, ov_chat_engine
 
     # embedding model
     ov_embedding = load_embedding_model(embedding_model_dir)
     log.info(f"Running {embedding_model_dir} on {','.join(ov_embedding._model.request.get_property('EXECUTION_DEVICES'))}")
+
+    # reranker model
+    ov_reranker = load_reranker_model(reranker_model_dir)
+    log.info(f"Running {reranker_model_dir} on {','.join(ov_reranker._model.request.get_property('EXECUTION_DEVICES'))}")
 
     # chat model
     ov_llm = load_chat_model(chat_model_dir)
@@ -198,7 +220,7 @@ def load_context(file_path: str):
     index = VectorStoreIndex.from_documents([document])
     # create a RAG pipeline
     ov_chat_engine = index.as_chat_engine(llm=ov_llm, chat_mode=ChatMode.CONTEXT, system_prompt=SYSTEM_CONFIGURATION,
-                                          memory=memory)
+                                          memory=memory, node_postprocessors=[ov_reranker])
 
 
 def generate_initial_greeting() -> str:
@@ -353,27 +375,32 @@ def create_UI(initial_message: str) -> gr.Blocks:
         file_uploader_ui.change(lambda: ([[None, initial_message]], None), outputs=[chatbot_ui, summary_ui]) \
             .then(load_context, inputs=file_uploader_ui)
 
-        clear_btn.click(lambda: ([[None, initial_message]], None), outputs=[chatbot_ui, summary_ui])
+        clear_btn.click(lambda: ([[None, initial_message]], None), outputs=[chatbot_ui, summary_ui]) \
+            .then(lambda: gr.Button(interactive=False), outputs=clear_btn)
 
         # block buttons, clear output audio, do the transcription and conversation, clear input audio, unblock buttons
         submit_audio_btn.click(lambda: gr.Button(interactive=False), outputs=submit_audio_btn) \
             .then(lambda: gr.Button(interactive=False), outputs=summarize_button) \
+            .then(lambda: gr.Button(interactive=False), outputs=clear_btn) \
             .then(lambda: None, outputs=output_audio_ui) \
             .then(transcribe, inputs=[input_audio_ui, input_text_ui, chatbot_ui], outputs=chatbot_ui) \
             .then(chat, chatbot_ui, chatbot_ui) \
             .then(synthesize, inputs=[chatbot_ui, input_audio_ui], outputs=output_audio_ui) \
             .then(lambda: (None, None), inputs=[], outputs=[input_audio_ui, input_text_ui]) \
+            .then(lambda: gr.Button(interactive=True), outputs=clear_btn) \
             .then(lambda: gr.Button(interactive=True), outputs=summarize_button)
 
         # block button, do the summarization, unblock button
         summarize_button.click(lambda: gr.Button(interactive=False), outputs=summarize_button) \
+            .then(lambda: gr.Button(interactive=False), outputs=clear_btn) \
             .then(summarize, inputs=chatbot_ui, outputs=summary_ui) \
+            .then(lambda: gr.Button(interactive=True), outputs=clear_btn) \
             .then(lambda: gr.Button(interactive=True), outputs=summarize_button)
 
         return demo
 
 
-def run(asr_model_dir: Path, chat_model_dir: Path, embedding_model_dir: Path, public_interface: bool = False) -> None:
+def run(asr_model_dir: Path, chat_model_dir: Path, embedding_model_dir: Path, reranker_model_dir: Path, public_interface: bool = False) -> None:
     """
     Run the chatbot application
 
@@ -381,6 +408,7 @@ def run(asr_model_dir: Path, chat_model_dir: Path, embedding_model_dir: Path, pu
         asr_model_dir: dir with the automatic speech recognition model
         chat_model_dir: dir with the chat model
         embedding_model_dir: dir with the embedding model
+        reranker_model_dir: dir with the reranker model
         public_interface: whether UI should be available publicly
     """
     # set up logging
@@ -389,7 +417,7 @@ def run(asr_model_dir: Path, chat_model_dir: Path, embedding_model_dir: Path, pu
     # load whisper model
     load_asr_model(asr_model_dir)
     # load chat models
-    load_rag_models(chat_model_dir, embedding_model_dir)
+    load_rag_models(chat_model_dir, embedding_model_dir, reranker_model_dir)
 
     if asr_model is None or ov_llm is None or ov_embedding is None:
         log.error("Required models are not loaded. Exiting...")
@@ -407,9 +435,10 @@ def run(asr_model_dir: Path, chat_model_dir: Path, embedding_model_dir: Path, pu
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--asr_model", type=str, default="model/distil-whisper-large-v3-INT8", help="Path of the automatic speech recognition model directory")
-    parser.add_argument("--chat_model", type=str, default="model/llama3.1-8B-INT4", help="Path of the chat model directory")
-    parser.add_argument("--embedding_model", type=str, default="model/bge-small-FP32", help="Path of the embedding model directory")
+    parser.add_argument("--chat_model", type=str, default="model/llama3.1-8B-INT4", help="Path to the chat model directory")
+    parser.add_argument("--embedding_model", type=str, default="model/bge-small-FP32", help="Path to the embedding model directory")
+    parser.add_argument("--reranker_model", type=str, default="model/bge-reranker-large-FP32", help="Path to the reranker model directory")
     parser.add_argument("--public", default=False, action="store_true", help="Whether interface should be available publicly")
 
     args = parser.parse_args()
-    run(Path(args.asr_model), Path(args.chat_model), Path(args.embedding_model), args.public)
+    run(Path(args.asr_model), Path(args.chat_model), Path(args.embedding_model), Path(args.reranker_model), args.public)

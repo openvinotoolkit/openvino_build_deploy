@@ -6,7 +6,7 @@ import openvino as ov
 from openvino.runtime import opset10 as ops
 from openvino.runtime import passes
 from optimum.intel import OVModelForCausalLM, OVModelForFeatureExtraction, OVWeightQuantizationConfig, OVConfig, \
-    OVQuantizer
+    OVQuantizer, OVModelForSequenceClassification
 from transformers import AutoTokenizer
 
 MODEL_MAPPING = {
@@ -15,7 +15,10 @@ MODEL_MAPPING = {
     "qwen2-7B": "Qwen/Qwen2-7B-Instruct",
     "bge-small": "BAAI/bge-small-en-v1.5",
     "bge-large": "BAAI/bge-large-en-v1.5",
-    "bge-m3": "BAAI/bge-m3"
+    "bge-m3": "BAAI/bge-m3",
+    "bge-reranker-base": "BAAI/bge-reranker-base",
+    "bge-reranker-large": "BAAI/bge-reranker-large",
+    "bge-reranker-m3": "BAAI/bge-reranker-v2-m3"
 }
 
 
@@ -116,8 +119,33 @@ def convert_embedding_model(model_type: str, model_dir: Path) -> Path:
     model_name = MODEL_MAPPING[model_type]
 
     # load model and convert it to OpenVINO
-    model = OVModelForFeatureExtraction.from_pretrained(model_name, export=True)
+    model = OVModelForFeatureExtraction.from_pretrained(model_name, export=True, compile=False)
     optimize_model_for_npu(model)
+    model.save_pretrained(output_dir)
+
+    # export tokenizer
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    tokenizer.save_pretrained(output_dir)
+
+    return Path(output_dir) / "openvino_model.xml"
+
+
+def convert_reranker_model(model_type: str, model_dir: Path) -> Path:
+    """
+    Convert reranker model
+
+    Params:
+        model_type: selected mode type and size
+        model_dir: dir to export model
+    Returns:
+       Path to exported model
+    """
+    output_dir = model_dir / model_type
+    output_dir = output_dir.with_name(output_dir.name + "-FP32")
+    model_name = MODEL_MAPPING[model_type]
+
+    # load model and convert it to OpenVINO
+    model = OVModelForSequenceClassification.from_pretrained(model_name, export=True, compile=False)
     model.save_pretrained(output_dir)
 
     # export tokenizer
@@ -133,10 +161,13 @@ if __name__ == "__main__":
                         default="llama3.1-8B", help="Chat model to be converted")
     parser.add_argument("--embedding_model_type", type=str, choices=["bge-small", "bge-large", "bge-m3"],
                         default="bge-small", help="Embedding model to be converted")
+    parser.add_argument("--reranker_model_type", type=str, choices=["bge-reranker-large", "bge-reranker-base", "bge-reranker-m3"],
+                        default="bge-reranker-large", help="Reranker model to be converted")
     parser.add_argument("--precision", type=str, default="int4", choices=["fp16", "int8", "int4"], help="Model precision")
     parser.add_argument("--hf_token", type=str, help="HuggingFace access token to get Llama3")
     parser.add_argument("--model_dir", type=str, default="model", help="Directory to place the model in")
 
     args = parser.parse_args()
     convert_embedding_model(args.embedding_model_type, Path(args.model_dir))
+    convert_reranker_model(args.reranker_model_type, Path(args.model_dir))
     convert_chat_model(args.chat_model_type, args.precision, Path(args.model_dir), args.hf_token)
