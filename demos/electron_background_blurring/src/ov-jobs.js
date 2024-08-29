@@ -102,6 +102,15 @@ function postprocessMask (mask, padInfo){
     if (maskMatSmall == null){
         maskMatSmall = new cv.Mat(labelMaskUnpadded.length, labelMaskUnpadded[0].length, cv.CV_8UC1);
     }
+    maskMatSmall.data.set(labelMaskUnpadded.flat());
+
+    let i = 0;
+        for (const item of maskMatSmall.data){
+            if (item!==0){
+                i++;
+            }
+        }
+    console.log("not blurred: ", i);
     cv.resize(maskMatSmall, maskMatOrg, maskMatOrg.size(), cv.INTER_NEAREST);
 }
 
@@ -197,7 +206,6 @@ async function runModel(img, width, height, device){
 
         cv.add(mat, blurredImage, finalMat);
         console.log(performance.now()-begin, "ADD final");
-
 
         return {
             img : new Uint8ClampedArray(finalMat.data),
