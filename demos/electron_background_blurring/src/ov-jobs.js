@@ -100,10 +100,8 @@ function postprocessMask (mask, padInfo){
 
 
     // RESIZING
-    console.log(maskMatOrg.size(), maskMatOrg.data.length, labelMaskUnpadded.length, labelMaskUnpadded[0].length);
     const labelMaskResized = new Array(maskMatOrg.size()[0]).fill(0).map(() => new Array(maskMatOrg.size()[1]).fill(0));
     maskMatOrg.data.set(labelMaskResized);
-    console.log(maskMatOrg.size(), maskMatOrg.data.length)
     /*
     mat resize:  5.1266000010073185
     array resize:  0.07750000059604645
@@ -122,8 +120,6 @@ async function runModel(img, width, height, device){
 
     try{
         const begin = performance.now();
-        console.log("img: ", img instanceof ImageData);
-        console.log(img.data);
 
         // CANVAS TO MAT CONVERSION:
         if (mat == null || mat.data.length != img.data.length){
@@ -138,10 +134,7 @@ async function runModel(img, width, height, device){
         console.log(performance.now()-begin, "mat preprocessed");
 
         // MAT TO OpenVINO TENSOR CONVERSION:
-        const tensorData = new Float32Array(preprocessedImage.data.length);
-        for (let i = 0; i < preprocessedImage.data.length; i++) {
-            tensorData[i] = preprocessedImage.data[i] / 255.0;
-        }
+        const tensorData = Float32Array.from(preprocessedImage.data, x => x / 255.0);
         const shape = [1, preprocessedImage.rows, preprocessedImage.cols, 3];
         const inputTensor = new ov.Tensor(ov.element.f32, shape, tensorData);
         console.log(performance.now()-begin, "mat to tensor");
@@ -182,7 +175,6 @@ async function runModel(img, width, height, device){
         console.log(performance.now()-begin, "blur");
 
         cv.threshold(maskMatOrg, maskMatOrg, thresh=0, maxval=1, type=cv.THRESH_BINARY);
-        console.log(maskMatOrg.data);
         
         // for (let y = 0; y < height; y++) {
         //     for (let x = 0; x < width; x++) {
@@ -209,13 +201,6 @@ async function runModel(img, width, height, device){
         // cv.bitwise_and(blurredImage, inverseConditionMat, blurredImage);
         // cv.add(finalMat, blurredImage, finalMat);
         // console.log(performance.now()-begin, "blurred merged");
-
-        const imageData = new ImageData(new Uint8ClampedArray(mat.data), mat.cols, mat.rows);
-
-        console.log("imageData: ",imageData instanceof ImageData);
-        // console.log(imageData);
-
-        // const buf = getImageBuffer(imageData);
 
         return {
             img : new Uint8ClampedArray(mat.data),      // for tests, later change for finalMat

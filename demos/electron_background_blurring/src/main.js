@@ -42,9 +42,7 @@ ipcMain.handle('detect-devices', async () => {
 });
 
 ipcMain.handle('run-model', async (event, img, width, height, device) => {
-  result = await runModel(img, width, height, device);
-  console.log("main handle, type", result.img instanceof ImageData);
-  return result;
+  return await runModel(img, width, height, device);
 })
 
 ipcMain.handle('detect-webcam', async () => {

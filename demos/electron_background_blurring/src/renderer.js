@@ -73,15 +73,13 @@ document.addEventListener('DOMContentLoaded', () => {
           inferenceTime = result.inferenceTime;
           tempImg = new ImageData(result.img, result.width, result.height);
 
-          ctx.putImageData(tempImg, 0,0);
-
-          // document.getElementById('processingTime').innerText = tempImg;
+          ctx.putImageData(tempImg, 0, 0);
 
           imgElement.src = canvasElement.toDataURL('image/jpeg');
-          // document.getElementById('processingTime').innerText = `Inference time: ${inferenceTime} ms (${(1000 / inferenceTime).toFixed(1)} FPS)`;
+          document.getElementById('processingTime').innerText = `Inference time: ${inferenceTime} ms (${(1000 / inferenceTime).toFixed(1)} FPS)`;
           endTime = await window.electronAPI.takeTime();
 
-          const delay = Math.max(0, 100 - (endTime - begin));
+          const delay = Math.max(0, 50 - (endTime - begin));
           if (processingActive) {
             setTimeout(captureFrame, delay);
           }
