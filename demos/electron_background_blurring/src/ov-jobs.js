@@ -15,6 +15,7 @@ let maskMatOrg = null;
 let maskMatSmall = null;
 let notMask = null;
 let finalMat = null;
+let alpha = null;
 
 let model = null;
 
@@ -89,7 +90,6 @@ function postprocessMask (mask, padInfo){
     // TAKE OUT LABELS
     const maskShape = mask.getShape();
     const multidimArray = convertToMultiDimensionalArray(mask.data, maskShape);
-    console.log(multidimArray[0]);
     const labelMask = multidimArray[0].map(row => row.map(pixel => pixel.indexOf(Math.max(...pixel))));
 
     // UNPADDING
@@ -166,36 +166,41 @@ async function runModel(img, width, height, device){
         postprocessMask(resultInfer, preprocessingResult.paddingInfo);
         console.log(performance.now()-begin, "postprocessing");
         if (blurredImage == null){
-            blurredImage = new cv.Mat(height, width, cv.CV_8UC3);
+            blurredImage = new cv.Mat(height, width, cv.CV_8UC4);
         }
-        cv.blur(mat, blurredImage, new cv.Size(15,15));
+        cv.blur(mat, blurredImage, new cv.Size(55,55));
         console.log(performance.now() - begin, "blur");
 
-        cv.threshold(maskMatOrg, maskMatOrg, 0, 1, cv.THRESH_BINARY);
+        cv.threshold(maskMatOrg, maskMatOrg, 0, 255, cv.THRESH_BINARY);
         console.log(performance.now()-begin, "threshold");
 
         if (notMask == null){
             notMask = new cv.Mat(height, width, cv.CV_8UC1);
         }
         cv.bitwise_not(maskMatOrg, notMask);
+        cv.threshold(notMask, notMask, 254, 255, cv.THRESH_BINARY);
         console.log(performance.now()-begin, "not mask declared");
 
-        cv.bitwise_and(mat, mat, maskMatOrg);
-        console.log(performance.now()-begin, "AND org");
-        cv.bitwise_and(blurredImage, blurredImage, notMask);
-        console.log(performance.now()-begin, "AND blur");
-
         if (finalMat == null){
-            finalMat = new cv.Mat(height, width, cv.CV_8UC1);
+            finalMat = new cv.Mat(height, width, cv.CV_8UC4);
         }
         console.log(performance.now()-begin, "final mat declared");
+
+        if (alpha == null) {
+            alpha = new cv.Mat(height, width, mat.type(), new cv.Scalar(0, 0, 0, 0)); 
+        }
+
+        cv.bitwise_and(mat, alpha, mat, mask=notMask);
+        console.log(performance.now()-begin, "AND org");
+        cv.bitwise_and(blurredImage, alpha, blurredImage, mask=maskMatOrg);
+        console.log(performance.now()-begin, "AND blur");
 
         cv.add(mat, blurredImage, finalMat);
         console.log(performance.now()-begin, "ADD final");
 
 
         return {
-            img : new Uint8ClampedArray(finalMat.data),      // for tests, later change for finalMat
+            img : new Uint8ClampedArray(finalMat.data),
             width : finalMat.cols,
             height : finalMat.rows,
             inferenceTime : inferenceTime.toFixed(2).toString()
