@@ -103,14 +103,6 @@ function postprocessMask (mask, padInfo){
         maskMatSmall = new cv.Mat(labelMaskUnpadded.length, labelMaskUnpadded[0].length, cv.CV_8UC1);
     }
     maskMatSmall.data.set(labelMaskUnpadded.flat());
-
-    let i = 0;
-        for (const item of maskMatSmall.data){
-            if (item!==0){
-                i++;
-            }
-        }
-    console.log("not blurred: ", i);
     cv.resize(maskMatSmall, maskMatOrg, maskMatOrg.size(), cv.INTER_NEAREST);
 }
 
