@@ -115,3 +115,4 @@ pipcache_openvino/
 
 # NodeJS 
 demos/*/node_modules/**
+**/kernel.error.txt
