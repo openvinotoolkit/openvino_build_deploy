@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
         canvasElement.height = videoElement.videoHeight;
       });
 
-      videoElement.play();
+      await videoElement.play();
       processingActive = true; 
 
       async function captureFrame() {
@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      captureFrame();
+      await captureFrame();
       toggleWebcamButton.textContent = 'Stop';
     } catch (error) {
       console.error('Error accessing webcam:', error);

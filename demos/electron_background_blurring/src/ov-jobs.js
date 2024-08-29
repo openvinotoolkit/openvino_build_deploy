@@ -13,8 +13,6 @@ let paddedImg = null;
 let blurredImage = null;
 let maskMatOrg = null;
 let maskMatSmall = null;
-let notMask = null;
-let finalMat = null;
 
 let model = null;
 
@@ -26,13 +24,13 @@ function preprocessMat(image, targetHeight = 256, targetWidth = 256) {
     // RESIZING
     if (image.rows < image.cols){
         const height = Math.floor(image.rows / (image.cols / targetWidth));
-        if (resizedMat == null || resizedMat.size().width != targetWidth || resizedMat.size().height != height){
+        if (resizedMat == null || resizedMat.size().width !== targetWidth || resizedMat.size().height !== height){
             resizedMat = new cv.Mat(height, targetWidth, cv.CV_8UC3);
         }
         cv.resize(image, resizedMat, resizedMat.size());
     } else {
         const width = Math.floor(image.cols / (image.rows / targetHeight));
-        if (resizedMat == null || resizedMat.size().width != width || resizedMat.size().height != targetHeight){
+        if (resizedMat == null || resizedMat.size().width !== width || resizedMat.size().height !== targetHeight){
             resizedMat = new cv.Mat(targetHeight, width, cv.CV_8UC3);
         }
         cv.resize(image, resizedMat, resizedMat.size());
@@ -102,7 +100,7 @@ function postprocessMask (mask, padInfo){
     if (maskMatSmall == null){
         maskMatSmall = new cv.Mat(labelMaskUnpadded.length, labelMaskUnpadded[0].length, cv.CV_8UC1);
     }
-    cv.resize(maskMatSmall, maskMatOrg, maskMatOrg.size(), interpolaton=cv.INTER_NEAREST);
+    cv.resize(maskMatSmall, maskMatOrg, maskMatOrg.size(), cv.INTER_NEAREST);
 }
 
 let semaphore = false; 
@@ -119,7 +117,7 @@ async function runModel(img, width, height, device){
         const begin = performance.now();
 
         // CANVAS TO MAT CONVERSION:
-        if (mat == null || mat.data.length != img.data.length){
+        if (mat == null || mat.data.length !== img.data.length){
             mat = new cv.Mat(height, width, cv.CV_8UC4);
         }
         mat.data.set(img.data);
@@ -138,7 +136,7 @@ async function runModel(img, width, height, device){
 
         // OpenVINO INFERENCE
         const startTime = performance.now();            // TIME MEASURING : START
-        let compiledModel = null;
+        let compiledModel, inferRequest;
         if (model == null){
             model = await core.readModel(path.join(__dirname, "../models/selfie_multiclass_256x256.xml"));
         }
@@ -147,7 +145,7 @@ async function runModel(img, width, height, device){
             ovModels.set(device, compiledModel);
         } else {
             compiledModel = ovModels.get(device);
-        }    
+        }
         inferRequest = compiledModel.createInferRequest();
         inferRequest.setInputTensor(inputTensor);
         inferRequest.infer();
@@ -169,9 +167,9 @@ async function runModel(img, width, height, device){
             blurredImage = new cv.Mat(height, width, cv.CV_8UC3);
         }
         cv.blur(mat, blurredImage, new cv.Size(15,15));
-        console.log(performance.now()-begin, "blur");
+        console.log(performance.now() - begin, "blur");
 
-        cv.threshold(maskMatOrg, maskMatOrg, thresh=0, maxval=1, type=cv.THRESH_BINARY);
+        cv.threshold(maskMatOrg, maskMatOrg, 0, 1, cv.THRESH_BINARY);
         console.log(performance.now()-begin, "threshold");
 
         if (notMask == null){

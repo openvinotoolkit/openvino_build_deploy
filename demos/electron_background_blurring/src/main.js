@@ -1,6 +1,5 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
-const { ImageData } = require('@napi-rs/canvas');
 
 const { detectDevices, runModel, takeTime } = require('./ov-jobs')
 
