@@ -71,19 +71,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
           const result = await window.electronAPI.runModel(imageData, canvasElement.width, canvasElement.height, ovDevice);
           inferenceTime = result.inferenceTime;
-          tempImg = result.img;
-
-          
-
-          document.getElementById('processingTime').innerText = tempImg instanceof window.electronAPI.ImageData;
-          // const blob = new Blob([tempImg], { type: 'image/png' });
-          // const dataURL = URL.createObjectURL(blob);
+          tempImg = new ImageData(result.img, result.width, result.height);
 
           ctx.putImageData(tempImg, 0,0);
 
           // document.getElementById('processingTime').innerText = tempImg;
 
-          imgElement.src = dataURL;
+          imgElement.src = canvasElement.toDataURL('image/jpeg');
           // document.getElementById('processingTime').innerText = `Inference time: ${inferenceTime} ms (${(1000 / inferenceTime).toFixed(1)} FPS)`;
           endTime = await window.electronAPI.takeTime();
 

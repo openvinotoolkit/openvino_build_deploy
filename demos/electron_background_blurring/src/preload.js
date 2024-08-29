@@ -1,6 +1,5 @@
 const { contextBridge, ipcRenderer } = require('electron');
 const { Buffer } = require('buffer');
-const { ImageData } = require('@napi-rs/canvas');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   ipcRenderer: {
@@ -10,6 +9,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   Buffer: Buffer,
   detectDevices: () => ipcRenderer.invoke('detect-devices'),
   runModel: (img, width, height, device) => ipcRenderer.invoke('run-model', img, width, height, device),
-  takeTime: () => ipcRenderer.invoke('take-time'),
-  ImageData : ImageData
+  takeTime: () => ipcRenderer.invoke('take-time')
 });

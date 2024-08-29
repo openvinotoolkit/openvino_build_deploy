@@ -212,13 +212,15 @@ async function runModel(img, width, height, device){
 
         const imageData = new ImageData(new Uint8ClampedArray(mat.data), mat.cols, mat.rows);
 
-        // console.log("imageData: ",imageData instanceof ImageData);
+        console.log("imageData: ",imageData instanceof ImageData);
         // console.log(imageData);
 
         // const buf = getImageBuffer(imageData);
 
         return {
-            img : mat,      // for tests, later change for finalMat
+            img : new Uint8ClampedArray(mat.data),      // for tests, later change for finalMat
+            width : mat.cols,
+            height : mat.rows,
             inferenceTime : inferenceTime.toFixed(2).toString()
         };
 
