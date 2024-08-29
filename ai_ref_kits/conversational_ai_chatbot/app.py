@@ -85,8 +85,9 @@ def load_asr_model(model_dir: Path) -> None:
         log.error(f"Cannot find {model_dir}")
         return
 
+    device = "AUTO:GPU,CPU" if ov.__version__ < "2024.3" else "AUTO:CPU"
     # create a distil-whisper model and its processor
-    asr_model = OVModelForSpeechSeq2Seq.from_pretrained(model_dir, device="AUTO:GPU,CPU")
+    asr_model = OVModelForSpeechSeq2Seq.from_pretrained(model_dir, device=device)
     asr_processor = AutoProcessor.from_pretrained(model_dir)
 
     model_name = model_dir.name
