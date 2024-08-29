@@ -13,6 +13,8 @@ let paddedImg = null;
 let blurredImage = null;
 let maskMatOrg = null;
 let maskMatSmall = null;
+let notMask = null;
+let finalMat = null;
 
 let model = null;
 
@@ -178,9 +180,9 @@ async function runModel(img, width, height, device){
         cv.bitwise_not(maskMatOrg, notMask);
         console.log(performance.now()-begin, "not mask declared");
 
-        cv.bitwise_and(mat, maskMatOrg, mat);
+        cv.bitwise_and(mat, mat, maskMatOrg);
         console.log(performance.now()-begin, "AND org");
-        cv.bitwise_and(blurredImage, notMask, blurredImage);
+        cv.bitwise_and(blurredImage, blurredImage, notMask);
         console.log(performance.now()-begin, "AND blur");
 
         if (finalMat == null){
