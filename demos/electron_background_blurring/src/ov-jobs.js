@@ -2,8 +2,6 @@ const { addon: ov } = require('openvino-node');
 const { cv } = require('opencv-wasm');
 const { performance } = require('perf_hooks');
 const path = require('path');
-const { ImageData } = require('@napi-rs/canvas');
-const { getImageBuffer } = require('./helpers.js')
 
 module.exports = { detectDevices, runModel, takeTime }
 
@@ -15,9 +13,8 @@ let paddedImg = null;
 let blurredImage = null;
 let maskMatOrg = null;
 let maskMatSmall = null;
-let conditionMat = null;
+let notMask = null;
 let finalMat = null;
-let inverseConditionMat = null;
 
 let model = null;
 
@@ -91,8 +88,9 @@ function convertToMultiDimensionalArray(tensor, shape) {
 function postprocessMask (mask, padInfo){
     // TAKE OUT LABELS
     const maskShape = mask.getShape();
-    const multidimArray = convertToMultiDimensionalArray(mask, maskShape);
-    const labelMask = multidimArray[0].map(row => row.map(pixel => pixel.indexOf(Math.max(...pixel))));    
+    const multidimArray = convertToMultiDimensionalArray(mask.data, maskShape);
+    console.log(multidimArray[0]);
+    const labelMask = multidimArray[0].map(row => row.map(pixel => pixel.indexOf(Math.max(...pixel))));
 
     // UNPADDING
     const unpadH = maskShape[1] - padInfo.bottomPadding;
@@ -174,37 +172,32 @@ async function runModel(img, width, height, device){
         console.log(performance.now()-begin, "blur");
 
         cv.threshold(maskMatOrg, maskMatOrg, thresh=0, maxval=1, type=cv.THRESH_BINARY);
-        
-        // for (let y = 0; y < height; y++) {
-        //     for (let x = 0; x < width; x++) {
-        //         let maskValue = maskMatOrg.ucharAt(y, x);
-        //         conditionMat.ucharPtr(y, x)[0] = maskValue > 0 ? 255 : 0;
-        //         conditionMat.ucharPtr(y, x)[1] = maskValue > 0 ? 255 : 0;
-        //         conditionMat.ucharPtr(y, x)[2] = maskValue > 0 ? 255 : 0;
-        //     }
-        // }
-        // console.log(performance.now()-begin, "condition mat filled");
+        console.log(performance.now()-begin, "threshold");
 
-        // if (finalMat == null) {
-        //     finalMat = new cv.Mat();
-        // }
+        if (notMask == null){
+            notMask = new cv.Mat(height, width, cv.CV_8UC1);
+        }
+        cv.bitwise_not(maskMatOrg, notMask);
+        console.log(performance.now()-begin, "not mask declared");
 
-        // console.log(performance.now()-begin, "final mat created");
-        // cv.bitwise_and(mat, conditionMat, finalMat);
-        // console.log(performance.now()-begin, "bitwise and");
-        // if (inverseConditionMat == null){
-        //     inverseConditionMat = new cv.Mat();
-        // }
-        // console.log(performance.now()-begin, "inverse condition mat created");
-        // cv.bitwise_not(conditionMat, inverseConditionMat);
-        // cv.bitwise_and(blurredImage, inverseConditionMat, blurredImage);
-        // cv.add(finalMat, blurredImage, finalMat);
-        // console.log(performance.now()-begin, "blurred merged");
+        cv.bitwise_and(mat, maskMatOrg, mat);
+        console.log(performance.now()-begin, "AND org");
+        cv.bitwise_and(blurredImage, notMask, blurredImage);
+        console.log(performance.now()-begin, "AND blur");
+
+        if (finalMat == null){
+            finalMat = new cv.Mat(height, width, cv.CV_8UC1);
+        }
+        console.log(performance.now()-begin, "final mat declared");
+
+        cv.add(mat, blurredImage, finalMat);
+        console.log(performance.now()-begin, "ADD final");
+
 
         return {
-            img : new Uint8ClampedArray(mat.data),      // for tests, later change for finalMat
-            width : mat.cols,
-            height : mat.rows,
+            img : new Uint8ClampedArray(finalMat.data),      // for tests, later change for finalMat
+            width : finalMat.cols,
+            height : finalMat.rows,
             inferenceTime : inferenceTime.toFixed(2).toString()
         };
 
