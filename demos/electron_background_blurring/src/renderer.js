@@ -76,13 +76,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const imageData = ctx.getImageData(0, 0, canvasElement.width, canvasElement.height);
 
       ovDevice = deviceSelect.value;
-      const result = await window.electronAPI.runModel(imageData, canvasElement.width, canvasElement.height, ovDevice);
+      const resultMask = await window.electronAPI.runModel(imageData, canvasElement.width, canvasElement.height, ovDevice);
+
+      const result = await window.electronAPI.blurImage(imageData, resultMask.width, resultMask.height);
 
       tempImg = new ImageData(result.img, result.width, result.height);
       ctx.putImageData(tempImg, 0, 0);
       imgElement.src = canvasElement.toDataURL('image/jpeg');
 
-      inferenceTime = result.inferenceTime;
+      inferenceTime = resultMask.inferenceTime;
       document.getElementById('processingTime').innerText = `Inference time: ${inferenceTime} ms (${(1000 / inferenceTime).toFixed(1)} FPS)`;
 
       endTime = await window.electronAPI.takeTime();

@@ -9,5 +9,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   Buffer: Buffer,
   detectDevices: () => ipcRenderer.invoke('detect-devices'),
   runModel: (img, width, height, device) => ipcRenderer.invoke('run-model', img, width, height, device),
+  blurImage: (image, width, height) => ipcRenderer.invoke('blur-image', image, width, height),
   takeTime: () => ipcRenderer.invoke('take-time')
 });
