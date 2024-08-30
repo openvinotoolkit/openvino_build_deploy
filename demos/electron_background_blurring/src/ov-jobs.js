@@ -18,6 +18,7 @@ let finalMat = null;
 let alpha = null;
 
 let infTimes = [];
+let avgInfTime = 0;
 
 let model = null;
 
@@ -173,60 +174,68 @@ async function runModel(img, width, height, device){
                 infTimes.pop();
             }
             infTimes.unshift(inferenceTime);
-            let avgInfTime = calculateAverage(infTimes);
+            avgInfTime = calculateAverage(infTimes);
             console.log("average: ", avgInfTime);
             console.log(performance.now()-begin, "calculating average");
         }
 
-        // BLURRING IMAGE
+        // POSTPROCESSING
         if (maskMatOrg == null){
             maskMatOrg = new cv.Mat(height, width, cv.CV_8UC1);
         }
         postprocessMask(resultInfer, preprocessingResult.paddingInfo);
         console.log(performance.now()-begin, "postprocessing");
-        if (blurredImage == null){
-            blurredImage = new cv.Mat(height, width, cv.CV_8UC4);
-        }
-        cv.blur(mat, blurredImage, new cv.Size(55,55));
-        console.log(performance.now() - begin, "blur");
 
-        cv.threshold(maskMatOrg, maskMatOrg, 0, 255, cv.THRESH_BINARY);
-        console.log(performance.now()-begin, "threshold");
-
-        if (notMask == null){
-            notMask = new cv.Mat(height, width, cv.CV_8UC1);
-        }
-        cv.bitwise_not(maskMatOrg, notMask);
-        cv.threshold(notMask, notMask, 254, 255, cv.THRESH_BINARY);
-        console.log(performance.now()-begin, "not mask declared");
-
-        if (finalMat == null){
-            finalMat = new cv.Mat(height, width, cv.CV_8UC4);
-        }
-        console.log(performance.now()-begin, "final mat declared");
-
-        if (alpha == null) {
-            alpha = new cv.Mat(height, width, mat.type(), new cv.Scalar(0, 0, 0, 0)); 
-        }
-
-        cv.bitwise_and(mat, alpha, mat, mask=notMask);
-        console.log(performance.now()-begin, "AND org");
-        cv.bitwise_and(blurredImage, alpha, blurredImage, mask=maskMatOrg);
-        console.log(performance.now()-begin, "AND blur");
-
-        cv.add(mat, blurredImage, finalMat);
-        console.log(performance.now()-begin, "ADD final");
+        // BLURRING IMAGE
+        blurImage(mat, maskMatOrg, width, height);
+        console.log(performance.now()-begin, "EOL");
 
         return {
             img : new Uint8ClampedArray(finalMat.data),
             width : finalMat.cols,
             height : finalMat.rows,
-            inferenceTime : inferenceTime.toFixed(2).toString()
+            inferenceTime : avgInfTime.toFixed(2).toString()
         };
 
     } finally {
         semaphore = false;
     }
+}
+
+async function blurImage(image, mask, width, height){
+    let begin = performance.now();
+    if (blurredImage == null){
+        blurredImage = new cv.Mat(height, width, cv.CV_8UC4);
+    }
+    cv.blur(image, blurredImage, new cv.Size(55,55));
+    console.log(performance.now() - begin, "blur");
+
+    cv.threshold(maskMatOrg, maskMatOrg, 0, 255, cv.THRESH_BINARY);
+    console.log(performance.now()-begin, "threshold");
+
+    if (notMask == null){
+        notMask = new cv.Mat(height, width, cv.CV_8UC1);
+    }
+    cv.bitwise_not(maskMatOrg, notMask);
+    cv.threshold(notMask, notMask, 254, 255, cv.THRESH_BINARY);
+    console.log(performance.now()-begin, "not mask declared");
+
+    if (finalMat == null){
+        finalMat = new cv.Mat(height, width, cv.CV_8UC4);
+    }
+    console.log(performance.now()-begin, "final mat declared");
+
+    if (alpha == null) {
+        alpha = new cv.Mat(height, width, image.type(), new cv.Scalar(0, 0, 0, 0)); 
+    }
+
+    cv.bitwise_and(image, alpha, image, mask=notMask);
+    console.log(performance.now()-begin, "AND org");
+    cv.bitwise_and(blurredImage, alpha, blurredImage, mask=maskMatOrg);
+    console.log(performance.now()-begin, "AND blur");
+
+    cv.add(image, blurredImage, finalMat);
+    console.log(performance.now()-begin, "ADD final");
 }
 
 
