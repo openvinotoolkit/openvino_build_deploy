@@ -46,12 +46,6 @@ SYSTEM_CONFIGURATION = (
     "Your responses should consistently encourage the patient to discuss their symptoms in greater detail while remaining neutral and non-diagnostic."
 )
 GREET_THE_CUSTOMER = "Please introduce yourself and greet the patient"
-SUMMARIZE_THE_CUSTOMER = (
-    "You are now required to summarize the patient's provided context and symptoms for the doctor's review. "
-    "Strictly do not mention any personal data like age, name, gender, contact, non-health information etc. when summarizing. "
-    "Summarize the health-related concerns mentioned by the patient in this conversation or in the provided context. "
-    "You must include information from the context if it's provided. "
-)
 
 MODEL_DIR = Path("model")
 inference_lock = threading.Lock()
@@ -333,20 +327,6 @@ def synthesize(conversation: List[List[str]], audio: Tuple[int, np.ndarray]) -> 
     return audio
 
 
-def summarize(conversation: List) -> str:
-    """
-    Summarize the patient case
-
-    Params
-        conversation: history of the messages so far
-    Returns:
-        Summary
-    """
-    conversation.append([SUMMARIZE_THE_CUSTOMER, None])
-    for partial_summary in chat(conversation):
-        yield partial_summary[-1][1]
-
-
 def create_UI(initial_message: str) -> gr.Blocks:
     """
     Create web user interface
@@ -356,61 +336,47 @@ def create_UI(initial_message: str) -> gr.Blocks:
     Returns:
         Demo UI
     """
-    with gr.Blocks(title="Adrishuo - the AI Assistant") as demo:
+    with gr.Blocks(title="Adrishuo - the Conversational AI Chatbot") as demo:
         gr.Markdown("""
-        # Adrishuo: A Custom Healthcare AI assistant running with OpenVINO
+        # Adrishuo: A Conversational AI Hotel Concierge running with OpenVINO
 
         Instructions for use:
-        1. Attach the PDF or TXT file with the prior examination report (optional - see "Sample LLM Patient Records.pdf" as an example)
+        1. Attach the PDF or TXT file with the hotel guide (see "Grand_Azure_Resort_Spa_Full_Guide.pdf" as an example)
         2. Record your question/comment using the first audio widget ("Your voice input") or type it in the textbox ("Your text input"), then click Submit
-        3. Wait for the chatbot to response ("Chatbot")
-        4. Discuss with the chatbot
-        5. Click the "Summarize" button to make a summary
-
-        **Note: This chatbot application is not intended to be used for medical purposes. It is for demonstration purposes only.**
+        3. Wait for the chatbot to respond ("Chatbot") and say it aloud ("Chatbot voice response")
+        4. Discuss with the chatbot and ask questions about the hotel rules and city places
         """)
         with gr.Row():
             with gr.Column(scale=1):
+                file_uploader_ui = gr.File(label="Hotel guide", file_types=[".pdf", ".txt"])
                 input_audio_ui = gr.Audio(sources=["microphone"], label="Your voice input")
                 input_text_ui = gr.Textbox(label="Your text input")
-                file_uploader_ui = gr.File(label="Prior examination report", file_types=[".pdf", ".txt"])
                 submit_audio_btn = gr.Button("Submit", variant="primary", interactive=False)
-                output_audio_ui = gr.Audio(label="Chatbot voice response", autoplay=True)
             with gr.Column(scale=2):
                 chatbot_ui = gr.Chatbot(value=[[None, initial_message]], label="Chatbot")
-                summary_ui = gr.Textbox(label="Summary (Click 'Summarize' to trigger)", interactive=False)
+                output_audio_ui = gr.Audio(label="Chatbot voice response", autoplay=True)
                 clear_btn = gr.Button("Start over", variant="secondary")
-                summarize_button = gr.Button("Summarize", variant="primary", interactive=False)
 
         # events
         # block submit button when no audio or text input
         gr.on(triggers=[input_audio_ui.change, input_text_ui.change], inputs=[input_audio_ui, input_text_ui], outputs=submit_audio_btn,
               fn=lambda x, y: gr.Button(interactive=True) if bool(x) ^ bool(y) else gr.Button(interactive=False))
 
-        file_uploader_ui.change(lambda: ([[None, initial_message]], None), outputs=[chatbot_ui, summary_ui]) \
+        file_uploader_ui.change(lambda: [[None, initial_message]], outputs=chatbot_ui) \
             .then(load_context, inputs=file_uploader_ui)
 
-        clear_btn.click(lambda: ([[None, initial_message]], None), outputs=[chatbot_ui, summary_ui]) \
+        clear_btn.click(lambda: [[None, initial_message]], outputs=chatbot_ui) \
             .then(lambda: gr.Button(interactive=False), outputs=clear_btn)
 
         # block buttons, clear output audio, do the transcription and conversation, clear input audio, unblock buttons
         submit_audio_btn.click(lambda: gr.Button(interactive=False), outputs=submit_audio_btn) \
-            .then(lambda: gr.Button(interactive=False), outputs=summarize_button) \
             .then(lambda: gr.Button(interactive=False), outputs=clear_btn) \
             .then(lambda: None, outputs=output_audio_ui) \
             .then(transcribe, inputs=[input_audio_ui, input_text_ui, chatbot_ui], outputs=chatbot_ui) \
             .then(chat, chatbot_ui, chatbot_ui) \
             .then(synthesize, inputs=[chatbot_ui, input_audio_ui], outputs=output_audio_ui) \
             .then(lambda: (None, None), inputs=[], outputs=[input_audio_ui, input_text_ui]) \
-            .then(lambda: gr.Button(interactive=True), outputs=clear_btn) \
-            .then(lambda: gr.Button(interactive=True), outputs=summarize_button)
-
-        # block button, do the summarization, unblock button
-        summarize_button.click(lambda: gr.Button(interactive=False), outputs=summarize_button) \
-            .then(lambda: gr.Button(interactive=False), outputs=clear_btn) \
-            .then(summarize, inputs=chatbot_ui, outputs=summary_ui) \
-            .then(lambda: gr.Button(interactive=True), outputs=clear_btn) \
-            .then(lambda: gr.Button(interactive=True), outputs=summarize_button)
+            .then(lambda: gr.Button(interactive=True), outputs=clear_btn)
 
         return demo
 
