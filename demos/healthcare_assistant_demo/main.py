@@ -282,7 +282,7 @@ def create_UI(initial_message: str) -> gr.Blocks:
                 input_audio_ui = gr.Audio(sources=["microphone"], label="Your voice input")
                 input_text_ui = gr.Textbox(label="Your text input")
                 file_uploader_ui = gr.File(label="Prior examination report", file_types=[".pdf", ".txt"])
-                submit_audio_btn = gr.Button("Submit", variant="primary", interactive=False)
+                submit_btn = gr.Button("Submit", variant="primary", interactive=False)
             with gr.Column(scale=2):
                 chatbot_ui = gr.Chatbot(value=[[None, initial_message]], label="Chatbot")
                 summary_ui = gr.Textbox(label="Summary (Click 'Summarize' to trigger)", interactive=False)
@@ -291,7 +291,7 @@ def create_UI(initial_message: str) -> gr.Blocks:
 
         # events
         # block submit button when no audio or text input
-        gr.on(triggers=[input_audio_ui.change, input_text_ui.change], inputs=[input_audio_ui, input_text_ui], outputs=submit_audio_btn,
+        gr.on(triggers=[input_audio_ui.change, input_text_ui.change], inputs=[input_audio_ui, input_text_ui], outputs=submit_btn,
               fn=lambda x, y: gr.Button(interactive=True) if bool(x) ^ bool(y) else gr.Button(interactive=False))
 
         file_uploader_ui.change(lambda: ([[None, initial_message]], None), outputs=[chatbot_ui, summary_ui]) \
@@ -300,11 +300,12 @@ def create_UI(initial_message: str) -> gr.Blocks:
         clear_btn.click(lambda: ([[None, initial_message]], None), outputs=[chatbot_ui, summary_ui])
 
         # block buttons, do the transcription and conversation, clear audio, unblock buttons
-        submit_audio_btn.click(lambda: gr.Button(interactive=False), outputs=submit_audio_btn) \
+        gr.on(triggers=[submit_btn.click, input_text_ui.submit], fn=lambda: gr.Button(interactive=False), outputs=submit_btn) \
             .then(lambda: gr.Button(interactive=False), outputs=summarize_button) \
             .then(transcribe, inputs=[input_audio_ui, input_text_ui, chatbot_ui], outputs=chatbot_ui) \
+            .then(lambda: None, outputs=input_text_ui) \
             .then(chat, chatbot_ui, chatbot_ui) \
-            .then(lambda: (None, None), inputs=[], outputs=[input_audio_ui, input_text_ui]) \
+            .then(lambda: None, outputs=input_audio_ui) \
             .then(lambda: gr.Button(interactive=True), outputs=summarize_button)
 
         # block button, do the summarization, unblock button
