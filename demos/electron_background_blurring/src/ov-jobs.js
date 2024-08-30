@@ -17,6 +17,8 @@ let notMask = null;
 let finalMat = null;
 let alpha = null;
 
+let infTimes = [];
+
 let model = null;
 
 async function detectDevices() {
@@ -85,6 +87,11 @@ function convertToMultiDimensionalArray(tensor, shape) {
     return createArray(0, 0);
 }
 
+function calculateAverage(array){
+    let sum = array.reduce((accumulator, currentValue) => accumulator + currentValue, 0);
+    return (sum / array.length);
+}
+
 
 function postprocessMask (mask, padInfo){
     // TAKE OUT LABELS
@@ -96,7 +103,6 @@ function postprocessMask (mask, padInfo){
     const unpadH = maskShape[1] - padInfo.bottomPadding;
     const unpadW = maskShape[2] - padInfo.rightPadding;
     const labelMaskUnpadded = labelMask.slice(0, unpadH).map(row => row.slice(0, unpadW));
-
 
     // RESIZING
     if (maskMatSmall == null){
@@ -115,6 +121,7 @@ async function runModel(img, width, height, device){
     }
 
     semaphore = true;
+    let isFirst = false;
 
     try{
         const begin = performance.now();
@@ -146,6 +153,7 @@ async function runModel(img, width, height, device){
         if (!ovModels.has(device)){
             compiledModel = await core.compileModel(model, device);
             ovModels.set(device, compiledModel);
+            isFirst = true;
         } else {
             compiledModel = ovModels.get(device);
         }
@@ -157,8 +165,18 @@ async function runModel(img, width, height, device){
 
         const endTime = performance.now();
         const inferenceTime = endTime - startTime;      // TIME MEASURING : END
-
         console.log(performance.now()-begin, "inference");
+
+        // COUNTING AVERAGE INFERENCE TIME
+        if(!isFirst){
+            if(infTimes.length>=50){
+                infTimes.pop();
+            }
+            infTimes.unshift(inferenceTime);
+            let avgInfTime = calculateAverage(infTimes);
+            console.log("average: ", avgInfTime);
+            console.log(performance.now()-begin, "calculating average");
+        }
 
         // BLURRING IMAGE
         if (maskMatOrg == null){
