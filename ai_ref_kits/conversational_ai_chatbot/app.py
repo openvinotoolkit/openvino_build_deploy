@@ -1,5 +1,6 @@
 import argparse
 import logging as log
+import os
 import threading
 import time
 from pathlib import Path
@@ -47,6 +48,7 @@ SYSTEM_CONFIGURATION = (
 )
 GREET_THE_CUSTOMER = "Please introduce yourself and greet the patient"
 
+EXAMPLE_PDF_PATH = os.path.join(os.path.dirname(__file__), "Grand_Azure_Resort_Spa_Full_Guide.pdf")
 MODEL_DIR = Path("model")
 inference_lock = threading.Lock()
 
@@ -348,10 +350,10 @@ def create_UI(initial_message: str) -> gr.Blocks:
         """)
         with gr.Row():
             with gr.Column(scale=1):
-                file_uploader_ui = gr.File(label="Hotel guide", file_types=[".pdf", ".txt"])
+                file_uploader_ui = gr.File(label="Hotel guide", file_types=[".pdf", ".txt"], value=EXAMPLE_PDF_PATH)
                 input_audio_ui = gr.Audio(sources=["microphone"], label="Your voice input")
                 input_text_ui = gr.Textbox(label="Your text input")
-                submit_audio_btn = gr.Button("Submit", variant="primary", interactive=False)
+                submit_btn = gr.Button("Submit", variant="primary", interactive=False)
             with gr.Column(scale=2):
                 chatbot_ui = gr.Chatbot(value=[[None, initial_message]], label="Chatbot")
                 output_audio_ui = gr.Audio(label="Chatbot voice response", autoplay=True)
@@ -359,7 +361,7 @@ def create_UI(initial_message: str) -> gr.Blocks:
 
         # events
         # block submit button when no audio or text input
-        gr.on(triggers=[input_audio_ui.change, input_text_ui.change], inputs=[input_audio_ui, input_text_ui], outputs=submit_audio_btn,
+        gr.on(triggers=[input_audio_ui.change, input_text_ui.change], inputs=[input_audio_ui, input_text_ui], outputs=submit_btn,
               fn=lambda x, y: gr.Button(interactive=True) if bool(x) ^ bool(y) else gr.Button(interactive=False))
 
         file_uploader_ui.change(lambda: [[None, initial_message]], outputs=chatbot_ui) \
@@ -369,7 +371,7 @@ def create_UI(initial_message: str) -> gr.Blocks:
             .then(lambda: gr.Button(interactive=False), outputs=clear_btn)
 
         # block buttons, clear output audio, do the transcription and conversation, clear input audio, unblock buttons
-        submit_audio_btn.click(lambda: gr.Button(interactive=False), outputs=submit_audio_btn) \
+        submit_btn.click(lambda: gr.Button(interactive=False), outputs=submit_btn) \
             .then(lambda: gr.Button(interactive=False), outputs=clear_btn) \
             .then(lambda: None, outputs=output_audio_ui) \
             .then(transcribe, inputs=[input_audio_ui, input_text_ui, chatbot_ui], outputs=chatbot_ui) \
@@ -406,6 +408,9 @@ def run(asr_model_dir: Path, chat_model_dir: Path, embedding_model_dir: Path, re
 
     # get initial greeting
     initial_message = generate_initial_greeting()
+
+    # load initial context
+    load_context(EXAMPLE_PDF_PATH)
 
     # create user interface
     demo = create_UI(initial_message)
