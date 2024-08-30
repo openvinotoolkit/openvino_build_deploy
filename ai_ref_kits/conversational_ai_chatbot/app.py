@@ -6,18 +6,22 @@ from pathlib import Path
 from threading import Thread
 from typing import Tuple, List, Optional, Set
 
+import faiss
 import gradio as gr
 import librosa
 import numpy as np
 import openvino as ov
-from llama_index.core import Document, VectorStoreIndex, Settings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from llama_index.core import Document, VectorStoreIndex, Settings, StorageContext
 from llama_index.core.chat_engine import SimpleChatEngine
 from llama_index.core.chat_engine.types import BaseChatEngine, ChatMode
 from llama_index.core.memory import ChatMemoryBuffer
+from llama_index.core.node_parser import LangchainNodeParser
 from llama_index.embeddings.huggingface_openvino import OpenVINOEmbedding
 from llama_index.llms.openvino import OpenVINOLLM
 from llama_index.postprocessor.openvino_rerank import OpenVINORerank
 from llama_index.readers.file import PDFReader
+from llama_index.vector_stores.faiss import FaissVectorStore
 from optimum.intel import OVModelForSpeechSeq2Seq
 from transformers import AutoProcessor, TextIteratorStreamer
 
@@ -198,7 +202,7 @@ def load_file(file_path: Path) -> Document:
         raise ValueError(f"{ext} file is not supported for now")
 
 
-def load_context(file_path: str):
+def load_context(file_path: str) -> None:
     """
     Load context (document) and create a RAG pipeline
 
@@ -213,11 +217,22 @@ def load_context(file_path: str):
     # when context removed, no longer RAG pipeline is needed
     if not file_path:
         ov_chat_engine = SimpleChatEngine.from_defaults(llm=ov_llm, system_prompt=SYSTEM_CONFIGURATION, memory=memory)
+        return
 
     document = load_file(Path(file_path))
+
+    # a splitter to divide document into chunks
+    splitter = LangchainNodeParser(RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100))
+
+    dim = ov_embedding._model.request.outputs[0].get_partial_shape()[2].get_length()
+    # a memory database to store chunks
+    faiss_index = faiss.IndexFlatL2(dim)
+    vector_store = FaissVectorStore(faiss_index=faiss_index)
+    storage_context = StorageContext.from_defaults(vector_store=vector_store)
+
     # set embedding model
     Settings.embed_model = ov_embedding
-    index = VectorStoreIndex.from_documents([document])
+    index = VectorStoreIndex.from_documents([document], storage_context, transformations=[splitter])
     # create a RAG pipeline
     ov_chat_engine = index.as_chat_engine(llm=ov_llm, chat_mode=ChatMode.CONTEXT, system_prompt=SYSTEM_CONFIGURATION,
                                           memory=memory, node_postprocessors=[ov_reranker])
@@ -305,7 +320,7 @@ def transcribe(audio: Tuple[int, np.ndarray], prompt: str, conversation: List[Li
     return conversation
 
 
-def synthesize(conversation: List[List[str]], audio: Tuple[int, np.ndarray]):
+def synthesize(conversation: List[List[str]], audio: Tuple[int, np.ndarray]) -> Tuple[int, np.ndarray]:
     """
     Synthesizes speech from chatbot's response
 
