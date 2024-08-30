@@ -217,6 +217,7 @@ async function runModel(img, width, height, device){
 }
 
 let matToBlur = null;
+let smallImage = null;
 
 async function blurImage(image, width, height){
     const begin = performance.now();
@@ -225,30 +226,36 @@ async function blurImage(image, width, height){
         matToBlur = new cv.Mat(height, width, cv.CV_8UC4);
     }
     matToBlur.data.set(image.data);
-    console.log(performance.now()-begin, "canvas to mat converted");
+    // console.log(performance.now()-begin, "canvas to mat converted");
+
+    if (smallImage == null){
+        smallImage = new cv.Mat(height/16, width/16, cv.CV_8UC4);
+    }
 
     if (blurredImage == null){
         blurredImage = new cv.Mat(height, width, cv.CV_8UC4);
     }
-    cv.blur(matToBlur, blurredImage, new cv.Size(55,55));
-    console.log(performance.now() - begin, "blur");
+    // cv.blur(matToBlur, blurredImage, new cv.Size(25,25));
+    cv.resize(matToBlur, smallImage, smallImage.size(), cv.INTER_AREA);
+    cv.resize(smallImage, blurredImage, blurredImage.size(), cv.INTER_LINEAR);
+    // console.log(performance.now() - begin, "blur");
 
     if (finalMat == null){
         finalMat = new cv.Mat(height, width, cv.CV_8UC4);
     }
-    console.log(performance.now()-begin, "final mat declared");
+    // console.log(performance.now()-begin, "final mat declared");
 
     if (alpha == null) {
         alpha = new cv.Mat(height, width, matToBlur.type(), new cv.Scalar(0, 0, 0, 0)); 
     }
 
     cv.bitwise_and(matToBlur, alpha, matToBlur, mask=notMask);
-    console.log(performance.now()-begin, "AND org");
+    // console.log(performance.now()-begin, "AND org");
     cv.bitwise_and(blurredImage, alpha, blurredImage, mask=maskMatOrg);
-    console.log(performance.now()-begin, "AND blur");
+    // console.log(performance.now()-begin, "AND blur");
 
     cv.add(matToBlur, blurredImage, finalMat);
-    console.log(performance.now()-begin, "ADD final");
+    // console.log(performance.now()-begin, "ADD final");
 
     countBlur++;
     console.log("\nmodel blur:", countBlur,"time:", performance.now()-begin, "\n");

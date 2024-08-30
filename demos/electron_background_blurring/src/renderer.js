@@ -66,7 +66,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  let isFirstIter = true;
   let resultMask = null;
   let processingMask = false;
   let maskProcessed = false;
@@ -112,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  async function stopWebcam(keepActive) {
+  function stopWebcam(keepActive) {
     processingActive = false; 
     clearInterval(captureInterval);
     if (webcamStream) {
