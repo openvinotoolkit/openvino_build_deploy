@@ -181,7 +181,7 @@ def load_file(file_path: Path) -> Document:
         raise ValueError(f"{ext} file is not supported for now")
 
 
-def load_context(file_path: str) -> str:
+def load_context(file_path: str) -> None:
     global ov_chat_engine
 
     # limit chat history to 3000 tokens
@@ -189,6 +189,7 @@ def load_context(file_path: str) -> str:
 
     if not file_path:
         ov_chat_engine = SimpleChatEngine.from_defaults(llm=ov_llm, system_prompt=SYSTEM_CONFIGURATION, memory=memory)
+        return
 
     document = load_file(Path(file_path))
     Settings.embed_model = ov_embedding
