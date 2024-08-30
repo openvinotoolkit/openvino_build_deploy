@@ -66,26 +66,41 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  let isFirstIter = true;
+  let resultMask = null;
+  let processingMask = false;
+  let maskProcessed = false;
+
+  async function processMask(imageData, canvasElement, ovDevice){
+    processingMask = true;
+    resultMask = await window.electronAPI.runModel(imageData, canvasElement.width, canvasElement.height, ovDevice);
+    processingMask = false;
+    maskProcessed = true;
+  }
+
   async function captureFrame() {
     if (!processingActive) return;
-    let ovDevice;
+    let ovDevice= deviceSelect.value;
     try {
       begin = await window.electronAPI.takeTime();
 
       ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
       const imageData = ctx.getImageData(0, 0, canvasElement.width, canvasElement.height);
 
-      ovDevice = deviceSelect.value;
-      const resultMask = await window.electronAPI.runModel(imageData, canvasElement.width, canvasElement.height, ovDevice);
+      if (!processingMask){
+        processMask(imageData, canvasElement, ovDevice);
+      }
 
-      const result = await window.electronAPI.blurImage(imageData, resultMask.width, resultMask.height);
+      if(maskProcessed){
+        const result = await window.electronAPI.blurImage(imageData, canvasElement.width, canvasElement.height);
 
-      tempImg = new ImageData(result.img, result.width, result.height);
-      ctx.putImageData(tempImg, 0, 0);
-      imgElement.src = canvasElement.toDataURL('image/jpeg');
+        tempImg = new ImageData(result.img, result.width, result.height);
+        ctx.putImageData(tempImg, 0, 0);
+        imgElement.src = canvasElement.toDataURL('image/jpeg');
 
-      inferenceTime = resultMask.inferenceTime;
-      document.getElementById('processingTime').innerText = `Inference time: ${inferenceTime} ms (${(1000 / inferenceTime).toFixed(1)} FPS)`;
+        inferenceTime = resultMask.inferenceTime;
+        document.getElementById('processingTime').innerText = `Inference time: ${inferenceTime} ms (${(1000 / inferenceTime).toFixed(1)} FPS)`;
+      }
 
       endTime = await window.electronAPI.takeTime();
       const delay = Math.max(0, 50 - (endTime - begin));

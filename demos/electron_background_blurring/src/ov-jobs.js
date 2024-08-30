@@ -115,6 +115,9 @@ function postprocessMask (mask, padInfo){
 
 let semaphore = false; 
 
+let countRun = 0;
+let countBlur = 0;
+
 async function runModel(img, width, height, device){
 
     while (semaphore) {
@@ -198,10 +201,14 @@ async function runModel(img, width, height, device){
         cv.threshold(notMask, notMask, 254, 255, cv.THRESH_BINARY);
         console.log(performance.now()-begin, "not mask declared");
 
+        countRun++;
+        console.log("\nmodel run:", countRun,"time:", performance.now()-begin, "\n");
+
         return {
             width : maskMatOrg.cols,
             height : maskMatOrg.rows,
-            inferenceTime : avgInfTime.toFixed(2).toString()
+            inferenceTime : avgInfTime.toFixed(2).toString(),
+            finished : true
         };
 
     } finally {
@@ -242,6 +249,9 @@ async function blurImage(image, width, height){
 
     cv.add(matToBlur, blurredImage, finalMat);
     console.log(performance.now()-begin, "ADD final");
+
+    countBlur++;
+    console.log("\nmodel blur:", countBlur,"time:", performance.now()-begin, "\n");
 
     return{
         img : new Uint8ClampedArray(finalMat.data),
