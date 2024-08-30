@@ -29,24 +29,13 @@ from transformers import AutoProcessor, TextIteratorStreamer
 # Global variables initialization
 TARGET_AUDIO_SAMPLE_RATE = 16000
 SYSTEM_CONFIGURATION = (
-    "You are Adrishuo - a helpful, respectful, and honest virtual doctor assistant. "
-    "Your role is talking to a patient who just came in."
-    "Your primary role is to assist in the collection of symptom information from a patient. "
-    "The patient may attach prior examination report related to their health, which is available as context information. "
-    "If the report is attached, you must take it into account. "
-    "You must only ask follow-up questions based on the patient's initial descriptions and optional report to clarify and gather more details about their symtpoms. "
-    "You must not attempt to diagnose, treat, or offer health advice. "
-    "Ask one and only the symptom related followup questions and keep it short. "
-    "You must strictly not suggest or recommend any treatments, including over-the-counter medication. "
-    "You must strictly avoid making any assumptions or conclusions about the causes or nature of the patient's symptoms. "
-    "You must strictly avoid providing suggestions to manage their symptoms. "
-    "Your interactions should be focused solely on understanding and recording the patient's stated symptoms. "
-    "Do not collect or use any personal information like age, name, contact, gender, etc. "
-    "Ask at most 3 questions then say you know everything and you're ready to summarize the patient. "
-    "Remember, your role is to aid in symptom information collection in a supportive, unbiased, and factually accurate manner. "
-    "Your responses should consistently encourage the patient to discuss their symptoms in greater detail while remaining neutral and non-diagnostic."
+    "You are Adrishuo - a helpful, respectful, and honest hotel concierge. "
+    "Your role is talking to a guest who just came in to the hotel."
+    "Your primary role is to answer questions about hotel rules and city. "
+    "You must take into account the provided context information. "
+    "If context information is empty, tell guest that hotel guide is missing and stop answering questions. "
 )
-GREET_THE_CUSTOMER = "Please introduce yourself and greet the patient"
+GREET_THE_CUSTOMER = "Please introduce yourself and greet the hotel guest"
 
 EXAMPLE_PDF_PATH = os.path.join(os.path.dirname(__file__), "Grand_Azure_Resort_Spa_Full_Guide.pdf")
 MODEL_DIR = Path("model")
@@ -371,13 +360,14 @@ def create_UI(initial_message: str) -> gr.Blocks:
             .then(lambda: gr.Button(interactive=False), outputs=clear_btn)
 
         # block buttons, clear output audio, do the transcription and conversation, clear input audio, unblock buttons
-        submit_btn.click(lambda: gr.Button(interactive=False), outputs=submit_btn) \
+        gr.on(triggers=[submit_btn.click, input_text_ui.submit], fn=lambda: gr.Button(interactive=False), outputs=submit_btn) \
             .then(lambda: gr.Button(interactive=False), outputs=clear_btn) \
             .then(lambda: None, outputs=output_audio_ui) \
             .then(transcribe, inputs=[input_audio_ui, input_text_ui, chatbot_ui], outputs=chatbot_ui) \
+            .then(lambda: None, outputs=input_text_ui) \
             .then(chat, chatbot_ui, chatbot_ui) \
             .then(synthesize, inputs=[chatbot_ui, input_audio_ui], outputs=output_audio_ui) \
-            .then(lambda: (None, None), inputs=[], outputs=[input_audio_ui, input_text_ui]) \
+            .then(lambda: None, outputs=input_audio_ui) \
             .then(lambda: gr.Button(interactive=True), outputs=clear_btn)
 
         return demo
