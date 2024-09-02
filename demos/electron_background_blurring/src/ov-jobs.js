@@ -188,7 +188,7 @@ async function runModel(img, width, height, device){
         }
 
         // POSTPROCESSING
-        if (maskMatOrg == null){
+        if (maskMatOrg == null || mat.data.length !== maskMatOrg.data.length){
             maskMatOrg = new cv.Mat(height, width, cv.CV_8UC1);
         }
         postprocessMask(resultInfer, preprocessingResult.paddingInfo);
@@ -236,7 +236,7 @@ async function blurImage(image, width, height){
     //     smallImage = new cv.Mat(height/20, width/20, cv.CV_8UC4);
     // }
 
-    if (blurredImage == null){
+    if (blurredImage == null || matToBlur.data.length !== blurredImage.data.length){
         blurredImage = new cv.Mat(height, width, cv.CV_8UC4);
     }
     cv.blur(matToBlur, blurredImage, new cv.Size(25,25));
@@ -245,12 +245,12 @@ async function blurImage(image, width, height){
 
     // console.log(performance.now() - begin, "blur");
 
-    if (finalMat == null){
+    if (finalMat == null || matToBlur.data.length !== finalMat.data.length){
         finalMat = new cv.Mat(height, width, cv.CV_8UC4);
     }
     // console.log(performance.now()-begin, "final mat declared");
 
-    if (alpha == null) {
+    if (alpha == null || matToBlur.data.length !== alpha.data.length) {
         alpha = new cv.Mat(height, width, matToBlur.type(), new cv.Scalar(0, 0, 0, 0)); 
     }
 
