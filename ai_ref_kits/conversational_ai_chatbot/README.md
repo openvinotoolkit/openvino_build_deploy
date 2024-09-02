@@ -134,7 +134,7 @@ This script will convert and optimize the automatic speech recognition (ASR) mod
 
 2. Chat LLama Conversion:
 ```shell
-python convert_and_optimize_chat.py --chat_model_type llama3.1-8B --embedding_model_type bge-large --precision int
+python convert_and_optimize_chat.py --chat_model_type llama3.1-8B --embedding_model_type bge-large --precision int4
 ```
 This script will handle the conversion and optimization of:
 
