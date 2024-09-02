@@ -70,6 +70,18 @@ The demo detects people in front of the webcam and changes them into Santa Claus
 | Platforms                            | Client (CPU, GPU, NPU), Edge (CPU)                         |
 | Owner                                | [@adrianboguszewski](https://github.com/adrianboguszewski) |
 
+### 🔮 Hide Your Mess Behind
+
+The demo blurs the background behind a person on webcam. The app is built using NodeJS and Electron technologies. It can be run from exe file or using npm.
+
+image TBA
+
+| [Hide Your Mess Behind](link) |                                                            |
+|--------------------------------------|------------------------------------------------------------|
+| Related AI concepts                  | image segmentation                                         |
+| Platforms                            | Client (CPU, GPU, NPU), Edge (CPU)                         |
+| Owner                                | [@Roszczyk](https://github.com/Roszczyk), [@adrianboguszewski](https://github.com/adrianboguszewski) |
+
 ## Contributing
 
 Please follow the rules defined in the [contributing guide](CONTRIBUTING.md) to add a demo to this repository.
