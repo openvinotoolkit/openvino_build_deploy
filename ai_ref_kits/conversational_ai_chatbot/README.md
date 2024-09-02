@@ -127,7 +127,7 @@ This script will handle the conversion and optimization of:
 
 The script requires a Hugging Face token (`--hf_token`) for authentication, which allows access to gated models like LLaMA. The converted models will be saved in the specified `model` directory.
 To access the original LlaMA model weights:
-Accept the License on Hugging Face: Visit the LlaMA model page, for example [meta-llama/Meta-Llama-3.1-8B]([https://aka.ms/vs/16/release/vc_redist.x64.exe](https://huggingface.co/meta-llama/Meta-Llama-3.1-8B) on Hugging Face. Read and accept the license. Once you have accepted the license, you'll gain access to the LlaMA models. Note that requests used to take up to one hour to get processed.
+Accept the License on Hugging Face: Visit the LlaMA model page, for example [meta-llama/Meta-Llama-3.1-8B](https://huggingface.co/meta-llama/Meta-Llama-3.1-8B) on Hugging Face. Read and accept the license. Once you have accepted the license, you'll gain access to the LlaMA models. Note that requests used to take up to one hour to get processed.
 
 After running the conversion scripts, you can run app.py to launch the application.
 
