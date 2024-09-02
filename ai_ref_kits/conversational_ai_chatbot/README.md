@@ -124,6 +124,7 @@ This script will handle the conversion and optimization of:
 - The chat model (`llama3.1-8B`) with `int4` precision.
 - The embedding model (`bge-large`) with `FP32` precision.
 - Reranker Model (`bge-reranker-large`) with `FP32` precision.
+
 The script requires a Hugging Face token (`--hf_token`) for authentication, which allows access to gated models like LLaMA. The converted models will be saved in the specified `model` directory.
 To access the original LlaMA model weights:
 Visit [Meta AI's website](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) and fill in your details, including your name, email, and organization.
