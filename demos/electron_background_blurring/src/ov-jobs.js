@@ -152,6 +152,7 @@ async function runModel(img, width, height, device){
         const startTime = performance.now();            // TIME MEASURING : START
         let compiledModel, inferRequest;
         if (model == null){
+            // model = await core.readModel(path.join(__dirname, "../../app.asar.unpacked/models/selfie_multiclass_256x256.xml"));
             model = await core.readModel(path.join(__dirname, "../models/selfie_multiclass_256x256.xml"));
         }
         if (!ovModels.has(device)){
@@ -189,7 +190,7 @@ async function runModel(img, width, height, device){
         postprocessMask(resultInfer, preprocessingResult.paddingInfo);
         console.log(performance.now()-begin, "postprocessing");
 
-        // BLURRING IMAGE
+        // MASK PREPARATION
 
         cv.threshold(maskMatOrg, maskMatOrg, 0, 255, cv.THRESH_BINARY);
         console.log(performance.now()-begin, "threshold");
@@ -207,8 +208,7 @@ async function runModel(img, width, height, device){
         return {
             width : maskMatOrg.cols,
             height : maskMatOrg.rows,
-            inferenceTime : avgInfTime.toFixed(2).toString(),
-            finished : true
+            inferenceTime : avgInfTime.toFixed(2).toString()
         };
 
     } finally {
@@ -229,15 +229,16 @@ async function blurImage(image, width, height){
     // console.log(performance.now()-begin, "canvas to mat converted");
 
     if (smallImage == null){
-        smallImage = new cv.Mat(height/16, width/16, cv.CV_8UC4);
+        smallImage = new cv.Mat(height/4, width/4, cv.CV_8UC4);
     }
 
     if (blurredImage == null){
         blurredImage = new cv.Mat(height, width, cv.CV_8UC4);
     }
-    // cv.blur(matToBlur, blurredImage, new cv.Size(25,25));
-    cv.resize(matToBlur, smallImage, smallImage.size(), cv.INTER_AREA);
-    cv.resize(smallImage, blurredImage, blurredImage.size(), cv.INTER_LINEAR);
+    cv.resize(matToBlur, smallImage, smallImage.size());
+    cv.blur(smallImage, smallImage, new cv.Size(9,9));
+    cv.resize(smallImage, blurredImage, blurredImage.size());
+
     // console.log(performance.now() - begin, "blur");
 
     if (finalMat == null){

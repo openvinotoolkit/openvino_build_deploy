@@ -1,5 +1,5 @@
 {
-  "name": "ov-background-blurring",
+  "name": "hide-your-mess-behind",
   "version": "1.0.0",
   "main": "src/main.js",
   "scripts": {
@@ -7,7 +7,7 @@
     "dist": "electron-builder"
   },
   "build": {
-    "appId": "com.example.webcamapp",
+    "appId": "com.example.hideyourmessbehind",
     "mac": {
       "icon": "assets/icons/icon.png"
     },
@@ -29,7 +29,11 @@
       "src/index.html",
       "src/styles.css",
       "package.json",
+      "models/**",
       "assets/**/*"
+    ],
+    "asarUnpack": [
+      "models/**"
     ]
   },
   "devDependencies": {

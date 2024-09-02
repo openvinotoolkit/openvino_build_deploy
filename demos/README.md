@@ -76,7 +76,7 @@ The demo blurs the background behind a person on webcam. The app is built using 
 
 image TBA
 
-| [Hide Your Mess Behind](link) |                                                            |
+| [Hide Your Mess Behind](electron_background_blurring) |                                                            |
 |--------------------------------------|------------------------------------------------------------|
 | Related AI concepts                  | image segmentation                                         |
 | Platforms                            | Client (CPU, GPU, NPU), Edge (CPU)                         |
