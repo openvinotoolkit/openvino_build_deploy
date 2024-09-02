@@ -188,7 +188,7 @@ async function runModel(img, width, height, device){
         }
 
         // POSTPROCESSING
-        if (maskMatOrg == null || mat.data.length !== maskMatOrg.data.length){
+        if (maskMatOrg == null || mat.rows !== maskMatOrg.rows || mat.cols !== maskMatOrg.cols){
             maskMatOrg = new cv.Mat(height, width, cv.CV_8UC1);
         }
         postprocessMask(resultInfer, preprocessingResult.paddingInfo);
@@ -199,7 +199,7 @@ async function runModel(img, width, height, device){
         cv.threshold(maskMatOrg, maskMatOrg, 0, 255, cv.THRESH_BINARY);
         console.log(performance.now()-begin, "threshold");
 
-        if (notMask == null){
+        if (notMask == null || notMask.data.length !== maskMatOrg.data.length){
             notMask = new cv.Mat(height, width, cv.CV_8UC1);
         }
         cv.bitwise_not(maskMatOrg, notMask);
