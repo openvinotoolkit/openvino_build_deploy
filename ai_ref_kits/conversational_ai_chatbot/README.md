@@ -98,28 +98,6 @@ pip install -r requirements.txt
 
 _NOTE: If you already have access to the LlaMA model weights, skip to the authentication step, which is mandatory for converting the LlaMA model._
 
-### Accessing Original Weights from Meta AI
-
-To access the original LlaMA model weights:
-
-Visit [Meta AI's website](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) and fill in your details, including your name, email, and organization.
-Accept the terms and submit the form. You will receive an email granting access to download the model weights.
-
-### Using LlaMA with Hugging Face
-
-Set Up a Hugging Face Account: If you don't have one, create a [Hugging Face account](https://huggingface.co/welcome).
-
-Authenticate with Meta AI: Go to the LlaMA model (v2 or v3) page on Hugging Face. To authenticate, enter the same email address you used for the Meta AI website. After authentication, you'll gain access to the model.
-
-To use the model, authenticate using the Hugging Face CLI:
-
-```shell
-huggingface-cli login
-```
-When prompted to add the token as a git credential, respond with 'n'. This step ensures that you are logged into the Hugging Face API and ready to download the model.
-
-Now, you're ready to download and optimize the models required to run the application.
-
 ## Model Conversion and Optimization
 
 _NOTE: This reference kit requires much bandwidth and disk space (>8GB) for downloading models. Also, the conversion may take much time (>2h) and need much memory (>32GB)) when running for the first time as the models used here are huge. After the first run, the subsequent runs will be done much faster._
@@ -127,19 +105,30 @@ _NOTE: This reference kit requires much bandwidth and disk space (>8GB) for down
 The application uses three separate models for its operation, each requiring conversion and optimization for use with OpenVINO™. Follow the order below to convert and optimize each model:
 
 1. Automated Speech Recognition Distil-Whisper Conversion:
+The ASR model is responsible for converting spoken language (audio) into written text. This functionality is crucial as it enables the chatbot to understand and process voice-based user queries.
 ```shell
 python convert_and_optimize_asr.py --asr_model_type distil-whisper-large-v3 --precision int8
 ```
 This script will convert and optimize the automatic speech recognition (ASR) model performing weights quantization.
 
-2. Chat LLama Conversion:
+2.Chat , Embedding, and Reranker Model Conversion:
+The chat model is at the core of the chatbot's ability to generate meaningful and context-aware responses. It processes the text input from the ASR model and produces a human-like response.
+The embedding model represents text data (both user queries and potential responses or knowledge base entries) as numerical vectors. These vectors are essential for tasks such as semantic search and similarity matching.
+The reranker model is used in retrieval-augmented generation (RAG) setups to reorder or "rerank" retrieved results, ensuring the most relevant information is presented to the user.
+To convert the chat, embedding, and reranker models, run the following command:
 ```shell
-python convert_and_optimize_chat.py --chat_model_type llama3.1-8B --embedding_model_type bge-large --precision int4
+python convert_and_optimize_chat.py --chat_model_type llama3.1-8B --embedding_model_type bge-large --reranker_model_type bge-reranker-large --precision int4 --hf_token your_huggingface_token --model_dir model
 ```
 This script will handle the conversion and optimization of:
 
-- The chat model (llama3.1-8B) with int4 precision.
-- The embedding model (bge-large) with FP32 precision.
+- The chat model (`llama3.1-8B`) with `int4` precision.
+- The embedding model (`bge-large`) with `FP32` precision.
+- Reranker Model (`bge-reranker-large`) with `FP32` precision.
+The script requires a Hugging Face token (`--hf_token`) for authentication, which allows access to gated models like LLaMA. The converted models will be saved in the specified `model` directory.
+To access the original LlaMA model weights:
+Visit [Meta AI's website](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) and fill in your details, including your name, email, and organization.
+Accept the terms and submit the form. You will receive an email granting access to download the model weights.
+Authenticate with Meta AI: Go to the LlaMA model (v2 or v3) page on Hugging Face. To authenticate, enter the same email address you used for the Meta AI website. After authentication, you'll gain access to the model.
 
 After running the conversion scripts, you can run app.py to launch the application.
 
@@ -149,20 +138,25 @@ _NOTE: This application requires much memory (>16GB) as the models used here are
 
 Execute the `app.py` script with the following command, including all necessary model directory arguments:
 ```shell
-python app.py --asr_model_dir path/to/asr_model --chat_model_dir path/to/chat_model  --embedding_model path/to/embedding_model --public
+python app.py --asr_model_dir path/to/asr_model --chat_model_dir path/to/chat_model --embedding_model path/to/embedding_model --reranker_model path/to/reranker_model --public
 ```
-Replace `path/to/asr_model` , `path/to/chat_model` ,`path/to/embedding_model` and other paths  with actual paths to your respective models. Add ``--public` to make it publicly accessible.
+Replace `path/to/asr_model` , `path/to/chat_model` ,`path/to/embedding_model`, and `path/to/reranker_model` with the actual paths to your respective models. Add ``--public` to make it publicly accessible.
 
 ### Accessing the Web Interface
 After running the script, Gradio will provide a local URL, typically `http://127.0.0.1:XXXX`, which you can open in your web browser to start interacting with the assistant. If you configured the application to be accessible publicly, Gradio will also provide a public URL.
 
 Trying Out the Application
 1. Navigate to the provided Gradio URL in your web browser.
-2. You will see the Gradio interface with options to input voice.
+2. File Upload (for RAG context):
+    - You start by uploading a PDF or TXT file (Eg: "Grand_Azure_Resort_Spa_Full_Guide.pdf") that the chatbot will use as a knowledge base.
+    - You use the file upload widget to select and upload your file.
 3. To interact using voice:
-    - Click on the microphone icon and speak your query.
-    - Wait for the assistant to process your speech and respond.
-4. The assistant will respond to your query in text and audio form.
+    - You click on the microphone icon and speak your query.
+    - You wait for the assistant to process your speech and respond.
+4. To interact using text:
+    - You type your query into the text box provided.
+    - You click "Submit" or press "Enter" to send your question to the chatbot.
+5. The assistant will respond to your query in text and audio form.
 
 Feel free to engage with the Conversational AI Chatbot, ask questions, or give commands as per the assistant's capabilities. This hands-on experience will help you understand the assistant's interactive quality and performance.
 
