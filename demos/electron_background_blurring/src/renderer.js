@@ -76,6 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let resultMask = null;
   let processingMask = false;
   let maskProcessed = false;
+  let processingOn = true;
 
   async function processMask(imageData, canvasElement, ovDevice){
     processingMask = true;
@@ -92,11 +93,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
       ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
       const imageData = ctx.getImageData(0, 0, canvasElement.width, canvasElement.height);
+      
+      if (!processingMask && processingOn){
+        processMask(imageData, canvasElement, ovDevice);
+      }
 
       if (toggleSwitch.checked){
-        if (!processingMask){
-          processMask(imageData, canvasElement, ovDevice);
-        }
+
+        processingOn = true;
 
         if(maskProcessed){
             const result = await window.electronAPI.blurImage(imageData, canvasElement.width, canvasElement.height);
@@ -107,6 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
       } else {
           document.getElementById('processingTime').innerText = `Inference time: Inference OFF`;
+          processingOn = false;
       }
       imgElement.src = canvasElement.toDataURL('image/jpeg');
 
