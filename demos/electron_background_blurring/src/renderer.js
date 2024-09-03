@@ -34,6 +34,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  const toggleSwitch = document.getElementById('toggleSwitch');
+  const toggleValue = document.getElementById('toggleValue');
+
+  toggleSwitch.addEventListener('change', () => {
+    toggleValue.textContent = toggleSwitch.checked ? 'on' : 'off';
+  });
+
   let tempImg = null;
 
   async function startWebcam(deviceId) {
@@ -86,20 +93,22 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
       const imageData = ctx.getImageData(0, 0, canvasElement.width, canvasElement.height);
 
-      if (!processingMask){
-        processMask(imageData, canvasElement, ovDevice);
+      if (toggleSwitch.checked){
+        if (!processingMask){
+          processMask(imageData, canvasElement, ovDevice);
+        }
+
+        if(maskProcessed){
+            const result = await window.electronAPI.blurImage(imageData, canvasElement.width, canvasElement.height);
+            tempImg = new ImageData(result.img, result.width, result.height);
+            ctx.putImageData(tempImg, 0, 0);
+            inferenceTime = resultMask.inferenceTime;
+            document.getElementById('processingTime').innerText = `Inference time: ${inferenceTime} ms (${(1000 / inferenceTime).toFixed(1)} FPS)`;
+          }
+      } else {
+          document.getElementById('processingTime').innerText = `Inference time: Inference OFF`;
       }
-
-      if(maskProcessed){
-        const result = await window.electronAPI.blurImage(imageData, canvasElement.width, canvasElement.height);
-
-        tempImg = new ImageData(result.img, result.width, result.height);
-        ctx.putImageData(tempImg, 0, 0);
-        imgElement.src = canvasElement.toDataURL('image/jpeg');
-
-        inferenceTime = resultMask.inferenceTime;
-        document.getElementById('processingTime').innerText = `Inference time: ${inferenceTime} ms (${(1000 / inferenceTime).toFixed(1)} FPS)`;
-      }
+      imgElement.src = canvasElement.toDataURL('image/jpeg');
 
       endTime = await window.electronAPI.takeTime();
       const delay = Math.max(0, 50 - (endTime - begin));
@@ -120,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     videoElement.srcObject = null;
     imgElement.src = '../assets/webcam_placeholder.png';
-    document.getElementById('processingTime').innerText = `Inference time: 0 ms (0 FPS)`;
+    document.getElementById('processingTime').innerText = `Inference time: Inference OFF`;
 
     if (!keepActive) {
       toggleWebcamButton.textContent = 'Start';
