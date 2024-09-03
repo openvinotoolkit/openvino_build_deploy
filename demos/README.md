@@ -72,7 +72,7 @@ The demo detects people in front of the webcam and changes them into Santa Claus
 
 ### 🔮 Hide Your Mess Behind
 
-The demo blurs the background behind a person on webcam. The app is built using NodeJS and Electron technologies. It can be run from exe file or using npm.
+The demo blurs the background behind a person on webcam. The app is built using NodeJS and Electron technologies. It can be run from compiled exe file or using npm.
 
 [![image](https://github.com/user-attachments/assets/5c9b00b3-3cdf-4e3a-afa1-9c0cabaab5d4)](electron_background_blurring)
 

@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     videoElement.srcObject = null;
     imgElement.src = '../assets/webcam_placeholder.png';
-    document.getElementById('processingTime').innerText = `Inference time: Inference OFF`;
+    document.getElementById('processingTime').innerText = `Inference time: Video stopped`;
 
     if (!keepActive) {
       toggleWebcamButton.textContent = 'Start';
