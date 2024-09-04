@@ -44,7 +44,8 @@
     "buffer": "^6.0.3",
     "openvino-node": "2024.3.0",
     "opencv-wasm": "4.3.0-10",
-    "@napi-rs/canvas": "^0.1.52"
+    "@napi-rs/canvas": "^0.1.52",
+    "stackblur-canvas": "^2.7.0"
   },
   "keywords": [],
   "author": "Mikołaj Roszczyk <mikolaj.roszczyk@intel.com>",

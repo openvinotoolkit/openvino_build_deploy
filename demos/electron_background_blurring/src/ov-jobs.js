@@ -3,6 +3,7 @@ const { cv } = require('opencv-wasm');
 const { performance } = require('perf_hooks');
 const path = require('path');
 const fs = require('fs');
+const StackBlur = require( 'stackblur-canvas' );
 
 module.exports = { detectDevices, runModel, takeTime, blurImage }
 
@@ -230,6 +231,8 @@ async function blurImage(image, width, height){
         matToBlur = new cv.Mat(height, width, cv.CV_8UC4);
     }
     matToBlur.data.set(image.data);
+
+    image = StackBlur.imageDataRGBA(image, 0, 0, image.data.width, image.data.height, 55);
     // console.log(performance.now()-begin, "canvas to mat converted");
 
     // if (smallImage == null){
@@ -239,7 +242,8 @@ async function blurImage(image, width, height){
     if (blurredImage == null || matToBlur.data.length !== blurredImage.data.length){
         blurredImage = new cv.Mat(height, width, cv.CV_8UC4);
     }
-    cv.blur(matToBlur, blurredImage, new cv.Size(25,25));
+    blurredImage.data.set(image.data);
+    // cv.blur(matToBlur, blurredImage, new cv.Size(25,25));
     // cv.resize(matToBlur, smallImage, smallImage.size(), cv.INTER_AREA);
     // cv.resize(smallImage, blurredImage, blurredImage.size(), cv.INTER_LINEAR);
 
