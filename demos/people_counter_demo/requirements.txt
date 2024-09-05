@@ -1,3 +1,5 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+
 # openvino 2024.3 and nncf=2.12.0 cause issues for NPU
 openvino==2024.2
 nncf==2.11.0
