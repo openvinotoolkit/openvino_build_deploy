@@ -297,20 +297,26 @@ def create_UI(initial_message: str) -> gr.Blocks:
         file_uploader_ui.change(lambda: ([[None, initial_message]], None), outputs=[chatbot_ui, summary_ui]) \
             .then(load_context, inputs=file_uploader_ui)
 
-        clear_btn.click(lambda: ([[None, initial_message]], None), outputs=[chatbot_ui, summary_ui])
+        clear_btn.click(lambda: ([[None, initial_message]], None), outputs=[chatbot_ui, summary_ui]) \
+            .then(load_context, inputs=file_uploader_ui) \
+            .then(lambda: gr.Button(interactive=False), outputs=summarize_button)
 
         # block buttons, do the transcription and conversation, clear audio, unblock buttons
         gr.on(triggers=[submit_btn.click, input_text_ui.submit], fn=lambda: gr.Button(interactive=False), outputs=submit_btn) \
             .then(lambda: gr.Button(interactive=False), outputs=summarize_button) \
+            .then(lambda: gr.Button(interactive=False), outputs=clear_btn) \
             .then(transcribe, inputs=[input_audio_ui, input_text_ui, chatbot_ui], outputs=chatbot_ui) \
             .then(lambda: None, outputs=input_text_ui) \
             .then(chat, chatbot_ui, chatbot_ui) \
             .then(lambda: None, outputs=input_audio_ui) \
+            .then(lambda: gr.Button(interactive=True), outputs=clear_btn) \
             .then(lambda: gr.Button(interactive=True), outputs=summarize_button)
 
         # block button, do the summarization, unblock button
         summarize_button.click(lambda: gr.Button(interactive=False), outputs=summarize_button) \
+            .then(lambda: gr.Button(interactive=False), outputs=clear_btn) \
             .then(summarize, inputs=chatbot_ui, outputs=summary_ui) \
+            .then(lambda: gr.Button(interactive=True), outputs=clear_btn) \
             .then(lambda: gr.Button(interactive=True), outputs=summarize_button)
 
         return demo
