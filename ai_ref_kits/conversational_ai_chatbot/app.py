@@ -248,6 +248,12 @@ def chat(history: List[List[str]]) -> List[List[str]]:
     Returns:
         History with the latest chat's response (yields partial response)
     """
+    # no document is loaded
+    if isinstance(ov_chat_engine, SimpleChatEngine):
+        history[-1][1] = "No guide is provided, so I cannot answer this question. Please upload the hotel guide."
+        yield history
+        return
+
     # get token by token and merge to the final response
     history[-1][1] = ""
     with inference_lock:
