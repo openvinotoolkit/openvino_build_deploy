@@ -73,7 +73,7 @@ cd openvino_build_deploy/ai_ref_kits/intelligent_queue_management
 Then pull the video sample:
 
 ```shell
-git lfs pull
+git lfs -X= -I=sample_video.mp4 pull
 ```
 
 ### Creating a Virtual Environment

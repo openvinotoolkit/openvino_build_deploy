@@ -68,7 +68,7 @@ cd openvino_build_deploy/ai_ref_kits/explainable_ai
 Then pull the video sample:
 
 ```shell
-git lfs pull
+git lfs -X= -I=Cars-FHD.mov pull
 ```
 
 ### Creating a Virtual Environment

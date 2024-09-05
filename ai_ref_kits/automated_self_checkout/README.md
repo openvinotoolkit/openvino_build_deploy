@@ -72,7 +72,7 @@ cd openvino_build_deploy/ai_ref_kits/automated_self_checkout
 Then pull the video sample:
 
 ```shell
-git lfs pull
+git lfs -X= -I=data/ pull
 ```
 
 ### Creating a Virtual Environment
