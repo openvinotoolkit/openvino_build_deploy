@@ -27,10 +27,5 @@ This notebook demonstrates how to  run [LCM_Dreamshaper_v7](https://huggingface.
   python -m pip install --upgrade pip 
   pip install -r requirements.txt
   ```
-- Install OpenVINO 2024.1 on Windows from an Archive File as described here https://docs.openvino.ai/2024/get-started/install-openvino/install-openvino-archive-windows.html 
-- In Command Prompt initialize OpenVINO, for example using
-  ```sh
-  "C:\Program Files (x86)\Intel\openvino_2024\setupvars.bat"
-  ```
 - Now you only need a Jupyter server to start.
 - All other dependencies are installed in the notebook itself
