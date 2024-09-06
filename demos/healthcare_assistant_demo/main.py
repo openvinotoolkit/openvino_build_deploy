@@ -71,7 +71,7 @@ def load_asr_model(model_name: str) -> None:
     global asr_model, asr_processor
 
     model_path = MODEL_DIR / model_name
-    device = "AUTO:GPU,CPU" if ov.__version__ < "2024.3" else "AUTO:CPU"
+    device = "GPU" if "GPU" in get_available_devices() and ov.__version__ < "2024.3" else "CPU"
 
     # create a distil-whisper model and its processor
     if not model_path.exists():
@@ -107,7 +107,8 @@ def load_chat_model(model_name: str, token: str = None) -> OpenVINOLLM:
         chat_tokenizer = AutoTokenizer.from_pretrained(model_name, token=token)
         chat_tokenizer.save_pretrained(model_path)
 
-    return OpenVINOLLM(context_window=2048, model_id_or_path=str(model_path), max_new_tokens=512, device_map="AUTO:GPU,CPU",
+    device = "GPU" if "GPU" in get_available_devices() else "CPU"
+    return OpenVINOLLM(context_window=2048, model_id_or_path=str(model_path), max_new_tokens=512, device_map=device,
                        model_kwargs={"ov_config": ov_config}, generate_kwargs={"do_sample": True, "temperature": 0.7, "top_k": 50, "top_p": 0.95})
 
 
@@ -153,7 +154,7 @@ def load_embedding_model(model_name: str) -> OpenVINOEmbedding:
         embedding_tokenizer = AutoTokenizer.from_pretrained(model_name)
         embedding_tokenizer.save_pretrained(model_path)
 
-    device = "AUTO:NPU" if "NPU" in get_available_devices() else "AUTO:CPU"
+    device = "NPU" if "NPU" in get_available_devices() else "CPU"
     return OpenVINOEmbedding(str(model_path), device=device, embed_batch_size=1, model_kwargs={"dynamic_shapes": False})
 
 
