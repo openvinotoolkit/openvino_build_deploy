@@ -1,8 +1,10 @@
-# Healthcare Assistant with OpenVINO™
+# Virtual AI Assistant with OpenVINO™
 
-The demo works as a virtual healthcare assistant, whose task is to greet the patient and summarize the patient's condition based on the conversation and uploaded examination report. 
+The demo works as a virtual AI assistant. The default personality is a healthcare assistant, whose task is to greet the patient and summarize the patient's condition based on the conversation and uploaded examination report.
 
-![](https://github.com/user-attachments/assets/28e66746-1f6c-4dfc-b345-ae9f0e003e76)
+The personality and behaviour can be easily changed with the config file (see Step 2).
+
+![](https://github.com/user-attachments/assets/d3ede3e5-d6af-46c7-8e00-250fc2137ed3)
 
 Here are the steps involved in this demo:
 
@@ -83,10 +85,16 @@ Once the models are cached, the subsequent executions will be much faster.
 python main.py --hf_token [replace-with-your-token]
 ```
 
-You can also change chat and asr model:
+Change the personality and behaviour by providing a new YAML config file:
 
 ```shell
-python main.py --asr_model distil-whisper/distil-large-v2 --chat_model OpenVINO/Phi-3-medium-4k-instruct-int4-ov
+python main.py --personality bartender_personality.yaml
+```
+
+You can also change chat, asr or embedding model:
+
+```shell
+python main.py --asr_model distil-whisper/distil-large-v2 --chat_model OpenVINO/Phi-3-medium-4k-instruct-int4-ov --embedding_model BAAI/bge-large-en-v1.5
 ```
 
 Running with `--public` will allow you to access from any computer:

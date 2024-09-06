@@ -10,6 +10,7 @@ import gradio as gr
 import librosa
 import numpy as np
 import openvino as ov
+import yaml
 from llama_index.core import Document, VectorStoreIndex, Settings
 from llama_index.core.chat_engine import SimpleChatEngine
 from llama_index.core.chat_engine.types import BaseChatEngine, ChatMode
@@ -25,31 +26,6 @@ from transformers import AutoTokenizer, AutoProcessor, TextIteratorStreamer
 
 # Global variables initialization
 TARGET_AUDIO_SAMPLE_RATE = 16000
-SYSTEM_CONFIGURATION = (
-    "You are Adrishuo - a helpful, respectful, and honest virtual doctor assistant. "
-    "Your role is talking to a patient who just came in."
-    "Your primary role is to assist in the collection of symptom information from a patient. "
-    "The patient may attach prior examination report related to their health, which is available as context information. "
-    "If the report is attached, you must take it into account. "
-    "You must only ask follow-up questions based on the patient's initial descriptions and optional report to clarify and gather more details about their symtpoms. "
-    "You must not attempt to diagnose, treat, or offer health advice. "
-    "Ask one and only the symptom related followup questions and keep it short. "
-    "You must strictly not suggest or recommend any treatments, including over-the-counter medication. "
-    "You must strictly avoid making any assumptions or conclusions about the causes or nature of the patient's symptoms. "
-    "You must strictly avoid providing suggestions to manage their symptoms. "
-    "Your interactions should be focused solely on understanding and recording the patient's stated symptoms. "
-    "Do not collect or use any personal information like age, name, contact, gender, etc. "
-    "Ask at most 3 questions then say you know everything and you're ready to summarize the patient. "
-    "Remember, your role is to aid in symptom information collection in a supportive, unbiased, and factually accurate manner. "
-    "Your responses should consistently encourage the patient to discuss their symptoms in greater detail while remaining neutral and non-diagnostic."
-)
-GREET_THE_CUSTOMER = "Please introduce yourself and greet the patient"
-SUMMARIZE_THE_CUSTOMER = (
-    "You are now required to summarize the patient's provided context and symptoms for the doctor's review. "
-    "Strictly do not mention any personal data like age, name, gender, contact, non-health information etc. when summarizing. "
-    "Summarize the health-related concerns mentioned by the patient in this conversation or in the provided context. "
-    "You must include information from the context if it's provided. "
-)
 
 MODEL_DIR = Path("model")
 inference_lock = threading.Lock()
@@ -60,6 +36,8 @@ asr_processor: Optional[AutoProcessor] = None
 ov_llm: Optional[OpenVINOLLM] = None
 ov_embedding: Optional[OpenVINOEmbedding] = None
 ov_chat_engine: Optional[BaseChatEngine] = None
+
+chatbot_config = {}
 
 
 def get_available_devices() -> Set[str]:
@@ -158,14 +136,18 @@ def load_embedding_model(model_name: str) -> OpenVINOEmbedding:
     return OpenVINOEmbedding(str(model_path), device=device, embed_batch_size=1, model_kwargs={"dynamic_shapes": False})
 
 
-def load_chat_models(chat_model_name: str, embedding_model_name: str, auth_token: str = None) -> None:
-    global ov_llm, ov_chat_engine, ov_embedding
+def load_chat_models(chat_model_name: str, embedding_model_name: str, personality_file_path: Path, auth_token: str = None) -> None:
+    global ov_llm, ov_chat_engine, ov_embedding, chatbot_config
+
+    with open(personality_file_path) as f:
+        chatbot_config = yaml.safe_load(f)
+
     ov_embedding = load_embedding_model(embedding_model_name)
     log.info(f"Running {embedding_model_name} on {','.join(ov_embedding._model.request.get_property('EXECUTION_DEVICES'))}")
     ov_llm = load_chat_model(chat_model_name, auth_token)
     log.info(f"Running {chat_model_name} on {','.join(ov_llm._model.request.get_compiled_model().get_property('EXECUTION_DEVICES'))}")
 
-    ov_chat_engine = SimpleChatEngine.from_defaults(llm=ov_llm, system_prompt=SYSTEM_CONFIGURATION,
+    ov_chat_engine = SimpleChatEngine.from_defaults(llm=ov_llm, system_prompt=chatbot_config["system_configuration"],
                                                     memory=ChatMemoryBuffer.from_defaults())
 
 
@@ -189,18 +171,18 @@ def load_context(file_path: str) -> None:
     memory = ChatMemoryBuffer.from_defaults()
 
     if not file_path:
-        ov_chat_engine = SimpleChatEngine.from_defaults(llm=ov_llm, system_prompt=SYSTEM_CONFIGURATION, memory=memory)
+        ov_chat_engine = SimpleChatEngine.from_defaults(llm=ov_llm, system_prompt=chatbot_config["system_configuration"], memory=memory)
         return
 
     document = load_file(Path(file_path))
     Settings.embed_model = ov_embedding
     index = VectorStoreIndex.from_documents([document])
-    ov_chat_engine = index.as_chat_engine(llm=ov_llm, chat_mode=ChatMode.CONTEXT, system_prompt=SYSTEM_CONFIGURATION,
+    ov_chat_engine = index.as_chat_engine(llm=ov_llm, chat_mode=ChatMode.CONTEXT, system_prompt=chatbot_config["system_configuration"],
                                           memory=memory)
 
 
 def generate_initial_greeting() -> str:
-    return ov_chat_engine.chat(GREET_THE_CUSTOMER).response
+    return ov_chat_engine.chat(chatbot_config["greet_the_user_prompt"]).response
 
 
 def chat(history: List[List[str]]) -> List[List[str]]:
@@ -259,18 +241,18 @@ def transcribe(audio: Tuple[int, np.ndarray], prompt: str, conversation: List[Li
 
 
 def summarize(conversation: List) -> str:
-    conversation.append([SUMMARIZE_THE_CUSTOMER, None])
+    conversation.append([chatbot_config["summarize_the_user_prompt"], None])
     for partial_summary in chat(conversation):
         yield partial_summary[-1][1]
 
 
 def create_UI(initial_message: str) -> gr.Blocks:
-    with gr.Blocks(title="Adrishuo - the AI Assistant") as demo:
+    with gr.Blocks(title="Adrishuo - the Virtual AI Assistant") as demo:
         gr.Markdown("""
-        # Adrishuo: A Custom Healthcare AI assistant running with OpenVINO
+        # Adrishuo: A Virtual AI assistant running with OpenVINO
 
         Instructions for use:
-        1. Attach the PDF or TXT file with the prior examination report (optional - see "Sample LLM Patient Records.pdf" as an example)
+        1. Attach the PDF or TXT file with an additional context (e.g prior examination report - optional; see "Sample LLM Patient Records.pdf" as an example)
         2. Record your question/comment using the first audio widget ("Your voice input") or type it in the textbox ("Your text input"), then click Submit
         3. Wait for the chatbot to response ("Chatbot")
         4. Discuss with the chatbot
@@ -282,7 +264,7 @@ def create_UI(initial_message: str) -> gr.Blocks:
             with gr.Column(scale=1):
                 input_audio_ui = gr.Audio(sources=["microphone"], label="Your voice input")
                 input_text_ui = gr.Textbox(label="Your text input")
-                file_uploader_ui = gr.File(label="Prior examination report", file_types=[".pdf", ".txt"])
+                file_uploader_ui = gr.File(label="Additional context", file_types=[".pdf", ".txt"])
                 submit_btn = gr.Button("Submit", variant="primary", interactive=False)
             with gr.Column(scale=2):
                 chatbot_ui = gr.Chatbot(value=[[None, initial_message]], label="Chatbot")
@@ -323,14 +305,14 @@ def create_UI(initial_message: str) -> gr.Blocks:
         return demo
 
 
-def run(asr_model_name: str, chat_model_name: str, embedding_model_name: str, hf_token: str = None, public_interface: bool = False) -> None:
+def run(asr_model_name: str, chat_model_name: str, embedding_model_name: str, personality_file_path: Path, hf_token: str = None, public_interface: bool = False) -> None:
     # set up logging
     log.getLogger().setLevel(log.INFO)
 
     # load whisper model
     load_asr_model(asr_model_name)
     # load chat models
-    load_chat_models(chat_model_name, embedding_model_name, hf_token)
+    load_chat_models(chat_model_name, embedding_model_name, personality_file_path, hf_token)
 
     # get initial greeting
     initial_message = generate_initial_greeting()
@@ -346,8 +328,9 @@ if __name__ == "__main__":
     parser.add_argument("--asr_model", type=str, default="distil-whisper/distil-large-v3", help="Path/name of the automatic speech recognition model")
     parser.add_argument("--chat_model", type=str, default="meta-llama/Meta-Llama-3.1-8B-Instruct", help="Path/name of the chat model")
     parser.add_argument("--embedding_model", type=str, default="BAAI/bge-small-en-v1.5", help="Path/name of the model for embeddings")
+    parser.add_argument("--personality", type=str, default="default_personality.yaml", help="Path to the YAML file with chatbot personality")
     parser.add_argument("--hf_token", type=str, help="HuggingFace access token to get Llama3")
     parser.add_argument("--public", default=False, action="store_true", help="Whether interface should be available publicly")
 
     args = parser.parse_args()
-    run(args.asr_model, args.chat_model, args.embedding_model, args.hf_token, args.public)
+    run(args.asr_model, args.chat_model, args.embedding_model, Path(args.personality), args.hf_token, args.public)
