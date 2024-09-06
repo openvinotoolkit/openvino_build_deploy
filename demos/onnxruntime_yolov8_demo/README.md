@@ -22,4 +22,3 @@ This sample was modified from one of the [available Onnx Runtime Inference examp
   pip install -r requirements.txt
   ```
 - Now you only need a Jupyter server to start.
-- For details, please refer to [Installation Guide](../../README.md#-installation-guide).
