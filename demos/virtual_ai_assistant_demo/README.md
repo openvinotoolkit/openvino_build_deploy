@@ -88,7 +88,7 @@ python main.py --hf_token [replace-with-your-token]
 Change the personality and behaviour by providing a new YAML config file:
 
 ```shell
-python main.py --personality bartender_personality.yaml
+python main.py --personality use_your_personality.yaml
 ```
 
 You can also change chat, asr or embedding model:
