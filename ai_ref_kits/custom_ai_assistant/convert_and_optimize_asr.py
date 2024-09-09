@@ -50,7 +50,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--asr_model_type", type=str, choices=["distil-whisper-large-v3", "belle-distilwhisper-large-v2-zh"],
                         default="distil-whisper-large-v3", help="Speech recognition model to be converted")
-    parser.add_argument("--precision", type=str, default="int8", choices=["fp16", "int8"], help="Model precision")
+    parser.add_argument("--precision", type=str, default="fp16", choices=["fp16", "int8"], help="Model precision")
     parser.add_argument("--model_dir", type=str, default="model", help="Directory to place the model in")
     args = parser.parse_args()
 
