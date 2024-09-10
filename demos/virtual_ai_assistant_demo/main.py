@@ -143,7 +143,7 @@ def load_chat_models(chat_model_name: str, embedding_model_name: str, personalit
         chatbot_config = yaml.safe_load(f)
 
     ov_embedding = load_embedding_model(embedding_model_name)
-    log.info(f"Running {embedding_model_name} on {','.join(ov_embedding._model.request.get_property('EXECUTION_DEVICES'))}")
+    log.info(f"Running {embedding_model_name} on {ov_embedding._model.request.get_property('EXECUTION_DEVICES')}")
     ov_llm = load_chat_model(chat_model_name, auth_token)
     log.info(f"Running {chat_model_name} on {','.join(ov_llm._model.request.get_compiled_model().get_property('EXECUTION_DEVICES'))}")
 
