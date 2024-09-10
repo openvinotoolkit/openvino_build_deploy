@@ -220,7 +220,7 @@ def draw_ov_watermark(frame: ndarray, alpha: float = 0.35, size: float = 0.15) -
     patch[:] = alpha_channel * watermark[:, :, :3] + ((1.0 - alpha_channel) * patch)
 
 
-def draw_text(image: ndarray, text: str, point: Tuple[int, int], center: bool = False, font_scale: float = 1.0, font_color: Tuple[int, int, int] = (255, 255, 255)) -> None:
+def draw_text(image: ndarray, text: str, point: Tuple[int, int], center: bool = False, font_scale: float = 1.0, font_color: Tuple[int, int, int] = (255, 255, 255), with_background: bool = False) -> None:
     _, f_width = image.shape[:2]
     text_size, _ = cv2.getTextSize(text, fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=font_scale * f_width / 2000, thickness=2)
 
@@ -228,9 +228,11 @@ def draw_text(image: ndarray, text: str, point: Tuple[int, int], center: bool = 
     rect_height = text_size[1] + 30
     rect_x, rect_y = (point[0] - rect_width // 2, point[1] - rect_height // 2) if center else point
 
-    cv2.rectangle(image, pt1=(rect_x, rect_y), pt2=(rect_x + rect_width, rect_y + rect_height), color=(0, 0, 0), thickness=cv2.FILLED)
+    if with_background:
+        cv2.rectangle(image, pt1=(rect_x, rect_y), pt2=(rect_x + rect_width, rect_y + rect_height), color=(0, 0, 0), thickness=cv2.FILLED)
 
     text_x = rect_x + (rect_width - text_size[0]) // 2
     text_y = rect_y + (rect_height + text_size[1]) // 2
 
+    cv2.putText(image, text=text, org=(text_x, text_y), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=font_scale * f_width / 2000, color=(0, 0, 0), thickness=2, lineType=cv2.LINE_AA)
     cv2.putText(image, text=text, org=(text_x, text_y), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=font_scale * f_width / 2000, color=font_color, thickness=1, lineType=cv2.LINE_AA)
