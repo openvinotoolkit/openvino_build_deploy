@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import openvino as ov
 from PIL import Image
+from pathlib import Path
 
 def create_gaussian_kernel(size=25, sigma=10):
     kernel = np.fromfunction(
@@ -61,7 +62,7 @@ def visualize_results(original, mask, result):
 
 def main():
     model = PostProcModel()
-    input_image = load_image('/home/roszczyk-intel/Pictures/images.jpeg')
+    input_image = load_image(f"{Path(__file__).parent.parent}/assets/icons/icon.png")
     input_mask = generate_mask(image_size=input_image.shape[:2])
     input_image_tensor = tf.convert_to_tensor(input_image[None, ...])
     input_mask_tensor = tf.convert_to_tensor(input_mask[None, ...])
@@ -71,9 +72,11 @@ def main():
     def model_fn(input_image, input_mask):
         return model(input_image, input_mask)
     
-    concrete_model = model_fn.get_concrete_function(tf.TensorSpec(shape=input_image_tensor.shape, dtype=tf.float32),tf.TensorSpec(shape=input_mask_tensor.shape, dtype=tf.float32))
+    print(input_image_tensor.shape)
+    
+    concrete_model = model_fn.get_concrete_function(tf.TensorSpec(shape=[1,None,None,3], dtype=tf.float32),tf.TensorSpec(shape=[1,None,None,3], dtype=tf.float32))
     ov_model = ov.convert_model(concrete_model)
-    ov.save_model(ov_model, './postproc_model.xml', False)
+    ov.save_model(ov_model, f"{Path(__file__).parent.parent}/models/postproc_model.xml", False)
     result_image = result_tensor[0].numpy()
     visualize_results(input_image, input_mask, result_image)
 
