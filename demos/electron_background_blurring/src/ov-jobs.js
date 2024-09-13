@@ -30,45 +30,16 @@ async function detectDevices() {
 
 function preprocessMat(image, targetHeight = 256, targetWidth = 256) {
     // RESIZING
-    if (image.rows < image.cols){
-        const height = Math.floor(image.rows / (image.cols / targetWidth));
-        if (resizedMat == null || resizedMat.size().width !== targetWidth || resizedMat.size().height !== height){
-            resizedMat = new cv.Mat(height, targetWidth, cv.CV_8UC3);
-        }
-        cv.resize(image, resizedMat, resizedMat.size());
-    } else {
-        const width = Math.floor(image.cols / (image.rows / targetHeight));
-        if (resizedMat == null || resizedMat.size().width !== width || resizedMat.size().height !== targetHeight){
-            resizedMat = new cv.Mat(targetHeight, width, cv.CV_8UC3);
-        }
-        cv.resize(image, resizedMat, resizedMat.size());
+    if (resizedMat == null || resizedMat.size().width !== targetWidth || resizedMat.size().height !== targetHeight){
+        resizedMat = new cv.Mat(targetHeight, targetWidth, cv.CV_8UC3);
     }
+    cv.resize(image, resizedMat, resizedMat.size());
 
     //CHANGING FROM 4-CHANNEL BGRA TO 3-CHANNEL RGB
     cv.cvtColor(resizedMat, resizedMat, cv.COLOR_BGRA2RGB);
 
-    // PADDING
-    const rightPadding = Math.max(0,targetWidth - resizedMat.cols);
-    const bottomPadding = Math.max(0,targetHeight - resizedMat.rows);
-
-    if (paddedImg == null){
-        paddedImg = new cv.Mat(targetHeight,targetWidth,cv.CV_8UC3);
-    }
-    
-    cv.copyMakeBorder(
-        resizedMat,
-        paddedImg,
-        0,
-        bottomPadding,
-        0,
-        rightPadding,
-        cv.BORDER_CONSTANT,
-        [0,0,0,0]
-    );
-
     return {
-        image : paddedImg,
-        paddingInfo : { bottomPadding, rightPadding }
+        image : resizedMat
     };
 }
 
@@ -96,22 +67,17 @@ function calculateAverage(array){
 }
 
 
-function postprocessMask (mask, padInfo){
+function postprocessMask (mask){
     // TAKE OUT LABELS
     const maskShape = mask.getShape();
     const multidimArray = convertToMultiDimensionalArray(mask.data, maskShape);
     const labelMask = multidimArray[0].map(row => row.map(pixel => pixel.indexOf(Math.max(...pixel))));
 
-    // UNPADDING
-    const unpadH = maskShape[1] - padInfo.bottomPadding;
-    const unpadW = maskShape[2] - padInfo.rightPadding;
-    const labelMaskUnpadded = labelMask.slice(0, unpadH).map(row => row.slice(0, unpadW));
-
     // RESIZING
     if (maskMatSmall == null){
-        maskMatSmall = new cv.Mat(labelMaskUnpadded.length, labelMaskUnpadded[0].length, cv.CV_8UC1);
+        maskMatSmall = new cv.Mat(labelMask.length, labelMask[0].length, cv.CV_8UC1);
     }
-    maskMatSmall.data.set(labelMaskUnpadded.flat());
+    maskMatSmall.data.set(labelMask.flat());
     cv.resize(maskMatSmall, maskMatOrg, maskMatOrg.size(), cv.INTER_NEAREST);
 }
 
@@ -192,11 +158,10 @@ async function runModel(img, width, height, device){
         if (maskMatOrg == null || mat.rows !== maskMatOrg.rows || mat.cols !== maskMatOrg.cols){
             maskMatOrg = new cv.Mat(height, width, cv.CV_8UC1);
         }
-        postprocessMask(resultInfer, preprocessingResult.paddingInfo);
+        postprocessMask(resultInfer);
         console.log(performance.now()-begin, "postprocessing");
 
         // MASK PREPARATION
-
         cv.threshold(maskMatOrg, maskMatOrg, 0, 255, cv.THRESH_BINARY);
         console.log(performance.now()-begin, "threshold");
 
@@ -232,22 +197,12 @@ async function blurImage(image, width, height){
     }
     matToBlur.data.set(image.data);
 
-    image = StackBlur.imageDataRGBA(image, 0, 0, image.data.width, image.data.height, 55);
-    // console.log(performance.now()-begin, "canvas to mat converted");
-
-    // if (smallImage == null){
-    //     smallImage = new cv.Mat(height/20, width/20, cv.CV_8UC4);
-    // }
-
     if (blurredImage == null || matToBlur.data.length !== blurredImage.data.length){
         blurredImage = new cv.Mat(height, width, cv.CV_8UC4);
     }
+    
     blurredImage.data.set(image.data);
-    // cv.blur(matToBlur, blurredImage, new cv.Size(25,25));
-    // cv.resize(matToBlur, smallImage, smallImage.size(), cv.INTER_AREA);
-    // cv.resize(smallImage, blurredImage, blurredImage.size(), cv.INTER_LINEAR);
-
-    // console.log(performance.now() - begin, "blur");
+    cv.blur(matToBlur, blurredImage, new cv.Size(25,25));
 
     if (finalMat == null || matToBlur.data.length !== finalMat.data.length){
         finalMat = new cv.Mat(height, width, cv.CV_8UC4);

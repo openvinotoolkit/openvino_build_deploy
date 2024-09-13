@@ -44,4 +44,4 @@ To turn on blurring you have to turn on inference using the _Inference_ switch. 
 
 <img width="586" alt="inference-on" src="https://github.com/user-attachments/assets/eb9e1b75-8efb-4d6d-80e1-a9c438048bf7">
 
-You can change inference device or video source, turn on and off inference and streaming anytime. 
+You can change inference device or video source, turn on and off inference and streaming anytime.
