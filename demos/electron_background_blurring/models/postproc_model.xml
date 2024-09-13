@@ -13,13 +13,13 @@
 			</output>
 		</layer>
 		<layer id="0" name="input_mask" type="Parameter" version="opset1">
-			<data shape="1,?,?,3" element_type="f32" />
+			<data shape="1,?,?,1" element_type="f32" />
 			<output>
 				<port id="0" precision="FP32" names="input_mask">
 					<dim>1</dim>
 					<dim>-1</dim>
 					<dim>-1</dim>
-					<dim>3</dim>
+					<dim>1</dim>
 				</port>
 			</output>
 		</layer>
@@ -90,7 +90,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="6" name="Unsqueeze_351" type="Const" version="opset1">
+		<layer id="6" name="Unsqueeze_352" type="Const" version="opset1">
 			<data element_type="f32" shape="1, 1, 1, 1" offset="2732" size="4" />
 			<output>
 				<port id="0" precision="FP32">
@@ -101,7 +101,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="7" name="Constant_354" type="Const" version="opset1">
+		<layer id="7" name="Constant_355" type="Const" version="opset1">
 			<data element_type="i64" shape="4" offset="0" size="32" />
 			<output>
 				<port id="0" precision="I64">
@@ -109,13 +109,13 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="8" name="Transpose_355" type="Transpose" version="opset1">
+		<layer id="8" name="Transpose_356" type="Transpose" version="opset1">
 			<input>
 				<port id="0" precision="FP32">
 					<dim>1</dim>
 					<dim>-1</dim>
 					<dim>-1</dim>
-					<dim>3</dim>
+					<dim>1</dim>
 				</port>
 				<port id="1" precision="I64">
 					<dim>4</dim>
@@ -124,13 +124,13 @@
 			<output>
 				<port id="2" precision="FP32">
 					<dim>1</dim>
-					<dim>3</dim>
+					<dim>1</dim>
 					<dim>-1</dim>
 					<dim>-1</dim>
 				</port>
 			</output>
 		</layer>
-		<layer id="9" name="Transpose_259" type="Subtract" version="opset1">
+		<layer id="9" name="Transpose_260" type="Subtract" version="opset1">
 			<data auto_broadcast="numpy" />
 			<input>
 				<port id="0" precision="FP32">
@@ -141,7 +141,7 @@
 				</port>
 				<port id="1" precision="FP32">
 					<dim>1</dim>
-					<dim>3</dim>
+					<dim>1</dim>
 					<dim>-1</dim>
 					<dim>-1</dim>
 				</port>
@@ -149,13 +149,13 @@
 			<output>
 				<port id="2" precision="FP32" names="post_proc_model_1/sub:0">
 					<dim>1</dim>
-					<dim>3</dim>
+					<dim>1</dim>
 					<dim>-1</dim>
 					<dim>-1</dim>
 				</port>
 			</output>
 		</layer>
-		<layer id="10" name="Transpose_261" type="Multiply" version="opset1">
+		<layer id="10" name="Transpose_262" type="Multiply" version="opset1">
 			<data auto_broadcast="numpy" />
 			<input>
 				<port id="0" precision="FP32">
@@ -166,7 +166,7 @@
 				</port>
 				<port id="1" precision="FP32">
 					<dim>1</dim>
-					<dim>3</dim>
+					<dim>1</dim>
 					<dim>-1</dim>
 					<dim>-1</dim>
 				</port>
@@ -180,7 +180,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="11" name="Transpose_263" type="Multiply" version="opset1">
+		<layer id="11" name="Transpose_264" type="Multiply" version="opset1">
 			<data auto_broadcast="numpy" />
 			<input>
 				<port id="0" precision="FP32">
@@ -191,7 +191,7 @@
 				</port>
 				<port id="1" precision="FP32">
 					<dim>1</dim>
-					<dim>3</dim>
+					<dim>1</dim>
 					<dim>-1</dim>
 					<dim>-1</dim>
 				</port>
@@ -205,7 +205,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="12" name="Transpose_265" type="Add" version="opset1">
+		<layer id="12" name="Transpose_266" type="Add" version="opset1">
 			<data auto_broadcast="numpy" />
 			<input>
 				<port id="0" precision="FP32">
@@ -230,7 +230,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="13" name="Constant_264" type="Const" version="opset1">
+		<layer id="13" name="Constant_265" type="Const" version="opset1">
 			<data element_type="i64" shape="4" offset="2736" size="32" />
 			<output>
 				<port id="0" precision="I64">
@@ -238,7 +238,7 @@
 				</port>
 			</output>
 		</layer>
-		<layer id="14" name="post_proc_model_1/add_1_1/Add" type="Transpose" version="opset1">
+		<layer id="14" name="post_proc_model_1/add" type="Transpose" version="opset1">
 			<input>
 				<port id="0" precision="FP32">
 					<dim>1</dim>
@@ -251,7 +251,7 @@
 				</port>
 			</input>
 			<output>
-				<port id="2" precision="FP32" names="Identity:0,post_proc_model_1/add_1_1/Add:0">
+				<port id="2" precision="FP32" names="Identity:0,post_proc_model_1/add:0">
 					<dim>1</dim>
 					<dim>-1</dim>
 					<dim>-1</dim>
@@ -290,7 +290,7 @@
 		<edge from-layer="14" from-port="2" to-layer="15" to-port="0" />
 	</edges>
 	<rt_info>
-		<Runtime_version value="2024.3.0-16041-1e3b88e4e3f-releases/2024/3" />
+		<Runtime_version value="2024.4.0-16579-c3152d32c9c-releases/2024/4" />
 		<conversion_parameters>
 			<framework value="tf" />
 			<is_python_object value="True" />

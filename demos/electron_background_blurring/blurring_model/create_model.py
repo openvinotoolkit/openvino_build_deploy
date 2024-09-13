@@ -28,57 +28,18 @@ class PostProcModel(tf.keras.Model):
         blurred = tf.nn.depthwise_conv2d(input_image, self.kernel, strides=[1, 1, 1, 1], padding='SAME')
         blurred_masked = blurred * (1 - input_mask)
         original_masked = input_image * input_mask
-        return tf.keras.layers.Add()([blurred_masked, original_masked])
-
-def load_image(image_path, image_size=(128, 128)):
-    img = Image.open(image_path).resize(image_size)
-    img = np.array(img).astype(np.float32) / 255.0
-    return img
-
-def generate_mask(image_size=(128, 128)):
-    input_mask = np.zeros(image_size, dtype=np.float32)
-    input_mask[32:96, 32:96] = 1.0
-    input_mask = np.expand_dims(input_mask, axis=-1)
-    return input_mask
-
-def visualize_results(original, mask, result):
-    plt.figure(figsize=(10, 5))
-    plt.subplot(1, 3, 1)
-    plt.title("Oryginalny obraz")
-    plt.imshow(original)
-    plt.axis('off')
-
-    plt.subplot(1, 3, 2)
-    plt.title("Maska")
-    plt.imshow(mask.squeeze(), cmap='gray')  # squeeze() usuwa zbędny wymiar
-    plt.axis('off')
-
-    plt.subplot(1, 3, 3)
-    plt.title("Wynik modelu")
-    plt.imshow(result)
-    plt.axis('off')
-    
-    plt.show()
+        return blurred_masked + original_masked
 
 def main():
     model = PostProcModel()
-    input_image = load_image(f"{Path(__file__).parent.parent}/assets/icons/icon.png")
-    input_mask = generate_mask(image_size=input_image.shape[:2])
-    input_image_tensor = tf.convert_to_tensor(input_image[None, ...])
-    input_mask_tensor = tf.convert_to_tensor(input_mask[None, ...])
-    result_tensor = model(input_image_tensor, input_mask_tensor)
 
     @tf.function
     def model_fn(input_image, input_mask):
         return model(input_image, input_mask)
     
-    print(input_image_tensor.shape)
-    
-    concrete_model = model_fn.get_concrete_function(tf.TensorSpec(shape=[1,None,None,3], dtype=tf.float32),tf.TensorSpec(shape=[1,None,None,3], dtype=tf.float32))
+    concrete_model = model_fn.get_concrete_function(tf.TensorSpec(shape=[1,None,None,3], dtype=tf.float32),tf.TensorSpec(shape=[1,None,None,1], dtype=tf.float32))
     ov_model = ov.convert_model(concrete_model)
     ov.save_model(ov_model, f"{Path(__file__).parent.parent}/models/postproc_model.xml", False)
-    result_image = result_tensor[0].numpy()
-    visualize_results(input_image, input_mask, result_image)
 
 if __name__ == "__main__":
     main()
