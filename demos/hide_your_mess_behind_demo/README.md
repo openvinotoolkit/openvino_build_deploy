@@ -29,11 +29,11 @@ npm start
 
 When you open the app, the following view will appear:
 
-![image](https://github.com/user-attachments/assets/33d9ab98-40e9-4fc3-b9e3-b302aa49bc9d)
+![image](https://github.com/user-attachments/assets/b9852e1e-3fa7-4375-afb9-8976cd9cf325)
 
 Select the chosen video source from the control panel. Then click _Start_ button to start the streaming.
 
-![image](https://github.com/user-attachments/assets/ba8f4b6f-33a1-43cf-8885-265f117f482e)
+![image](https://github.com/user-attachments/assets/cd5a86e2-8865-4736-93e6-e2e0eb9b37f2)
 
 Later you can turn off streaming by clicking _Stop_ button.
 
@@ -42,6 +42,6 @@ Later you can turn off streaming by clicking _Stop_ button.
 
 To turn on blurring you have to turn on inference using the _Inference_ switch. Below it, you can notice a panel, where you can choose the inference device (e.g. AUTO, GPU, CPU, NPU). 
 
-![image](https://github.com/user-attachments/assets/eb9e1b75-8efb-4d6d-80e1-a9c438048bf7)
+![image](https://github.com/user-attachments/assets/e6925e6b-0d81-41da-b9b0-c4f21f173681)
 
 You can change the inference device or video source, and turn on and off inference, and streaming anytime.
