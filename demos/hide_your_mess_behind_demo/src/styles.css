@@ -6,8 +6,8 @@ body {
   font-family: Arial, sans-serif;
   font-size: 16pt;
   margin: 0;
-  min-width: 600px; /* Minimum width */
-  min-height: 500px; /* Minimum height */
+  min-width: 600px;
+  min-height: 500px; 
 }
 
 #mainContainer {
@@ -21,23 +21,23 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 80%; /* Adjust width as needed */
-  max-width: 960px; /* Ensure the webcam doesn’t grow too large */
+  width: 80%; 
+  max-width: 960px;
   margin: 5px;
 }
 
 #processingTimeContainer {
-  width: 100%; /* Ensure it takes full width of the container */
+  width: 100%;
 }
 
 #processingTime {
   margin: 0;
-  font-size: 12pt; /* Adjust as needed */
+  font-size: 12pt; 
 }
 
 #webcam {
-  width: 100%; /* Responsive width */
-  height: auto; /* Maintain aspect ratio */
+  width: 100%; 
+  height: auto;
   background: black;
   display: block;
   transform: scaleX(-1);
@@ -45,46 +45,46 @@ body {
 
 #controlPanelContainer {
   display: flex;
-  flex-direction: column; /* Stack elements vertically */
-  width: 100%; /* Match the width of the webcam */
-  align-items: flex-start; /* Align items to the left */
+  flex-direction: column;
+  width: 100%;
+  align-items: flex-start;
 }
 
 #controlPanelRow {
-  display: flex; /* Align children in a row */
-  width: 100%; /* Full width of the container */
-  justify-content: space-between; /* Distribute space between items */
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
 }
 
 .controlPanelWidget {
   display: flex;
-  align-items: center; /* Vertically center items within the widget */
-  padding-top: 10px; /* Adjust padding as needed */
+  align-items: center;
+  padding-top: 10px;
 }
 
 .controlPanelWidget label {
-  margin-right: 10px; /* Space between label and select element */
+  margin-right: 10px;
 }
 
 #webcamSelect, #deviceSelect {
-  font-size: 14pt; /* Adjust font size as needed */
+  font-size: 14pt;
 }
 
 #toggleWebcamButton {
-  width: 200px; /* Set a fixed width */
-  padding: 12px; /* Adjust padding for better size */
-  font-size: 14pt; /* Increase font size for better readability */
-  background-color: #6c22ef; /* Set background color */
-  color: white; /* Set text color */
-  border: none; /* Remove default border */
-  border-radius: 5px; /* Optional: round the corners */
-  cursor: pointer; /* Change cursor to pointer on hover */
-  transition: background-color 0.3s ease; /* Smooth transition for background color */
-  text-align: center; /* Center text inside the button */
+  width: 200px;
+  padding: 12px;
+  font-size: 14pt;
+  background-color: #6c22ef;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease; 
+  text-align: center;
 }
 
 #toggleWebcamButton:hover {
-  background-color: #5a1db3; /* Darker shade on hover */
+  background-color: #5a1db3;
 }
 
 input[type="checkbox"] {
