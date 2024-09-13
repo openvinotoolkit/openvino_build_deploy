@@ -198,8 +198,11 @@ async function blurImage(image, width, height){
         } else {
         blurModelRead = await core.readModel(path.join(__dirname, "../models/postproc_model.xml"));
         }
+        console.log("model read");
         blurModelCompiled = await core.compileModel(blurModelRead, "AUTO");
+        console.log("compiled model");
     }
+    console.log(blurModelCompiled.inputs);
 
     // MASK TENSOR
     const tensorDataMask = Float32Array.from(maskMatOrg.data);
@@ -213,7 +216,7 @@ async function blurImage(image, width, height){
     
     // INFERENCE
     inferRequestBlur = compiledModel.createInferRequest();
-    inferRequestBlur.setInputTensor(blurModelCompiled.inputs[0], inputTensorImage); // Ustaw pierwszy tensor wejściowy
+    inferRequestBlur.setInputTensor(blurModelCompiled.inputs[0], inputTensorImage);
     inferRequestBlur.setInputTensor(blurModelCompiled.inputs[1], inputTensorMask);
     inferRequestBlur.infer();
     const outputLayer = compiledModel.outputs[0];
