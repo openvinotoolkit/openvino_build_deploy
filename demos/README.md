@@ -38,7 +38,7 @@ The demo counts people standing in front of the webcam, presenting differences i
 
 The demo blurs the background behind a person on a webcam. The app is built using NodeJS and Electron technologies. It can be run from the compiled exe file or using npm.
 
-[![image](https://github.com/user-attachments/assets/275c8f31-870e-4f1b-8ee4-28e93665fee6)](hide_your_mess_behind_demo)
+[![image](https://github.com/user-attachments/assets/e6925e6b-0d81-41da-b9b0-c4f21f173681)](hide_your_mess_behind_demo)
 
 | [Hide Your Mess Behind](hide_your_mess_behind_demo) |                                                            |
 |--------------------------------------|------------------------------------------------------------|
