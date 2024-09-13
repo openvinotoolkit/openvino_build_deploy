@@ -34,6 +34,18 @@ The demo counts people standing in front of the webcam, presenting differences i
 | Platforms                             | Client (CPU, GPU, NPU), Edge (CPU)                         |
 | Owner                                 | [@adrianboguszewski](https://github.com/adrianboguszewski) |
 
+### 🔮 Hide Your Mess Behind
+
+The demo blurs the background behind a person on a webcam. The app is built using NodeJS and Electron technologies. It can be run from the compiled exe file or using npm.
+
+[![image](https://github.com/user-attachments/assets/275c8f31-870e-4f1b-8ee4-28e93665fee6)](hide_your_mess_behind_demo)
+
+| [Hide Your Mess Behind](hide_your_mess_behind_demo) |                                                            |
+|--------------------------------------|------------------------------------------------------------|
+| Related AI concepts                  | image segmentation                                         |
+| Platforms                            | Client (CPU, GPU, NPU), Edge (CPU)                         |
+| Owner                                | [@Roszczyk](https://github.com/Roszczyk), [@adrianboguszewski](https://github.com/adrianboguszewski) |
+
 ### 💃 Strike a pose
 
 The demo estimates poses of all people standing in front of the webcam.
@@ -69,18 +81,6 @@ The demo detects people in front of the webcam and changes them into Santa Claus
 | Related AI concepts                  | face detection, landmarks regression, emotion recognition  |
 | Platforms                            | Client (CPU, GPU, NPU), Edge (CPU)                         |
 | Owner                                | [@adrianboguszewski](https://github.com/adrianboguszewski) |
-
-### 🔮 Hide Your Mess Behind
-
-The demo blurs the background behind a person on webcam. The app is built using NodeJS and Electron technologies. It can be run from compiled exe file or using npm.
-
-[![image](https://github.com/user-attachments/assets/275c8f31-870e-4f1b-8ee4-28e93665fee6)](electron_background_blurring)
-
-| [Hide Your Mess Behind](electron_background_blurring) |                                                            |
-|--------------------------------------|------------------------------------------------------------|
-| Related AI concepts                  | image segmentation                                         |
-| Platforms                            | Client (CPU, GPU, NPU), Edge (CPU)                         |
-| Owner                                | [@Roszczyk](https://github.com/Roszczyk), [@adrianboguszewski](https://github.com/adrianboguszewski) |
 
 ## Contributing
 
