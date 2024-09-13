@@ -161,8 +161,15 @@ async function runModel(img, width, height, device){
         console.log(performance.now()-begin, "postprocessing");
 
         // MASK PREPARATION
-        cv.threshold(maskMatOrg, maskMatOrg, 0, 1, cv.THRESH_BINARY);
+        cv.threshold(maskMatOrg, maskMatOrg, 0, 255, cv.THRESH_BINARY);
         console.log(performance.now()-begin, "threshold");
+
+        if (notMask == null || notMask.data.length !== maskMatOrg.data.length){
+            notMask = new cv.Mat(height, width, cv.CV_8UC1);
+        }
+        cv.bitwise_not(maskMatOrg, notMask);
+        cv.threshold(notMask, notMask, 254, 255, cv.THRESH_BINARY);
+        console.log(performance.now()-begin, "not mask declared");
 
         countRun++;
         console.log("\nmodel run:", countRun,"time:", performance.now()-begin, "\n");
@@ -180,52 +187,38 @@ async function runModel(img, width, height, device){
 
 let matToBlur = null;
 let smallImage = null;
-let blurModelRead = null;
-let blurModelCompiled = null;
 
 async function blurImage(image, width, height){
     const begin = performance.now();
-    let inferRequestBlur;
     
     if (matToBlur == null || matToBlur.data.length !== image.data.length){
         matToBlur = new cv.Mat(height, width, cv.CV_8UC4);
     }
     matToBlur.data.set(image.data);
 
-    if (blurModelCompiled == null){
-        if (fs.existsSync(path.join(__dirname, '../../app.asar'))){
-            blurModelRead = await core.readModel(path.join(__dirname, "../../app.asar.unpacked/models/spostproc_model.xml"));
-        } else {
-        blurModelRead = await core.readModel(path.join(__dirname, "../models/postproc_model.xml"));
-        }
-        console.log("model read");
-        blurModelCompiled = await core.compileModel(blurModelRead, "AUTO");
-        console.log("compiled model");
+    if (blurredImage == null || matToBlur.data.length !== blurredImage.data.length){
+        blurredImage = new cv.Mat(height, width, cv.CV_8UC4);
     }
-    console.log(blurModelCompiled.inputs);
-
-    // MASK TENSOR
-    const tensorDataMask = Float32Array.from(maskMatOrg.data);
-    const shapeMask = [1, maskMatOrg.rows, maskMatOrg.cols, 1];
-    const inputTensorMask = new ov.Tensor(ov.element.f32, shapeMask, tensorDataMask);
-
-    // IMAGE TENSOR
-    const tensorDataImage = Float32Array.from(image.data, x => x / 255.0);
-    const shapeImage = [1, maskMatOrg.rows, maskMatOrg.cols, 3];
-    const inputTensorImage = new ov.Tensor(ov.element.f32, shapeImage, tensorDataImage);
     
-    // INFERENCE
-    inferRequestBlur = compiledModel.createInferRequest();
-    inferRequestBlur.setInputTensor(blurModelCompiled.inputs[0], inputTensorImage);
-    inferRequestBlur.setInputTensor(blurModelCompiled.inputs[1], inputTensorMask);
-    inferRequestBlur.infer();
-    const outputLayer = compiledModel.outputs[0];
-    const resultInfer = inferRequestBlur.getTensor(outputLayer);
+    blurredImage.data.set(image.data);
+    cv.blur(matToBlur, blurredImage, new cv.Size(25,25));
 
     if (finalMat == null || matToBlur.data.length !== finalMat.data.length){
         finalMat = new cv.Mat(height, width, cv.CV_8UC4);
     }
-    finalMat.data.set(resultInfer);
+    // console.log(performance.now()-begin, "final mat declared");
+
+    if (alpha == null || matToBlur.data.length !== alpha.data.length) {
+        alpha = new cv.Mat(height, width, matToBlur.type(), new cv.Scalar(0, 0, 0, 0)); 
+    }
+
+    cv.bitwise_and(matToBlur, alpha, matToBlur, mask=notMask);
+    // console.log(performance.now()-begin, "AND org");
+    cv.bitwise_and(blurredImage, alpha, blurredImage, mask=maskMatOrg);
+    // console.log(performance.now()-begin, "AND blur");
+
+    cv.add(matToBlur, blurredImage, finalMat);
+    // console.log(performance.now()-begin, "ADD final");
 
     countBlur++;
     console.log("\nmodel blur:", countBlur,"time:", performance.now()-begin, "\n");
