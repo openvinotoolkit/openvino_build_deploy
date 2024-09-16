@@ -32,7 +32,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // semaphores:
   let processingMask = false;
   let processingActive = false;
-  let maskProcessed = false;
   let processingOn = true;
 
 
@@ -40,7 +39,6 @@ document.addEventListener('DOMContentLoaded', () => {
   toggleWebcamButton.addEventListener('click', () => {
     if (webcamStream) {
       stopWebcam(false);
-      webcamStream = null;
     } else {
       startWebcam(webcamSelect.value);
     }
@@ -89,7 +87,6 @@ document.addEventListener('DOMContentLoaded', () => {
     processingMask = true;
     resultMask = await window.electronAPI.runModel(imageData, canvasElement.width, canvasElement.height, ovDevice);
     processingMask = false;
-    maskProcessed = true;
   }
 
 
@@ -106,19 +103,16 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       if (toggleSwitch.checked){
-
         processingOn = true;
 
-        if(maskProcessed){
-            const result = await window.electronAPI.blurImage(imageData, canvasElement.width, canvasElement.height);
-            tempImg = new ImageData(result.img, result.width, result.height);
-            ctx.putImageData(tempImg, 0, 0);
-            inferenceTime = resultMask.inferenceTime;
-            document.getElementById('processingTime').innerText = `Inference time: ${inferenceTime} ms (${(1000 / inferenceTime).toFixed(1)} FPS)`;
-          }
+        const result = await window.electronAPI.blurImage(imageData, canvasElement.width, canvasElement.height);
+        tempImg = new ImageData(result.img, result.width, result.height);
+        ctx.putImageData(tempImg, 0, 0);
+        inferenceTime = resultMask.inferenceTime;
+        document.getElementById('processingTime').innerText = `Inference time: ${inferenceTime} ms (${(1000 / inferenceTime).toFixed(1)} FPS)`;
       } else {
-          document.getElementById('processingTime').innerText = `Inference OFF`;
-          processingOn = false;
+        document.getElementById('processingTime').innerText = `Inference OFF`;
+        processingOn = false;
       }
       imgElement.src = canvasElement.toDataURL('image/jpeg');
       if (processingActive) {
@@ -141,6 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
     videoElement.srcObject = null;
     imgElement.src = '../assets/webcam_placeholder.png';
     document.getElementById('processingTime').innerText = `Streaming stopped`;
+    webcamStream = null;
 
     if (!keepActive) {
       toggleWebcamButton.textContent = 'Start';

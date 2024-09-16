@@ -178,6 +178,14 @@ async function runModel(img, width, height, device){
 
 
 async function blurImage(image, width, height){
+    if (maskMatOrg == null){
+        return{
+            img : image,
+            width : width,
+            height : height
+        };
+    }
+    
     const begin = performance.now();
     
     // MAT FROM IMAGE DATA (from webcam)
