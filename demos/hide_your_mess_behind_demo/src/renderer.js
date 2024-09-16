@@ -110,13 +110,13 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('processingTime').innerText = `Inference time: ${inferenceTime} ms (${(1000 / inferenceTime).toFixed(1)} FPS)`;
           }
       } else {
-          document.getElementById('processingTime').innerText = `Inference time: Inference OFF`;
+          document.getElementById('processingTime').innerText = `Inference OFF`;
           processingOn = false;
       }
       imgElement.src = canvasElement.toDataURL('image/jpeg');
 
       endTime = await window.electronAPI.takeTime();
-      const delay = Math.max(0, 50 - (endTime - begin));
+      const delay = Math.max(0, 30 - (endTime - begin));
       if (processingActive) {
         setTimeout(captureFrame, delay);
       }
@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     videoElement.srcObject = null;
     imgElement.src = '../assets/webcam_placeholder.png';
-    document.getElementById('processingTime').innerText = `Inference time: Video stopped`;
+    document.getElementById('processingTime').innerText = `Streaming stopped`;
 
     if (!keepActive) {
       toggleWebcamButton.textContent = 'Start';
