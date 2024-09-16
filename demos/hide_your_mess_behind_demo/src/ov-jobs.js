@@ -185,9 +185,6 @@ async function blurImage(image, width, height) {
             height : height
         };
     }
-    
-    const begin = performance.now();
-    
     // MAT FROM IMAGE DATA (from webcam)
     if (matToBlur == null || matToBlur.data.length !== image.data.length){
         matToBlur = new cv.Mat(height, width, cv.CV_8UC4);
@@ -204,8 +201,8 @@ async function blurImage(image, width, height) {
     if (alpha == null || matToBlur.data.length !== alpha.data.length) {
         alpha = new cv.Mat(height, width, matToBlur.type(), new cv.Scalar(0, 0, 0, 0)); 
     }
-    cv.bitwise_and(matToBlur, alpha, matToBlur, mask=notMask);
-    cv.bitwise_and(blurredImage, alpha, blurredImage, mask=maskMatOrg);
+    cv.bitwise_and(matToBlur, alpha, matToBlur, notMask);
+    cv.bitwise_and(blurredImage, alpha, blurredImage, maskMatOrg);
 
     // MERGING IMAGES
     if (finalMat == null || matToBlur.data.length !== finalMat.data.length){
