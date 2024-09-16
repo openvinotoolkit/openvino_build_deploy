@@ -12,19 +12,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // VARIABLES:
+  // UI elements:
   const videoElement = document.createElement('video');
   const canvasElement = document.createElement('canvas');
   const ctx = canvasElement.getContext('2d');
   const imgElement = document.getElementById('webcam');
   const deviceSelect = document.getElementById("deviceSelect")
   const toggleWebcamButton = document.getElementById('toggleWebcamButton');
+  const toggleSwitch = document.getElementById('toggleSwitch');
+  const toggleValue = document.getElementById('toggleValue');
+  // streaming:
   let webcamStream = null;
   let captureInterval = null;
+  // collecting inference results:
+  let resultMask = null;
   let inferenceTime = null;
-  let begin = null;
-  let endTime = null;
+  let tempImg = null;
+  // semaphores:
+  let processingMask = false;
   let processingActive = false;
+  let maskProcessed = false;
+  let processingOn = true;
 
+
+  // START/STOP BUTTON
   toggleWebcamButton.addEventListener('click', () => {
     if (webcamStream) {
       stopWebcam(false);
@@ -34,15 +46,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  const toggleSwitch = document.getElementById('toggleSwitch');
-  const toggleValue = document.getElementById('toggleValue');
-
+  // ON/OF INFERENCE BUTTON
   toggleSwitch.addEventListener('change', () => {
     toggleValue.textContent = toggleSwitch.checked ? 'on' : 'off';
   });
 
-  let tempImg = null;
 
+  // START STREAMING
   async function startWebcam(deviceId) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -73,11 +83,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  let resultMask = null;
-  let processingMask = false;
-  let maskProcessed = false;
-  let processingOn = true;
 
+  // INFERENCE MANAGING
   async function processMask(imageData, canvasElement, ovDevice){
     processingMask = true;
     resultMask = await window.electronAPI.runModel(imageData, canvasElement.width, canvasElement.height, ovDevice);
@@ -85,12 +92,12 @@ document.addEventListener('DOMContentLoaded', () => {
     maskProcessed = true;
   }
 
+
+  // CAPTURING FRAMES
   async function captureFrame() {
     if (!processingActive) return;
     let ovDevice= deviceSelect.value;
     try {
-      begin = await window.electronAPI.takeTime();
-
       ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
       const imageData = ctx.getImageData(0, 0, canvasElement.width, canvasElement.height);
       
@@ -114,17 +121,16 @@ document.addEventListener('DOMContentLoaded', () => {
           processingOn = false;
       }
       imgElement.src = canvasElement.toDataURL('image/jpeg');
-
-      endTime = await window.electronAPI.takeTime();
-      const delay = Math.max(0, 30 - (endTime - begin));
       if (processingActive) {
-        setTimeout(captureFrame, delay);
+        setTimeout(captureFrame, 0);
       }
     } catch (error) {
       console.error('Error during capture:', error);
     }
   }
 
+
+  // STOP STREAMING
   function stopWebcam(keepActive) {
     processingActive = false; 
     clearInterval(captureInterval);
@@ -142,6 +148,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+
+// GETTING THE LIST OF AVAILABLE DEVICES
 function updateDeviceSelect() {
   const deviceSelect = document.getElementById('deviceSelect');
 
@@ -155,6 +163,8 @@ function updateDeviceSelect() {
   );
 }
 
+
+// GETTING THE LIST OF AVAILABLE WEBCAMS
 function updateWebcamSelect() {
   const webcamSelect = document.getElementById('webcamSelect');
 

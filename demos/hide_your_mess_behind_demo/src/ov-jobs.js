@@ -6,21 +6,27 @@ const fs = require('fs');
 
 module.exports = { detectDevices, runModel, takeTime, blurImage }
 
+// GLOBAL VARIABLES
+// OpenVINO:
 const core = new ov.Core();
-const ovModels = new Map();
+const ovModels = new Map(); // compiled models
+let model = null; // read model
+// mats used during preprocessing:
 let mat = null;
 let resizedMat = null;
 let blurredImage = null;
+// mats used during postprocessing:
 let maskMatOrg = null;
 let maskMatSmall = null;
 let notMask = null;
-let finalMat = null;
+let matToBlur = null;
 let alpha = null;
-
+let finalMat = null;
+// semaphore used in runModel:
+let semaphore = false;
+// variables used to calculate inference time:
 let infTimes = [];
 let avgInfTime = 0;
-
-let model = null;
 
 
 async function detectDevices() {
@@ -84,8 +90,6 @@ function postprocessMask (mask){
 }
 
 
-let semaphore = false; 
-
 async function runModel(img, width, height, device){
 
     while (semaphore) {
@@ -93,7 +97,7 @@ async function runModel(img, width, height, device){
     }
 
     semaphore = true;
-    let isFirst = false;
+    let isFirst = false; // not counting first iteration to average
 
     try{
         // CANVAS TO MAT CONVERSION:
@@ -113,11 +117,12 @@ async function runModel(img, width, height, device){
 
         // OpenVINO INFERENCE
         const startTime = performance.now();            // TIME MEASURING : START
+
         let compiledModel, inferRequest;
         if (model == null){
-            if (fs.existsSync(path.join(__dirname, '../../app.asar'))){
+            if (fs.existsSync(path.join(__dirname, '../../app.asar'))){     //if running compiled program
                 model = await core.readModel(path.join(__dirname, "../../app.asar.unpacked/models/selfie_multiclass_256x256.xml"));
-            } else {
+            } else {    //if running npm start
             model = await core.readModel(path.join(__dirname, "../models/selfie_multiclass_256x256.xml"));
             }
         }
@@ -154,7 +159,6 @@ async function runModel(img, width, height, device){
 
         // MASK PREPARATION
         cv.threshold(maskMatOrg, maskMatOrg, 0, 255, cv.THRESH_BINARY);
-
         if (notMask == null || notMask.data.length !== maskMatOrg.data.length){
             notMask = new cv.Mat(height, width, cv.CV_8UC1);
         }
@@ -172,8 +176,6 @@ async function runModel(img, width, height, device){
     }
 }
 
-
-let matToBlur = null;
 
 async function blurImage(image, width, height){
     const begin = performance.now();
