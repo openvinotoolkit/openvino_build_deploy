@@ -177,10 +177,10 @@ async function runModel(img, width, height, device){
 }
 
 
-async function blurImage(image, width, height){
+async function blurImage(image, width, height) {
     if (maskMatOrg == null){
         return{
-            img : image,
+            img : image.data,
             width : width,
             height : height
         };

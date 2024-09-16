@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let captureInterval = null;
   // collecting inference results:
   let resultMask = null;
-  let inferenceTime = null;
+  let inferenceTime = 0;
   let tempImg = null;
   // semaphores:
   let processingMask = false;
@@ -75,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       toggleWebcamButton.textContent = 'Stop';
 
-      await captureFrame();
+      processFrame();
     } catch (error) {
       console.error('Error accessing webcam:', error);
     }
@@ -83,23 +83,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   // INFERENCE MANAGING
-  async function processMask(imageData, canvasElement, ovDevice){
-    processingMask = true;
-    resultMask = await window.electronAPI.runModel(imageData, canvasElement.width, canvasElement.height, ovDevice);
-    processingMask = false;
+  async function getMask(imageData, canvasElement, ovDevice){
+    if (!processingMask){
+      processingMask = true;
+      resultMask = await window.electronAPI.runModel(imageData, canvasElement.width, canvasElement.height, ovDevice);
+      inferenceTime = resultMask.inferenceTime;
+      processingMask = false;
+    }
   }
 
 
   // CAPTURING FRAMES
-  async function captureFrame() {
+  async function processFrame() {
     if (!processingActive) return;
     let ovDevice= deviceSelect.value;
     try {
       ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
       const imageData = ctx.getImageData(0, 0, canvasElement.width, canvasElement.height);
       
-      if (!processingMask && processingOn){
-        processMask(imageData, canvasElement, ovDevice);
+      if (processingOn){
+        getMask(imageData, canvasElement, ovDevice);
       }
 
       if (toggleSwitch.checked){
@@ -108,7 +111,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const result = await window.electronAPI.blurImage(imageData, canvasElement.width, canvasElement.height);
         tempImg = new ImageData(result.img, result.width, result.height);
         ctx.putImageData(tempImg, 0, 0);
-        inferenceTime = resultMask.inferenceTime;
         document.getElementById('processingTime').innerText = `Inference time: ${inferenceTime} ms (${(1000 / inferenceTime).toFixed(1)} FPS)`;
       } else {
         document.getElementById('processingTime').innerText = `Inference OFF`;
@@ -116,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       imgElement.src = canvasElement.toDataURL('image/jpeg');
       if (processingActive) {
-        setTimeout(captureFrame, 0);
+        setTimeout(processFrame, 0);
       }
     } catch (error) {
       console.error('Error during capture:', error);
