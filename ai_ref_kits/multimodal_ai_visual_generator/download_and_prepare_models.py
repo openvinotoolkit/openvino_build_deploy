@@ -22,20 +22,30 @@ def prepare_whisper_model() :
     os.system("python convert-whisper-to-openvino.py --model base")  
     shutil.copy('ggml-base-encoder-openvino.bin', '../../')
     shutil.copy('ggml-base-encoder-openvino.xml', '../../')
+    os.chdir("..\\..\\..")
+    print("Current working folder", Path(__file__).parent.absolute())
+    
 
 def prepare_lcm_model() :
  warnings.filterwarnings("ignore")
  if not Path(model_dir+"/openvino_ir_lcm").exists():
     ov_pipeline = OVLatentConsistencyModelPipeline.from_pretrained("SimianLuo/LCM_Dreamshaper_v7", height=512, width=512, export=True, compile=False)
     ov_pipeline.save_pretrained(model_dir+"/openvino_ir_lcm")
+ else:
+        print("lcm Model already downloaded")
 
 def prepare_depth_anythingv2_model():
     pass
 
 def prepare_llm_model():
-    cmd = "optimum-cli export openvino --model meta-llama/Meta-Llama-3-8B-Instruct --task text-generation-with-past --weight-format int4 --group-size 128 --ratio 0.8 --sym " + model_dir + "/llama-3-8b-instruct/INT4_compressed_weights"
-    print(cmd)
-    os.system(cmd)
+    
+    if not Path(model_dir+"/llama-3-8b-instruct").exists():
+        print("llama Model not downloaded")
+        cmd = "optimum-cli export openvino --model meta-llama/Meta-Llama-3-8B-Instruct --task text-generation-with-past --weight-format int4 --group-size 128 --ratio 0.8 --sym " + model_dir + "/llama-3-8b-instruct/INT4_compressed_weights"
+        print("llm download command",cmd)
+        os.system(cmd)
+    else:
+        print("llama Model already downloaded")
 
 # Define a download file helper function
 def download_file(url: str, path: Path) -> None:
@@ -67,6 +77,8 @@ def prepare_super_res():
         print(f'{model_name} already downloaded to {base_model_dir}')
 
 def prepare_llava():
+   #os.chdir("..")
+   print("Prepare llava model for download")
    cmd = "python download_and_optimize_llava_model.py --model_dir " +  model_dir
    os.system(cmd)
 
@@ -75,4 +87,5 @@ if __name__ == "__main__":
     prepare_lcm_model()
     prepare_whisper_model()   
     prepare_llm_model()
+    
     prepare_llava()

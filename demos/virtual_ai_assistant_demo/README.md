@@ -1,8 +1,10 @@
-# People Counting with OpenVINO™
+# Virtual AI Assistant with OpenVINO™
 
-The demo counts people standing in front of the webcam, presenting differences in performance between various precisions and devices on the used platform. Please press keys listed in the control panel to change a precision or device.
+The demo works as a virtual AI assistant. The default personality is a healthcare assistant, whose task is to greet the patient and summarize the patient's condition based on the conversation and uploaded examination report.
 
-![image](https://github.com/openvinotoolkit/openvino_build_deploy/assets/4547501/e386c632-34f3-41c7-9713-c5aca8c1842a)
+The personality and behaviour can be easily changed with the config file (see Step 2).
+
+![](https://github.com/user-attachments/assets/d3ede3e5-d6af-46c7-8e00-250fc2137ed3)
 
 Here are the steps involved in this demo:
 
@@ -39,7 +41,7 @@ git clone https://github.com/openvinotoolkit/openvino_build_deploy.git
 The above will clone the repository into a directory named "openvino_build_deploy" in the current directory. Then, navigate into the directory using the following command:
 
 ```shell
-cd openvino_build_deploy/demos/people_counter_demo
+cd openvino_build_deploy/demos/virtual_ai_assistant_demo
 ```
 
 2. Create a virtual environment
@@ -74,16 +76,29 @@ pip install -r requirements.txt
 
 ## Step 2
 
-To run the application, use the following command:
+To run the application, use the following command. The application will start downloading Llama 3, and Distil-Whisper by default. 
+To use LLama3, you must provide your [HuggingFace access token](https://huggingface.co/docs/hub/en/security-tokens) as a parameter. 
+It will take up to an hour (depending on your internet speed) for the first time running this application due to the large downloads and conversion of the models. 
+Once the models are cached, the subsequent executions will be much faster.
 
 ```shell
-python main.py --stream 0
+python main.py --hf_token [replace-with-your-token]
 ```
 
-By default, the YOLOv8n model is used. To change this, select another model from the family:
+Change the personality and behaviour by providing a new YAML config file:
 
 ```shell
-python main.py --stream 0 --model_name yolov8x
+python main.py --personality use_your_personality.yaml
 ```
 
-The demo will show alert "Intel employee is required in zone 0" if there are more than 3 people standing in front of the camera. To change this number override `--people_limit` option.
+You can also change chat, asr or embedding model:
+
+```shell
+python main.py --asr_model distil-whisper/distil-large-v2 --chat_model OpenVINO/Phi-3-medium-4k-instruct-int4-ov --embedding_model BAAI/bge-large-en-v1.5
+```
+
+Running with `--public` will allow you to access from any computer:
+
+```shell
+python main.py --public
+```

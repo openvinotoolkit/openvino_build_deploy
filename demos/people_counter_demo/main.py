@@ -13,6 +13,7 @@ import numpy as np
 import supervision as sv
 import torch
 from openvino import runtime as ov
+from supervision import ColorLookup
 from ultralytics import YOLO
 from ultralytics.utils import ops
 
@@ -33,7 +34,7 @@ def convert(model_name: str, model_dir: Path) -> tuple[Path, Path]:
     if not ov_model_path.exists():
         ov_model_path = yolo_model.export(format="openvino", dynamic=False, half=True)
     if not ov_int8_model_path.exists():
-        ov_int8_model_path = yolo_model.export(format="openvino", dynamic=False, half=True, int8=True)
+        ov_int8_model_path = yolo_model.export(format="openvino", dynamic=False, half=True, int8=True, data="coco128.yaml")
     return Path(ov_model_path) / f"{model_name}.xml", Path(ov_int8_model_path) / f"{model_name}.xml"
 
 
@@ -60,7 +61,7 @@ def letterbox(img: np.ndarray, new_shape: Tuple[int, int]) -> Tuple[np.ndarray, 
     return img, ratio, (int(dw), int(dh))
 
 
-def preprocess(image: np.ndarray, input_size: Tuple[int, int]) -> np.ndarray:
+def preprocess(image: np.ndarray, input_size: Tuple[int, int]) -> Tuple[np.ndarray, Tuple[int, int]]:
     # add padding to the image
     image, _, padding = letterbox(image, new_shape=input_size)
     # convert to float32
@@ -99,7 +100,7 @@ def postprocess(pred_boxes: np.ndarray, pred_masks: np.ndarray, input_size: Tupl
     return det[det.class_id == 0]
 
 
-def get_model(model_path: str, device: str = "AUTO") -> ov.CompiledModel:
+def get_model(model_path: Path, device: str = "AUTO") -> ov.CompiledModel:
     # initialize OpenVINO
     core = ov.Core()
     # read the model from file
@@ -119,7 +120,7 @@ def load_zones(json_path: str) -> List[np.ndarray]:
     return [np.array(zone["points"], np.int32) for zone in zones_dict.values()]
 
 
-def get_annotators(json_path: str, resolution_wh: Tuple[int, int]) -> Tuple[List, List, List]:
+def get_annotators(json_path: str, resolution_wh: Tuple[int, int], colorful: bool = False) -> Tuple[List, List, List, List]:
     # list of points
     polygons = load_zones(json_path)
 
@@ -137,9 +138,11 @@ def get_annotators(json_path: str, resolution_wh: Tuple[int, int]) -> Tuple[List
         # the annotator - visual part of the zone
         zone_annotators.append(sv.PolygonZoneAnnotator(zone=zone, color=colors.by_idx(index), thickness=0))
         # box annotator, showing boxes around people
-        box_annotators.append(sv.BoxAnnotator(color=colors.by_idx(index)))
+        box_annotator = sv.BoxAnnotator(color_lookup=ColorLookup.INDEX) if colorful else sv.BoxAnnotator(color=colors.by_idx(index))
+        box_annotators.append(box_annotator)
         # mask annotator, showing transparent mask
-        masks_annotators.append(sv.MaskAnnotator(color=colors.by_idx(index)))
+        mask_annotator = sv.MaskAnnotator(color_lookup=ColorLookup.INDEX) if colorful else sv.MaskAnnotator(color=colors.by_idx(index))
+        masks_annotators.append(mask_annotator)
 
     return zones, zone_annotators, box_annotators, masks_annotators
 
@@ -155,29 +158,29 @@ def draw_info(image, device_mapping):
         utils.draw_text(image, f"{i}: {device_name} - {device_info}", (10, h - start_y + (i + 2) * line_space))
 
 
-def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str, people_limit: int = 3, last_frames: int = 50, model_name: str = "") -> None:
+def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str, people_limit: int = 3, model_name: str = "", colorful: bool = False, last_frames: int = 50) -> None:
     # set up logging
     log.getLogger().setLevel(log.INFO)
 
-    MODEL_MAPPING = {
+    model_mapping = {
         "FP16": model_paths[0],
         "INT8": model_paths[1],
     }
 
-    DEVICE_MAPPING = {"AUTO": "AUTO device"}
+    device_mapping = {"AUTO": "AUTO device"}
 
     core = ov.Core()
     for device in core.available_devices:
         device_name = core.get_property(device, "FULL_DEVICE_NAME")
         if "nvidia" not in device_name.lower():
-            DEVICE_MAPPING[device] = device_name
+            device_mapping[device] = device_name
 
     model_type = "INT8"
     device_type = "AUTO"
 
     core.set_property({"CACHE_DIR": "cache"})
     # initialize and load model
-    model = get_model(MODEL_MAPPING[model_type], device_type)
+    model = get_model(model_mapping[model_type], device_type)
     # input shape of the model (w, h, d)
     input_shape = tuple(model.inputs[0].shape)[:0:-1]
 
@@ -187,7 +190,7 @@ def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str,
     player = utils.VideoPlayer(video_path, size=(1920, 1080), fps=60, flip=True)
 
     # get zones, and zone and box annotators for zones
-    zones, zone_annotators, box_annotators, masks_annotators = get_annotators(json_path=zones_config_file, resolution_wh=(player.width, player.height))
+    zones, zone_annotators, box_annotators, masks_annotators = get_annotators(json_path=zones_config_file, resolution_wh=(player.width, player.height), colorful=colorful)
 
     # people counter
     queue_count = defaultdict(lambda: deque(maxlen=last_frames))
@@ -256,7 +259,7 @@ def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str,
         utils.draw_text(frame, text=f"Inference time: {processing_time:.0f}ms ({fps:.1f} FPS)", point=(f_width * 3 // 5, 10))
         utils.draw_text(frame, text=f"Currently running {model_name} ({model_type}) on {device_type}", point=(f_width * 3 // 5, 50))
 
-        draw_info(frame, DEVICE_MAPPING)
+        draw_info(frame, device_mapping)
         utils.draw_ov_watermark(frame)
         # show the output live
         cv2.imshow(title, frame)
@@ -272,14 +275,14 @@ def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str,
         if key == ord('i'):
             model_type = "INT8"
             model_changed = True
-        for i, dev in enumerate(DEVICE_MAPPING.keys()):
+        for i, dev in enumerate(device_mapping.keys()):
             if key == ord('1') + i:
                 device_type = dev
                 model_changed = True
 
         if model_changed:
             del model
-            model = get_model(MODEL_MAPPING[model_type], device_type)
+            model = get_model(model_mapping[model_type], device_type)
             processing_times.clear()
 
     # stop the stream
@@ -290,13 +293,14 @@ def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str,
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--stream', default="0", type=str, help="Path to a video file or the webcam number")
+    parser.add_argument('--stream', default="2", type=str, help="Path to a video file or the webcam number")
     parser.add_argument("--model_name", type=str, default="yolov8n", help="Model version to be converted",
                         choices=["yolov8n", "yolov8s", "yolov8m", "yolov8l", "yolov8x", "yolov8n-seg", "yolov8s-seg", "yolov8m-seg", "yolov8l-seg", "yolov8x-seg"])
     parser.add_argument("--model_dir", type=str, default="model", help="Directory to place the model in")
     parser.add_argument('--zones_config_file', type=str, default="zones.json", help="Path to the zone config file (json)")
     parser.add_argument('--people_limit', type=int, default=3, help="The maximum number of people in the area")
+    parser.add_argument('--colorful', action="store_true", help="If people should be annotated with random colors")
 
     args = parser.parse_args()
     model_paths = convert(args.model_name, Path(args.model_dir))
-    run(args.stream, model_paths, args.zones_config_file, args.people_limit, model_name=args.model_name)
+    run(args.stream, model_paths, args.zones_config_file, args.people_limit, args.model_name, args.colorful)
