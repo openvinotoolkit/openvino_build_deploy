@@ -136,11 +136,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     videoElement.srcObject = null;
     imgElement.src = '../assets/webcam_placeholder.png';
-    document.getElementById('processingTime').innerText = `Streaming stopped`;
     webcamStream = null;
 
     if (!keepActive) {
       toggleWebcamButton.textContent = 'Start';
+      document.getElementById('processingTime').innerText = `Streaming stopped`;
     }
   }
 });
