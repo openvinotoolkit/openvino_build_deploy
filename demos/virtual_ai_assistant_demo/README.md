@@ -74,7 +74,37 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-## Step 2
+## Step 2: How to Create a YAML Personality File for a Virtual AI Assistant
+
+You can create a personality file for your virtual AI assistant using YAML. Each personality can be customized based on the specific role of the assistant, such as a health assistant, bartender, or legal assistant. 
+
+### Key Components of a Personality File
+
+A typical YAML personality file has the following sections:
+
+1. **Title**: A brief, descriptive title for the assistant.
+2. **System Configuration**: Instructions that define the assistant's behavior and limitations.
+3. **Greet the User Prompt**: The first interaction where the assistant introduces itself.
+4. **Summarize the User Prompt**: Instructions on how the assistant summarizes the conversation.
+
+### Some tips for creating this YAML file: 
+
+The title provides an introduction to the assistant, along with important notes or instructions for the user. It should be clear and concise, giving users context on how to interact with the assistant.
+
+```yaml
+title:
+  "# [Assistant Name]: [Brief Role Description]
+
+        Instructions for use:  
+        1. Provide a brief step-by-step guide on how the assistant works.  
+        2. Include key points the user should know before interacting with the assistant.  
+        3. Mention any important disclaimers, if applicable.
+
+        **Note: [Add a disclaimer or key note about what the assistant can and cannot do].**"
+```
+
+
+## Step 3
 
 To run the application, use the following command. The application will start downloading Llama 3, and Distil-Whisper by default. 
 To use LLama3, you must provide your [HuggingFace access token](https://huggingface.co/docs/hub/en/security-tokens) as a parameter. 
