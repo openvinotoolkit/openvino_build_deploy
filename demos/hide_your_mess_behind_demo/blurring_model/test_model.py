@@ -27,7 +27,6 @@ def view_results(image, mask, blurred):
     plt.imshow(mask.squeeze(), cmap='gray')
     plt.axis('off')
 
-    print(blurred.max())
     plt.subplot(1, 3, 3)
     plt.title("Model result")
     plt.imshow(blurred)
