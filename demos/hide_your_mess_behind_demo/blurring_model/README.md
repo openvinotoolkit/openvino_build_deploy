@@ -6,10 +6,11 @@ Model has two inputs:
 * Original Image, which is about to be blurred
 * Mask, according to which the blur will be added
 
-It consists of three operations:
+It consists of four operations:
 * deepwise convolution 2D
 * multiplixation
-* addition and subtraction 
+* addition
+* subtraction 
 
 ![image](https://github.com/user-attachments/assets/46009aae-c681-469f-a322-a2317c3c4253)
 
