@@ -7,7 +7,7 @@ Model has two inputs:
 * Mask, according to which the blur will be added
 
 It consists of four operations:
-* deepwise convolution 2D
+* depthwise convolution 2D
 * multiplication
 * addition
 * subtraction 
