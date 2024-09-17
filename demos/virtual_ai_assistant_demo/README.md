@@ -94,15 +94,15 @@ A typical YAML personality file has the following sections:
 The instructions provides an introduction to the assistant, along with the title and important notes for the user. It should be clear and concise, giving users context on how to interact with the assistant.
 
 ```yaml
-Instructions:
-  "# [Assistant Name]: [Brief Role Description]
+instructions: | 
+  # [Assistant Name]: [Brief Role Description]
 
         Instructions for use:  
         1. Provide a brief step-by-step guide on how the assistant works.  
         2. Include key points the user should know before interacting with the assistant.  
         3. Mention any important disclaimers, if applicable.
 
-        **Note: [Add a disclaimer or key note about what the assistant can and cannot do].**"
+        **Note: [Add a disclaimer or key note about what the assistant can and cannot do].**
 ```
 
 
