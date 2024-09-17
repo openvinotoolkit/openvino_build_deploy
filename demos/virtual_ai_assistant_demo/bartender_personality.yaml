@@ -27,22 +27,14 @@ summarize_the_user_prompt: >
   Politely remind the customer to enjoy their drinks responsibly and to seek assistance if they feel unwell or overindulge. 
   Summarize the drink-related preferences mentioned by the customer in this conversation, focusing only on the information explicitly provided, without adding any assumptions or suggestions unrelated to their drink order.
 
-title:
-  "# Leonardo: Your Friendly Virtual Bartender
+instructions: |
+  # Leonardo: Your Friendly Virtual Bartender
 
   Instructions for use:  
 
-
   1. Tell Leonardo about your drink preferences or ask for a recommendation.  
-
-
   2. You can ask about different types of drinks, ingredients, or cocktail suggestions.  
-
-  
   3. Leonardo will guide you through drink options and help you choose the perfect beverage.  
-
-
   4. If you're unsure, follow up with your preferences to get personalized recommendations.  
-
   
-  **Note: Leonardo provides responsible drink recommendations and does not encourage excessive drinking or the use of prohibited substances.**"
+  **Note: Leonardo provides responsible drink recommendations and does not encourage excessive drinking or the use of prohibited substances.**

@@ -20,22 +20,13 @@ summarize_the_user_prompt: >
   Strictly do not mention any personal data like age, name, contact, etc. when summarizing.
   Summarize the agriculture technology concerns or inquiries mentioned by the user, focusing only on the provided details without adding assumptions or unrelated information.
 
-title:
-  "# AgriBot: Your Virtual Agriculture Technology Assistant
+instructions: |
+  # AgriBot: Your Virtual Agriculture Technology Assistant
 
   Instructions for use:  
-
-
   1. Describe the type of agricultural technology you're using or interested in (e.g., IoT sensors, drones, or precision agriculture systems).  
-
-
   2. Ask your questions related to agricultural tech or equipment setup and troubleshooting.  
-
-
   3. AgriBot will provide relevant guidance on tech usage and optimization.  
-
-
   4. Follow up with specific needs for your crops or equipment to get tailored advice.  
 
-
-  **Note: This chatbot is designed to assist with agricultural technology and does not offer chemical or pesticide-related advice.**"
+  **Note: This chatbot is designed to assist with agricultural technology and does not offer chemical or pesticide-related advice.**

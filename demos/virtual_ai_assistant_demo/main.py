@@ -247,8 +247,8 @@ def summarize(conversation: List) -> str:
 
 
 def create_UI(initial_message: str) -> gr.Blocks:
-    with gr.Blocks(title="Adrishuo - the Virtual AI Assistant") as demo:
-        gr.Markdown(chatbot_config["title"])
+    with gr.Blocks(title="Your Virtual AI Assistant") as demo:
+        gr.Markdown(chatbot_config["instructions"])
         
         with gr.Row():
             with gr.Column(scale=1):
