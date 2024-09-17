@@ -247,19 +247,9 @@ def summarize(conversation: List) -> str:
 
 
 def create_UI(initial_message: str) -> gr.Blocks:
-    with gr.Blocks(title="Adrishuo - the Virtual AI Assistant") as demo:
-        gr.Markdown("""
-        # Adrishuo: A Virtual AI assistant running with OpenVINO
-
-        Instructions for use:
-        1. Attach the PDF or TXT file with an additional context (e.g prior examination report - optional; see "Sample LLM Patient Records.pdf" as an example)
-        2. Record your question/comment using the first audio widget ("Your voice input") or type it in the textbox ("Your text input"), then click Submit
-        3. Wait for the chatbot to response ("Chatbot")
-        4. Discuss with the chatbot
-        5. Click the "Summarize" button to make a summary
-
-        **Note: This chatbot application is not intended to be used for medical purposes. It is for demonstration purposes only.**
-        """)
+    with gr.Blocks(title="Your Virtual AI Assistant") as demo:
+        gr.Markdown(chatbot_config["instructions"])
+        
         with gr.Row():
             with gr.Column(scale=1):
                 input_audio_ui = gr.Audio(sources=["microphone"], label="Your voice input")
@@ -328,7 +318,7 @@ if __name__ == "__main__":
     parser.add_argument("--asr_model", type=str, default="distil-whisper/distil-large-v3", help="Path/name of the automatic speech recognition model")
     parser.add_argument("--chat_model", type=str, default="meta-llama/Meta-Llama-3.1-8B-Instruct", help="Path/name of the chat model")
     parser.add_argument("--embedding_model", type=str, default="BAAI/bge-small-en-v1.5", help="Path/name of the model for embeddings")
-    parser.add_argument("--personality", type=str, default="default_personality.yaml", help="Path to the YAML file with chatbot personality")
+    parser.add_argument("--personality", type=str, default="healthcare_personality.yaml", help="Path to the YAML file with chatbot personality")
     parser.add_argument("--hf_token", type=str, help="HuggingFace access token to get Llama3")
     parser.add_argument("--public", default=False, action="store_true", help="Whether interface should be available publicly")
 
