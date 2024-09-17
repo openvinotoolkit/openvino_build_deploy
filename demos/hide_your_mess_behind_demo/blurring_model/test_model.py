@@ -35,9 +35,10 @@ def view_results(image, mask, blurred):
     plt.show(block=True)
 
 
-import_image = np.array(Image.open(f"{Path(__file__).parent}/photo.png"))
-if import_image.shape[2] == 4:
-    import_image = import_image[:, :, :3]
-mask = generate_mask(import_image)
-result = run_model(import_image, mask)
-view_results(import_image, mask, result[0].astype(np.uint8))
+if __name__ == "__main__":
+    import_image = np.array(Image.open(f"{Path(__file__).parent}/photo.png"))
+    if import_image.shape[2] == 4:
+        import_image = import_image[:, :, :3]
+    mask = generate_mask(import_image)
+    result = run_model(import_image, mask)
+    view_results(import_image, mask, result[0].astype(np.uint8))
