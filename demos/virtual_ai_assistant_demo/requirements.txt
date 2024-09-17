@@ -17,5 +17,4 @@ librosa==0.10.2
 pypdf==4.3.1
 pyyaml==6.0.1
 
-gradio==4.43.0
-fastapi==0.112.4
+gradio==4.4.0
