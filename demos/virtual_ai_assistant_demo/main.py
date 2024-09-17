@@ -248,18 +248,8 @@ def summarize(conversation: List) -> str:
 
 def create_UI(initial_message: str) -> gr.Blocks:
     with gr.Blocks(title="Adrishuo - the Virtual AI Assistant") as demo:
-        gr.Markdown("""
-        # Adrishuo: A Virtual AI assistant running with OpenVINO
-
-        Instructions for use:
-        1. Attach the PDF or TXT file with an additional context (e.g prior examination report - optional; see "Sample LLM Patient Records.pdf" as an example)
-        2. Record your question/comment using the first audio widget ("Your voice input") or type it in the textbox ("Your text input"), then click Submit
-        3. Wait for the chatbot to response ("Chatbot")
-        4. Discuss with the chatbot
-        5. Click the "Summarize" button to make a summary
-
-        **Note: This chatbot application is not intended to be used for medical purposes. It is for demonstration purposes only.**
-        """)
+        gr.Markdown(chatbot_config["title"])
+        
         with gr.Row():
             with gr.Column(scale=1):
                 input_audio_ui = gr.Audio(sources=["microphone"], label="Your voice input")
