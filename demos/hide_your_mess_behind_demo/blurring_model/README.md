@@ -18,4 +18,5 @@ It consists of four operations:
 
 You can check how does the model work using [test_model.py](test_model.py). First, we need to generate mask using selfie_multiclass_256x256 model ([generate_mask.py](generate_mask.py)). Later we use the newly generated model to blur the background. 
 
-![image](https://github.com/user-attachments/assets/ea03ff3d-0753-468f-af27-3f211d44e74b)
+![image](https://github.com/user-attachments/assets/39c8b4bc-2f96-4680-a745-615f2c0c5f01)
+
