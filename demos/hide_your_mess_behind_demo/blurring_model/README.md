@@ -11,7 +11,7 @@ It consists of three operations:
 * multiplixation
 * addition and subtraction 
 
-![image](https://github.com/user-attachments/assets/6f39a54f-25dc-4b2d-b30a-8934917ce8ea)
+![image](https://github.com/user-attachments/assets/46009aae-c681-469f-a322-a2317c3c4253)
 
 # Testing
 
