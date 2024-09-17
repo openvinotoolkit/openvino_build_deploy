@@ -18,4 +18,5 @@ It consists of four operations:
 
 To verify the model's functionality, the testing script [test_model.py](test_model.py) can be used. First, a mask must be generated with the selfie_multiclass_256x256 model, using the script [generate_mask.py](generate_mask.py). The generated mask is then applied to blur the background of the original image.
 
-![image](https://github.com/user-attachments/assets/ea03ff3d-0753-468f-af27-3f211d44e74b)
+![image](https://github.com/user-attachments/assets/39c8b4bc-2f96-4680-a745-615f2c0c5f01)
+
