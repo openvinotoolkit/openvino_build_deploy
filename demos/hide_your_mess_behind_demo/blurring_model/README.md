@@ -8,7 +8,7 @@ Model has two inputs:
 
 It consists of four operations:
 * deepwise convolution 2D
-* multiplixation
+* multiplication
 * addition
 * subtraction 
 
