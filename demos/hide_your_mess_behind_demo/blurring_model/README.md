@@ -11,10 +11,10 @@ It consists of three operations:
 * multiplixation
 * addition and subtraction 
 
-here model structure from netron
+![image](https://github.com/user-attachments/assets/6f39a54f-25dc-4b2d-b30a-8934917ce8ea)
 
 # Testing
 
 You can check how does the model work using test_model.py. First, we need to generate mask using selfie_multiclass_256x256 model (generate_mask.py). Later we use the newly generated model to blur the background. 
 
-here results 
+![image](https://github.com/user-attachments/assets/ea03ff3d-0753-468f-af27-3f211d44e74b)
