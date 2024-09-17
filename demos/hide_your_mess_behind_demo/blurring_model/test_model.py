@@ -1,6 +1,7 @@
 import openvino as ov
 import matplotlib.pyplot as plt
 from PIL import Image
+import requests
 import numpy as np
 from pathlib import Path
 from generate_mask import generate_mask
@@ -15,7 +16,7 @@ def run_model(image, mask):
 
 
 def view_results(image, mask, blurred):
-    plt.figure(figsize=(10, 5))
+    plt.figure(figsize=(20,10))
 
     plt.subplot(1, 3, 1)
     plt.title("Original image")
@@ -36,7 +37,7 @@ def view_results(image, mask, blurred):
 
 
 if __name__ == "__main__":
-    import_image = np.array(Image.open(f"{Path(__file__).parent}/photo.png"))
+    import_image = np.array(Image.open(requests.get("https://user-images.githubusercontent.com/29454499/251036317-551a2399-303e-4a4a-a7d6-d7ce973e05c5.png", stream=True).raw))
     if import_image.shape[2] == 4:
         import_image = import_image[:, :, :3] # if RGBA, convert to RGB
     mask = generate_mask(import_image)
