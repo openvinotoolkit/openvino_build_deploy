@@ -1,8 +1,6 @@
 import tensorflow as tf
 import numpy as np
-import matplotlib.pyplot as plt
 import openvino as ov
-from PIL import Image
 from pathlib import Path
 
 def create_gaussian_kernel(size=25, sigma=10):
