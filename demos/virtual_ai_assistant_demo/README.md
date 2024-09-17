@@ -12,11 +12,13 @@ Step 0: Install Python and prerequisites
 
 Step 1: Set up the environment
 
-Step 2: Run the Application
+Step 2: Create a YAML Personality File
+
+Step 3: Run the Application
 
 Now, let's dive into the steps starting with installing Python.
 
-## Step 0: Pre-requisities 
+## Step 0: Install Python and prerequisites 
 
 This project requires Python 3.8 or higher and a few libraries. If you don't have Python installed on your machine, go to https://www.python.org/downloads/ and download the latest version for your operating system. Follow the prompts to install Python, making sure to check the option to add Python to your PATH environment variable.
 
@@ -28,7 +30,7 @@ sudo apt install git git-lfs gcc python3-venv python3-dev
 
 _NOTE: If you are using Windows, you will probably need to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe) also._
 
-## Step 1: Demo installation
+## Step 1: Set up the environment
 
 1. Clone the Repository
 
@@ -74,7 +76,7 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-## Step 2: How to Create a YAML Personality File for a Virtual AI Assistant
+## Step 2: Create a YAML Personality File
 
 You can create a personality file for your virtual AI assistant using YAML. Each personality can be customized based on the specific role of the assistant, such as a health assistant, bartender, or legal assistant. 
 
@@ -82,17 +84,17 @@ You can create a personality file for your virtual AI assistant using YAML. Each
 
 A typical YAML personality file has the following sections:
 
-1. **Title**: A brief, descriptive title for the assistant.
+1. **Instructions**: A brief, descriptive title for the assistant.
 2. **System Configuration**: Instructions that define the assistant's behavior and limitations.
 3. **Greet the User Prompt**: The first interaction where the assistant introduces itself.
 4. **Summarize the User Prompt**: Instructions on how the assistant summarizes the conversation.
 
 ### Some tips for creating this YAML file: 
 
-The title provides an introduction to the assistant, along with important notes or instructions for the user. It should be clear and concise, giving users context on how to interact with the assistant.
+The instructions provides an introduction to the assistant, along with the title and important notes for the user. It should be clear and concise, giving users context on how to interact with the assistant.
 
 ```yaml
-title:
+Instructions:
   "# [Assistant Name]: [Brief Role Description]
 
         Instructions for use:  
@@ -104,7 +106,7 @@ title:
 ```
 
 
-## Step 3: Run the application
+## Step 3: Run the Application
 
 To run the application, use the following command. The application will start downloading Llama 3, and Distil-Whisper by default. 
 To use LLama3, you must provide your [HuggingFace access token](https://huggingface.co/docs/hub/en/security-tokens) as a parameter. 
