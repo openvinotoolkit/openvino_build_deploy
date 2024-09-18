@@ -1,0 +1,120 @@
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  font-family: Arial, sans-serif;
+  font-size: 16pt;
+  margin: 0;
+  min-width: 600px;
+  min-height: 500px; 
+}
+
+#mainContainer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#webcamViewer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 80%; 
+  max-width: 960px;
+  margin: 5px;
+}
+
+#processingTimeContainer {
+  width: 100%;
+}
+
+#processingTime {
+  margin: 0;
+  font-size: 12pt; 
+}
+
+#webcam {
+  width: 100%; 
+  height: auto;
+  background: black;
+  display: block;
+  transform: scaleX(-1);
+}
+
+#controlPanelContainer {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  align-items: flex-start;
+}
+
+#controlPanelRow {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+}
+
+.controlPanelWidget {
+  display: flex;
+  align-items: center;
+  padding-top: 10px;
+}
+
+.controlPanelWidget label {
+  margin-right: 10px;
+}
+
+#webcamSelect, #deviceSelect {
+  font-size: 14pt;
+}
+
+#toggleWebcamButton {
+  width: 200px;
+  padding: 12px;
+  font-size: 14pt;
+  background-color: #6c22ef;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease; 
+  text-align: center;
+}
+
+#toggleWebcamButton:hover {
+  background-color: #5a1db3;
+}
+
+input[type="checkbox"] {
+  appearance: none;
+  width: 50px;
+  height: 25px;
+  background-color: #ccc;
+  border-radius: 25px;
+  position: relative;
+  outline: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+input[type="checkbox"]::before {
+  content: '';
+  width: 21px;
+  height: 21px;
+  background-color: white;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.3s ease;
+}
+
+input[type="checkbox"]:checked {
+  background-color: #66bb6a;
+}
+
+input[type="checkbox"]:checked::before {
+  transform: translateX(25px);
+}

@@ -114,7 +114,7 @@ def build_ui():
                 with gr.Column():
                     result_img = gr.Image(label="Generated image", elem_id="output_image", format="png")
                     with gr.Row():
-                        result_time_label = gr.Text("", label="Processing Time", type="text")
+                        result_time_label = gr.Text("", label="Inference Time", type="text")
                         result_device_label = gr.Text("", label="Device Name", type="text")
                     with gr.Row():
                         start_button = gr.Button("Start generation")

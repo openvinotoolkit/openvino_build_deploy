@@ -38,13 +38,25 @@ The demo counts people standing in front of the webcam, presenting differences i
 
 The demo works as a virtual healthcare assistant, whose task is to greet the patient and summarize the patient's condition based on the conversation and uploaded examination report. 
 
-[![image](https://github.com/user-attachments/assets/28e66746-1f6c-4dfc-b345-ae9f0e003e76)](healthcare_assistant_demo)
+[![image](https://github.com/user-attachments/assets/d3ede3e5-d6af-46c7-8e00-250fc2137ed3)](healthcare_assistant_demo)
 
-| [Healthcare Assistant](healthcare_assistant_demo) |                                                            |
-|---------------------------|------------------------------------------------------------|
-| Related AI concepts       | LLM, RAG, ASR, GenAI, Llama3, Whisper                      |
-| Platforms                 | Client (CPU, GPU), Cloud (CPU, GPU)                        |
-| Owner                     | [@adrianboguszewski](https://github.com/adrianboguszewski) |
+| [Virtual AI Assistant](virtual_ai_assistant_demo) |                                                            |
+|---------------------------------------------------|------------------------------------------------------------|
+| Related AI concepts                               | LLM, RAG, ASR, GenAI, Llama3, Whisper                      |
+| Platforms                                         | Client (CPU, GPU, NPU), Cloud (CPU, GPU)                   |
+| Owner                                             | [@adrianboguszewski](https://github.com/adrianboguszewski) |
+
+### 🔮 Hide Your Mess Behind
+
+The demo blurs the background behind a person on a webcam. The app is built using NodeJS and Electron technologies. It can be run from the compiled exe file or using npm.
+
+[![image](https://github.com/user-attachments/assets/e6925e6b-0d81-41da-b9b0-c4f21f173681)](hide_your_mess_behind_demo)
+
+| [Hide Your Mess Behind](hide_your_mess_behind_demo) |                                                                                       |
+|--------------------------------------|------------------------------------------------------------------------------------------------------|
+| Related AI concepts                  | image segmentation                                                                                   |
+| Platforms                            | Client (CPU, GPU, NPU), Edge (CPU)                                                                   |
+| Owner                                | [@Roszczyk](https://github.com/Roszczyk), [@adrianboguszewski](https://github.com/adrianboguszewski) |
 
 ### 💃 Strike a pose
 

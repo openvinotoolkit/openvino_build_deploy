@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hide Your Mess Behind with OpenVINO</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="mainContainer">
+  <div id="webcamViewer">
+    <div id="processingTimeContainer">
+      <p id="processingTime">Click START to run the demo</p>
+    </div>
+    <img id="webcam" alt="" src="../assets/webcam_placeholder.png" />
+    <div id="controlPanelContainer">
+      <div class="controlPanelWidget">
+        <label for="webcamSelect">Video Source:</label>
+        <select id="webcamSelect"></select>
+      </div>
+      <div class="controlPanelWidget">
+        <label for="toggleSwitch">Inference</label>
+        <input type="checkbox" id="toggleSwitch">
+        <span id="toggleValue">off</span>
+      </div>
+      <div id="controlPanelRow">
+        <div class="controlPanelWidget">
+          <label for="deviceSelect">Inference Device:</label>
+          <select id="deviceSelect"></select>
+        </div>
+        <div class="controlPanelWidget">
+          <button id="toggleWebcamButton">Start</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="renderer.js"></script>
+</body>
+</html>
