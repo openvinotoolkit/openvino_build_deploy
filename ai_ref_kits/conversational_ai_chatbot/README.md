@@ -138,9 +138,37 @@ _NOTE: This application requires much memory (>16GB) as the models used here are
 
 Execute the `app.py` script with the following command, including all necessary model directory arguments:
 ```shell
-python app.py --asr_model_dir path/to/asr_model --chat_model_dir path/to/chat_model --embedding_model path/to/embedding_model --reranker_model path/to/reranker_model --public
+python app.py --personality concierge_personality.yaml --asr_model_dir path/to/asr_model --chat_model_dir path/to/chat_model --embedding_model path/to/embedding_model --reranker_model path/to/reranker_model --public
 ```
-Replace `path/to/asr_model` , `path/to/chat_model` ,`path/to/embedding_model`, and `path/to/reranker_model` with the actual paths to your respective models. Add ``--public` to make it publicly accessible.
+Replace `path/to/asr_model` , `path/to/chat_model` ,`path/to/embedding_model`, and `path/to/reranker_model` with the actual paths to your respective models. Add ``--public` to make it publicly accessible. Feel free to provide a custom personality, which must be defined in a yaml file.
+
+### Create a Custom YAML Personality File
+
+You can create a personality file for your virtual AI assistant using YAML. Each personality can be customized based on the specific role of the assistant, such as a concierge, bartender, or legal assistant. 
+
+#### Key Components of a Personality File
+
+A typical YAML personality file has the following sections:
+
+1. **Instructions**: A brief, descriptive title for the assistant.
+2. **System Configuration**: Instructions that define the assistant's behavior and limitations.
+3. **Greet the User Prompt**: The first interaction where the assistant introduces itself.
+
+#### Some tips for creating this YAML file: 
+
+The instructions provide an introduction to the assistant, along with the title and important notes for the user. It should be clear and concise, giving users context on how to interact with the assistant.
+
+```yaml
+instructions: | 
+  # [Assistant Name]: [Brief Role Description]
+
+        Instructions for use:  
+        1. Provide a brief step-by-step guide on how the assistant works.  
+        2. Include key points the user should know before interacting with the assistant.  
+        3. Mention any important disclaimers, if applicable.
+
+        **Note: [Add a disclaimer or key note about what the assistant can and cannot do].**
+```
 
 ### Accessing the Web Interface
 After running the script, Gradio will provide a local URL, typically `http://127.0.0.1:XXXX`, which you can open in your web browser to start interacting with the assistant. If you configured the application to be accessible publicly, Gradio will also provide a public URL.

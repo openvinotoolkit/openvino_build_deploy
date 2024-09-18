@@ -13,6 +13,7 @@ import librosa
 import numpy as np
 import openvino as ov
 import torch
+import yaml
 from datasets import load_dataset
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from llama_index.core import Document, VectorStoreIndex, Settings, StorageContext
@@ -30,20 +31,6 @@ from transformers import AutoProcessor, TextIteratorStreamer, pipeline
 
 # Global variables initialization
 TARGET_AUDIO_SAMPLE_RATE = 16000
-SYSTEM_CONFIGURATION = (
-#   "You are Adrishuo - a helpful, respectful, and honest hotel concierge. "
-#   "Your role is talking to a guest who just came in to the hotel."
-#   "Your primary role is to answer questions about hotel rules and city. "
-#   "You must take into account the provided context information. "
-#   "If context information is empty, tell guest that hotel guide is missing and stop answering questions. "
-    "You are Adrishuo - a helpful, respectful, and knowledgeable hotel concierge. "
-    "Your role is to assist hotel guests with inquiries about hotel services, including dining options, spa treatments, room details, and nearby attractions. "
-    "Answer questions with the knowledge you have, but if you're unsure or don't have specific details, politely let the guest know that they should check with the front desk or appropriate staff for more information. "
-    "Do not provide any speculative information or estimates. Politely refer the guest to the front desk for any details that are unavailable or not known. "
-    "Do not mention or refer to the hotel guide document directly. "
-    "Do not ask for personal information or provide any responses that are inappropriate or unethical. Always remain professional, empathetic, and polite."
-)
-GREET_THE_CUSTOMER = "Please introduce yourself and greet the hotel guest"
 
 EXAMPLE_PDF_PATH = os.path.join(os.path.dirname(__file__), "Grand_Azure_Resort_Spa_Full_Guide.pdf")
 MODEL_DIR = Path("model")
@@ -56,6 +43,9 @@ ov_llm: Optional[OpenVINOLLM] = None
 ov_embedding: Optional[OpenVINOEmbedding] = None
 ov_reranker: Optional[OpenVINORerank] = None
 ov_chat_engine: Optional[BaseChatEngine] = None
+
+chatbot_config = {}
+
 
 # todo temporary
 synthesiser = pipeline("text-to-speech", "microsoft/speecht5_tts")
@@ -149,7 +139,7 @@ def load_reranker_model(model_dir: Path) -> Optional[OpenVINORerank]:
     return OpenVINORerank(model_id_or_path=str(model_dir), device="AUTO:CPU", top_n=3)
 
 
-def load_rag_models(chat_model_dir: Path, embedding_model_dir: Path, reranker_model_dir: Path) -> None:
+def load_rag_models(chat_model_dir: Path, embedding_model_dir: Path, reranker_model_dir: Path, personality_file_path: Path) -> None:
     """
     Load all models required in RAG pipeline
 
@@ -157,8 +147,12 @@ def load_rag_models(chat_model_dir: Path, embedding_model_dir: Path, reranker_mo
         chat_model_dir: dir with the chat model
         embedding_model_dir: dir with the embedding model
         reranker_model_dir: dir with the reranker model
+        personality_file_path: path to the chatbot personality specification file
     """
-    global ov_llm, ov_embedding, ov_reranker, ov_chat_engine
+    global ov_llm, ov_embedding, ov_reranker, ov_chat_engine, chatbot_config
+
+    with open(personality_file_path) as f:
+        chatbot_config = yaml.safe_load(f)
 
     # embedding model
     ov_embedding = load_embedding_model(embedding_model_dir)
@@ -173,7 +167,7 @@ def load_rag_models(chat_model_dir: Path, embedding_model_dir: Path, reranker_mo
     log.info(f"Running {chat_model_dir} on {','.join(ov_llm._model.request.get_compiled_model().get_property('EXECUTION_DEVICES'))}")
 
     # chat engine
-    ov_chat_engine = SimpleChatEngine.from_defaults(llm=ov_llm, system_prompt=SYSTEM_CONFIGURATION,
+    ov_chat_engine = SimpleChatEngine.from_defaults(llm=ov_llm, system_prompt=chatbot_config["system_configuration"],
                                                     memory=ChatMemoryBuffer.from_defaults())
 
 
@@ -213,7 +207,7 @@ def load_context(file_path: str) -> None:
 
     # when context removed, no longer RAG pipeline is needed
     if not file_path:
-        ov_chat_engine = SimpleChatEngine.from_defaults(llm=ov_llm, system_prompt=SYSTEM_CONFIGURATION, memory=memory)
+        ov_chat_engine = SimpleChatEngine.from_defaults(llm=ov_llm, system_prompt=chatbot_config["system_configuration"], memory=memory)
         return
 
     document = load_file(Path(file_path))
@@ -231,7 +225,7 @@ def load_context(file_path: str) -> None:
     Settings.embed_model = ov_embedding
     index = VectorStoreIndex.from_documents([document], storage_context, transformations=[splitter])
     # create a RAG pipeline
-    ov_chat_engine = index.as_chat_engine(llm=ov_llm, chat_mode=ChatMode.CONTEXT, system_prompt=SYSTEM_CONFIGURATION,
+    ov_chat_engine = index.as_chat_engine(llm=ov_llm, chat_mode=ChatMode.CONTEXT, system_prompt=chatbot_config["system_configuration"],
                                           memory=memory, node_postprocessors=[ov_reranker])
 
 
@@ -242,7 +236,7 @@ def generate_initial_greeting() -> str:
     Returns:
         Generated greeting
     """
-    return ov_chat_engine.chat(GREET_THE_CUSTOMER).response
+    return ov_chat_engine.chat(chatbot_config["greet_the_user_prompt"]).response
 
 
 def chat(history: List[List[str]]) -> List[List[str]]:
@@ -355,15 +349,7 @@ def create_UI(initial_message: str) -> gr.Blocks:
         Demo UI
     """
     with gr.Blocks(title="Adrishuo - the Conversational AI Chatbot") as demo:
-        gr.Markdown("""
-        # Adrishuo: A Conversational AI Hotel Concierge running with OpenVINO
-
-        Instructions for use:
-        1. Attach the PDF or TXT file with the hotel guide (see "Grand_Azure_Resort_Spa_Full_Guide.pdf" as an example)
-        2. Record your question/comment using the first audio widget ("Your voice input") or type it in the textbox ("Your text input"), then click Submit
-        3. Wait for the chatbot to respond ("Chatbot") and say it aloud ("Chatbot voice response")
-        4. Discuss with the chatbot and ask questions about the hotel rules and city places
-        """)
+        gr.Markdown(chatbot_config["instructions"])
         with gr.Row():
             with gr.Column(scale=1):
                 file_uploader_ui = gr.File(label="Hotel guide", file_types=[".pdf", ".txt"], value=EXAMPLE_PDF_PATH)
@@ -400,7 +386,7 @@ def create_UI(initial_message: str) -> gr.Blocks:
         return demo
 
 
-def run(asr_model_dir: Path, chat_model_dir: Path, embedding_model_dir: Path, reranker_model_dir: Path, public_interface: bool = False) -> None:
+def run(asr_model_dir: Path, chat_model_dir: Path, embedding_model_dir: Path, reranker_model_dir: Path, personality_file_path: Path, public_interface: bool = False) -> None:
     """
     Run the chatbot application
 
@@ -409,6 +395,7 @@ def run(asr_model_dir: Path, chat_model_dir: Path, embedding_model_dir: Path, re
         chat_model_dir: dir with the chat model
         embedding_model_dir: dir with the embedding model
         reranker_model_dir: dir with the reranker model
+        personality_file_path: path to the chatbot personality specification file
         public_interface: whether UI should be available publicly
     """
     # set up logging
@@ -417,7 +404,7 @@ def run(asr_model_dir: Path, chat_model_dir: Path, embedding_model_dir: Path, re
     # load whisper model
     load_asr_model(asr_model_dir)
     # load chat models
-    load_rag_models(chat_model_dir, embedding_model_dir, reranker_model_dir)
+    load_rag_models(chat_model_dir, embedding_model_dir, reranker_model_dir, personality_file_path)
 
     if asr_model is None or ov_llm is None or ov_embedding is None:
         log.error("Required models are not loaded. Exiting...")
@@ -441,7 +428,8 @@ if __name__ == "__main__":
     parser.add_argument("--chat_model", type=str, default="model/llama3.1-8B-INT4", help="Path to the chat model directory")
     parser.add_argument("--embedding_model", type=str, default="model/bge-small-FP32", help="Path to the embedding model directory")
     parser.add_argument("--reranker_model", type=str, default="model/bge-reranker-large-FP32", help="Path to the reranker model directory")
+    parser.add_argument("--personality", type=str, default="concierge_personality.yaml", help="Path to the YAML file with chatbot personality")
     parser.add_argument("--public", default=False, action="store_true", help="Whether interface should be available publicly")
 
     args = parser.parse_args()
-    run(Path(args.asr_model), Path(args.chat_model), Path(args.embedding_model), Path(args.reranker_model), args.public)
+    run(Path(args.asr_model), Path(args.chat_model), Path(args.embedding_model), Path(args.reranker_model), Path(args.personality), args.public)
