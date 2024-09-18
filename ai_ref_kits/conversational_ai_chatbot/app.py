@@ -437,7 +437,7 @@ def run(asr_model_dir: Path, chat_model_dir: Path, embedding_model_dir: Path, re
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--asr_model", type=str, default="model/distil-whisper-large-v3-INT8", help="Path of the automatic speech recognition model directory")
+    parser.add_argument("--asr_model", type=str, default="model/distil-whisper-large-v3-FP16", help="Path of the automatic speech recognition model directory")
     parser.add_argument("--chat_model", type=str, default="model/llama3.1-8B-INT4", help="Path to the chat model directory")
     parser.add_argument("--embedding_model", type=str, default="model/bge-small-FP32", help="Path to the embedding model directory")
     parser.add_argument("--reranker_model", type=str, default="model/bge-reranker-large-FP32", help="Path to the reranker model directory")
