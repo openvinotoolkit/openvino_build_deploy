@@ -27,17 +27,16 @@ from llama_index.postprocessor.openvino_rerank import OpenVINORerank
 from llama_index.readers.file import PDFReader
 from llama_index.vector_stores.faiss import FaissVectorStore
 from optimum.intel import OVModelForSpeechSeq2Seq
-from transformers import AutoProcessor, TextIteratorStreamer, pipeline
-
-import openvino.torch
-import time
-import soundfile as sf
+from transformers import AutoProcessor, TextIteratorStreamer
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
-import torch._dynamo
-torch._dynamo.config.suppress_errors = True
+
+# todo
+# import openvino.torch
+# torch._dynamo.config.suppress_errors = True
 
 # Global variables initialization
 TARGET_AUDIO_SAMPLE_RATE = 16000
+SPEAKER_INDEX = 7306
 
 EXAMPLE_PDF_PATH = os.path.join(os.path.dirname(__file__), "Grand_Azure_Resort_Spa_Full_Guide.pdf")
 MODEL_DIR = Path("model")
@@ -50,6 +49,10 @@ ov_llm: Optional[OpenVINOLLM] = None
 ov_embedding: Optional[OpenVINOEmbedding] = None
 ov_reranker: Optional[OpenVINORerank] = None
 ov_chat_engine: Optional[BaseChatEngine] = None
+ov_tts_model: Optional[SpeechT5ForTextToSpeech] = None
+ov_tts_vocoder: Optional[SpeechT5HifiGan] = None
+tts_processor: Optional[SpeechT5Processor] = None
+speaker_embeddings: Optional[torch.Tensor] = None
 
 chatbot_config = {}
 
@@ -231,10 +234,17 @@ def load_context(file_path: str) -> None:
                                           memory=memory, node_postprocessors=[ov_reranker])
 
 
-def load_speaker_embeddings():
+def load_speaker_embeddings(speaker_index: int) -> torch.Tensor:
+    """
+    Load embeddings for selected speaker
+
+    Params:
+        speaker_index: index in Matthijs/cmu-arctic-xvectors database (val subset)
+    Returns:
+        Speaker embeddings
+    """
     embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation")
-    speaker_embeddings = torch.tensor(embeddings_dataset[7306]["xvector"]).unsqueeze(0)
-    return speaker_embeddings
+    return torch.tensor(embeddings_dataset[speaker_index]["xvector"]).unsqueeze(0)
 
 
 def load_tts_model(model_dir: Path, vocoder_model_dir: Path) -> None:
@@ -249,12 +259,14 @@ def load_tts_model(model_dir: Path, vocoder_model_dir: Path) -> None:
     tts_processor = SpeechT5Processor.from_pretrained(model_dir)
     tts_model = SpeechT5ForTextToSpeech.from_pretrained(model_dir)
     tts_vocoder = SpeechT5HifiGan.from_pretrained(vocoder_model_dir)
-    speaker_embeddings = load_speaker_embeddings()
+    speaker_embeddings = load_speaker_embeddings(SPEAKER_INDEX)
 
     # Compile the TTS model and vocoder with OpenVINO
     opts = {"device": "CPU", "config":{'PERFORMANCE_HINT': "LATENCY"}}
     ov_tts_model = torch.compile(tts_model, backend="openvino", options=opts)
     ov_tts_vocoder = torch.compile(tts_vocoder, backend="openvino", options=opts)
+
+    log.info(f"Running {type(ov_tts_model.base_model).__name__} on {ov_tts_model.device.__str__().upper()}")
 
 
 def generate_initial_greeting() -> str:
@@ -365,7 +377,7 @@ def synthesize(conversation: List[List[str]]) -> Tuple[int, np.ndarray]:
     end_time = time.time()
     log.info(f"TTS model response time: {end_time - start_time:.2f} seconds")
 
-    return 16000, speech.numpy()
+    return TARGET_AUDIO_SAMPLE_RATE, speech.numpy()
 
 
 def create_UI(initial_message: str) -> gr.Blocks:
@@ -458,7 +470,7 @@ def run(asr_model_dir: Path, chat_model_dir: Path, tts_model_dir: Path, vocoder_
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--asr_model", type=str, default="model/distil-whisper-large-v3-FP16", help="Path of the automatic speech recognition model directory")
-    parser.add_argument("--chat_model", type=str, default="model/llama3-8B-INT4", help="Path to the chat model directory")
+    parser.add_argument("--chat_model", type=str, default="model/llama3.1-8B-INT4", help="Path to the chat model directory")
     parser.add_argument("--tts_model", type=str, default="microsoft/speecht5_tts", help="Path to the tts model directory")
     parser.add_argument("--vocoder_model", type=str, default="microsoft/speecht5_hifigan", help="Path to the vocoder model directory for tts")
     parser.add_argument("--embedding_model", type=str, default="model/bge-small-FP32", help="Path to the embedding model directory")
