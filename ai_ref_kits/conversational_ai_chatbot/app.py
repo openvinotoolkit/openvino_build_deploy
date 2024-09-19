@@ -29,6 +29,13 @@ from llama_index.vector_stores.faiss import FaissVectorStore
 from optimum.intel import OVModelForSpeechSeq2Seq
 from transformers import AutoProcessor, TextIteratorStreamer, pipeline
 
+import openvino.torch
+import time
+import soundfile as sf
+from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
+import torch._dynamo
+torch._dynamo.config.suppress_errors = True
+
 # Global variables initialization
 TARGET_AUDIO_SAMPLE_RATE = 16000
 
@@ -45,11 +52,6 @@ ov_reranker: Optional[OpenVINORerank] = None
 ov_chat_engine: Optional[BaseChatEngine] = None
 
 chatbot_config = {}
-
-
-# todo temporary
-synthesiser = pipeline("text-to-speech", "microsoft/speecht5_tts")
-speaker_embedding = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation")[2534]["xvector"]
 
 
 def get_available_devices() -> Set[str]:
@@ -229,6 +231,32 @@ def load_context(file_path: str) -> None:
                                           memory=memory, node_postprocessors=[ov_reranker])
 
 
+def load_speaker_embeddings():
+    embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation")
+    speaker_embeddings = torch.tensor(embeddings_dataset[7306]["xvector"]).unsqueeze(0)
+    return speaker_embeddings
+
+
+def load_tts_model(model_dir: Path, vocoder_model_dir: Path) -> None:
+    """
+    Load text-to-speech model and assign it to a global variable
+
+    Params:
+        model_dir: dir with the tts model
+    """
+    global ov_tts_model, ov_tts_vocoder, tts_processor, speaker_embeddings
+
+    tts_processor = SpeechT5Processor.from_pretrained(model_dir)
+    tts_model = SpeechT5ForTextToSpeech.from_pretrained(model_dir)
+    tts_vocoder = SpeechT5HifiGan.from_pretrained(vocoder_model_dir)
+    speaker_embeddings = load_speaker_embeddings()
+
+    # Compile the TTS model and vocoder with OpenVINO
+    opts = {"device": "CPU", "config":{'PERFORMANCE_HINT': "LATENCY"}}
+    ov_tts_model = torch.compile(tts_model, backend="openvino", options=opts)
+    ov_tts_vocoder = torch.compile(tts_vocoder, backend="openvino", options=opts)
+
+
 def generate_initial_greeting() -> str:
     """
     Generates customer/patient greeting
@@ -330,13 +358,14 @@ def synthesize(conversation: List[List[str]]) -> Tuple[int, np.ndarray]:
 
     start_time = time.time()
 
-    # todo: replace with openvino pipeline
-    speech = synthesiser(prompt, forward_params={"speaker_embeddings": torch.tensor(speaker_embedding).unsqueeze(0)})
+    inputs = tts_processor(text=prompt, return_tensors="pt")
+    with torch.no_grad():
+       speech = ov_tts_model.generate_speech(inputs["input_ids"], speaker_embeddings, vocoder=ov_tts_vocoder)
 
     end_time = time.time()
     log.info(f"TTS model response time: {end_time - start_time:.2f} seconds")
 
-    return speech["sampling_rate"], speech["audio"]
+    return 16000, speech.numpy()
 
 
 def create_UI(initial_message: str) -> gr.Blocks:
@@ -386,13 +415,15 @@ def create_UI(initial_message: str) -> gr.Blocks:
         return demo
 
 
-def run(asr_model_dir: Path, chat_model_dir: Path, embedding_model_dir: Path, reranker_model_dir: Path, personality_file_path: Path, public_interface: bool = False) -> None:
+def run(asr_model_dir: Path, chat_model_dir: Path, tts_model_dir: Path, vocoder_model_dir: Path, embedding_model_dir: Path, reranker_model_dir: Path, personality_file_path: Path, public_interface: bool = False) -> None:
     """
     Run the chatbot application
 
     Params
         asr_model_dir: dir with the automatic speech recognition model
         chat_model_dir: dir with the chat model
+        tts_model_dir: dir with the tts model
+        vocoder_model_dir: dir with the vocoder model for tts
         embedding_model_dir: dir with the embedding model
         reranker_model_dir: dir with the reranker model
         personality_file_path: path to the chatbot personality specification file
@@ -405,6 +436,8 @@ def run(asr_model_dir: Path, chat_model_dir: Path, embedding_model_dir: Path, re
     load_asr_model(asr_model_dir)
     # load chat models
     load_rag_models(chat_model_dir, embedding_model_dir, reranker_model_dir, personality_file_path)
+    # load tts model
+    load_tts_model(tts_model_dir, vocoder_model_dir)
 
     if asr_model is None or ov_llm is None or ov_embedding is None:
         log.error("Required models are not loaded. Exiting...")
@@ -425,11 +458,13 @@ def run(asr_model_dir: Path, chat_model_dir: Path, embedding_model_dir: Path, re
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--asr_model", type=str, default="model/distil-whisper-large-v3-FP16", help="Path of the automatic speech recognition model directory")
-    parser.add_argument("--chat_model", type=str, default="model/llama3.1-8B-INT4", help="Path to the chat model directory")
+    parser.add_argument("--chat_model", type=str, default="model/llama3-8B-INT4", help="Path to the chat model directory")
+    parser.add_argument("--tts_model", type=str, default="microsoft/speecht5_tts", help="Path to the tts model directory")
+    parser.add_argument("--vocoder_model", type=str, default="microsoft/speecht5_hifigan", help="Path to the vocoder model directory for tts")
     parser.add_argument("--embedding_model", type=str, default="model/bge-small-FP32", help="Path to the embedding model directory")
     parser.add_argument("--reranker_model", type=str, default="model/bge-reranker-large-FP32", help="Path to the reranker model directory")
     parser.add_argument("--personality", type=str, default="concierge_personality.yaml", help="Path to the YAML file with chatbot personality")
     parser.add_argument("--public", default=False, action="store_true", help="Whether interface should be available publicly")
 
     args = parser.parse_args()
-    run(Path(args.asr_model), Path(args.chat_model), Path(args.embedding_model), Path(args.reranker_model), Path(args.personality), args.public)
+    run(Path(args.asr_model), Path(args.chat_model), args.tts_model, args.vocoder_model, Path(args.embedding_model), Path(args.reranker_model), Path(args.personality), args.public)
