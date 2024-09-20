@@ -8,6 +8,7 @@ from threading import Thread
 from typing import Tuple, List, Optional, Set
 
 import faiss
+import fitz  # PyMuPDF
 import gradio as gr
 import librosa
 import numpy as np
@@ -178,22 +179,28 @@ def load_rag_models(chat_model_dir: Path, embedding_model_dir: Path, reranker_mo
 
 def load_file(file_path: Path) -> Document:
     """
-    Load text or pdf document
-
+    Load text or pdf document using PyMuPDF for PDFs and standard reading for text files.
+    
     Params:
         file_path: the path to the document
     Returns:
         A document in LLama Index format
     """
-    # file extension
     ext = file_path.suffix
     if ext == ".pdf":
-        reader = PDFReader()
-        return reader.load_data(file_path)[0]
+        # Using PyMuPDF (fitz) to read PDF content
+        text = ""
+        with fitz.open(file_path) as pdf:
+            for page in pdf:
+                text += page.get_text("text") + "\n"  # Extract text from each page
+            return Document(text=text, metadata={"file_name": file_path.name})
+    
     elif ext == ".txt":
+        # Reading text files as usual
         with open(file_path) as f:
             content = f.read()
             return Document(text=content, metadata={"file_name": file_path.name})
+    
     else:
         raise ValueError(f"{ext} file is not supported for now")
 
