@@ -59,6 +59,12 @@ This will clone the repository into a directory named "openvino_build_deploy" in
 cd openvino_build_deploy/ai_ref_kits/meter_reader
 ```
 
+Then pull the models:
+
+```shell
+git lfs -X= -I=model/ pull
+```
+
 ### Creating a Virtual Environment
 
 To create a virtual environment, open your terminal or command prompt and navigate to the directory where you want to create the environment. Then, run the following command:

@@ -130,10 +130,21 @@ The application uses three separate models for its operation, each requiring con
 ```shell
 python convert_and_optimize_asr.py --asr_model_type distil-whisper-large-v3 --precision int8
 ```
+
+For GPU, please use the default float16 precision.
+```shell
+python convert_and_optimize_asr.py --asr_model_type distil-whisper-large-v3
+```
+
 This script will convert and optimize the automatic speech recognition (ASR) model performing weights quantization.
 If you want to convert speech to text in Chinese, you could choose the Chinese fine-tuned ASR model with the following:
 ```shell
 python convert_and_optimize_asr.py --asr_model_type belle-distilwhisper-large-v2-zh --precision int8
+```
+
+For GPU, please use the default float16 precision.
+```shell
+python convert_and_optimize_asr.py --asr_model_type belle-distilwhisper-large-v2-zh
 ```
 
 2. Chat LLama Conversion:
