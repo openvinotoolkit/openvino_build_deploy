@@ -7,6 +7,8 @@ def generate_mask(image):
     core = ov.Core()
     read_model = core.read_model(f"{Path(__file__).parent.parent}/models/selfie_multiclass_256x256.xml")
     compiled_model = core.compile_model(read_model, "AUTO")
+    if image.shape[2] == 4:
+        image = image[:, :, :3] # if RGBA, convert to RGB
     original_image_shape = np.array(image).shape
     image = cv2.resize(image, (256,256))
     image = np.expand_dims(image.astype(np.float32) / 255, 0)

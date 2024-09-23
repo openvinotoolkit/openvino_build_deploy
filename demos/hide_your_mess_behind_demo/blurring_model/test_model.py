@@ -38,8 +38,7 @@ def view_results(image, mask, blurred):
 
 if __name__ == "__main__":
     import_image = np.array(Image.open(requests.get("https://user-images.githubusercontent.com/29454499/251036317-551a2399-303e-4a4a-a7d6-d7ce973e05c5.png", stream=True).raw))
-    if import_image.shape[2] == 4:
-        import_image = import_image[:, :, :3] # if RGBA, convert to RGB
     mask = generate_mask(import_image)
     result = run_model(import_image, mask)
+    print(result)
     view_results(import_image, mask, result[0].astype(np.uint8))

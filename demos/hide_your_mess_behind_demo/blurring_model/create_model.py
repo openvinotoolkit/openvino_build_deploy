@@ -14,7 +14,7 @@ def create_gaussian_kernel(size=25, sigma=10):
 def create_rgb_kernel(size=25, sigma=10):
     gaussian_kernel = create_gaussian_kernel(size, sigma)
     gaussian_kernel = gaussian_kernel[:, :, np.newaxis, np.newaxis]
-    gaussian_kernel_rgb = np.tile(gaussian_kernel, [1, 1, 3, 1])
+    gaussian_kernel_rgb = np.tile(gaussian_kernel, [1, 1, 4, 1])
     return gaussian_kernel_rgb
     
 class PostProcModel(tf.keras.Model):
@@ -35,9 +35,10 @@ def main():
     def model_fn(input_image, input_mask):
         return model(input_image, input_mask)
     
-    concrete_model = model_fn.get_concrete_function(tf.TensorSpec(shape=[1,None,None,3], dtype=tf.float32),tf.TensorSpec(shape=[1,None,None,1], dtype=tf.float32))
+    concrete_model = model_fn.get_concrete_function(tf.TensorSpec(shape=[1,None,None,4], dtype=tf.float32),tf.TensorSpec(shape=[1,None,None,1], dtype=tf.float32))
     ov_model = ov.convert_model(concrete_model)
     ov.save_model(ov_model, f"{Path(__file__).parent.parent}/models/postproc_model.xml", False)
+    print("model saved")
 
 if __name__ == "__main__":
     main()
