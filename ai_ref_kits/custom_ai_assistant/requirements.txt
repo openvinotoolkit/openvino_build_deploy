@@ -12,3 +12,4 @@ transformers==4.43.4
 librosa==0.10.2
 
 gradio==4.42.0
+fastapi==0.112.4
