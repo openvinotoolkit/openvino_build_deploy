@@ -21,9 +21,6 @@ let blurredImage = null;
 let maskMatOrg = null;
 let maskMatSmall = null;
 let notMask = null;
-let matToBlur = null;
-let alpha = null;
-let finalMat = null;
 // semaphore used in runModel:
 let semaphore = false;
 // variables used to calculate inference time:
@@ -186,11 +183,6 @@ async function blurImage(image, width, height) {
             height : height
         };
     }
-    // MAT FROM IMAGE DATA (from webcam)
-    // if (matToBlur == null || matToBlur.data.length !== image.data.length){
-    //     matToBlur = new cv.Mat(height, width, cv.CV_8UC4);
-    // }
-    // matToBlur.data.set(image.data);
 
     // CONVERSION TO OpenVINO TENSOR:
     const tensorDataMask = Float32Array.from(maskMatOrg.data, x => x / 255.0);
@@ -220,12 +212,6 @@ async function blurImage(image, width, height) {
     const outputLayer = compiledBlur.outputs[0];
     const resultInfer = inferRequest.getTensor(outputLayer);
     console.log("time: ", performance.now() - begin, " ms");
-
-    // // MERGING IMAGES
-    // if (finalMat == null || image.data.length !== finalMat.data.length){
-    //     finalMat = new cv.Mat(height, width, cv.CV_8UC4);
-    // }
-    // finalMat.data.set(resultData);
 
     return{
         img : new Uint8ClampedArray(resultInfer.data),
