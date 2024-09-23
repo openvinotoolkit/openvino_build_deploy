@@ -11,6 +11,8 @@ module.exports = { detectDevices, runModel, takeTime, blurImage }
 const core = new ov.Core();
 const ovModels = new Map(); // compiled models
 let model = null; // read model
+let modelBlur = null; // read model for blurring
+let compiledBlur = null; // compiled model for blurring
 // mats used during preprocessing:
 let mat = null;
 let resizedMat = null;
@@ -47,6 +49,20 @@ function preprocessMat(image, targetHeight = 256, targetWidth = 256) {
     return {
         image : resizedMat
     };
+}
+
+
+function convertBGRAtoRGB(imageData) {
+    const data = imageData.data;
+    const rgbData = new Uint8ClampedArray((data.length / 4) * 3);
+
+    for (let i = 0, j = 0; i < data.length; i += 4, j += 3) {
+        rgbData[j] = data[i];
+        rgbData[j + 1] = data[i + 1];
+        rgbData[j + 2] = data[i + 2];
+    }
+
+    return rgbData;
 }
 
 
@@ -186,29 +202,50 @@ async function blurImage(image, width, height) {
         };
     }
     // MAT FROM IMAGE DATA (from webcam)
-    if (matToBlur == null || matToBlur.data.length !== image.data.length){
-        matToBlur = new cv.Mat(height, width, cv.CV_8UC4);
-    }
-    matToBlur.data.set(image.data);
+    // if (matToBlur == null || matToBlur.data.length !== image.data.length){
+    //     matToBlur = new cv.Mat(height, width, cv.CV_8UC4);
+    // }
+    // matToBlur.data.set(image.data);
 
-    // BLURRING THE COPY
-    if (blurredImage == null || matToBlur.data.length !== blurredImage.data.length){
-        blurredImage = new cv.Mat(height, width, cv.CV_8UC4);
-    }
-    cv.blur(matToBlur, blurredImage, new cv.Size(25,25));
+    console.log(maskMatOrg.rows, width, maskMatOrg.cols, height);
 
-    // CUTTING IMAGES ACCORDING TO MASK
-    if (alpha == null || matToBlur.data.length !== alpha.data.length) {
-        alpha = new cv.Mat(height, width, matToBlur.type(), new cv.Scalar(0, 0, 0, 0)); 
+    // CONVERSION TO OpenVINO TENSOR:
+    const tensorDataMask = Float32Array.from(maskMatOrg.data, x => x / 255.0);
+    const inputTensorMask = new ov.Tensor(ov.element.f32, [1, maskMatOrg.rows, maskMatOrg.cols, 1], tensorDataMask);
+
+    image = convertBGRAtoRGB(image);
+    const tensorDataImg = Float32Array.from(image, x => x / 255.0);
+    const inputTensorImg = new ov.Tensor(ov.element.f32, [1, height, width, 3], tensorDataImg);
+
+    // OpenVINO BLURRING MODEL DECLARATION:
+    if (modelBlur == null){
+        if (fs.existsSync(path.join(__dirname, '../../app.asar'))){     //if running compiled program
+            modelBlur = await core.readModel(path.join(__dirname, "../../app.asar.unpacked/models/postproc_model.xml"));
+        } else {    //if running npm start
+        modelBlur = await core.readModel(path.join(__dirname, "../models/postproc_model.xml"));
+        }
     }
-    cv.bitwise_and(matToBlur, alpha, matToBlur, notMask);
-    cv.bitwise_and(blurredImage, alpha, blurredImage, maskMatOrg);
+    if (compiledBlur == null){
+        compiledBlur = await core.compileModel(modelBlur, "AUTO");
+    }
+
+    // OpenVINO BLURRING MODEL INFERENCE:
+    const inferRequest = compiledBlur.createInferRequest();
+    inferRequest.setInputTensor(0, inputTensorImg);
+    inferRequest.setInputTensor(1, inputTensorMask);
+    inferRequest.infer();
+    const outputLayer = compiledBlur.outputs[0];
+    const resultInfer = inferRequest.getTensor(outputLayer);
+
+    console.log(typeof resultInfer);
+    console.log(resultInfer);
 
     // MERGING IMAGES
     if (finalMat == null || matToBlur.data.length !== finalMat.data.length){
-        finalMat = new cv.Mat(height, width, cv.CV_8UC4);
+        finalMat = new cv.Mat(height, width, cv.CV_8UC3);
     }
-    cv.add(matToBlur, blurredImage, finalMat);
+    // cv.add(matToBlur, blurredImage, finalMat);
+    finalMat.data.set(resultInfer);
 
     return{
         img : new Uint8ClampedArray(finalMat.data),
