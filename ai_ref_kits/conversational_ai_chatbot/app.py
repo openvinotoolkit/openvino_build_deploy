@@ -15,6 +15,7 @@ import numpy as np
 import openvino as ov
 import torch
 import yaml
+import nltk
 from datasets import load_dataset
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from llama_index.core import Document, VectorStoreIndex, Settings, StorageContext
@@ -38,6 +39,8 @@ from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5Hif
 # Global variables initialization
 TARGET_AUDIO_SAMPLE_RATE = 16000
 SPEAKER_INDEX = 7306
+
+nltk.download('punkt_tab', quiet=True)
 
 EXAMPLE_PDF_PATH = os.path.join(os.path.dirname(__file__), "Grand_Azure_Resort_Spa_Full_Guide.pdf")
 MODEL_DIR = Path("model")
@@ -377,14 +380,21 @@ def synthesize(conversation: List[List[str]]) -> Tuple[int, np.ndarray]:
 
     start_time = time.time()
 
-    inputs = tts_processor(text=prompt, return_tensors="pt")
-    with torch.no_grad():
-       speech = ov_tts_model.generate_speech(inputs["input_ids"], speaker_embeddings, vocoder=ov_tts_vocoder)
+    # Existing logic to synthesize speech
+    sentences = nltk.sent_tokenize(prompt)
+    audio_segments = []
+    for sentence in sentences:
+        inputs = tts_processor(text=sentence, return_tensors="pt")
+        with torch.no_grad():
+            interim_speech = ov_tts_model.generate_speech(inputs["input_ids"], speaker_embeddings, vocoder=ov_tts_vocoder)
+            audio_segments.append(interim_speech.numpy())
+
+    speech = np.concatenate(audio_segments, axis=0)
 
     end_time = time.time()
     log.info(f"TTS model response time: {end_time - start_time:.2f} seconds")
 
-    return TARGET_AUDIO_SAMPLE_RATE, speech.numpy()
+    return TARGET_AUDIO_SAMPLE_RATE, speech
 
 
 def create_UI(initial_message: str) -> gr.Blocks:
@@ -487,3 +497,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     run(Path(args.asr_model), Path(args.chat_model), args.tts_model, args.vocoder_model, Path(args.embedding_model), Path(args.reranker_model), Path(args.personality), args.public)
+    
