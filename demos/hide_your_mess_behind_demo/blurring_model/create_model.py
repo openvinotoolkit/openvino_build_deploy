@@ -21,9 +21,18 @@ class PostProcModel(tf.keras.Model):
     def __init__(self):
         super(PostProcModel, self).__init__()
         self.kernel = tf.convert_to_tensor(create_rgb_kernel(15,10))
+        self.depthwise_conv = tf.keras.layers.DepthwiseConv2D(
+            kernel_size=(15, 15),
+            strides=(1, 1),
+            padding='same',
+            use_bias=False
+        )
+        self.depthwise_conv.build((None, None, None, 4))
+        self.depthwise_conv.set_weights([self.kernel])
 
     def call(self, input_image, input_mask):
-        blurred = tf.nn.depthwise_conv2d(input_image, self.kernel, strides=[1, 1, 1, 1], padding='SAME')
+        # blurred = tf.nn.depthwise_conv2d(input_image, self.kernel, strides=[1, 1, 1, 1], padding='SAME')
+        blurred = self.depthwise_conv(input_image)
         blurred_masked = blurred * (1 - input_mask)
         original_masked = input_image * input_mask
         return blurred_masked + original_masked

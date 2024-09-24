@@ -5,6 +5,7 @@ import requests
 import numpy as np
 from pathlib import Path
 from generate_mask import generate_mask
+import time
 
 def run_model(image, mask):
     core = ov.Core()
@@ -12,6 +13,10 @@ def run_model(image, mask):
     compiled_model = core.compile_model(read_model, "AUTO")
     image = np.expand_dims(image, axis=0)
     out = compiled_model((image, mask))[0]
+    begin_meas = time.time()
+    for i in range(10):
+        compiled_model((image, mask))[0]
+    print("time of inference: ", round(1000*((time.time()-begin_meas)/10),3), "ms")
     return out
 
 
@@ -40,5 +45,4 @@ if __name__ == "__main__":
     import_image = np.array(Image.open(requests.get("https://user-images.githubusercontent.com/29454499/251036317-551a2399-303e-4a4a-a7d6-d7ce973e05c5.png", stream=True).raw))
     mask = generate_mask(import_image)
     result = run_model(import_image, mask)
-    print(result)
     view_results(import_image, mask, result[0].astype(np.uint8))
