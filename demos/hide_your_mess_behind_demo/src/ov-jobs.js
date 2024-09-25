@@ -35,17 +35,11 @@ async function detectDevices() {
 
 
 function preprocessMat(image, targetHeight = 256, targetWidth = 256) {
-    // RESIZING
-    if (resizedMat == null || resizedMat.size().width !== targetWidth || resizedMat.size().height !== targetHeight){
-        resizedMat = new cv.Mat(targetHeight, targetWidth, cv.CV_8UC3);
-    }
-    cv.resize(image, resizedMat, resizedMat.size());
-
     //CHANGING FROM 4-CHANNEL BGRA TO 3-CHANNEL RGB
-    cv.cvtColor(resizedMat, resizedMat, cv.COLOR_BGRA2RGB);
+    cv.cvtColor(image, image, cv.COLOR_BGRA2RGB);
 
     return {
-        image : resizedMat
+        image : image
     };
 }
 
@@ -125,11 +119,12 @@ async function runModel(img, width, height, device){
         }
 
         // PREPOSTPROCESSOR
-        const _ppp = ov.preprocess.PrePostProcessor(model);
+        const _ppp = new ov.preprocess.PrePostProcessor(model);
         _ppp.input().tensor().setShape([1,height,width,3]).setLayout('NHWC');
         _ppp.input().preprocess().resize(ov.preprocess.resizeAlgorithm.RESIZE_LINEAR);
         _ppp.input().model().setLayout('NCHW');
-
+        // _ppp.output().tensor().setElementType(ov.element.f32);
+        _ppp.build();
 
         // OpenVINO INFERENCE
         const startTime = performance.now();            // TIME MEASURING : START
