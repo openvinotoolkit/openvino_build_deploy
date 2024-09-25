@@ -108,7 +108,7 @@ Understanding why computer vision models make certain predictions using data and
 An in-depth demo of how the Multimodal AI Visual Generator Kit creates a real-time visual generative AI workflow. This allows the intake of multimodal inputs from sources like a camera, voice, or typed text to produce visual outputs driven by AI models like Whisper, Llama, nanoLLaVA, and Latent Consistency Models.
 
 ### 💬 Conversational AI Chatbot
-![an image]()
+[![conversational-ai-chatbot](https://github.com/user-attachments/assets/262ba878-b845-445b-aff7-0a118517d409)](conversational-ai-chatbot)
 
 | [Conversational AI Chatbot](conversational_ai_chatbot) |                                                                                                                                                         |
 |--------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|

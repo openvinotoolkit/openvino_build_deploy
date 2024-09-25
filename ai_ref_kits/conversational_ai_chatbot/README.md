@@ -16,7 +16,7 @@ This kit uses the following technology stack:
 
 Check out our [Edge AI Reference Kits repository](/) for other kits.
 
-![Conversational-ai-Chatbot](https://github.com/openvinotoolkit/openvino_notebooks/assets/138901786/e0c2f2db-c213-4071-970b-09ebc1eea710) - placeholder
+![conversational-ai-chatbot](https://github.com/user-attachments/assets/262ba878-b845-445b-aff7-0a118517d409)
 
 ### What's New
 
