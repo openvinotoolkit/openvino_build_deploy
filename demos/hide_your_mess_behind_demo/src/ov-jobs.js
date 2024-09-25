@@ -27,6 +27,7 @@ let semaphore = false;
 // variables used to calculate inference time:
 let infTimes = [];
 let avgInfTime = 0;
+let prevDevice = null;
 
 
 async function detectDevices() {
@@ -143,6 +144,9 @@ async function runModel(img, width, height, device){
         const inferenceTime = endTime - startTime;      // TIME MEASURING : END
 
         // COUNTING AVERAGE INFERENCE TIME
+        if(prevDevice != device){
+            infTimes = [];
+        }
         if(!isFirst){
             if(infTimes.length>=50){
                 infTimes.pop();
@@ -150,6 +154,7 @@ async function runModel(img, width, height, device){
             infTimes.unshift(inferenceTime);
             avgInfTime = calculateAverage(infTimes);
         }
+        prevDevice = device;
 
         // POSTPROCESSING
         if (maskMatOrg == null || mat.rows !== maskMatOrg.rows || mat.cols !== maskMatOrg.cols){
