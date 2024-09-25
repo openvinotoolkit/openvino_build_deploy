@@ -31,12 +31,9 @@ from optimum.intel import OVModelForSpeechSeq2Seq
 from transformers import AutoProcessor, TextIteratorStreamer
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
 
-
 # Global variables initialization
 TARGET_AUDIO_SAMPLE_RATE = 16000
 SPEAKER_INDEX = 7306
-
-nltk.download('punkt_tab', quiet=True)
 
 EXAMPLE_PDF_PATH = os.path.join(os.path.dirname(__file__), "Grand_Azure_Resort_Spa_Full_Guide.pdf")
 MODEL_DIR = Path("model")
@@ -176,6 +173,43 @@ def load_rag_models(chat_model_dir: Path, embedding_model_dir: Path, reranker_mo
                                                     memory=ChatMemoryBuffer.from_defaults())
 
 
+def load_speaker_embeddings(speaker_index: int) -> torch.Tensor:
+    """
+    Load embeddings for selected speaker
+
+    Params:
+        speaker_index: index in Matthijs/cmu-arctic-xvectors database (val subset)
+    Returns:
+        Speaker embeddings
+    """
+    embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation")
+    return torch.tensor(embeddings_dataset[speaker_index]["xvector"]).unsqueeze(0)
+
+
+def load_tts_model(model_dir: Path, vocoder_model_dir: Path) -> None:
+    """
+    Load text-to-speech model and assign it to a global variable
+
+    Params:
+        model_dir: dir with the tts model
+    """
+    global ov_tts_model, ov_tts_vocoder, tts_processor, speaker_embeddings
+
+    nltk.download('punkt_tab', quiet=True)
+
+    tts_processor = SpeechT5Processor.from_pretrained(model_dir)
+    tts_model = SpeechT5ForTextToSpeech.from_pretrained(model_dir)
+    tts_vocoder = SpeechT5HifiGan.from_pretrained(vocoder_model_dir)
+    speaker_embeddings = load_speaker_embeddings(SPEAKER_INDEX)
+
+    # Compile the TTS model and vocoder with OpenVINO
+    opts = {"device": "CPU", "config":{'PERFORMANCE_HINT': "LATENCY"}}
+    ov_tts_model = torch.compile(tts_model, backend="openvino", options=opts)
+    ov_tts_vocoder = torch.compile(tts_vocoder, backend="openvino", options=opts)
+
+    log.info(f"Running {type(ov_tts_model.base_model).__name__} on {ov_tts_model.device.__str__().upper()}")
+
+
 def load_file(file_path: Path) -> Document:
     """
     Load text or pdf document using PyMuPDF for PDFs and standard reading for text files.
@@ -238,41 +272,6 @@ def load_context(file_path: str) -> None:
     # create a RAG pipeline
     ov_chat_engine = index.as_chat_engine(llm=ov_llm, chat_mode=ChatMode.CONTEXT, system_prompt=chatbot_config["system_configuration"],
                                           memory=memory, node_postprocessors=[ov_reranker])
-
-
-def load_speaker_embeddings(speaker_index: int) -> torch.Tensor:
-    """
-    Load embeddings for selected speaker
-
-    Params:
-        speaker_index: index in Matthijs/cmu-arctic-xvectors database (val subset)
-    Returns:
-        Speaker embeddings
-    """
-    embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation")
-    return torch.tensor(embeddings_dataset[speaker_index]["xvector"]).unsqueeze(0)
-
-
-def load_tts_model(model_dir: Path, vocoder_model_dir: Path) -> None:
-    """
-    Load text-to-speech model and assign it to a global variable
-
-    Params:
-        model_dir: dir with the tts model
-    """
-    global ov_tts_model, ov_tts_vocoder, tts_processor, speaker_embeddings
-
-    tts_processor = SpeechT5Processor.from_pretrained(model_dir)
-    tts_model = SpeechT5ForTextToSpeech.from_pretrained(model_dir)
-    tts_vocoder = SpeechT5HifiGan.from_pretrained(vocoder_model_dir)
-    speaker_embeddings = load_speaker_embeddings(SPEAKER_INDEX)
-
-    # Compile the TTS model and vocoder with OpenVINO
-    opts = {"device": "CPU", "config":{'PERFORMANCE_HINT': "LATENCY"}}
-    ov_tts_model = torch.compile(tts_model, backend="openvino", options=opts)
-    ov_tts_vocoder = torch.compile(tts_vocoder, backend="openvino", options=opts)
-
-    log.info(f"Running {type(ov_tts_model.base_model).__name__} on {ov_tts_model.device.__str__().upper()}")
 
 
 def generate_initial_greeting() -> str:
