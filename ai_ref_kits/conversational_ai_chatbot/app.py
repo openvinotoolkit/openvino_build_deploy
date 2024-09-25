@@ -25,15 +25,11 @@ from llama_index.core.node_parser import LangchainNodeParser
 from llama_index.embeddings.huggingface_openvino import OpenVINOEmbedding
 from llama_index.llms.openvino import OpenVINOLLM
 from llama_index.postprocessor.openvino_rerank import OpenVINORerank
-from llama_index.readers.file import PDFReader
 from llama_index.vector_stores.faiss import FaissVectorStore
 from optimum.intel import OVModelForSpeechSeq2Seq
 from transformers import AutoProcessor, TextIteratorStreamer
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
 
-# todo
-# import openvino.torch
-# torch._dynamo.config.suppress_errors = True
 
 # Global variables initialization
 TARGET_AUDIO_SAMPLE_RATE = 16000
