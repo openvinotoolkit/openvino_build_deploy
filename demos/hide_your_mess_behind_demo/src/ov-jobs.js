@@ -115,10 +115,7 @@ async function runModel(img, width, height, device){
         const shape = [1, preprocessedImage.rows, preprocessedImage.cols, 3];
         const inputTensor = new ov.Tensor(ov.element.f32, shape, tensorData);
 
-        // OpenVINO INFERENCE
-        const startTime = performance.now();            // TIME MEASURING : START
-
-        let compiledModel, inferRequest;
+        //DECLARE OpenVINO MODEL
         if (model == null){
             if (fs.existsSync(path.join(__dirname, '../../app.asar'))){     //if running compiled program
                 model = await core.readModel(path.join(__dirname, "../../app.asar.unpacked/models/selfie_multiclass_256x256.xml"));
@@ -126,6 +123,19 @@ async function runModel(img, width, height, device){
             model = await core.readModel(path.join(__dirname, "../models/selfie_multiclass_256x256.xml"));
             }
         }
+
+        // PREPOSTPROCESSOR
+        const _ppp = ov.preprocess.PrePostProcessor(model);
+        _ppp.input().tensor().setShape([1,height,width,3]).setLayout('NHWC');
+        _ppp.input().preprocess().resize(ov.preprocess.resizeAlgorithm.RESIZE_LINEAR);
+        _ppp.input().model().setLayout('NCHW');
+
+
+        // OpenVINO INFERENCE
+        const startTime = performance.now();            // TIME MEASURING : START
+
+        let compiledModel, inferRequest;
+
         if (!ovModels.has(device)){
             compiledModel = await core.compileModel(model, device);
             ovModels.set(device, compiledModel);
