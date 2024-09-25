@@ -4,18 +4,18 @@
 
 This demo demonstrates how to use the OpenVINO toolkit in NodeJS to blur the background of video. 
 
-There are 2 possible ways to run the demo - using executable file or using source code and NodeJS.
+There are 2 possible ways to run the demo - using executable or source code in NodeJS.
 
 ## Running the demo using executable file
 
 ### Installers
 
-Download installers of compiled app. There are available for Windows and Linux.
+Download installers of the compiled app. They are available for Windows and Linux.
 
 | OS | Installer |
 |---|---|
-| Linux | [Download deb](https://github.com/openvinotoolkit/openvino_build_deploy/releases/download/hide_your_mess_behind_v1.0/hide-your-mess-behind_1.0.0_amd64.deb) <br> [Download rpm](https://github.com/openvinotoolkit/openvino_build_deploy/releases/download/hide_your_mess_behind_v1.0/hide-your-mess-behind-1.0.0.x86_64.rpm) |
-| Windows | [Download exe](https://github.com/openvinotoolkit/openvino_build_deploy/releases/download/hide_your_mess_behind_v1.0/hide-your-mess-behind.Setup.1.0.0.exe) |
+| Linux | [DEB](https://github.com/openvinotoolkit/openvino_build_deploy/releases/download/hide_your_mess_behind_v1.0/hide-your-mess-behind_1.0.0_amd64.deb) [RPM](https://github.com/openvinotoolkit/openvino_build_deploy/releases/download/hide_your_mess_behind_v1.0/hide-your-mess-behind-1.0.0.x86_64.rpm) |
+| Windows | [EXE](https://github.com/openvinotoolkit/openvino_build_deploy/releases/download/hide_your_mess_behind_v1.0/hide-your-mess-behind.Setup.1.0.0.exe) |
 
 
 ## Running the demo using source code and NodeJS
