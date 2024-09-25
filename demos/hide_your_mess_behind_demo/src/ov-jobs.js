@@ -2,14 +2,14 @@ const { addon: ov } = require('openvino-node');
 const { cv } = require('opencv-wasm');
 const { performance } = require('perf_hooks');
 const path = require('path');
-const fs = require('fs');
+const fs = require('node:fs/promises');
 
 module.exports = { detectDevices, runModel, takeTime, blurImage }
 
 // GLOBAL VARIABLES
 // OpenVINO:
 const core = new ov.Core();
-const ovModels = new Map(); // compiled models
+// const ovModels = new Map(); // compiled models
 let model = null; // read model
 // mats used during preprocessing:
 let mat = null;
@@ -55,16 +55,16 @@ function convertToMultiDimensionalArray(tensor, shape) {
         if (dim >= shape.length) {
             return tensor[idx];
         }
-        
+
         let arr = [];
         let size = shape.slice(dim + 1).reduce((a, b) => a * b, 1);
-        
+
         for (let i = 0; i < shape[dim]; i++) {
             arr.push(createArray(dim + 1, idx + i * size));
         }
         return arr;
     }
-    
+
     return createArray(0, 0);
 }
 
@@ -75,7 +75,7 @@ function calculateAverage(array){
 }
 
 
-function postprocessMask (mask){
+function postprocessMask(mask){
     // LABELING
     const maskShape = mask.getShape();
     const multidimArray = convertToMultiDimensionalArray(mask.data, maskShape);
@@ -89,8 +89,64 @@ function postprocessMask (mask){
     cv.resize(maskMatSmall, maskMatOrg, maskMatOrg.size(), cv.INTER_NEAREST);
 }
 
+class ModelExecutor {
+    initialized = false;
+    core = null;
+    model = null;
+    compiledModel = null;
+    ir = null;
+    modelFilePath = null;
+    lastUsedDevice = null;
 
-async function runModel(img, width, height, device){
+    constructor(ov, modelFilePath) {
+        this.core = new ov.Core();
+        this.modelFilePath = modelFilePath;
+    }
+
+    async init() {
+        this.model = await core.readModel(this.modelFilePath);
+        this.initialized = true;
+    }
+
+    async compileModel(device = 'AUTO') {
+        this.compiledModel = await this.core.compileModel(this.model, device);
+        this.lastUsedDevice = device;
+
+        return this.compiledModel;
+    }
+
+    async execute(device, inputData) {
+        if (!this.initialized)
+            throw new Error('Model isn\'t initialized');
+
+        if (!this.compiledModel || device !== this.lastUsedDevice) {
+            await this.compileModel(device);
+            this.ir = await this.compiledModel.createInferRequest();
+        }
+
+        const result = await this.ir.inferAsync(inputData);
+        const keys = Object.keys(result);
+
+        return result[keys[0]];
+    }
+}
+
+let modelExecutor = null;
+
+async function getModelPath() {
+    const archivePath = path.join(__dirname, '../../app.asar.unpacked/models/selfie_multiclass_256x256.xml');
+    const devPath = path.join(__dirname, '../models/selfie_multiclass_256x256.xml');
+
+    try {
+        await fs.access(archivePath, fs.constants.F_OK);
+
+        return archivePath;
+    } catch(e) {
+        return devPath;
+    }
+}
+
+async function runModel(img, width, height, device) {
 
     while (semaphore) {
         await new Promise(resolve => setTimeout(resolve, 7));
@@ -99,7 +155,14 @@ async function runModel(img, width, height, device){
     semaphore = true;
     let isFirst = false; // not counting first iteration to average
 
-    try{
+    try {
+        if (!modelExecutor) {
+            const modelPath = await getModelPath();
+
+            modelExecutor = new ModelExecutor(ov, modelPath);
+            await modelExecutor.init();
+        }
+
         // CANVAS TO MAT CONVERSION:
         if (mat == null || mat.data.length !== img.data.length){
             mat = new cv.Mat(height, width, cv.CV_8UC4);
@@ -117,28 +180,7 @@ async function runModel(img, width, height, device){
 
         // OpenVINO INFERENCE
         const startTime = performance.now();            // TIME MEASURING : START
-
-        let compiledModel, inferRequest;
-        if (model == null){
-            if (fs.existsSync(path.join(__dirname, '../../app.asar'))){     //if running compiled program
-                model = await core.readModel(path.join(__dirname, "../../app.asar.unpacked/models/selfie_multiclass_256x256.xml"));
-            } else {    //if running npm start
-            model = await core.readModel(path.join(__dirname, "../models/selfie_multiclass_256x256.xml"));
-            }
-        }
-        if (!ovModels.has(device)){
-            compiledModel = await core.compileModel(model, device);
-            ovModels.set(device, compiledModel);
-            isFirst = true;
-        } else {
-            compiledModel = ovModels.get(device);
-        }
-        inferRequest = compiledModel.createInferRequest();
-        inferRequest.setInputTensor(inputTensor);
-        inferRequest.infer();
-        const outputLayer = compiledModel.outputs[0];
-        const resultInfer = inferRequest.getTensor(outputLayer);
-
+        const resultInfer = await modelExecutor.execute(device, [inputTensor]);
         const endTime = performance.now();
         const inferenceTime = endTime - startTime;      // TIME MEASURING : END
 
@@ -178,6 +220,8 @@ async function runModel(img, width, height, device){
 
 
 async function blurImage(image, width, height) {
+    // console.log({ width, height })
+
     if (maskMatOrg == null){
         return{
             img : image.data,
@@ -199,7 +243,7 @@ async function blurImage(image, width, height) {
 
     // CUTTING IMAGES ACCORDING TO MASK
     if (alpha == null || matToBlur.data.length !== alpha.data.length) {
-        alpha = new cv.Mat(height, width, matToBlur.type(), new cv.Scalar(0, 0, 0, 0)); 
+        alpha = new cv.Mat(height, width, matToBlur.type(), new cv.Scalar(0, 0, 0, 0));
     }
     cv.bitwise_and(matToBlur, alpha, matToBlur, notMask);
     cv.bitwise_and(blurredImage, alpha, blurredImage, maskMatOrg);
