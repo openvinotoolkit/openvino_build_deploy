@@ -106,7 +106,7 @@ def get_model(model_path: Path, device: str = "AUTO") -> ov.CompiledModel:
     # read the model from file
     model = core.read_model(model_path)
     # compile the model for latency mode
-    model = core.compile_model(model, device_name=device, config={"PERFORMANCE_HINT": "LATENCY"})
+    model = core.compile_model(model, device_name=device, config={"PERFORMANCE_HINT": "LATENCY", "CACHE_DIR": "cache"})
 
     return model
 
