@@ -293,7 +293,7 @@ def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str,
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--stream', default="2", type=str, help="Path to a video file or the webcam number")
+    parser.add_argument('--stream', default="0", type=str, help="Path to a video file or the webcam number")
     parser.add_argument("--model_name", type=str, default="yolov8n", help="Model version to be converted",
                         choices=["yolov8n", "yolov8s", "yolov8m", "yolov8l", "yolov8x", "yolov8n-seg", "yolov8s-seg", "yolov8m-seg", "yolov8l-seg", "yolov8x-seg"])
     parser.add_argument("--model_dir", type=str, default="model", help="Directory to place the model in")
