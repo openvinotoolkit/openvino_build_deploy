@@ -4,7 +4,7 @@
 
 This demo demonstrates how to use the OpenVINO toolkit in NodeJS to blur the background of video. 
 
-There are 2 possible ways to run the demo - using executable file or using source code.
+There are 2 possible ways to run the demo - using executable file or using source code and NodeJS.
 
 ## Running the demo using executable file
 
@@ -12,11 +12,12 @@ There are 2 possible ways to run the demo - using executable file or using sourc
 
 Download installers of compiled app. There are available for Windows and Linux.
 
+| OS | Installer |
 |---|---|
-| Linux | Download |
-|---|---|
-| Windows | Download |
-|---|---|
+| Linux | [Download]() |
+| Windows | [Download]() |
+
+
 
 
 ## Running the demo using source code and NodeJS
@@ -41,6 +42,8 @@ Once you've completed the initial setup, you can start the app anytime by runnin
 ```bash
 npm start
 ```
+
+
 
 ## Using the Demo
 
