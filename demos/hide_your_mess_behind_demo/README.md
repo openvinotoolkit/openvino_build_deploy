@@ -14,10 +14,8 @@ Download installers of compiled app. There are available for Windows and Linux.
 
 | OS | Installer |
 |---|---|
-| Linux | [Download]() |
-| Windows | [Download](https://github.com/openvinotoolkit/openvino_build_deploy/releases/download/hide_your_mess_behind_v1.0/hide-your-mess-behind.Setup.1.0.0.exe) |
-
-
+| Linux | [Download deb](https://github.com/openvinotoolkit/openvino_build_deploy/releases/download/hide_your_mess_behind_v1.0/hide-your-mess-behind_1.0.0_amd64.deb) <br> [Download rpm](https://github.com/openvinotoolkit/openvino_build_deploy/releases/download/hide_your_mess_behind_v1.0/hide-your-mess-behind-1.0.0.x86_64.rpm) |
+| Windows | [Download exe](https://github.com/openvinotoolkit/openvino_build_deploy/releases/download/hide_your_mess_behind_v1.0/hide-your-mess-behind.Setup.1.0.0.exe) |
 
 
 ## Running the demo using source code and NodeJS
