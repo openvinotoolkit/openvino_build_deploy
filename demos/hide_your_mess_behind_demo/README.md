@@ -4,11 +4,28 @@
 
 This demo demonstrates how to use the OpenVINO toolkit in NodeJS to blur the background of video. 
 
-## Requirements
+There are 2 possible ways to run the demo - using executable file or using source code.
+
+## Running the demo using executable file
+
+### Installers
+
+Download installers of compiled app. There are available for Windows and Linux.
+
+|---|---|
+| Linux | Download |
+|---|---|
+| Windows | Download |
+|---|---|
+
+
+## Running the demo using source code and NodeJS
+
+### Requirements
 
 Ensure that you have Node.js (with npm) installed on your system. The app was developed and tested using *node v20.15.0* and *npm 10.8.2*.
 
-## Getting started
+### Getting started
 
 Before running the app you have to initialize the electron project and install the required packages. Do it by running the following commands in the app folder:
 
@@ -17,13 +34,15 @@ npm init -y
 npm install
 ```
 
-## Running the Demo
+### Running the demo
 
 Once you've completed the initial setup, you can start the app anytime by running the following command in the app folder:
 
 ```bash
 npm start
 ```
+
+## Using the Demo
 
 ### Turn on the video
 
