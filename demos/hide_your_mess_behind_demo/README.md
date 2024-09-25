@@ -4,11 +4,27 @@
 
 This demo demonstrates how to use the OpenVINO toolkit in NodeJS to blur the background of video. 
 
-## Requirements
+There are 2 possible ways to run the demo - using executable or source code in NodeJS.
+
+## Running the demo using executable file
+
+### Installers
+
+Download installers of the compiled app. They are available for Windows and Linux.
+
+| OS | Installer |
+|---|---|
+| Linux | [DEB](https://github.com/openvinotoolkit/openvino_build_deploy/releases/download/hide_your_mess_behind_v1.0/hide-your-mess-behind_1.0.0_amd64.deb) [RPM](https://github.com/openvinotoolkit/openvino_build_deploy/releases/download/hide_your_mess_behind_v1.0/hide-your-mess-behind-1.0.0.x86_64.rpm) |
+| Windows | [EXE](https://github.com/openvinotoolkit/openvino_build_deploy/releases/download/hide_your_mess_behind_v1.0/hide-your-mess-behind.Setup.1.0.0.exe) |
+
+
+## Running the demo using source code and NodeJS
+
+### Requirements
 
 Ensure that you have Node.js (with npm) installed on your system. The app was developed and tested using *node v20.15.0* and *npm 10.8.2*.
 
-## Getting started
+### Getting started
 
 Before running the app you have to initialize the electron project and install the required packages. Do it by running the following commands in the app folder:
 
@@ -17,13 +33,17 @@ npm init -y
 npm install
 ```
 
-## Running the Demo
+### Running the demo
 
 Once you've completed the initial setup, you can start the app anytime by running the following command in the app folder:
 
 ```bash
 npm start
 ```
+
+
+
+## Using the Demo
 
 ### Turn on the video
 
