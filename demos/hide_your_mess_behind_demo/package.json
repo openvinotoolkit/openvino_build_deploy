@@ -41,10 +41,10 @@
     "electron-builder": "^25.0.5"
   },
   "dependencies": {
+    "@napi-rs/canvas": "^0.1.52",
     "buffer": "^6.0.3",
-    "openvino-node": "2024.3.0",
-    "opencv-wasm": "4.3.0-10",
-    "@napi-rs/canvas": "^0.1.52"
+    "openvino-node": "2024.4.0",
+    "sharp": "^0.33.5"
   },
   "keywords": [],
   "author": "Mikołaj Roszczyk <mikolaj.roszczyk@intel.com>",
