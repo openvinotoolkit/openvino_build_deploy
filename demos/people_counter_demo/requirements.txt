@@ -11,5 +11,4 @@ torch==2.2.0
 torchvision==0.17.0
 supervision==0.22.0
 tqdm==4.66.3
-pycocotools==2.0.6
 cython==0.29.35
