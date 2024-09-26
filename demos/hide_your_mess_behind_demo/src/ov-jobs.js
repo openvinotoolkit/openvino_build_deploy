@@ -1,8 +1,10 @@
 const { addon: ov } = require('openvino-node');
 const { performance } = require('perf_hooks');
-const path = require('path');
+const path = require('node:path');
 const fs = require('node:fs/promises');
 const sharp = require('sharp');
+
+const ModelExecutor = require('./model-executor');
 
 module.exports = { detectDevices, runModel, takeTime, blurImage }
 
@@ -15,6 +17,7 @@ let semaphore = false;
 let infTimes = [];
 let avgInfTime = 0;
 
+const inputSize = { w: 256, h: 256 };
 let outputMask = null;
 
 
@@ -27,53 +30,13 @@ function calculateAverage(array){
     return (sum / array.length);
 }
 
-class ModelExecutor {
-    initialized = false;
-    core = null;
-    model = null;
-    compiledModel = null;
-    ir = null;
-    modelFilePath = null;
-    lastUsedDevice = null;
 
-    constructor(ov, modelFilePath) {
-        this.core = new ov.Core();
-        this.modelFilePath = modelFilePath;
-    }
-
-    async init() {
-        this.model = await core.readModel(this.modelFilePath);
-        this.initialized = true;
-    }
-
-    async compileModel(device = 'AUTO') {
-        this.compiledModel = await this.core.compileModel(this.model, device);
-        this.lastUsedDevice = device;
-
-        return this.compiledModel;
-    }
-
-    async execute(device, inputData) {
-        if (!this.initialized)
-            throw new Error('Model isn\'t initialized');
-
-        if (!this.compiledModel || device !== this.lastUsedDevice) {
-            await this.compileModel(device);
-            this.ir = await this.compiledModel.createInferRequest();
-        }
-
-        const result = await this.ir.inferAsync(inputData);
-        const keys = Object.keys(result);
-
-        return result[keys[0]];
-    }
-}
 
 let modelExecutor = null;
 
 async function getModelPath() {
-    const archivePath = path.join(__dirname, '../../app.asar.unpacked/models/selfie_multiclass_256x256.xml');
-    const devPath = path.join(__dirname, '../models/selfie_multiclass_256x256.xml');
+    const archivePath = path.join(__dirname, '../../app.asar.unpacked/models/selfie_multiclass_f32_256x256.xml');
+    const devPath = path.join(__dirname, '../models/selfie_multiclass_f32_256x256.xml');
 
     try {
         await fs.access(archivePath, fs.constants.F_OK);
@@ -108,7 +71,6 @@ function normalizeArray(array) {
 }
 
 async function runModel(img, width, height, device) {
-    const inputSize = { w: 256, h: 256 };
     const originalImg = sharp(img.data, { raw: { channels: 4, width, height } });
     const inputImg = await originalImg
         .resize(inputSize.w, inputSize.h, { fit: 'fill' })
@@ -148,17 +110,17 @@ async function runModel(img, width, height, device) {
             avgInfTime = calculateAverage(infTimes);
         }
 
-        const channels = 4;
+        const channels = 3;
         const normalizedData = normalizeArray(resultTensor.data);
         const imageBuffer = Buffer.alloc(inputSize.w * inputSize.h * channels);
 
         for (let i = 0; i < normalizedData.length; i += 6) {
             const indexOffset = i/6 * channels;
+            const value = 255*normalizedData[i];
 
-            imageBuffer[indexOffset] = 0;
-            imageBuffer[indexOffset + 1] = 0;
-            imageBuffer[indexOffset + 2] = 0;
-            imageBuffer[indexOffset + 3] = 255*normalizedData[i];
+            imageBuffer[indexOffset] = value;
+            imageBuffer[indexOffset + 1] = value;
+            imageBuffer[indexOffset + 2] = value;
         }
 
         outputMask = imageBuffer;
@@ -174,7 +136,6 @@ async function runModel(img, width, height, device) {
     }
 }
 
-
 async function blurImage(image, width, height) {
     if (outputMask == null)
         return {
@@ -183,23 +144,40 @@ async function blurImage(image, width, height) {
             height: height
         };
 
-    const mask = await sharp(outputMask, {
-            raw: { channels: 4, width: 256, height: 256 }
+    const person = await sharp(outputMask, {
+            raw: {
+                channels: 3,
+                width: inputSize.w,
+                height: inputSize.h,
+            }
         })
-        .resize(width, height, { fit: 'fill' }).toBuffer();
-    const combined = await sharp(image.data, {
+        .resize(width, height, { fit: 'fill' })
+        .unflatten()
+        .composite([{
+            input: image.data,
             raw: {
                 channels: 4,
                 width,
                 height,
-            }
+            },
+            blend: 'in',
+        }])
+        .toBuffer();
+
+    const screen = await sharp(image.data, {
+            raw: { channels: 4, width, height },
         })
-        // .flatten({ background: mask })
-        .composite([{ input: mask, raw: { channels: 4, width, height } }])
-        .raw().toBuffer();
+        .blur(10)
+        .composite([{
+            input: person,
+            raw: { channels: 4, width, height },
+            blend: 'atop'
+        }])
+        .raw()
+        .toBuffer();
 
     return{
-        img: new Uint8ClampedArray(combined.buffer),
+        img: new Uint8ClampedArray(screen.buffer),
         width: width,
         height: height,
     };
