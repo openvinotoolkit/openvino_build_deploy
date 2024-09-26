@@ -121,12 +121,7 @@ async function runModel(img, width, height, device){
         // PREPOSTPROCESSOR
         const _ppp = new ov.preprocess.PrePostProcessor(model);
         _ppp.input().tensor().setShape([1,height,width,3]).setLayout('NHWC');
-        /*
-        Problem: Resulting shape '[1,3,256,3]' after preprocessing is not aligned with original parameter's shape: [1,256,256,3], input parameter: input_29
-        */
         _ppp.input().preprocess().resize(ov.preprocess.resizeAlgorithm.RESIZE_LINEAR);
-        _ppp.input().model().setLayout('NCHW');
-        _ppp.output().tensor().setElementType(ov.element.f32);
         _ppp.build();
 
         // OpenVINO INFERENCE
