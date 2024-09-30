@@ -294,8 +294,9 @@ def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str,
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--stream', default="0", type=str, help="Path to a video file or the webcam number")
-    parser.add_argument("--model_name", type=str, default="yolov8n", help="Model version to be converted",
-                        choices=["yolov8n", "yolov8s", "yolov8m", "yolov8l", "yolov8x", "yolov8n-seg", "yolov8s-seg", "yolov8m-seg", "yolov8l-seg", "yolov8x-seg"])
+    parser.add_argument("--model_name", type=str, default="yolo11n", help="Model version to be converted",
+                        choices=["yolov8n", "yolov8s", "yolov8m", "yolov8l", "yolov8x", "yolov8n-seg", "yolov8s-seg", "yolov8m-seg", "yolov8l-seg", "yolov8x-seg",
+                                 "yolo11n", "yolo11s", "yolo11m", "yolo11l", "yolo11x", "yolo11n-seg", "yolo11s-seg", "yolo11m-seg", "yolo11l-seg", "yolo11x-seg"])
     parser.add_argument("--model_dir", type=str, default="model", help="Directory to place the model in")
     parser.add_argument('--zones_config_file', type=str, default="zones.json", help="Path to the zone config file (json)")
     parser.add_argument('--people_limit', type=int, default=3, help="The maximum number of people in the area")
