@@ -56,8 +56,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           deviceId: deviceId,
-          width: { ideal: 800 },
-          height: { ideal: 600 }
+          width: { ideal: 960 },
+          height: { ideal: 540 }
         },
         audio: false
       });

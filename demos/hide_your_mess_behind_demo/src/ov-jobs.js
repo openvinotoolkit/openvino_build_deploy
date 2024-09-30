@@ -11,11 +11,14 @@ module.exports = { detectDevices, runModel, takeTime, blurImage }
 // GLOBAL VARIABLES
 // OpenVINO:
 const core = new ov.Core();
+const ovModels = new Map(); // compiled models
+let modelExecutor = null;
 // semaphore used in runModel:
 let semaphore = false;
 // variables used to calculate inference time:
 let infTimes = [];
 let avgInfTime = 0;
+let isFirst = true; // not counting first iteration to average
 
 const inputSize = { w: 256, h: 256 };
 let outputMask = null;
@@ -29,10 +32,6 @@ function calculateAverage(array){
     let sum = array.reduce((accumulator, currentValue) => accumulator + currentValue, 0);
     return (sum / array.length);
 }
-
-
-
-let modelExecutor = null;
 
 async function getModelPath() {
     const archivePath = path.join(__dirname, '../../app.asar.unpacked/models/selfie_multiclass_f32_256x256.xml');
@@ -69,8 +68,6 @@ function normalizeArray(array) {
         return coef > throughput ? 1 : 0;
     });
 }
-
-let isFirst = true; // not counting first iteration to average
 
 async function runModel(img, width, height, device) {
     const originalImg = sharp(img.data, { raw: { channels: 4, width, height } });
