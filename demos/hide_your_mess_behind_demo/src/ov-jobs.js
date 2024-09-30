@@ -68,7 +68,7 @@ function normalizeArray(array) {
     });
 }
 
-async function preprocessing(originalImg){
+async function preprocessing(originalImg) {
     const inputImg = await originalImg
         .resize(inputSize.w, inputSize.h, { fit: 'fill' })
         .removeAlpha()
@@ -77,6 +77,22 @@ async function preprocessing(originalImg){
     const tensorData = Float32Array.from(resizedImageData, x => x / 255);
     const shape = [1, inputSize.w, inputSize.h, 3];
     return new ov.Tensor(ov.element.f32, shape, tensorData);
+}
+
+function postprocessMask(resultTensor) {
+    const channels = 3;
+    const normalizedData = normalizeArray(resultTensor.data);
+    const imageBuffer = Buffer.alloc(inputSize.w * inputSize.h * channels);
+
+    for (let i = 0; i < normalizedData.length; i += 6) {
+        const indexOffset = i/6 * channels;
+        const value = 255*normalizedData[i];
+
+        imageBuffer[indexOffset] = value;
+        imageBuffer[indexOffset + 1] = value;
+        imageBuffer[indexOffset + 2] = value;
+    }
+    return imageBuffer;
 }
 
 async function runModel(img, width, height, device) {
@@ -116,20 +132,7 @@ async function runModel(img, width, height, device) {
             avgInfTime = calculateAverage(infTimes);
         }
 
-        const channels = 3;
-        const normalizedData = normalizeArray(resultTensor.data);
-        const imageBuffer = Buffer.alloc(inputSize.w * inputSize.h * channels);
-
-        for (let i = 0; i < normalizedData.length; i += 6) {
-            const indexOffset = i/6 * channels;
-            const value = 255*normalizedData[i];
-
-            imageBuffer[indexOffset] = value;
-            imageBuffer[indexOffset + 1] = value;
-            imageBuffer[indexOffset + 2] = value;
-        }
-
-        outputMask = imageBuffer;
+        outputMask = postprocessMask(resultTensor);
         isFirst = false;
 
         return {
