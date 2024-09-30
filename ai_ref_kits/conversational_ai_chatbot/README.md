@@ -160,7 +160,7 @@ python app.py \
 
 - `--reranker_model path/to/reranker_model`: Path to your reranker model directory (e.g., `model/bge-reranker-large-FP32`). This model Reranks responses to ensure relevance and accuracy.
 
-- `--tts_model path/to/tts_model`: Path to your TTS (Text-to-Speech) model directory (e.g., `microsoft/speecht5_tts`) for converting text responses into spoken words.
+- `--tts_model tts_model_name`: HuggingFace name of your TTS (Text-to-Speech) model (e.g., `microsoft/speecht5_tts`) for converting text responses into spoken words.
 
 - `--vocoder_model path/to/vocoder_model`: Path to your vocoder model directory (e.g., `microsoft/speecht5_hifigan`). Enhances audio quality of the spoken responses.
 
