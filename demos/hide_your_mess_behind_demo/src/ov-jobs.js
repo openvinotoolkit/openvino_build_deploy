@@ -68,13 +68,19 @@ function normalizeArray(array) {
     });
 }
 
-async function runModel(img, width, height, device) {
-    const originalImg = sharp(img.data, { raw: { channels: 4, width, height } });
+async function preprocessing(originalImg){
     const inputImg = await originalImg
         .resize(inputSize.w, inputSize.h, { fit: 'fill' })
         .removeAlpha()
         .raw().toBuffer();
     const resizedImageData = new Uint8ClampedArray(inputImg.buffer);
+    const tensorData = Float32Array.from(resizedImageData, x => x / 255);
+    const shape = [1, inputSize.w, inputSize.h, 3];
+    return new ov.Tensor(ov.element.f32, shape, tensorData);
+}
+
+async function runModel(img, width, height, device) {
+    const originalImg = sharp(img.data, { raw: { channels: 4, width, height } });
 
     while (semaphore) {
         await new Promise(resolve => setTimeout(resolve, 7));
@@ -91,11 +97,10 @@ async function runModel(img, width, height, device) {
             ovModels.set(device, modelExecutor);
             isFirst = true;
         } else {
-            modelExecutor = ovModels.get(device)
+            modelExecutor = ovModels.get(device);
         }
-        const tensorData = Float32Array.from(resizedImageData, x => x / 255);
-        const shape = [1, inputSize.w, inputSize.h, 3];
-        const inputTensor = new ov.Tensor(ov.element.f32, shape, tensorData);
+
+        const inputTensor = await preprocessing(originalImg);
 
         // OpenVINO INFERENCE
         const startTime = performance.now();            // TIME MEASURING : START
