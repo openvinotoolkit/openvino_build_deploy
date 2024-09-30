@@ -25,7 +25,7 @@ class ModelExecutor {
             this.compiledModel = await this.core.compileModel(
                 this.model, device,
                 {
-                  'PERFORMANCE_HINT': 'THROUGHPUT',
+                  'PERFORMANCE_HINT': 'LATENCY',
                   'NUM_STREAMS': 2
                 },
             );
@@ -33,7 +33,7 @@ class ModelExecutor {
             this.compiledModel = await this.core.compileModel(
                 this.model, device,
                 {
-                  'PERFORMANCE_HINT': 'THROUGHPUT'
+                  'PERFORMANCE_HINT': 'LATENCY'
                 },
         );
         }

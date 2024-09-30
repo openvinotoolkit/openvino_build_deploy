@@ -89,6 +89,7 @@ async function runModel(img, width, height, device) {
             modelExecutor = new ModelExecutor(ov, modelPath);
             await modelExecutor.init();
             ovModels.set(device, modelExecutor);
+            isFirst = true;
         } else {
             modelExecutor = ovModels.get(device)
         }
