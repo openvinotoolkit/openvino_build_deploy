@@ -146,8 +146,8 @@ python app.py \
   --chat_model path/to/chat_model \
   --embedding_model path/to/embedding_model \
   --reranker_model path/to/reranker_model \
-  --tts_model path/to/tts_model \
-  --vocoder_model path/to/vocoder_model \
+  --tts_model tts_model_name \
+  --vocoder_model vocoder_model_name \
   --public
 ```
 - `--personality path/to/personality.yaml`: Path to your custom personality YAML file (e.g., `concierge_personality.yaml`). This file defines the assistant's personality, including instructions, system configuration, and greeting prompts. Feel free to create and provide your own custom personality file.
