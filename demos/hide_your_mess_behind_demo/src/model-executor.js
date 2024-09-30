@@ -21,20 +21,34 @@ class ModelExecutor {
     }
 
     async compileModel(device = 'AUTO') {
-        this.compiledModel = await this.core.compileModel(
-            this.model, device,
-            {
-              'PERFORMANCE_HINT': 'THROUGHPUT',
-              //'NUM_STREAMS': 2 // 2 is for CPU, GPU usually fails, remove for GPU
-            },
+        if (device != "GPU"){
+            this.compiledModel = await this.core.compileModel(
+                this.model, device,
+                {
+                  'PERFORMANCE_HINT': 'THROUGHPUT',
+                  'NUM_STREAMS': 2
+                },
+            );
+        } else {
+            this.compiledModel = await this.core.compileModel(
+                this.model, device,
+                {
+                  'PERFORMANCE_HINT': 'THROUGHPUT'
+                },
         );
+        }
         this.lastUsedDevice = device;
 
         return this.compiledModel;
     }
 
     async execute(device, inputData) {
-        const useTwoInferRequests = true; // Can fail on GPU
+      let useTwoInferRequests;
+        if (device == "GPU"){
+            useTwoInferRequests = false; 
+        } else {
+            useTwoInferRequests = true; 
+        }
 
         if (!this.initialized)
             throw new Error('Model isn\'t initialized');
