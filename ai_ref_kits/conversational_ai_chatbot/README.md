@@ -108,7 +108,7 @@ The ASR model is responsible for converting spoken language (audio) into written
 ```shell
 python convert_and_optimize_asr.py --asr_model_type distil-whisper-large-v3 --precision int8
 ```
-    This script will convert and optimize the automatic speech recognition (ASR) model performing weights quantization.
+This script will convert and optimize the automatic speech recognition (ASR) model performing weights quantization.
 
 2. **Chat , Embedding, and Reranker Model Conversion**:
 The chat model is at the core of the chatbot's ability to generate meaningful and context-aware responses. It processes the text input from the ASR model and produces a human-like response.
@@ -118,7 +118,7 @@ To convert the chat, embedding, and reranker models, run the following command:
 ```shell
 python convert_and_optimize_chat.py --chat_model_type llama3.1-8B --embedding_model_type bge-large --reranker_model_type bge-reranker-large --precision int4 --hf_token your_huggingface_token --model_dir model
 ```
-    This script will handle the conversion and optimization of:
+This script will handle the conversion and optimization of:
 
 - The chat model (`llama3.1-8B`) with `int4` precision.
 - The embedding model (`bge-large`) with `FP32` precision.
