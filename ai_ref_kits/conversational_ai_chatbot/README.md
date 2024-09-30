@@ -162,7 +162,7 @@ python app.py \
 
 - `--tts_model tts_model_name`: HuggingFace name of your TTS (Text-to-Speech) model (e.g., `microsoft/speecht5_tts`) for converting text responses into spoken words.
 
-- `--vocoder_model path/to/vocoder_model`: Path to your vocoder model directory (e.g., `microsoft/speecht5_hifigan`). Enhances audio quality of the spoken responses.
+- `--vocoder_model vocoder_model_name`: HuggingFace name of your vocoder model (e.g., `microsoft/speecht5_hifigan`). Enhances audio quality of the spoken responses.
 
 - `--public`: Include this flag to make the Gradio interface publicly accessible over the network. Without this flag, the interface will only be available on your local machine.
 
