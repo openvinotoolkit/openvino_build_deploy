@@ -12,7 +12,6 @@ module.exports = { detectDevices, runModel, takeTime, blurImage }
 // OpenVINO:
 const core = new ov.Core();
 const ovModels = new Map(); // compiled models
-let modelExecutor = null;
 // semaphore used in runModel:
 let semaphore = false;
 // variables used to calculate inference time:
@@ -84,11 +83,14 @@ async function runModel(img, width, height, device) {
     semaphore = true;
 
     try {
-        if (!modelExecutor) {
+        if (!ovModels.has(device)) {
             const modelPath = await getModelPath();
 
             modelExecutor = new ModelExecutor(ov, modelPath);
             await modelExecutor.init();
+            ovModels.set(device, modelExecutor);
+        } else {
+            modelExecutor = ovModels.get(device)
         }
         const tensorData = Float32Array.from(resizedImageData, x => x / 255);
         const shape = [1, inputSize.w, inputSize.h, 3];
