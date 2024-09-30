@@ -11,6 +11,7 @@ module.exports = { detectDevices, runModel, takeTime, blurImage }
 // GLOBAL VARIABLES
 // OpenVINO:
 const core = new ov.Core();
+let readModel = null;
 const ovModels = new Map(); // compiled models
 // semaphore used in runModel:
 let semaphore = false;
@@ -106,9 +107,11 @@ async function runModel(img, width, height, device) {
 
     try {
         if (!ovModels.has(device)) {
-            const modelPath = await getModelPath();
-
-            modelExecutor = new ModelExecutor(ov, modelPath);
+            if (readModel==null){
+                const modelPath = await getModelPath();
+                readModel = await core.readModel(modelPath);
+            }
+            modelExecutor = new ModelExecutor(ov, readModel);
             await modelExecutor.init();
             ovModels.set(device, modelExecutor);
             isFirst = true;

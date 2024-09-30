@@ -1,3 +1,6 @@
+
+const { performance } = require('perf_hooks');
+
 class ModelExecutor {
     initialized = false;
     core = null;
@@ -5,18 +8,16 @@ class ModelExecutor {
     compiledModel = null;
     ir1 = null;
     ir2 = null;
-    modelFilePath = null;
     lastUsedDevice = null;
 
     nextInferRequestNum = 1;
 
-    constructor(ov, modelFilePath) {
+    constructor(ov, model) {
         this.core = new ov.Core();
-        this.modelFilePath = modelFilePath;
+        this.model = model;
     }
 
     async init() {
-        this.model = await this.core.readModel(this.modelFilePath);
         this.initialized = true;
     }
 
@@ -43,6 +44,7 @@ class ModelExecutor {
     }
 
     async execute(device, inputData) {
+      const begin = performance.now();
       let useTwoInferRequests;
         if (device == "GPU"){
             useTwoInferRequests = false; 
@@ -63,7 +65,7 @@ class ModelExecutor {
 
         const result = await this.getInferRequest(useTwoInferRequests).inferAsync(inputData);
         const keys = Object.keys(result);
-
+        console.log(performance.now()-begin);
         return result[keys[0]];
     }
 
