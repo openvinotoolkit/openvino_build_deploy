@@ -70,6 +70,8 @@ function normalizeArray(array) {
     });
 }
 
+let isFirst = true; // not counting first iteration to average
+
 async function runModel(img, width, height, device) {
     const originalImg = sharp(img.data, { raw: { channels: 4, width, height } });
     const inputImg = await originalImg
@@ -83,7 +85,6 @@ async function runModel(img, width, height, device) {
     }
 
     semaphore = true;
-    let isFirst = false; // not counting first iteration to average
 
     try {
         if (!modelExecutor) {
@@ -106,7 +107,7 @@ async function runModel(img, width, height, device) {
         if (!isFirst) {
             if (infTimes.length >= 50) infTimes.pop();
 
-            infTimes.push(inferenceTime);
+            infTimes.unshift(inferenceTime);
             avgInfTime = calculateAverage(infTimes);
         }
 
@@ -124,6 +125,7 @@ async function runModel(img, width, height, device) {
         }
 
         outputMask = imageBuffer;
+        isFirst = false;
 
         return {
             width,
