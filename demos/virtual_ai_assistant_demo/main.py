@@ -49,7 +49,7 @@ def load_asr_model(model_name: str) -> None:
     global asr_model, asr_processor
 
     model_path = MODEL_DIR / model_name
-    device = "GPU" if "GPU" in get_available_devices() else "CPU"
+    device = "GPU" if "GPU" in get_available_devices() and ov.__version__ < "2024.3" else "CPU"
 
     # create a distil-whisper model and its processor
     if not model_path.exists():
