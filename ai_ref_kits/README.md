@@ -11,8 +11,10 @@
 	- [🔍 Defect Detection](#-defect-detection)
 	- [⏲️ Smart Meter Scanning](#%EF%B8%8F-smart-meter-scanning)
 	- [🛍️ Automated Self-Checkout](#%EF%B8%8F-automated-self-checkout)
-	- [🗣️ Voice-Enabled Assistant](#%EF%B8%8F-voice-enabled-assistant)
-	- [🔦 Explainable AI](#-explainable-ai) 
+	- [🗣️ Custom AI Assistant](#%EF%B8%8F-custom-ai-assistant)
+	- [🔦 Explainable AI](#-explainable-ai)
+	- [🖼️ Multimodal AI Visual Generator](#%EF%B8%8F-multimodal-ai-visual-generator)
+	- [💬 Conversational AI Chatbot](#-conversational-ai-chatbot)
 - [Future Kits](#future-kits)
 
 - [Troubleshooting and Resources](#troubleshooting-and-resources)
@@ -79,7 +81,7 @@ This solution is designed to help automate checkout for retail businesses more e
 |----------------------------------------------------| - |
 | Related AI concepts                                | Speech Recognition, Natural Language Understanding, Large Language Models (LLMs), Generative AI |
 | Example industries                                 | Retail Customer Service, Smart Home Automation |
-| Demo                                               |  |
+| Demo                                               | [Code video](https://www.youtube.com/watch?v=9jnY9PJjYVk) |
 
 The Custom AI Assistant, powered by the OpenVINO™ toolkit, integrates voice-activated interfaces into various applications. It employs advanced models for speech recognition, natural language processing, and speech synthesis. Additionally, the agent leverages the capabilities of Large Language Models (LLMs) and Generative AI, enabling it to understand complex queries, generate coherent responses, and offer a more dynamic and interactive communication experience. These advanced AI technologies enhance the agent's ability to engage in natural, human-like conversations, making it ideal for applications in customer service and smart home automation.
 
@@ -93,6 +95,28 @@ The Custom AI Assistant, powered by the OpenVINO™ toolkit, integrates voice-ac
 | Demo | [Code video](https://www.youtube.com/watch?v=InXb2wLCsJE) |
 
 Understanding why computer vision models make certain predictions using data and model explainability can help us refine our models to be more efficient and performant. This solution demonstrates how to leverage the OpenVINO™ toolkit, Datumaro, and Ultralytics to generate data quality measurements and saliency maps to understand the predictions and performance of computer vision models during inference.
+
+### 🖼️ Multimodal AI Visual Generator
+![multimodal-ai-visual-generator](https://github.com/user-attachments/assets/f113a126-4b44-4488-be4e-e4bf52a6cebc)
+
+| [Multimodal AI Visual Generator](multimodal_ai_visual_generator) |  |
+| - | - |
+| Related AI concepts | image generation, automatic speech recognition, natural language processing |
+| Example industries | retail, education​, entertainment |
+| Demo | |
+
+An in-depth demo of how the Multimodal AI Visual Generator Kit creates a real-time visual generative AI workflow. This allows the intake of multimodal inputs from sources like a camera, voice, or typed text to produce visual outputs driven by AI models like Whisper, Llama, nanoLLaVA, and Latent Consistency Models.
+
+### 💬 Conversational AI Chatbot
+[![conversational-ai-chatbot](https://github.com/user-attachments/assets/262ba878-b845-445b-aff7-0a118517d409)](conversational-ai-chatbot)
+
+| [Conversational AI Chatbot](conversational_ai_chatbot) |                                                                                                                                                         |
+|--------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Related AI concepts                                    | Speech Recognition, Natural Language Understanding, Large Language Models (LLMs), Retrieval Augmented Generation (RAG), Speech Synthesis, Generative AI |
+| Example industries                                     | Tourism                                                                                                                                                 |
+| Demo                                                   |                                                                                                                                                         |
+
+A description
 
 ## Future Kits
 This is a list of Edge AI Reference kits that are planned or are in development.

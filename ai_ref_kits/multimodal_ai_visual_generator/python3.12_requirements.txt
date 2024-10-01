@@ -7,10 +7,10 @@ optimum==1.20.0
 optimum-intel==1.17.0
 
 # deep learning frameworks
-tensorflow
+tensorflow==2.17.0
 
 
-onnx>=1.11.0
+onnx==1.16.0
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch==2.3.1
 torchvision==0.18.1
@@ -23,7 +23,7 @@ numpy>=1.21.0
 opencv-python
 Pillow>=8.3.2
 
-scipy
+scipy==1.14.1
 
 # The packages below are not directly required. They are dependencies of 
 # other dependencies that are pinned to a specific version to avoid
@@ -32,7 +32,7 @@ scikit-image>=0.19.2
 setuptools>=56.0.0
 
 
-gradio
-SpeechRecognition
-pyaudio
-diffusers
+gradio==4.42.0
+SpeechRecognition==3.10.4
+pyaudio==0.2.14
+diffusers==0.30.0
