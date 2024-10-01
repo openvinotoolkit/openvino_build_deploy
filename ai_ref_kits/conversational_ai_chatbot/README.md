@@ -103,15 +103,14 @@ _NOTE: If you already have access to the LlaMA model weights, skip to the authen
 _NOTE: This reference kit requires much bandwidth and disk space (>8GB) for downloading models. Also, the conversion may take much time (>2h) and need much memory (>32GB)) when running for the first time as the models used here are huge. After the first run, the subsequent runs will be done much faster._
 
 The application uses three separate models for its operation, each requiring conversion and optimization for use with OpenVINO™. Follow the order below to convert and optimize each model:
-
-1. Automated Speech Recognition Distil-Whisper Conversion:
+1. **Automated Speech Recognition Distil-Whisper Conversion**:
 The ASR model is responsible for converting spoken language (audio) into written text. This functionality is crucial as it enables the chatbot to understand and process voice-based user queries.
 ```shell
 python convert_and_optimize_asr.py --asr_model_type distil-whisper-large-v3 --precision int8
 ```
 This script will convert and optimize the automatic speech recognition (ASR) model performing weights quantization.
 
-2.Chat , Embedding, and Reranker Model Conversion:
+2. **Chat , Embedding, and Reranker Model Conversion**:
 The chat model is at the core of the chatbot's ability to generate meaningful and context-aware responses. It processes the text input from the ASR model and produces a human-like response.
 The embedding model represents text data (both user queries and potential responses or knowledge base entries) as numerical vectors. These vectors are essential for tasks such as semantic search and similarity matching.
 The reranker model is used in retrieval-augmented generation (RAG) setups to reorder or "rerank" retrieved results, ensuring the most relevant information is presented to the user.
@@ -125,10 +124,13 @@ This script will handle the conversion and optimization of:
 - The embedding model (`bge-large`) with `FP32` precision.
 - Reranker Model (`bge-reranker-large`) with `FP32` precision.
 
-The script requires a Hugging Face token (`--hf_token`) for authentication, which allows access to gated models like LLaMA. The converted models will be saved in the specified `model` directory.
+    The script requires a Hugging Face token (`--hf_token`) for authentication, which allows access to gated models like LLaMA. The converted models will be saved in the specified `model` directory.
 
-To access the original LlaMA model weights:
-Accept the License on Hugging Face: Visit the LlaMA model page, for example [meta-llama/Meta-Llama-3.1-8B](https://huggingface.co/meta-llama/Meta-Llama-3.1-8B) on Hugging Face. Read and accept the license. Once you have accepted the license, you'll gain access to the LlaMA models. Note that requests used to take up to one hour to get processed.
+    To access the original LlaMA model weights:
+    Accept the License on Hugging Face: Visit the LlaMA model page, for example [meta-llama/Meta-Llama-3.1-8B](https://huggingface.co/meta-llama/Meta-Llama-3.1-8B) on Hugging Face. Read and accept the license. Once you have accepted the license, you'll gain access to the LlaMA models. Note that requests used to take up to one hour to get processed.
+
+3. **Text-to-Speech (TTS) Model**:
+The Text-to-Speech (TTS) model converts the chatbot's text responses into spoken words, enabling voice output. The application uses Microsoft's SpeechT5 model for TTS. The TTS model and vocoder do not require conversion. They are compiled at runtime using ``torch.compile`` with the OpenVINO backend.
 
 After running the conversion scripts, you can run app.py to launch the application.
 
@@ -138,9 +140,31 @@ _NOTE: This application requires much memory (>16GB) as the models used here are
 
 Execute the `app.py` script with the following command, including all necessary model directory arguments:
 ```shell
-python app.py --personality concierge_personality.yaml --asr_model_dir path/to/asr_model --chat_model_dir path/to/chat_model --embedding_model path/to/embedding_model --reranker_model path/to/reranker_model --public
+python app.py \
+  --personality concierge_personality.yaml \
+  --asr_model path/to/asr_model \
+  --chat_model path/to/chat_model \
+  --embedding_model path/to/embedding_model \
+  --reranker_model path/to/reranker_model \
+  --tts_model tts_model_name \
+  --vocoder_model vocoder_model_name \
+  --public
 ```
-Replace `path/to/asr_model` , `path/to/chat_model` ,`path/to/embedding_model`, and `path/to/reranker_model` with the actual paths to your respective models. Add ``--public` to make it publicly accessible. Feel free to provide a custom personality, which must be defined in a yaml file.
+- `--personality path/to/personality.yaml`: Path to your custom personality YAML file (e.g., `concierge_personality.yaml`). This file defines the assistant's personality, including instructions, system configuration, and greeting prompts. Feel free to create and provide your own custom personality file.
+
+- `--asr_model path/to/asr_model`: Path to your ASR (Automatic Speech Recognition) model directory, using `int8` precision (e.g., `model/distil-whisper-large-v3-int8`) for efficient speech recognition.
+
+- `--chat_model path/to/chat_model`: Path to your chat model directory (e.g., `model/llama3.1-8B-INT4`) that drives conversation flow and response generation.
+
+- `--embedding_model path/to/embedding_model`: Path to your embedding model directory (e.g., `model/bge-small-FP32`) for understanding and matching text inputs.
+
+- `--reranker_model path/to/reranker_model`: Path to your reranker model directory (e.g., `model/bge-reranker-large-FP32`). This model Reranks responses to ensure relevance and accuracy.
+
+- `--tts_model tts_model_name`: HuggingFace name of your TTS (Text-to-Speech) model (e.g., `microsoft/speecht5_tts`) for converting text responses into spoken words.
+
+- `--vocoder_model vocoder_model_name`: HuggingFace name of your vocoder model (e.g., `microsoft/speecht5_hifigan`). Enhances audio quality of the spoken responses.
+
+- `--public`: Include this flag to make the Gradio interface publicly accessible over the network. Without this flag, the interface will only be available on your local machine.
 
 ### Create a Custom YAML Personality File
 
