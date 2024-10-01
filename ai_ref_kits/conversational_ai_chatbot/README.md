@@ -16,7 +16,7 @@ This kit uses the following technology stack:
 
 Check out our [Edge AI Reference Kits repository](/) for other kits.
 
-![conversational-ai-chatbot](https://github.com/user-attachments/assets/262ba878-b845-445b-aff7-0a118517d409)
+![conversational-ai-chatbot](https://github.com/user-attachments/assets/966fa497-14fa-4ba9-b091-65cf4fe1e187)
 
 ### What's New
 
