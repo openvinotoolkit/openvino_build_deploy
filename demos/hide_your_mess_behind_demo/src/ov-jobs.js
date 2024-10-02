@@ -36,17 +36,11 @@ async function detectDevices() {
 
 
 function preprocessMat(image, targetHeight = 256, targetWidth = 256) {
-    // RESIZING
-    if (resizedMat == null || resizedMat.size().width !== targetWidth || resizedMat.size().height !== targetHeight){
-        resizedMat = new cv.Mat(targetHeight, targetWidth, cv.CV_8UC3);
-    }
-    cv.resize(image, resizedMat, resizedMat.size());
-
     //CHANGING FROM 4-CHANNEL BGRA TO 3-CHANNEL RGB
-    cv.cvtColor(resizedMat, resizedMat, cv.COLOR_BGRA2RGB);
+    cv.cvtColor(image, image, cv.COLOR_BGRA2RGB);
 
     return {
-        image : resizedMat
+        image : image
     };
 }
 
@@ -116,10 +110,7 @@ async function runModel(img, width, height, device){
         const shape = [1, preprocessedImage.rows, preprocessedImage.cols, 3];
         const inputTensor = new ov.Tensor(ov.element.f32, shape, tensorData);
 
-        // OpenVINO INFERENCE
-        const startTime = performance.now();            // TIME MEASURING : START
-
-        let compiledModel, inferRequest;
+        //DECLARE OpenVINO MODEL
         if (model == null){
             if (fs.existsSync(path.join(__dirname, '../../app.asar'))){     //if running compiled program
                 model = await core.readModel(path.join(__dirname, "../../app.asar.unpacked/models/selfie_multiclass_256x256.xml"));
@@ -127,6 +118,18 @@ async function runModel(img, width, height, device){
             model = await core.readModel(path.join(__dirname, "../models/selfie_multiclass_256x256.xml"));
             }
         }
+
+        // PREPOSTPROCESSOR
+        const _ppp = new ov.preprocess.PrePostProcessor(model);
+        _ppp.input().tensor().setShape([1,height,width,3]).setLayout('NHWC');
+        _ppp.input().preprocess().resize(ov.preprocess.resizeAlgorithm.RESIZE_LINEAR);
+        _ppp.build();
+
+        // OpenVINO INFERENCE
+        const startTime = performance.now();            // TIME MEASURING : START
+
+        let compiledModel, inferRequest;
+
         if (!ovModels.has(device)){
             compiledModel = await core.compileModel(model, device);
             ovModels.set(device, compiledModel);
