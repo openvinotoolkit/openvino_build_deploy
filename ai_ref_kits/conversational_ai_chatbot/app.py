@@ -311,7 +311,11 @@ def chat(history: List[List[str]]) -> List[List[str]]:
             yield history
 
         end_time = time.time()
-        log.info(f"Chat model response time: {end_time - start_time:.2f} seconds")
+
+        # 75 words ~= 100 tokens
+        tokens = len(history[-1][1].split(" ")) * 4 / 3
+        processing_time = end_time - start_time
+        log.info(f"Chat model response time: {processing_time:.2f} seconds ({tokens / processing_time:.2f} tokens/s)")
 
 
 def transcribe(audio: Tuple[int, np.ndarray], prompt: str, conversation: List[List[str]]) -> List[List[str]]:
