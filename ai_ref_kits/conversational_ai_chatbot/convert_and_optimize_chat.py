@@ -12,6 +12,7 @@ from transformers import AutoTokenizer
 MODEL_MAPPING = {
     "llama3-8B": "meta-llama/Meta-Llama-3-8B-Instruct",
     "llama3.1-8B": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+    "llama3.2-3B": "meta-llama/Llama-3.2-3B-Instruct",
     "qwen2-7B": "Qwen/Qwen2-7B-Instruct",
     "bge-small": "BAAI/bge-small-en-v1.5",
     "bge-large": "BAAI/bge-large-en-v1.5",
@@ -157,7 +158,7 @@ def convert_reranker_model(model_type: str, model_dir: Path) -> Path:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--chat_model_type", type=str, choices=["llama3.1-8B", "llama3-8B", "qwen2-7B"],
+    parser.add_argument("--chat_model_type", type=str, choices=["llama3.2-3B", "llama3.1-8B", "llama3-8B", "qwen2-7B"],
                         default="llama3.1-8B", help="Chat model to be converted")
     parser.add_argument("--embedding_model_type", type=str, choices=["bge-small", "bge-large", "bge-m3"],
                         default="bge-small", help="Embedding model to be converted")
