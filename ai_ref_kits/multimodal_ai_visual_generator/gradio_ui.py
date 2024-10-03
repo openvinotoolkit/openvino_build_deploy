@@ -73,7 +73,7 @@ model_path_sr = Path(f"dnd_models/single-image-super-resolution-1033.xml") #real
 model_path = Path(f"dnd_models/square_lcm") 
 engine = LatentConsistencyEngine(
 model = model_path,
-device = ["NPU", "NPU", "GPU"]  #"CPU", "GPU"
+device = ["CPU", "NPU", "GPU"]  #"CPU", "GPU"
 )
 
 #model_path_lcm = Path("dnd_models/sd-1.5-lcm-openvino-npu") #Path(f"dnd_models/openvino_ir_lcm") 
@@ -185,11 +185,12 @@ def llama(text, random_num=None):
     #if first_run is True:
     global prev_history
     tokenizer_kwargs = model_configuration.get("tokenizer_kwargs", {})
+    #print("TEXT TESSTT @@@@@@@@@@@",text)
     #history_template = model_configuration.get("history_template")
     #has_chat_template = model_configuration.get("has_chat_template", history_template is None)
     test_string = f"""You are a Dungeons and Dragons prompt assistant who reads prompts and turns them into short prompts \
-        for an model that generates portrait images from prompts. Rephrase the following sentence to be a descriptive prompt that is one short sentence only\
-        and easy for a image generation model to understand, ending with proper punctuation, for a portrait.\
+        for an model that generates scene images from prompts. Rephrase the following sentence to be a descriptive prompt that is one short sentence only\
+        and easy for a image generation model to understand, ending with proper punctuation, for a scene.\
         Add the theme to the prompt. You MUST involve the context in your answer, if it is present: \
         ### Context: {prev_history if 'prev_history' in globals() else None} \
         ### Prompt: {text} \
@@ -203,8 +204,8 @@ def llama(text, random_num=None):
     result = result.split('.')[0]
     #We can also ensure that the theme is infused, by manually adding the phrase to the end again
     #result = result + " (" + locations_json[str(random_num)] + ") "
-    prev_history = result
-    print(result)
+    #prev_history = result
+    #print(result)
     return result
 
 def parse_ocr_output(text):
@@ -271,6 +272,7 @@ def generate_llm_prompt(text, dice_roll, _=gr.Progress(track_tqdm=True)):
    return text  
 
 def generate_from_text(theme, orig_prompt, llm_prompt, seed, num_steps,guidance_input, _=gr.Progress(track_tqdm=True)):
+   print("Generate from text....")
    
    if llm_prompt == "": # and output_ocr_text != "discard":
        #if dice_roll_theme not in orig_prompt
@@ -287,7 +289,7 @@ def generate_from_text(theme, orig_prompt, llm_prompt, seed, num_steps,guidance_
     height=512, width=512
     ).images[0]"""
 
-
+   #print("```````Going inn to SD Engine```````````````````")
    output = engine(
    prompt = text,
    num_inference_steps = num_steps,
@@ -345,28 +347,29 @@ h1 {
           border-color: rgba(255, 255, 255, 0.0);}
 """
 
-_js="""
-    () => {
-        document.body.classList.toggle('dark') ;
-        }
-    """
+#_js="""
+#    () => {
+#        document.body.classList.toggle('dark') ;
+#        }
+#    """
 
-"""theme = gr.themes.Default().set(button_primary_background_fill_dark="rgba(211, 211, 211, 0.1)",
+theme = gr.themes.Default().set(button_primary_background_fill_dark="rgba(211, 211, 211, 0.1)",
                                 button_primary_border_color_dark="rgba(211, 211, 211, 0.1)",
                                 input_background_fill_dark="rgba(255, 255, 255, 0.1)",
                                 block_background_fill_dark="rgba(211, 211, 211, 0.1)",
                                 block_label_background_fill_dark="rgba(211, 211, 211, 0.0)",
                                 border_color_primary_dark="rgba(211, 211, 211, 0.1)",
-                                slider_color_dark="#f97316")"""
-theme=gr.themes.Soft()
+                                slider_color_dark="#f97316")
+#theme=gr.themes.Soft()
+with gr.Blocks(css=css_code, theme=theme) as demo:
 
-with gr.Blocks(css=css_code, js=_js, theme=theme) as demo:
+#with gr.Blocks(css=css_code, js=_js, theme=theme) as demo:
 
     gr.Markdown(""" # 🏰 Bringing Adventure Gaming to Life 🧙 \n Using Real-time Generative AI on Your PC 💻 """)
 
     with gr.Row():
         with gr.Column(scale=1):
-            i = gr.Image(sources=["webcam", "upload"], label="Step 1: Get Inspired", type="pil")
+            #i = gr.Image(sources=["webcam", "upload"], label="Step 1: Get Inspired", type="pil")
             ocr_output = gr.Textbox(label="Output of OCR Model", visible=False)
             #out = gr.Textbox(label="Number typed in", elem_id="visible")
             with gr.Row():
@@ -395,10 +398,10 @@ with gr.Blocks(css=css_code, js=_js, theme=theme) as demo:
             depth_map = gr.Image(label="Depth Map", type="pil", elem_id="visible")
 
     radio.change(update_visibility, radio, [ocr_output, dice_roll_input])        
-    try:
-        i.change(ocr_dice_roll, [i, radio], [ocr_output, dice_roll_theme])
-    except ValueError:
-        pass
+    #try:
+    #    i.change(ocr_dice_roll, [i, radio], [ocr_output, dice_roll_theme])
+    #except ValueError:
+    #    pass
     #the following lines of code only apply if we are looking at a dice roll
     ocr_output.change(parse_ocr_output, ocr_output, dice_roll_input)
     dice_roll_input.change(adjust_theme, [ocr_output, dice_roll_input], dice_roll_theme)
@@ -406,13 +409,14 @@ with gr.Blocks(css=css_code, js=_js, theme=theme) as demo:
     add_theme_button.click(add_theme, [text_input, dice_roll_theme], text_input)
     llm_button.click(generate_llm_prompt, [text_input, dice_roll_input], text_output)
     context_button.click(clear_context)
-    #The LLM Generated Prompt can be left empty, and the image will be generated with the original prompt + theme
+    #The LLM Generated Prompt can be left empty, and the image will be generated with the original prompt + 
+    print("Before button")
     image_btn.click(generate_from_text, [dice_roll_theme, text_input, text_output, seed_input, steps_input, guidance_input], out)
     out.change(depth_map_parallax, out, depth_map)
 
 if __name__ == "__main__":
-    demo.launch(share=True,server_port=7960, debug=True,allowed_paths=['assets/image_opt.jpg',])
-#try:
-#    demo.launch(share=True,debug=True,allowed_paths=['assets/image_opt.jpg',])
-#except Exception:
-#    demo.launch(share=True, debug=True,allowed_paths=['assets/image_opt.jpg',])
+   #demo.launch(share=True,server_port=7960, debug=True,allowed_paths=['assets/image_opt.jpg',])
+    try:
+        demo.launch(share=True,debug=True,allowed_paths=['assets/image_opt.jpg',])
+    except Exception:
+        demo.launch(share=True, debug=True,allowed_paths=['assets/image_opt.jpg',])
