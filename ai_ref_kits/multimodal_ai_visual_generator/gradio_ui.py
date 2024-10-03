@@ -25,11 +25,12 @@ from depth_anything_v2_util_transform import Resize, NormalizeImage, PrepareForN
 from torchvision.transforms import Compose
 import whisper
 
+#Enable for light theme; dark theme enabled by default
+light_theme = None
 
 core = ov.Core()
 whisper_model = whisper.load_model("base", "cpu")
 whisper_model.eval()
-
 patch_whisper_for_ov_inference(whisper_model)
 WHISPER_ENCODER_OV = Path(f"dnd_models/ggml-base-encoder-openvino.xml")
 WHISPER_DECODER_OV = Path(f"dnd_models/whisper_base_decoder.xml")
@@ -185,7 +186,6 @@ def llama(text, random_num=None):
     #if first_run is True:
     global prev_history
     tokenizer_kwargs = model_configuration.get("tokenizer_kwargs", {})
-    #print("TEXT TESSTT @@@@@@@@@@@",text)
     #history_template = model_configuration.get("history_template")
     #has_chat_template = model_configuration.get("has_chat_template", history_template is None)
     test_string = f"""You are a Dungeons and Dragons prompt assistant who reads prompts and turns them into short prompts \
@@ -347,11 +347,14 @@ h1 {
           border-color: rgba(255, 255, 255, 0.0);}
 """
 
-#_js="""
-#    () => {
-#        document.body.classList.toggle('dark') ;
-#        }
-#    """
+if light_theme:
+    _js = None
+else:
+    _js="""
+        () => {
+            document.body.classList.toggle('dark') ;
+            }
+        """
 
 theme = gr.themes.Default().set(button_primary_background_fill_dark="rgba(211, 211, 211, 0.1)",
                                 button_primary_border_color_dark="rgba(211, 211, 211, 0.1)",
@@ -360,16 +363,14 @@ theme = gr.themes.Default().set(button_primary_background_fill_dark="rgba(211, 2
                                 block_label_background_fill_dark="rgba(211, 211, 211, 0.0)",
                                 border_color_primary_dark="rgba(211, 211, 211, 0.1)",
                                 slider_color_dark="#f97316")
-#theme=gr.themes.Soft()
-with gr.Blocks(css=css_code, theme=theme) as demo:
-
-#with gr.Blocks(css=css_code, js=_js, theme=theme) as demo:
+if light_theme is None: theme=gr.themes.Soft()
+with gr.Blocks(css=css_code, js = _js, theme=theme) as demo:
 
     gr.Markdown(""" # 🏰 Bringing Adventure Gaming to Life 🧙 \n Using Real-time Generative AI on Your PC 💻 """)
 
     with gr.Row():
         with gr.Column(scale=1):
-            #i = gr.Image(sources=["webcam", "upload"], label="Step 1: Get Inspired", type="pil")
+            i = gr.Image(sources=["webcam", "upload"], label="Step 1: Get Inspired", type="pil")
             ocr_output = gr.Textbox(label="Output of OCR Model", visible=False)
             #out = gr.Textbox(label="Number typed in", elem_id="visible")
             with gr.Row():
@@ -398,10 +399,10 @@ with gr.Blocks(css=css_code, theme=theme) as demo:
             depth_map = gr.Image(label="Depth Map", type="pil", elem_id="visible")
 
     radio.change(update_visibility, radio, [ocr_output, dice_roll_input])        
-    #try:
-    #    i.change(ocr_dice_roll, [i, radio], [ocr_output, dice_roll_theme])
-    #except ValueError:
-    #    pass
+    try:
+        i.change(ocr_dice_roll, [i, radio], [ocr_output, dice_roll_theme])
+    except ValueError:
+        pass
     #the following lines of code only apply if we are looking at a dice roll
     ocr_output.change(parse_ocr_output, ocr_output, dice_roll_input)
     dice_roll_input.change(adjust_theme, [ocr_output, dice_roll_input], dice_roll_theme)
