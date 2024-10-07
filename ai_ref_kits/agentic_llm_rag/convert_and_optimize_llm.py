@@ -8,14 +8,17 @@ from transformers import AutoTokenizer
 
 
 MODEL_MAPPING = {
+    "llama3-8B": "meta-llama/Meta-Llama-3-8B-Instruct",
+    "llama3.1-8B": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+    "llama3.2-3B": "meta-llama/Llama-3.2-3B-Instruct",
+    "llama3.2-11B": "meta-llama/Llama-3.2-11B-Vision-Instruct",
     "llama2-7B": "meta-llama/Llama-2-7b-chat-hf",
     "llama2-13B": "meta-llama/Llama-2-13b-chat-hf",
-    "llama3-8B": "meta-llama/Meta-Llama-3-8B-Instruct",
     "qwen2-7B": "Qwen/Qwen2-7B-Instruct", 
 }
 
 
-def convert_chat_model(model_type: str, precision: str, model_dir: Path) -> Path:
+def convert_chat_model(model_type: str, precision: str, model_dir: Path, access_token: str) -> Path:
     """
     Convert chat model
 
@@ -23,6 +26,7 @@ def convert_chat_model(model_type: str, precision: str, model_dir: Path) -> Path
         model_type: selected mode type and size
         precision: model precision
         model_dir: dir to export model
+        access_token: access token from Hugging Face to download gated models
     Returns:
        Path to exported model
     """
@@ -30,7 +34,7 @@ def convert_chat_model(model_type: str, precision: str, model_dir: Path) -> Path
     model_name = MODEL_MAPPING[model_type]
 
     # load model and convert it to OpenVINO
-    model = OVModelForCausalLM.from_pretrained(model_name, export=True, compile=False, load_in_8bit=False)
+    model = OVModelForCausalLM.from_pretrained(model_name, export=True, compile=False, load_in_8bit=False, token=access_token)
     # change precision to FP16
     model.half()
 
@@ -60,10 +64,11 @@ def convert_chat_model(model_type: str, precision: str, model_dir: Path) -> Path
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--chat_model_type", type=str, choices=["llama2-7B", "llama2-13B", "llama3-8B", "qwen2-7B"],
-                        default="llama3-8B", help="Chat model to be converted")
+    parser.add_argument("--chat_model_type", type=str, choices=["llama2-7B", "llama2-13B", "llama3-8B", "qwen2-7B", "llama3.2-3B", "llama3.1-8B", "llama3.2-11B"],
+                        default="llama3.2-11B", help="Chat model to be converted")
     parser.add_argument("--precision", type=str, default="int4", choices=["fp16", "int8", "int4"], help="Model precision")
+    parser.add_argument("--hf_token", type=str, help="HuggingFace access token to get Llama3")
     parser.add_argument("--model_dir", type=str, default="model", help="Directory to place the model in")
 
     args = parser.parse_args()
-    convert_chat_model(args.chat_model_type, args.precision, Path(args.model_dir))
+    convert_chat_model(args.chat_model_type, args.precision, Path(args.model_dir), args.hf_token)
