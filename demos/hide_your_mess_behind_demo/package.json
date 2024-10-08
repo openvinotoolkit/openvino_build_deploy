@@ -43,7 +43,7 @@
   "dependencies": {
     "buffer": "^6.0.3",
     "openvino-node": "2024.3.0",
-    "opencv-wasm": "4.3.0-10",
+    "sharp": "^0.33.5",
     "@napi-rs/canvas": "^0.1.52"
   },
   "keywords": [],
