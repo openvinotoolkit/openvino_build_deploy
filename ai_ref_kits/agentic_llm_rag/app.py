@@ -14,10 +14,12 @@ from pathlib import Path
 import requests
 import io
 from io import StringIO 
-from create_tools import *
+from create_tools import Math
 import sys
+import gradio as gr
+import nest_asyncio
 
-llm_model_id = "OpenVINO/Phi-3-mini-4k-instruct-int4-ov"
+llm_model_id = "meta-llama/Meta-Llama-3.1-8B-Instruct"
 #TBD enable latest Llama model
 llm_device = "GPU"
 embedding_device = "AUTO"
@@ -28,8 +30,8 @@ repo_name = llm_model_id.split("/")[0]
 embedding_model_id = "BAAI/bge-small-en-v1.5"
 embedding_model_path = "bge-small-en-v1.5"
 
-text_example_en_path = Path("text_example_en.pdf")
-text_example_en = "https://github.com/user-attachments/files/16171326/xeon6-e-cores-network-and-edge-brief.pdf"
+text_example_en_path = Path("test_painting_llm_rag.pdf")
+text_example_en = "test_painting_llm_rag.pdf"
 
 if not text_example_en_path.exists():
     r = requests.get(url=text_example_en)
@@ -59,13 +61,8 @@ llm = OpenVINOLLM(
 
 embedding = OpenVINOEmbedding(model_id_or_path=embedding_model_path, device=embedding_device)
 
-
-    
-multiply_tool = FunctionTool.from_defaults(fn=multiply)
-
-
-
-divide_tool = FunctionTool.from_defaults(fn=divide)
+multiply_tool = FunctionTool.from_defaults(fn=Math.multiply)
+divide_tool = FunctionTool.from_defaults(fn=Math.divide)
 
 Settings.embed_model = embedding
 Settings.llm = llm
@@ -80,16 +77,14 @@ vector_tool = QueryEngineTool(
     index.as_query_engine(streaming=True),
     metadata=ToolMetadata(
         name="vector_search",
-        description="Useful for searching for basic facts about 'Intel Xeon 6 processors'",
+        description="Useful for searching for facts and product recommendations about paint",
     ),
 )
+print(vector_tool)
 
-import nest_asyncio
 nest_asyncio.apply()
 
 agent = ReActAgent.from_tools([multiply_tool, divide_tool, vector_tool], llm=llm, verbose=True)
-
-
 ### Credit: Modified from llamaindex-packs: https://docs.llamaindex.ai/en/stable/api_reference/packs/gradio_agent_chat/
 ### We can remove this reference once we are finished with the app
 
@@ -116,7 +111,7 @@ def _generate_response(chat_history):
     """Generate the response from agent, and capture the stdout of the
     ReActAgent's thoughts.
     """
-
+    
     with Capturing() as output:
         """
         TBD - instead of an stdout module, can we access the agent's "steps" directly? 
@@ -129,7 +124,7 @@ def _generate_response(chat_history):
     #Note for dev team: Please see https://github.com/run-llama/llama_index/blob/main/llama-index-core/llama_index/core/agent/react/templates/system_header_template.md on the system template
     for token in response.response_gen:
         chat_history[-1][1] += token
-        yield chat_history, str(output)
+        yield chat_history, str(output) #TBD how do we stream the output earlier? Define another function
 
 def _reset_chat():
     """Reset the agent's chat history. And clear all dialogue boxes."""
@@ -137,12 +132,14 @@ def _reset_chat():
     agent.reset()
     return "", "", ""  # clear textboxes
 
+def purchase_click():
+    return "Items are added to cart."
+
 def run():
-    """Run the pipeline."""
-    import gradio as gr
-    
+    """Run the pipeline."""    
     with gr.Blocks() as demo:
         gr.Markdown("# Smart Retail Assistant 🤖: Agentic LLMs with RAG 💭")
+        gr.Markdown("Ask me about paint! 🎨")
         with gr.Row():
             chat_window = gr.Chatbot(
                 label="Message History",
@@ -168,7 +165,15 @@ def run():
             [chat_window, console],
         )
         clear.click(_reset_chat, None, [message, chat_window, console])
-
+        gr.Markdown("------------------------------")
+        gr.Markdown("### Purchase items")
+        with gr.Row():
+            gr.Dropdown(
+                ["Behr Premium Plus", "AwesomeSplash", "TheBrush", "PaintFinish"], multiselect=True, label="Items In-Stock", info="Which items would you like to purchase?"
+            ),
+            purchase = gr.Button(value="Purchase items")
+            purchased_textbox = gr.Textbox()
+            purchase.click(purchase_click, None, purchased_textbox)
     demo.launch()
 
 run()
