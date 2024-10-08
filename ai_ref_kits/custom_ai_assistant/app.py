@@ -115,7 +115,11 @@ def respond(prompt: str, streamer: BaseStreamer | None = None) -> str:
     outputs = chat_model.generate(**inputs, max_new_tokens=256, do_sample=True, temperature=0.6, top_p=0.9, top_k=50, streamer=streamer)
     tokens = outputs[0, input_length:]
     end_time = time.time()  # End time
-    log.info("Chat model response time: {:.2f} seconds".format(end_time - start_time))
+
+    # 75 words ~= 100 tokens
+    processing_time = end_time - start_time
+    log.info(f"Chat model response time: {processing_time:.2f} seconds ({len(tokens) / processing_time:.2f} tokens/s)")
+
     # decode tokens into text
     return chat_tokenizer.decode(tokens, skip_special_tokens=True)
 

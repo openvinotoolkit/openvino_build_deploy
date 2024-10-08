@@ -49,7 +49,7 @@ def load_asr_model(model_name: str) -> None:
     global asr_model, asr_processor
 
     model_path = MODEL_DIR / model_name
-    device = "GPU" if "GPU" in get_available_devices() else "CPU"
+    device = "GPU" if "GPU" in get_available_devices() and ov.__version__ < "2024.3" else "CPU"
 
     # create a distil-whisper model and its processor
     if not model_path.exists():
@@ -198,7 +198,11 @@ def chat(history: List[List[str]]) -> List[List[str]]:
             yield history
 
         end_time = time.time()
-        log.info(f"Chat model response time: {end_time - start_time:.2f} seconds")
+
+        # 75 words ~= 100 tokens
+        tokens = len(history[-1][1].split(" ")) * 4 / 3
+        processing_time = end_time - start_time
+        log.info(f"Chat model response time: {processing_time:.2f} seconds ({tokens / processing_time:.2f} tokens/s)")
 
 
 def transcribe(audio: Tuple[int, np.ndarray], prompt: str, conversation: List[List[str]]) -> List[List[str]]:
@@ -316,7 +320,7 @@ def run(asr_model_name: str, chat_model_name: str, embedding_model_name: str, pe
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--asr_model", type=str, default="distil-whisper/distil-large-v3", help="Path/name of the automatic speech recognition model")
-    parser.add_argument("--chat_model", type=str, default="meta-llama/Meta-Llama-3.1-8B-Instruct", help="Path/name of the chat model")
+    parser.add_argument("--chat_model", type=str, default="meta-llama/Llama-3.2-3B-Instruct", help="Path/name of the chat model")
     parser.add_argument("--embedding_model", type=str, default="BAAI/bge-small-en-v1.5", help="Path/name of the model for embeddings")
     parser.add_argument("--personality", type=str, default="healthcare_personality.yaml", help="Path to the YAML file with chatbot personality")
     parser.add_argument("--hf_token", type=str, help="HuggingFace access token to get Llama3")

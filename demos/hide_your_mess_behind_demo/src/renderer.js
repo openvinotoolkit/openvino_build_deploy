@@ -103,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const imageData = ctx.getImageData(0, 0, canvasElement.width, canvasElement.height);
 
       if (processingOn) {
-        getMask(imageData, canvasElement, ovDevice);
+        await getMask(imageData, canvasElement, ovDevice);
       }
 
       if (toggleSwitch.checked){

@@ -24,7 +24,7 @@ Check out our [Edge AI Reference Kits repository](/) for other kits.
 
 ![kit-gif](https://github.com/user-attachments/assets/f113a126-4b44-4488-be4e-e4bf52a6cebc)
 
-Contributors: Garth Long, Arisha Kumar, Paula Ramos, Dmitriy Pastushenkov, Zhuo Wu, and Raymond Lo.
+Contributors: Ria Cheruvu, Garth Long, Arisha Kumar, Paula Ramos, Dmitriy Pastushenkov, Zhuo Wu, and Raymond Lo.
 
 ### What's New
 
