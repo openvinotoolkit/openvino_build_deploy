@@ -1,6 +1,6 @@
 const { addon: ov } = require('openvino-node');
-const sharp = require('sharp');
 const { performance } = require('perf_hooks');
+const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs');
 
@@ -11,9 +11,6 @@ module.exports = { detectDevices, runModel, takeTime, blurImage }
 const core = new ov.Core();
 const ovModels = new Map(); // compiled models
 let model = null; // read model
-
-// semaphore used in runModel:
-let semaphore = false;
 
 // variables used to calculate inference time:
 let infTimes = [];
@@ -42,7 +39,6 @@ async function getModelPath() {
 
     try {
         await fs.access(archivePath, fs.constants.F_OK);
-
         return archivePath;
     } catch(e) {
         return devPath;
@@ -93,7 +89,7 @@ function postprocessMask(resultTensor) {
 
     for (let i = 0; i < normalizedData.length; i += 6) {
         const indexOffset = i/6 * channels;
-        const value = 255*normalizedData[i];
+        const value = 255 * normalizedData[i];
 
         imageBuffer[indexOffset] = value;
         imageBuffer[indexOffset + 1] = value;
@@ -105,12 +101,6 @@ function postprocessMask(resultTensor) {
 
 async function runModel(img, width, height, device){
     const originalImg = sharp(img.data, { raw: { channels: 4, width, height } });
-
-    while (semaphore) {
-        await new Promise(resolve => setTimeout(resolve, 7));
-    }
-
-    semaphore = true;
 
     try {
         let compiledModel, inferRequest;
@@ -164,7 +154,6 @@ async function runModel(img, width, height, device){
         };
 
     } finally {
-        semaphore = false;
     }
 }
 
