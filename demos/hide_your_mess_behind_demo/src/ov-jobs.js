@@ -16,7 +16,6 @@ let model = null; // read model
 let infTimes = [];
 let avgInfTime = 0;
 let prevDevice = null;
-let isFirst = false; // not counting first iteration to average
 
 const inputSize = { w: 256, h: 256 };
 let outputMask = null;
@@ -27,7 +26,7 @@ async function detectDevices() {
 }
 
 
-function calculateAverage(array){
+function average(array){
     let sum = array.reduce((accumulator, currentValue) => accumulator + currentValue, 0);
     return (sum / array.length);
 }
@@ -43,6 +42,24 @@ async function getModelPath() {
     } catch(e) {
         return devPath;
     }
+}
+
+
+async function getModel(device) {
+    // if model not loaded
+    if (model == null) {
+        const modelPath = await getModelPath();
+        model = await core.readModel(modelPath);
+    }
+
+    // if cached
+    if (ovModels.has(device)) return ovModels.get(device)
+
+    // compile and cache
+    let compiledModel = await core.compileModel(model, device);
+    ovModels.set(device, compiledModel);
+
+    return compiledModel;
 }
 
 
@@ -99,62 +116,49 @@ function postprocessMask(resultTensor) {
 }
 
 
+function calculateAverageInferenceTime(inferenceTime, device) {
+    if (prevDevice !== device){
+        infTimes = [];
+        prevDevice = device;
+    }
+    if (infTimes.length >= 50){
+        infTimes.pop();
+    }
+    infTimes.unshift(inferenceTime);
+    return average(infTimes);
+}
+
+
 async function runModel(img, width, height, device){
     const originalImg = sharp(img.data, { raw: { channels: 4, width, height } });
 
-    try {
-        let compiledModel, inferRequest;
-        if (model == null){
-            const modelPath = await getModelPath();
-            model = await core.readModel(modelPath);
-        }
-        if (!ovModels.has(device)){
-            compiledModel = await core.compileModel(model, device);
-            ovModels.set(device, compiledModel);
-            isFirst = true;
-        } else {
-            compiledModel = ovModels.get(device);
-        }
+    let model = await getModel(device);
 
-        const inputTensor = await preprocess(originalImg);
+    const inputTensor = await preprocess(originalImg);
 
-        const startTime = performance.now();            // TIME MEASURING : START
+    const startTime = performance.now();            // TIME MEASURING : START
 
-        // OpenVINO INFERENCE
-        inferRequest = compiledModel.createInferRequest();
-        inferRequest.setInputTensor(inputTensor);
-        inferRequest.infer();
-        const outputLayer = compiledModel.outputs[0];
-        const resultTensor = inferRequest.getTensor(outputLayer);
+    // OpenVINO INFERENCE
+    let inferRequest = model.createInferRequest();
 
-        const endTime = performance.now();              // TIME MEASURING : END
-        const inferenceTime = endTime - startTime;
+    inferRequest.setInputTensor(inputTensor);
+    inferRequest.infer();
+    const outputLayer = model.outputs[0];
+    const resultTensor = inferRequest.getTensor(outputLayer);
 
-        // COUNTING AVERAGE INFERENCE TIME
-        if(prevDevice !== device){
-            infTimes = [];
-        }
-        if(!isFirst){
-            if(infTimes.length>=50){
-                infTimes.pop();
-            }
-            infTimes.unshift(inferenceTime);
-            avgInfTime = calculateAverage(infTimes);
-        }
-        prevDevice = device;
+    const endTime = performance.now();              // TIME MEASURING : END
+    const inferenceTime = endTime - startTime;
 
-        // POSTPROCESSING
-        outputMask = postprocessMask(resultTensor);
-        isFirst = false;
+    avgInfTime = calculateAverageInferenceTime(inferenceTime, device)
 
-        return {
-            width : width,
-            height : height,
-            inferenceTime : avgInfTime.toFixed(2).toString()
-        };
+    // POSTPROCESSING
+    outputMask = postprocessMask(resultTensor);
 
-    } finally {
-    }
+    return {
+        width : width,
+        height : height,
+        inferenceTime : avgInfTime.toFixed(2).toString()
+    };
 }
 
 
@@ -167,12 +171,12 @@ async function blurImage(image, width, height) {
         };
 
     const person = await sharp(outputMask, {
-            raw: {
-                channels: 3,
-                width: inputSize.w,
-                height: inputSize.h,
-            }
-        })
+        raw: {
+            channels: 3,
+            width: inputSize.w,
+            height: inputSize.h,
+        }
+    })
         .resize(width, height, { fit: 'fill' })
         .unflatten()
         .composite([{
@@ -187,8 +191,8 @@ async function blurImage(image, width, height) {
         .toBuffer();
 
     const screen = await sharp(image.data, {
-            raw: { channels: 4, width, height },
-        })
+        raw: { channels: 4, width, height },
+    })
         .blur(10)
         .composite([{
             input: person,

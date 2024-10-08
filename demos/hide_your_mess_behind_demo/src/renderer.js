@@ -49,13 +49,13 @@ document.addEventListener('DOMContentLoaded', () => {
   async function processFrame() {
     if (!streamingActive) return;
 
-    let ovDevice = deviceSelect.value;
+    let device = deviceSelect.value;
     try {
       ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
       const imageData = ctx.getImageData(0, 0, canvasElement.width, canvasElement.height);
 
       if (inferenceActive) {
-        let resultMask = await window.electronAPI.runModel(imageData, canvasElement.width, canvasElement.height, ovDevice);
+        let resultMask = await window.electronAPI.runModel(imageData, canvasElement.width, canvasElement.height, device);
         const result = await window.electronAPI.blurImage(imageData, canvasElement.width, canvasElement.height);
 
         let blurredImage = new ImageData(result.img, result.width, result.height);
