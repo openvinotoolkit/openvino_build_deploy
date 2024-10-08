@@ -5,8 +5,8 @@ from optimum.intel.openvino import OVModelForSpeechSeq2Seq
 from transformers import AutoProcessor
 
 MODEL_MAPPING = {
-    "distil-whisper-large-v2": "distil-whisper/distil-large-v2",
-    "belle-distilwhisper-large-v2-zh": "BELLE-2/Belle-distilwhisper-large-v2-zh",
+    "distil-whisper-large-v3": "distil-whisper/distil-large-v3",
+    "belle-distil-whisper-large-v3-zh": "BELLE-2/Belle-whisper-large-v3-zh",
 }
 
 
@@ -48,9 +48,9 @@ def convert_asr_model(model_type: str, precision: str, model_dir: Path) -> Path:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--asr_model_type", type=str, choices=["distil-whisper-large-v2", "belle-distilwhisper-large-v2-zh"],
-                        default="distil-whisper-large-v2", help="Speech recognition model to be converted")
-    parser.add_argument("--precision", type=str, default="int8", choices=["fp16", "int8"], help="Model precision")
+    parser.add_argument("--asr_model_type", type=str, choices=["distil-whisper-large-v3", "belle-distil-whisper-large-v3-zh"],
+                        default="distil-whisper-large-v3", help="Speech recognition model to be converted")
+    parser.add_argument("--precision", type=str, default="fp16", choices=["fp16", "int8"], help="Model precision")
     parser.add_argument("--model_dir", type=str, default="model", help="Directory to place the model in")
     args = parser.parse_args()
 
