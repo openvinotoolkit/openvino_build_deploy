@@ -8,16 +8,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const deviceSelect = document.getElementById("deviceSelect")
   const webcamSelect = document.getElementById('webcamSelect');
   const toggleWebcamButton = document.getElementById('toggleWebcamButton');
-  const toggleSwitch = document.getElementById('toggleSwitch');
+  const toggleInferenceSwitch = document.getElementById('toggleSwitch');
   const toggleValue = document.getElementById('toggleValue');
   const processingTimeElement = document.getElementById('processingTime');
   // streaming:
   let webcamStream = null;
-  let captureInterval = null;
-  // collecting inference results:
-  let resultMask = null;
-  let inferenceTime = 0;
-  let tempImg = null;
 
   let streamingActive = false;
   let inferenceActive = false;
@@ -44,17 +39,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   // ON/OF INFERENCE BUTTON
-  toggleSwitch.addEventListener('change', () => {
-    toggleValue.textContent = toggleSwitch.checked ? 'on' : 'off';
-    inferenceActive = toggleSwitch.checked;
+  toggleInferenceSwitch.addEventListener('change', () => {
+    toggleValue.textContent = toggleInferenceSwitch.checked ? 'on' : 'off';
+    inferenceActive = toggleInferenceSwitch.checked;
   });
-
-
-  // INFERENCE MANAGING
-  async function getMask(imageData, canvasElement, ovDevice){
-    resultMask = await window.electronAPI.runModel(imageData, canvasElement.width, canvasElement.height, ovDevice);
-    inferenceTime = resultMask.inferenceTime;
-  }
 
 
   // CAPTURING FRAMES
@@ -67,15 +55,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const imageData = ctx.getImageData(0, 0, canvasElement.width, canvasElement.height);
 
       if (inferenceActive) {
-        await getMask(imageData, canvasElement, ovDevice);
+        let resultMask = await window.electronAPI.runModel(imageData, canvasElement.width, canvasElement.height, ovDevice);
         const result = await window.electronAPI.blurImage(imageData, canvasElement.width, canvasElement.height);
-        tempImg = new ImageData(result.img, result.width, result.height);
-        ctx.putImageData(tempImg, 0, 0);
+
+        let blurredImage = new ImageData(result.img, result.width, result.height);
+        ctx.putImageData(blurredImage, 0, 0);
+
+        let inferenceTime = resultMask.inferenceTime;
+        if (!streamingActive) return;
         processingTimeElement.innerText = `Inference time: ${inferenceTime} ms (${(1000 / inferenceTime).toFixed(1)} FPS)`;
       } else {
         processingTimeElement.innerText = `Inference OFF`;
       }
 
+      if (!streamingActive) return;
       imgElement.src = canvasElement.toDataURL('image/jpeg');
 
       requestAnimationFrame(processFrame);
@@ -120,8 +113,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // STOP STREAMING
   function stopWebcam(keepActive) {
     streamingActive = false;
-
-    clearInterval(captureInterval);
 
     if (webcamStream) {
       webcamStream.getTracks().forEach(track => track.stop());
