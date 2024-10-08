@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         audio: false
       });
-      
+
       webcamStream = stream;
       videoElement.srcObject = stream;
 
@@ -75,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       toggleWebcamButton.textContent = 'Stop';
 
-      processFrame();
+      requestAnimationFrame(processFrame);
     } catch (error) {
       console.error('Error accessing webcam:', error);
     }
@@ -96,13 +96,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // CAPTURING FRAMES
   async function processFrame() {
     if (!processingActive) return;
+
     let ovDevice= deviceSelect.value;
     try {
       ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
       const imageData = ctx.getImageData(0, 0, canvasElement.width, canvasElement.height);
-      
-      if (processingOn){
-        getMask(imageData, canvasElement, ovDevice);
+
+      if (processingOn) {
+        await getMask(imageData, canvasElement, ovDevice);
       }
 
       if (toggleSwitch.checked){
@@ -117,9 +118,8 @@ document.addEventListener('DOMContentLoaded', () => {
         processingOn = false;
       }
       imgElement.src = canvasElement.toDataURL('image/jpeg');
-      if (processingActive) {
-        setTimeout(processFrame, 0);
-      }
+
+      if (processingActive) requestAnimationFrame(processFrame);
     } catch (error) {
       console.error('Error during capture:', error);
     }
@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // STOP STREAMING
   function stopWebcam(keepActive) {
-    processingActive = false; 
+    processingActive = false;
     clearInterval(captureInterval);
     if (webcamStream) {
       webcamStream.getTracks().forEach(track => track.stop());
