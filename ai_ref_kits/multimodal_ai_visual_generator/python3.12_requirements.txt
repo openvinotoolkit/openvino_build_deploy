@@ -32,7 +32,7 @@ scikit-image>=0.19.2
 setuptools>=56.0.0
 
 
-gradio==4.42.0
+gradio==4.44.0
 SpeechRecognition==3.10.4
 pyaudio==0.2.14
 diffusers==0.30.0
