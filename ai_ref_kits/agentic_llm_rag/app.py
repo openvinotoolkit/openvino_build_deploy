@@ -1,147 +1,234 @@
 import argparse
+import time
 from pathlib import Path
+import huggingface_hub as hf_hub
+from llama_index.llms.openvino import OpenVINOLLM
+import openvino.properties as props
+import openvino.properties.hint as hints
+import openvino.properties.streams as streams
+from llama_index.embeddings.huggingface_openvino import OpenVINOEmbedding
+from llama_index.core.agent import ReActAgent
+from llama_index.core.tools import FunctionTool
+from llama_index.core.tools import QueryEngineTool, ToolMetadata
+from llama_index.core import SimpleDirectoryReader
+from llama_index.core import VectorStoreIndex, Settings
+import requests
+import io
+from io import StringIO
+from create_tools import Math
+import sys
+import gradio as gr
+import nest_asyncio
+import logging
 
-import numpy as np
-import openvino as ov
-from openvino.runtime import opset10 as ops
-from openvino.runtime import passes
-from optimum.intel import OVModelForCausalLM, OVModelForFeatureExtraction, OVWeightQuantizationConfig, OVConfig, \
-    OVQuantizer, OVModelForSequenceClassification
-from transformers import AutoTokenizer
+# Initialize logging
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger(__name__)
 
-#TBD Add Embedding Model Conversion
+llm_device = "GPU"
+embedding_device = "GPU"
 
-
-MODEL_MAPPING = {
-    "llama3-8B": "meta-llama/Meta-Llama-3-8B-Instruct",
-    "llama3.1-8B": "meta-llama/Meta-Llama-3.1-8B-Instruct",
-    "llama3.2-3B": "meta-llama/Llama-3.2-3B-Instruct",
-    "llama3.2-11B": "meta-llama/Llama-3.2-11B-Vision-Instruct",
-    "llama2-7B": "meta-llama/Llama-2-7b-chat-hf",
-    "llama2-13B": "meta-llama/Llama-2-13b-chat-hf",
-    "qwen2-7B": "Qwen/Qwen2-7B-Instruct",
-    "bge-small": "BAAI/bge-small-en-v1.5",
-    "bge-large": "BAAI/bge-large-en-v1.5",
-    "bge-m3": "BAAI/bge-m3",
+ov_config = {
+    hints.performance_mode(): hints.PerformanceMode.LATENCY,
+    streams.num(): "1",
+    props.cache_dir(): ""
 }
 
-def optimize_model_for_npu(model: OVModelForFeatureExtraction):
-    """
-    Fix some tensors to support NPU inference
+def phi_completion_to_prompt(completion):
+    return f"<|system|><|end|><|user|>{completion}<|end|><|assistant|>\n"
 
-     Params:
-        model: model to fix
-    """
-    class ReplaceTensor(passes.MatcherPass):
-        def __init__(self, packed_layer_name_tensor_dict_list):
-            super().__init__()
-            self.model_changed = False
+def llama3_completion_to_prompt(completion):
+    return f"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{completion}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
 
-            param = passes.WrapType("opset10.Multiply")
+def setup_models(llm_model_path, embedding_model_path):
+    # Load the Llama model locally
+    llm = OpenVINOLLM(
+        model_id_or_path=str(llm_model_path),
+        context_window=3900,
+        max_new_tokens=1000,
+        model_kwargs={"ov_config": ov_config},
+        generate_kwargs={"do_sample": False, "temperature": None, "top_p": None},
+        completion_to_prompt=phi_completion_to_prompt if llm_model_path == "Phi-3-mini-4k-instruct-int4-ov" else llama3_completion_to_prompt,
+        device_map=llm_device,
+    )
 
-            def callback(matcher: passes.Matcher) -> bool:
-                root = matcher.get_match_root()
-                if root is None:
-                    return False
-                for y in packed_layer_name_tensor_dict_list:
-                    root_name = root.get_friendly_name()
-                    if root_name.find(y["name"]) != -1:
-                        max_fp16 = np.array([[[[-np.finfo(np.float16).max]]]]).astype(np.float32)
-                        new_tensor = ops.constant(max_fp16, ov.Type.f32, name="Constant_4431")
-                        root.set_arguments([root.input_value(0).node, new_tensor])
-                        packed_layer_name_tensor_dict_list.remove(y)
+    # Load the embedding model locally
+    embedding = OpenVINOEmbedding(model_id_or_path=embedding_model_path, device=embedding_device)
 
-                return True
+    return llm, embedding
 
-            self.register_matcher(passes.Matcher(param, "ReplaceTensor"), callback)
+def setup_tools():
+    multiply_tool = FunctionTool.from_defaults(fn=Math.multiply)
+    divide_tool = FunctionTool.from_defaults(fn=Math.divide)
 
-    packed_layer_tensor_dict_list = [{"name": "aten::mul/Multiply"}]
+    return multiply_tool, divide_tool
 
-    manager = passes.Manager()
-    manager.register_pass(ReplaceTensor(packed_layer_tensor_dict_list))
-    manager.run_passes(model.model)
-    model.reshape(1, 512)
-
-
-def convert_chat_model(model_type: str, precision: str, model_dir: Path, access_token: str) -> Path:
-    """
-    Convert chat model
-
-    Params:
-        model_type: selected mode type and size
-        precision: model precision
-        model_dir: dir to export model
-        access_token: access token from Hugging Face to download gated models
-    Returns:
-       Path to exported model
-    """
-    output_dir = model_dir / model_type
-    model_name = MODEL_MAPPING[model_type]
-
-    # load model and convert it to OpenVINO
-    model = OVModelForCausalLM.from_pretrained(model_name, export=True, compile=False, load_in_8bit=False, token=access_token)
-    # change precision to FP16
-    model.half()
-
-    if precision != "fp16":
-        # select quantization mode
-        quant_config = OVWeightQuantizationConfig(bits=4, sym=False, ratio=0.8) if precision == "int4" else OVWeightQuantizationConfig(bits=8, sym=False)
-        config = OVConfig(quantization_config=quant_config)
-
-        suffix = "-INT4" if precision == "int4" else "-INT8"
-        output_dir = output_dir.with_name(output_dir.name + suffix)
-
-        # create a quantizer
-        quantizer = OVQuantizer.from_pretrained(model, task="text-generation")
-        # quantize weights and save the model to the output dir
-        quantizer.quantize(save_directory=output_dir, weights_only=True, ov_config=config)
-    else:
-        output_dir = output_dir.with_name(output_dir.name + "-FP16")
-        # save converted model
-        model.save_pretrained(output_dir)
-
-    # export also tokenizer
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    tokenizer.save_pretrained(output_dir)
-
-    return Path(output_dir) / "openvino_model.xml"
+def load_documents(text_example_en_path):
+    # Check and download document if not present
+    if not text_example_en_path.exists():
+        text_example_en = "https://example.com/test_painting_llm_rag.pdf"  # Replace with valid URL
+        r = requests.get(text_example_en)
+        content = io.BytesIO(r.content)
+        with open(text_example_en_path, "wb") as f:
+            f.write(content.read())
     
-def convert_embedding_model(model_type: str, model_dir: Path) -> Path:
-    """
-    Convert embedding model
+    reader = SimpleDirectoryReader(input_files=[text_example_en_path])
+    documents = reader.load_data()
+    index = VectorStoreIndex.from_documents(documents)
+    
+    return index
 
-    Params:
-        model_type: selected mode type and size
-        model_dir: dir to export model
-    Returns:
-       Path to exported model
-    """
-    output_dir = model_dir / model_type
-    output_dir = output_dir.with_name(output_dir.name + "-FP32")
-    model_name = MODEL_MAPPING[model_type]
+def run_app(agent):
+    class Capturing(list):
+        def __enter__(self):
+            self._stdout = sys.stdout
+            sys.stdout = self._stringio = StringIO()
+            return self
+        def __exit__(self, *args):
+            self.extend(self._stringio.getvalue().splitlines())
+            del self._stringio
+            sys.stdout = self._stdout
 
-    # load model and convert it to OpenVINO
-    model = OVModelForFeatureExtraction.from_pretrained(model_name, export=True, compile=False)
-    optimize_model_for_npu(model)
-    model.save_pretrained(output_dir)
+    def _handle_user_message(user_message, history):
+        return "", [*history, (user_message, "")]
 
-    # export tokenizer
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    tokenizer.save_pretrained(output_dir)
+    def _generate_response(chat_history, log_history):
+        if not isinstance(log_history, list):
+            log_history = []
 
-    return Path(output_dir) / "openvino_model.xml"
+        # Capture time for thought process
+        start_thought_time = time.time()
+
+        # Capture the thought process output
+        with Capturing() as output:
+            response = agent.stream_chat(chat_history[-1][0])
+
+        end_thought_time = time.time()
+        thought_process_time = end_thought_time - start_thought_time
+    
+        # After response is complete, show the captured logs in the log area
+        log_entries = "\n".join(output)
+        thought_process_log = f"Thought Process Time: {thought_process_time:.2f} seconds"
+        log_history.append(f"{log_entries}\n{thought_process_log}")
+
+        yield chat_history, "\n".join(log_history)  # Yield after the thought process time is captured
+            
+        # Now capture response generation time
+        start_response_time = time.time()
+
+        # Gradually yield the response from the agent to the chat
+        for token in response.response_gen:
+            chat_history[-1][1] += token
+            yield chat_history, "\n".join(log_history)  # Ensure log_history is a string
+
+        end_response_time = time.time()
+        response_time = end_response_time - start_response_time        
+
+        # Log tokens per second along with the device information
+        tokens = len(chat_history[-1][1].split(" ")) * 4 / 3  # Convert words to approx token count
+        response_log = f"Response Time: {response_time:.2f} seconds ({tokens / response_time:.2f} tokens/s on {llm_device})"
+    
+        log.info(response_log)
+
+        # Append the response time to log history
+        log_history.append(response_log)
+        yield chat_history, "\n".join(log_history)  # Join logs into a string for display
+
+    def _reset_chat():
+        agent.reset()
+        return "", [], []  # Reset both chat and logs (initialize log as empty list)
+
+    def purchase_click():
+        return "Items are added to cart."
+
+    def run():
+        with gr.Blocks() as demo:
+            gr.Markdown("# Smart Retail Assistant ðŸ¤–: Agentic LLMs with RAG ðŸ’­")
+            gr.Markdown("Ask me about paint! ðŸŽ¨")
+            
+            with gr.Row():
+                chat_window = gr.Chatbot(
+                    label="Paint Purchase Helper",
+                    avatar_images=(None, "https://docs.openvino.ai/2024/_static/favicon.ico"),
+		    height=400,  # Adjust height as per your preference
+                    scale=3  # Set a higher scale value for Chatbot to make it wider
+                   #autoscroll=True,  # Enable auto-scrolling for better UX
+                )
+                log_window = gr.Code(
+                    label="Agent's Steps", 
+                    language="python",
+                    interactive=False,
+                    scale=1  # Set lower scale to make it narrower than the Chatbot
+                )
+
+            
+            with gr.Row():
+                message = gr.Textbox(label="Ask the Paint Expert", scale=4)
+                clear = gr.ClearButton()
+
+            # Ensure that individual components are passed
+            message.submit(
+                _handle_user_message,
+                inputs=[message, chat_window],
+                outputs=[message, chat_window],
+                queue=False,
+            ).then(
+                _generate_response,
+                inputs=[chat_window, log_window],  # Pass individual components, including log_window
+                outputs=[chat_window, log_window],  # Update chatbot and log window
+            )
+            clear.click(_reset_chat, None, [message, chat_window, log_window])
+            
+            gr.Markdown("------------------------------")
+            gr.Markdown("### Purchase items")
+            with gr.Row():
+                gr.Dropdown(
+                    ["Behr Premium Plus", "AwesomeSplash", "TheBrush", "PaintFinish"], 
+                    multiselect=True, 
+                    label="Items In-Stock", 
+                    info="Which items would you like to purchase?"
+                ),
+                purchase = gr.Button(value="Purchase items")
+                purchased_textbox = gr.Textbox()
+                purchase.click(purchase_click, None, purchased_textbox)
+        
+        demo.launch(server_name='10.3.233.70', server_port=8694, share=True)
+
+    run()
 
 
 if __name__ == "__main__":
+    
+    # Define the argument parser at the end
     parser = argparse.ArgumentParser()
-    parser.add_argument("--chat_model_type", type=str, choices=["llama2-7B", "llama2-13B", "llama3-8B", "qwen2-7B", "llama3.2-3B", "llama3.1-8B", "llama3.2-11B"],
-                        default="llama3.2-11B", help="Chat model to be converted")
-    parser.add_argument("--embedding_model_type", type=str, choices=["bge-small", "bge-large", "bge-m3"],
-                        default="bge-large", help="Embedding model to be converted")
-    parser.add_argument("--precision", type=str, default="int4", choices=["fp16", "int8", "int4"], help="Model precision")
-    parser.add_argument("--hf_token", type=str, help="HuggingFace access token to get Llama3")
-    parser.add_argument("--model_dir", type=str, default="model", help="Directory to place the model in")
-
+    parser.add_argument("--chat_model", type=str, default="model/llama3.1-8B-INT4", help="Path to the chat model directory")
+    parser.add_argument("--embedding_model", type=str, default="model/bge-large-FP32", help="Path to the embedding model directory")
     args = parser.parse_args()
-    convert_embedding_model(args.embedding_model_type, Path(args.model_dir))
-    convert_chat_model(args.chat_model_type, args.precision, Path(args.model_dir), args.hf_token)
+
+    # Load models and embedding based on parsed arguments
+    llm, embedding = setup_models(args.chat_model, args.embedding_model)
+    
+    Settings.embed_model = embedding
+    Settings.llm = llm
+
+    # Set up tools
+    multiply_tool, divide_tool = setup_tools()
+    
+    # Step 4: Load documents and create the VectorStoreIndex
+    text_example_en_path = Path("test_painting_llm_rag.pdf")
+    index = load_documents(text_example_en_path)
+
+    vector_tool = QueryEngineTool(
+        index.as_query_engine(streaming=True),
+        metadata=ToolMetadata(
+            name="vector_search",
+            description="Useful for searching for facts and product recommendations about paint",
+        ),
+    )
+
+    # Step 5: Initialize the agent with the loaded tools
+    nest_asyncio.apply()
+    agent = ReActAgent.from_tools([multiply_tool, divide_tool, vector_tool], llm=llm, verbose=True)
+
+    # Step 6: Run the app
+    run_app(agent)
