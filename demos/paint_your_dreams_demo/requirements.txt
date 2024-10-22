@@ -3,11 +3,10 @@
 openvino==2024.4.0
 optimum==1.23.2
 optimum-intel==1.20.0
-diffusers==0.31.0
+diffusers>=0.31.0
 transformers
 onnx==1.16.0
 opencv-python
-tqdm==4.66.5
-requests==2.32.3
+tqdm
+requests
 gradio==5.3.0
-fastapi==0.112.4
