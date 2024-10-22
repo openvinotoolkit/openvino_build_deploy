@@ -88,7 +88,7 @@ def generate_images(prompt: str, seed: int, size: int, guidance_scale: float, nu
         utils.draw_ov_watermark(result, size=0.60)
 
         processing_time = end_time - start_time
-        yield result, round(processing_time, 5), ov_pipeline.device.upper()
+        yield result, round(processing_time, 5), ov_pipeline.device
 
         if stop_generating:
             break

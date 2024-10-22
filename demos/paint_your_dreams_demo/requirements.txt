@@ -1,12 +1,13 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 
 openvino==2024.4.0
-optimum-intel==1.18.0
-diffusers==0.29.2
-transformers==4.41.2
+optimum==1.23.2
+optimum-intel==1.20.0
+diffusers==0.31.0
+transformers
 onnx==1.16.0
-opencv-python==4.10.0.82
-tqdm==4.66.3
+opencv-python
+tqdm==4.66.5
 requests==2.32.3
-gradio==4.42.0
+gradio==5.3.0
 fastapi==0.112.4
