@@ -91,13 +91,17 @@ To run the application, use the following command:
 python main.py
 ```
 
-To change the model precision, run:
+During the first run (i.e., generating the first image), the application will download the model online. Please wait until the process is completed and do not disconnect the internet or close the application. Additionally, the first run may take significantly longer due to caching and other behavior, and you will notice a significant speed-up after warm-up. 
+
+To change the model precision to INT8, run:
 
 ```shell
 python main.py --model_name OpenVINO/LCM_Dreamshaper_v7-int8-ov
 ```
 
-The demo will available for localhost only. To make it available in the local network use:
+This change will provide speed up on CPU, and a slight improvement on GPU. Also, there is slight degradation in the image generation quality. You can increase the number of step by 1 or 2 to improve that.  
+
+The demo will be available for localhost only (i.e., the application is not accessible to outside network). To make it available in the local network use:
 
 ```shell
 python main.py --local_network
