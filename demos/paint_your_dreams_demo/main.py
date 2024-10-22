@@ -88,7 +88,7 @@ def generate_images(prompt: str, seed: int, size: int, guidance_scale: float, nu
         utils.draw_ov_watermark(result, size=0.60)
 
         processing_time = end_time - start_time
-        yield result, round(processing_time, 5), ov_pipeline.device
+        yield result, round(processing_time, 5)
 
         if stop_generating:
             break
@@ -109,13 +109,13 @@ def build_ui():
                 prompt_text = gr.Text(
                     label="Prompt",
                     placeholder="Enter your prompt here",
+                    value="A sail boat on a grass field with mountains in the morning and sunny day"
                 )
             with gr.Row():
                 with gr.Column():
                     result_img = gr.Image(label="Generated image", elem_id="output_image", format="png")
                     with gr.Row():
                         result_time_label = gr.Text("", label="Inference Time", type="text")
-                        result_device_label = gr.Text("", label="Device Name", type="text")
                     with gr.Row():
                         start_button = gr.Button("Start generation")
                         stop_button = gr.Button("Stop generation")
@@ -167,7 +167,7 @@ def build_ui():
         gr.on(triggers=[prompt_text.submit, start_button.click],
               fn=generate_images,
               inputs=[prompt_text, seed_slider, size_slider, guidance_scale_slider, num_inference_steps_slider, randomize_seed_checkbox, device_dropdown, endless_checkbox],
-              outputs=[result_img, result_time_label, result_device_label]
+              outputs=[result_img, result_time_label]
               )
         # clicking stop
         stop_button.click(stop)
