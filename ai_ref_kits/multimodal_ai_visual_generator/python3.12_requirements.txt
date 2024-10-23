@@ -1,38 +1,38 @@
 # openvino and its dependencies
-openvino==2024.2.0
+openvino==2024.4.0
 openvino-telemetry==2024.1.0
 
-nncf==2.10.0
-optimum==1.20.0
-optimum-intel==1.17.0
+nncf==2.13.0
+optimum==1.23.1
+optimum-intel==1.20.0
+openvino-genai==2024.4.0
+openai-whisper==20240930
 
 # deep learning frameworks
 tensorflow==2.17.0
 
-
-onnx==1.16.0
+onnx==1.16.1
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.3.1
-torchvision==0.18.1
-torchaudio==2.3.1
-transformers>=4.21.1
-tf_keras==2.16.0
+torch==2.4.1
+torchvision==0.19.1
+torchaudio==2.4.1
+transformers==4.45.2
+tf_keras==2.17.0
 
 # others
-numpy>=1.21.0
-opencv-python
-Pillow>=8.3.2
+numpy<2.1.0
+opencv-python==4.10.0.84
+Pillow==10.4.0
 
 scipy==1.14.1
 
 # The packages below are not directly required. They are dependencies of 
 # other dependencies that are pinned to a specific version to avoid
 # compatibility issues or vulnerabilities
-scikit-image>=0.19.2
-setuptools>=56.0.0
+scikit-image==0.24.0
+setuptools==75.1.0
 
-
-gradio==5.0.0
+gradio==5.1.0
 SpeechRecognition==3.10.4
 pyaudio==0.2.14
-diffusers==0.30.0
+diffusers==0.30.3

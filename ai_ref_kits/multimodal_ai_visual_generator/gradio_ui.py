@@ -19,14 +19,15 @@ from PIL import Image
 from pathlib import Path
 from pipelines.nano_llava_utils import OVLlavaQwen2ForCausalLM
 from threading import Thread
-from optimum.intel.openvino import OVLatentConsistencyModelPipeline
+#from optimum.intel.openvino import OVLatentConsistencyModelPipeline
 from utils import patch_whisper_for_ov_inference, OpenVINOAudioEncoder, OpenVINOTextDecoder, resample_wav
 from depth_anything_v2_util_transform import Resize, NormalizeImage, PrepareForNet
 from torchvision.transforms import Compose
 import whisper
+from openvino_genai import LLMPipeline, GenerationConfig
 
 #Enable for light theme; dark theme enabled by default
-light_theme = None
+light_theme = True
 
 core = ov.Core()
 whisper_model = whisper.load_model("base", "cpu")
@@ -53,20 +54,12 @@ def ready_ocr_model():
     return ocr_ov_model, ocr_tokenizer, streamer
 
 def ready_llm_model():
-    model_dir = r"dnd_models\llama-3-8b-instruct\INT4_compressed_weights"
+    model_dir = r"dnd_models\llama\INT4_compressed_weights" 
     print(f"Loading model from {model_dir}")
-    ov_config = {"PERFORMANCE_HINT": "LATENCY", "NUM_STREAMS": "1", "CACHE_DIR": "temp/"}
-    model_configuration = SUPPORTED_LLM_MODELS["English"]["llama-3-8b-instruct"]
-    model_name = model_configuration["model_id"]
-    llm_tokenizer = AutoTokenizer.from_pretrained(model_dir, trust_remote_code=True)
-    llm_model = OVModelForCausalLM.from_pretrained(
-        model_dir,
-        device= "GPU.0",
-        ov_config=ov_config,
-        config=AutoConfig.from_pretrained(model_dir, trust_remote_code=True),
-        trust_remote_code=True,
-    )
-    return llm_model, llm_tokenizer, model_configuration
+    pipe = LLMPipeline(str(model_dir), "GPU.0")
+    config = GenerationConfig()
+    config.max_new_tokens = 45
+    return pipe, config
 
 print("Application Set Up - Please wait")
 model_path_sr = Path(f"dnd_models/single-image-super-resolution-1033.xml") #realesrgan.xml")
@@ -83,25 +76,25 @@ device = ["CPU", "NPU", "GPU"]  #"CPU", "GPU"
 #engine_lcm.to("NPU")
 #engine_lcm.compile()
 
-llm_model, llm_tokenizer, model_configuration = ready_llm_model()
+llm_pipeline, llm_config = ready_llm_model()
 
 if OCR is True:
     ocr_ov_model, ocr_tokenizer, streamer = ready_ocr_model()
 
 print("Ready to launch")
 
-def ocr_dice_roll(image, ocr_radio=False):
-    if ocr_radio == "yes":
-        prompt = "What number did I just roll using the dice from the picture?"
-    else:
-        prompt = "Describe what you see in the image in 6 words ONLY"
-        #prompt= "Describe the style of the image (example: photo-realistic, realistic lighting, natural colors) in a few words ONLY." #
+def ocr_multimodal(image, ocr_radio=False):
+    prompt = "Describe what you see in the image in 6 words ONLY"
+    #prompt= "Describe the style of the image (example: photo-realistic, realistic lighting, natural colors) in a few words ONLY." #
     messages = [{"role": "user", "content": f"<image>\n{prompt}"}]
     text = ocr_tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
     text_chunks = [ocr_tokenizer(chunk).input_ids for chunk in text.split("<image>")]
     input_ids = torch.tensor(text_chunks[0] + [-200] + text_chunks[1], dtype=torch.long).unsqueeze(0)
     #streamer = TextStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
-    image_tensor = ocr_ov_model.process_images([image], ocr_ov_model.config)
+    try:
+        image_tensor = ocr_ov_model.process_images([image], ocr_ov_model.config)
+    except:
+        return None, None
     generation_kwargs = dict(
         input_ids=input_ids, images=image_tensor, streamer=streamer, max_new_tokens=128, temperature=0.01
     )
@@ -112,18 +105,14 @@ def ocr_dice_roll(image, ocr_radio=False):
         buffer += new_text
         generated_text_without_prompt = buffer[:]
         #time.sleep(0.04)
-    if ocr_radio == "yes":
-        return generated_text_without_prompt, None
-    else: 
-        print("Generated prompt", generated_text_without_prompt)
-        return None, generated_text_without_prompt
+    return generated_text_without_prompt
 
 def add_theme(prompt, location):
     if location not in prompt and "No theme" not in str(location):
         return f"{prompt} - {location}"
     
 def adjust_theme(text, dice_roll_number, prompt=None):
-    if dice_roll_number != "00":
+    if dice_roll_number != "None":
         indexed_location = locations_json[str(dice_roll_number)]
         try:
             return indexed_location
@@ -181,13 +170,17 @@ def run_sr(img):
 
     return result_image
 
+def ready_llm_model():
+    model_dir = r"dnd_models\llama\INT4_compressed_weights" 
+    print(f"Loading model from {model_dir}")
+    pipe = LLMPipeline(str(model_dir), "GPU.0")
+    config = GenerationConfig()
+    config.max_new_tokens = 45
+    return pipe, config
+
+llm_pipeline, llm_config = ready_llm_model()
 
 def llama(text, random_num=None):
-    #if first_run is True:
-    global prev_history
-    tokenizer_kwargs = model_configuration.get("tokenizer_kwargs", {})
-    #history_template = model_configuration.get("history_template")
-    #has_chat_template = model_configuration.get("has_chat_template", history_template is None)
     test_string = f"""You are a Dungeons and Dragons prompt assistant who reads prompts and turns them into short prompts \
         for an model that generates scene images from prompts. Rephrase the following sentence to be a descriptive prompt that is one short sentence only\
         and easy for a image generation model to understand, ending with proper punctuation, for a scene.\
@@ -196,30 +189,9 @@ def llama(text, random_num=None):
         ### Prompt: {text} \
         ### Theme: {random_num} \
         ### Rephrased Prompt: """
-    input_tokens = llm_tokenizer(test_string, return_tensors="pt", **tokenizer_kwargs)
-    answer = llm_model.generate(**input_tokens, max_new_tokens=45)
-    result = llm_tokenizer.batch_decode(answer, skip_special_tokens=True)[0]
-    result = result.split('### Rephrased Prompt: ')[1]
-    result = result.split('\n')[0]
+    result = llm_pipeline.generate(test_string, llm_config)
     result = result.split('.')[0]
-    #We can also ensure that the theme is infused, by manually adding the phrase to the end again
-    #result = result + " (" + locations_json[str(random_num)] + ") "
-    #prev_history = result
-    #print(result)
     return result
-
-def parse_ocr_output(text):
-    if text is not None:
-        try:
-            detected_roll = int(''.join(filter(str.isdigit, text)))
-            if 0 <= detected_roll <= 20:
-                #Detected number is out of range
-                return 0
-            else:
-                return detected_roll
-        except:
-            #Detection did not work or image is empty
-            return 0
 
 def depth_map_parallax(image):
     #This function will load the OV Depth Anything model
@@ -305,10 +277,6 @@ def generate_from_text(theme, orig_prompt, llm_prompt, seed, num_steps,guidance_
    img= cv2.cvtColor(np.array(out), cv2.COLOR_RGB2BGR)
    return img #, "downloaded_result.png"  
 
-def clear_context():
-    global prev_history
-    prev_history = "None"
-
 def transcribe(audio_data, progress=gr.Progress()):
    
     # Convert in-ram buffer to something the model can use directly without needing a temp file.
@@ -330,9 +298,9 @@ def transcribe(audio_data, progress=gr.Progress()):
 def update_visibility(radio):  # Accept the event argument, even if not used
         value = radio  # Get the selected value from the radio button
         if value == "yes":
-            return gr.Textbox(visible=bool(0)),  gr.Textbox(visible=bool(1))
+            return gr.Textbox(visible=bool(0)),  gr.Textbox(visible=bool(1)), gr.Image(visible=bool(0))
         else:
-            return gr.Textbox(visible=bool(0)), gr.Textbox(visible=bool(0))
+            return gr.Textbox(visible=bool(0)), gr.Textbox(visible=bool(0)), gr.Image(visible=bool(1))
 
 css_code="""
 .gradio-container { background:  url('file=assets/image_opt.jpg'); background-repeat: no-repeat; background-size: cover; background-position: center;}
@@ -347,7 +315,8 @@ h1 {
           border-color: rgba(255, 255, 255, 0.0);}
 """
 
-if light_theme:
+print("Light theme enabled: ", light_theme)
+if light_theme is True:
     _js = None
 else:
     _js="""
@@ -356,14 +325,17 @@ else:
             }
         """
 
-theme = gr.themes.Default().set(button_primary_background_fill_dark="rgba(211, 211, 211, 0.1)",
+if light_theme is True:
+    theme = gr.themes.Default().set(button_primary_background_fill_dark="rgba(211, 211, 211, 0.1)",
                                 button_primary_border_color_dark="rgba(211, 211, 211, 0.1)",
                                 input_background_fill_dark="rgba(255, 255, 255, 0.1)",
                                 block_background_fill_dark="rgba(211, 211, 211, 0.1)",
                                 block_label_background_fill_dark="rgba(211, 211, 211, 0.0)",
                                 border_color_primary_dark="rgba(211, 211, 211, 0.1)",
                                 slider_color_dark="#f97316")
-if light_theme is None: theme=gr.themes.Soft()
+else:
+    theme=gr.themes.Soft()
+
 with gr.Blocks(css=css_code, js = _js, theme=theme) as demo:
 
     gr.Markdown(""" # 🏰 Bringing Adventure Gaming to Life 🧙 \n Using Real-time Generative AI on Your PC 💻 """)
@@ -374,7 +346,7 @@ with gr.Blocks(css=css_code, js = _js, theme=theme) as demo:
             ocr_output = gr.Textbox(label="Output of OCR Model", visible=False)
             #out = gr.Textbox(label="Number typed in", elem_id="visible")
             with gr.Row():
-                dice_roll_input = gr.Textbox(lines=2, label="20-side Die Roll", container=True, placeholder="00", visible=False)
+                dice_roll_input = gr.Textbox(lines=2, label="20-side Die Roll", container=True, placeholder="None", visible=False)
                 dice_roll_theme = gr.Textbox(label="Theme", visible=True)
             with gr.Row():
                 with gr.Row():
@@ -389,7 +361,6 @@ with gr.Blocks(css=css_code, js = _js, theme=theme) as demo:
             image_btn = gr.Button(value="Step 6: Generate Image", variant="primary")
             #Parameters for multimodal model and LCM
             with gr.Accordion("Advanced Parameters", open=False):
-                context_button = gr.Button(value="Clear Context?", variant="primary")
                 radio = gr.Radio(["yes", "no"], value="no", label="Please Select: Recognize Dice?")
                 seed_input = gr.Slider(0, 10000000, value=2200000, label="Seed")
                 steps_input = gr.Slider(1, 50, value=5, step=1, label="Steps")
@@ -398,18 +369,18 @@ with gr.Blocks(css=css_code, js = _js, theme=theme) as demo:
             out = gr.Image(label="Result", type="pil", elem_id="visible")
             depth_map = gr.Image(label="Depth Map", type="pil", elem_id="visible")
 
-    radio.change(update_visibility, radio, [ocr_output, dice_roll_input])        
-    try:
-        i.change(ocr_dice_roll, [i, radio], [ocr_output, dice_roll_theme])
-    except ValueError:
-        pass
+    radio.change(update_visibility, radio, [ocr_output, dice_roll_input, i])        
+    #try:
+    #i.change(ocr_dice_roll, [i, radio], [ocr_output, dice_roll_theme])
+    i.change(ocr_multimodal, [i], [dice_roll_theme])
+    #except ValueError:
+    #    pass
     #the following lines of code only apply if we are looking at a dice roll
-    ocr_output.change(parse_ocr_output, ocr_output, dice_roll_input)
+    #ocr_output.change(parse_ocr_output, ocr_output, dice_roll_input)
     dice_roll_input.change(adjust_theme, [ocr_output, dice_roll_input], dice_roll_theme)
     audio_prompt.stop_recording(transcribe, audio_prompt, outputs=text_input)
     add_theme_button.click(add_theme, [text_input, dice_roll_theme], text_input)
     llm_button.click(generate_llm_prompt, [text_input, dice_roll_input], text_output)
-    context_button.click(clear_context)
     #The LLM Generated Prompt can be left empty, and the image will be generated with the original prompt + 
     print("Before button")
     image_btn.click(generate_from_text, [dice_roll_theme, text_input, text_output, seed_input, steps_input, guidance_input], out)
