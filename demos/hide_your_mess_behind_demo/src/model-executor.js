@@ -47,9 +47,9 @@ class ModelExecutor {
       const begin = performance.now();
       let useTwoInferRequests;
         if (device == "GPU"){
-            useTwoInferRequests = false; 
+            useTwoInferRequests = false;
         } else {
-            useTwoInferRequests = true; 
+            useTwoInferRequests = true;
         }
 
         if (!this.initialized)
@@ -63,9 +63,9 @@ class ModelExecutor {
               this.ir2 = await this.compiledModel.createInferRequest();
         }
 
-        const result = await this.getInferRequest(useTwoInferRequests).inferAsync(inputData);
+        const result = this.getInferRequest(useTwoInferRequests).infer(inputData);
         const keys = Object.keys(result);
-        console.log(performance.now()-begin);
+        // console.log(performance.now()-begin);
         return result[keys[0]];
     }
 
