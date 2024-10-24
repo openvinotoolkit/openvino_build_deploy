@@ -136,7 +136,8 @@ For GPU, please use the default float16 precision.
 python convert_and_optimize_asr.py --asr_model_type distil-whisper-large-v3
 ```
 
-This script will convert and optimize the automatic speech recognition (ASR) model performing weights quantization.
+This script will convert and optimize the automatic speech recognition (ASR) model performing weight quantization. 
+Warning: On Windows you will see an "Permission Error" message due to the export function [bug](https://github.com/openvinotoolkit/openvino_build_deploy/issues/89). The model will be exported successfully, however, you may want to clear the temp directory manually.
 If you want to convert speech to text in Chinese, you could choose the Chinese fine-tuned ASR model with the following:
 ```shell
 python convert_and_optimize_asr.py --asr_model_type belle-distilwhisper-large-v2-zh --precision int8
