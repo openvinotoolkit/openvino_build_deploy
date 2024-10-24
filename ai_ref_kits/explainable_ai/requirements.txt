@@ -14,3 +14,4 @@ pycocotools==2.0.6
 cython==0.29.35
 datumaro[default]==1.6.0rc1
 iprogress==0.4
+ipywidgets==8.1.5
