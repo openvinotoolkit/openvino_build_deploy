@@ -148,11 +148,12 @@ python convert_and_optimize_asr.py --asr_model_type belle-distilwhisper-large-v2
 ```
 
 2. Chat LLama Conversion:
-For Desktop or Server with 32GB of RAM:
+   
+For desktop or server processors,
 ```shell
 python convert_and_optimize_chat.py --chat_model_type llama3.1-8B --precision int4
 ```
-For AI PC and Edge:
+For AI PC or edge use cases,
 ```shell
 python convert_and_optimize_chat.py --chat_model_type llama3.2-3B --precision int4
 ```
