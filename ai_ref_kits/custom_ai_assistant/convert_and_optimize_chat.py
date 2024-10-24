@@ -6,7 +6,8 @@ from transformers import AutoTokenizer
 
 MODEL_MAPPING = {
     "llama3.1-8B": "meta-llama/Meta-Llama-3.1-8B-Instruct",
-    "llama3-8B": "meta-llama/Meta-Llama-3-8B-Instruct",
+    "llama3-8B": "meta-llama/Meta-Llama-3-8B-Instruct",    
+    "llama3.2-3B": "meta-llama/Llama-3.2-3B-Instruct",
     "qwen2-7B": "Qwen/Qwen2-7B-Instruct", 
 }
 
@@ -56,7 +57,7 @@ def convert_chat_model(model_type: str, precision: str, model_dir: Path) -> Path
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--chat_model_type", type=str, choices=["llama3.1-8B", "llama3-8B", "qwen2-7B"],
+    parser.add_argument("--chat_model_type", type=str, choices=["llama3.1-8B", "llama3-8B", "qwen2-7B", "llama3.2-3B"],
                         default="llama3.1-8B", help="Chat model to be converted")
     parser.add_argument("--precision", type=str, default="int4", choices=["fp16", "int8", "int4"], help="Model precision")
     parser.add_argument("--model_dir", type=str, default="model", help="Directory to place the model in")
