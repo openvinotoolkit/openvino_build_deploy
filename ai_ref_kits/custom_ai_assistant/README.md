@@ -122,7 +122,7 @@ Now, you're ready to download and optimize the models required to run the applic
 
 ## Model Conversion and Optimization
 
-_NOTE: This reference kit requires much bandwidth and disk space (>8GB) for downloading models. Also, the conversion may take much time (>2h) and need much memory (>32GB)) when running for the first time as the models used here are huge. After the first run, the subsequent runs will be done much faster._
+_NOTE: This reference kit requires much bandwidth and disk space (>8GB) for downloading models. Also, the conversion may take much time (>2h with slow networks) and need much memory (>32GB)) when running for the first time as the models used here are huge. After the first run, the subsequent runs will be done much faster._
 
 The application uses three separate models for its operation, each requiring conversion and optimization for use with OpenVINO™. Follow the order below to convert and optimize each model:
 
