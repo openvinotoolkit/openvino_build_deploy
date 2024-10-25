@@ -108,10 +108,20 @@ instructions: |
 
 ## Step 3: Run the Application
 
-To run the application, use the following command. The application will start downloading Llama 3, and Distil-Whisper by default. 
-To use LLama3, you must provide your [HuggingFace access token](https://huggingface.co/docs/hub/en/security-tokens) as a parameter. 
+Preq:
+
+*Important* To use LLama3, you must provide your [HuggingFace access token](https://huggingface.co/docs/hub/en/security-tokens) as a parameter or login with huggingface-cli. You also need to accept the agreement on Huggingface model page under Meta Llama: https://huggingface.co/meta-llama/Llama-3.2-3B. Once you have applied, you will get an confirmation email shortly (usually within an hour).
+
+Also, to setup your token for future uses on your machine, you can use [huggingface-cli](https://huggingface.co/docs/huggingface_hub/en/guides/cli) with the following command
+
+```shell
+huggingface-cli login
+```
+
 It will take up to an hour (depending on your internet speed) for the first time running this application due to the large downloads and conversion of the models. 
 Once the models are cached, the subsequent executions will be much faster.
+
+To run the application, use the following command. The application will start downloading Llama 3, and Distil-Whisper by default. 
 
 ```shell
 python main.py --hf_token [replace-with-your-token]
