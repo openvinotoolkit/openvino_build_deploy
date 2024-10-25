@@ -91,7 +91,7 @@ To run the application, use the following command:
 python main.py
 ```
 
-During the first run (i.e., generating the first image), the application will download the model online. Please wait until the process is completed and do not disconnect the internet or close the application. Additionally, the first run may take significantly longer due to caching and other behavior, and you will notice a significant speed-up after warm-up. 
+During the first run (i.e., before generating the first image), the application will download the model online. Please wait until the process is completed and do not disconnect the internet or close the application. Additionally, the first run may take significantly longer due to caching and other behavior, and you will notice a significant speed-up after warm-up. 
 
 To change the model precision to INT8, run:
 
