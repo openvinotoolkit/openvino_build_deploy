@@ -123,7 +123,7 @@ def build_ui():
                 with gr.Row():
                     device_dropdown = gr.Dropdown(
                         choices=get_available_devices(),
-                        value="AUTO",
+                        value="CPU",
                         label="Inference device",
                         interactive=True,
                         scale=4
