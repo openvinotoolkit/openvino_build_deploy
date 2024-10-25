@@ -79,6 +79,11 @@ To run the application, use the following command:
 ```shell
 python main.py --stream 0
 ```
+And you can run it on specific video input
+
+```shell
+python main.py --stream input.mp4
+```
 
 By default, the YOLOv8n model is used. To change this, select another model from the family:
 
