@@ -119,7 +119,7 @@ def build_ui():
                     with gr.Row():
                         start_button = gr.Button("Start generation")
                         stop_button = gr.Button("Stop generation")
-            with gr.Accordion("Advanced options", open=False):
+            with gr.Accordion("Advanced options", open=True):
                 with gr.Row():
                     device_dropdown = gr.Dropdown(
                         choices=get_available_devices(),
