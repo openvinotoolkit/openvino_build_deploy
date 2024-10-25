@@ -37,7 +37,7 @@ hf_model_name: str | None = None
 
 def get_available_devices() -> list[str]:
     core = ov.Core()
-    return ["AUTO"] + list({device.split(".")[0] for device in core.available_devices})
+    return list({device.split(".")[0] for device in core.available_devices})
 
 
 def load_pipeline(model_name: str, device: str):
