@@ -108,9 +108,7 @@ instructions: |
 
 ## Step 3: Run the Application
 
-Preq:
-
-*Important* To use LLama3, you must provide your [HuggingFace access token](https://huggingface.co/docs/hub/en/security-tokens) as a parameter or login with huggingface-cli. You also need to accept the agreement on Huggingface model page under Meta Llama: https://huggingface.co/meta-llama/Llama-3.2-3B. Once you have applied, you will get an confirmation email shortly (usually within an hour).
+To use LLama3, you must provide your [HuggingFace access token](https://huggingface.co/docs/hub/en/security-tokens) as a parameter or login with huggingface-cli. You also need to accept the agreement on Meta's Llama Model Page (e.g., https://huggingface.co/meta-llama/Llama-3.2-3B). Once you have applied, you will get an confirmation email shortly (usually within an hour).
 
 Also, to setup your token for future uses on your machine, you can use [huggingface-cli](https://huggingface.co/docs/huggingface_hub/en/guides/cli) with the following command
 
