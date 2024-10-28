@@ -108,24 +108,38 @@ instructions: |
 
 ## Step 3: Run the Application
 
-To use LLama3, you must provide your [HuggingFace access token](https://huggingface.co/docs/hub/en/security-tokens) as a parameter or login with huggingface-cli. You also need to accept the agreement on Meta's Llama Model Page (e.g., https://huggingface.co/meta-llama/Llama-3.2-3B). Once you have applied, you will get an confirmation email shortly (usually within an hour).
+### Access LlaMA
+NOTE: If you already have access to the LlaMA model weights, skip to the authentication step, which is mandatory for converting the LlaMA model.
 
-Also, to setup your token for future uses on your machine, you can use [huggingface-cli](https://huggingface.co/docs/huggingface_hub/en/guides/cli) with the following command
+Accessing Original Weights from Meta AI
+To access the original LlaMA model weights:
 
-```shell
+Visit Meta AI's website and fill in your details, including your name, email, and organization. Accept the terms and submit the form. You will receive an email granting access to download the model weights.
+
+Using LlaMA with Hugging Face
+Set Up a Hugging Face Account: If you don't have one, create a Hugging Face account.
+
+Authenticate with Meta AI: Go to the LlaMA model (v2 or v3) page on Hugging Face. To authenticate, enter the same email address you used for the Meta AI website. After authentication, you'll gain access to the model.
+
+To use the model, authenticate using the Hugging Face CLI:
+```
 huggingface-cli login
 ```
+When prompted to add the token as a git credential, respond with 'n'. This step ensures that you are logged into the Hugging Face API and ready to download the model.
 
-It will take up to an hour (depending on your internet speed) for the first time running this application due to the large downloads and conversion of the models. 
-Once the models are cached, the subsequent executions will be much faster.
+Now, you're ready to download and optimize the models required to run the application.
+
+
 
 To run the application, use the following command. The application will start downloading Llama 3, and Distil-Whisper by default. 
 
 ```shell
 python main.py --hf_token [replace-with-your-token]
 ```
+It will take up to an hour (depending on your internet speed) for the first time running this application due to the large downloads and conversion of the models. 
+Once the models are cached, the subsequent executions will be much faster.
 
-Change the personality and behaviour by providing a new YAML config file:
+To change the personality and behaviour by providing a new YAML config file:
 
 ```shell
 python main.py --personality use_your_personality.yaml
