@@ -114,12 +114,12 @@ NOTE: If you already have access to the LlaMA model weights, skip to the authent
 Accessing Original Weights from Meta AI
 To access the original LlaMA model weights:
 
-Visit Meta AI's website and fill in your details, including your name, email, and organization. Accept the terms and submit the form. You will receive an email granting access to download the model weights.
+Visit [Meta AI's website](https://www.llama.com/llama-downloads/) and fill in your details, including your name, email, and organization. Accept the terms and submit the form. You will receive an email granting access to download the model weights.
 
 Using LlaMA with Hugging Face
-Set Up a Hugging Face Account: If you don't have one, create a Hugging Face account.
+Set Up a Hugging Face Account: If you don't have one, create a [Hugging Face account](https://huggingface.co/welcome).
 
-Authenticate with Meta AI: Go to the LlaMA model (v2 or v3) page on Hugging Face. To authenticate, enter the same email address you used for the Meta AI website. After authentication, you'll gain access to the model.
+Authenticate with Meta AI: Go to the [LlaMA model](https://huggingface.co/meta-llama) (v2 or v3) page on Hugging Face. To authenticate, enter the same email address you used for the Meta AI website. After authentication, you'll gain access to the model.
 
 To use the model, authenticate using the Hugging Face CLI:
 ```
