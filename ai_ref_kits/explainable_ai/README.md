@@ -47,7 +47,7 @@ Install libraries and tools:
 sudo apt install git git-lfs gcc python3-venv python3-dev
 ```
 
-_NOTE: If you are using Windows, you will probably need to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe) also._
+_NOTE: If you are using Windows, you would need to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe) also._
 
 ## Setting up your Environment
 
@@ -100,6 +100,8 @@ To install the required packages, run the following commands:
 python -m pip install --upgrade pip 
 pip install -r requirements.txt
 ```
+
+_NOTE: Datumaro contains C++ and Rust implementations to improve Python performance: Please ensure you install the [Rust toolchain](https://www.rust-lang.org/tools/install) in your system to run this sample.
 
 ## Running the Application
 
