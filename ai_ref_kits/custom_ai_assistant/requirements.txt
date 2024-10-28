@@ -2,6 +2,7 @@
 
 openvino==2024.4.0
 optimum-intel==1.19.0
+optimum==1.22.0
 nncf==2.13.0
 
 onnx==1.16.1
