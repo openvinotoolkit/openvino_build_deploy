@@ -16,8 +16,8 @@ These samples are designed to run on CPU with torch.compile. Here you will see 3
   pip install -r requirements.txt
   ```
 - Now you only need a Jupyter server to start exploring the samples.
-```sh
-jupyter lab .
-```
+  ```sh
+  jupyter lab .
+  ```
 
 Note: Please shutdown the kernel to free up memory between samples. This is especially critical for stable diffusion and LCM demo.
