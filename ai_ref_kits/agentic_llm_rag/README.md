@@ -1,5 +1,5 @@
 <div id="top" align="center">
-  <h1>Agentic LLMs and RAG with the OpenVINO™ Toolkit</h1>
+  <h1>WORK IN PROGRESS - Agentic LLMs and RAG with the OpenVINO™ Toolkit</h1>
   <h4>
     <a href="https://www.intel.com/content/www/us/en/developer/topic-technology/edge-5g/open-potential.html">🏠&nbsp;About&nbsp;the&nbsp;Kits&nbsp;·</a>
     <a href="">👨‍💻&nbsp;Code&nbsp;Demo&nbsp;Video</a> - Placeholder
@@ -110,7 +110,7 @@ python convert_and_optimize_asr.py --asr_model_type distil-whisper-large-v3 --pr
 ```
 This script will convert and optimize the automatic speech recognition (ASR) model performing weights quantization.
 
-2. **Chat , Embedding, and Reranker Model Conversion**:
+2. **Chat and Embedding Model Conversion**:
 The chat model is at the core of the chatbot's ability to generate meaningful and context-aware responses. It processes the text input from the ASR model and produces a human-like response.
 The embedding model represents text data (both user queries and potential responses or knowledge base entries) as numerical vectors. These vectors are essential for tasks such as semantic search and similarity matching.
 The reranker model is used in retrieval-augmented generation (RAG) setups to reorder or "rerank" retrieved results, ensuring the most relevant information is presented to the user.
@@ -122,7 +122,6 @@ This script will handle the conversion and optimization of:
 
 - The chat model (`llama3.1-8B`) with `int4` precision.
 - The embedding model (`bge-large`) with `FP32` precision.
-- Reranker Model (`bge-reranker-large`) with `FP32` precision.
 
     The script requires a Hugging Face token (`--hf_token`) for authentication, which allows access to gated models like LLaMA. The converted models will be saved in the specified `model` directory.
 
@@ -138,14 +137,13 @@ _NOTE: This application requires much memory (>16GB) as the models used here are
 Execute the `app.py` script with the following command, including all necessary model directory arguments:
 ```shell
 python app.py \
-  --personality concierge_personality.yaml \
+  --personality personality.txt \
   --asr_model path/to/asr_model \
   --chat_model path/to/chat_model \
   --embedding_model path/to/embedding_model \
-  --vocoder_model vocoder_model_name \
   --public
 ```
-- `--personality path/to/personality.yaml`: Path to your custom personality YAML file (e.g., `concierge_personality.yaml`). This file defines the assistant's personality, including instructions, system configuration, and greeting prompts. Feel free to create and provide your own custom personality file.
+- `--personality path/to/personality.txt`: Path to your custom personality txt file (e.g., `personality.txt`). This file defines the assistant's personality, including instructions, system configuration, and greeting prompts. Feel free to create and provide your own custom personality file.
 
 - `--asr_model path/to/asr_model`: Path to your ASR (Automatic Speech Recognition) model directory, using `int8` precision (e.g., `model/distil-whisper-large-v3-int8`) for efficient speech recognition.
 
@@ -153,23 +151,21 @@ python app.py \
 
 - `--embedding_model path/to/embedding_model`: Path to your embedding model directory (e.g., `model/bge-small-FP32`) for understanding and matching text inputs.
 
-- `--vocoder_model vocoder_model_name`: HuggingFace name of your vocoder model (e.g., `microsoft/speecht5_hifigan`). Enhances audio quality of the spoken responses.
-
 - `--public`: Include this flag to make the Gradio interface publicly accessible over the network. Without this flag, the interface will only be available on your local machine.
 
-### Create a Custom YAML Personality File
+### Create a Custom TXT Personality File
 
-You can create a personality file for your virtual AI assistant using YAML. Each personality can be customized based on the specific role of the assistant, such as a concierge, bartender, or legal assistant. 
+You can create a personality file for your virtual AI assistant using TXT. Each personality can be customized based on the specific role of the assistant.
 
 #### Key Components of a Personality File
 
-A typical YAML personality file has the following sections:
+A typical personality file has the following sections:
 
 1. **Instructions**: A brief, descriptive title for the assistant.
 2. **System Configuration**: Instructions that define the assistant's behavior and limitations.
 3. **Greet the User Prompt**: The first interaction where the assistant introduces itself.
 
-#### Some tips for creating this YAML file: 
+#### Some tips for creating this file: 
 
 The instructions provide an introduction to the assistant, along with the title and important notes for the user. It should be clear and concise, giving users context on how to interact with the assistant.
 
@@ -189,7 +185,7 @@ instructions: |
 After running the script, Gradio will provide a local URL, typically `http://127.0.0.1:XXXX`, which you can open in your web browser to start interacting with the assistant. If you configured the application to be accessible publicly, Gradio will also provide a public URL.
 
 Trying Out the Application
- TBD
+- TBD
 
 Feel free to engage with the Chatbot, ask questions, or give commands as per the assistant's capabilities. This hands-on experience will help you understand the assistant's interactive quality and performance.
 
