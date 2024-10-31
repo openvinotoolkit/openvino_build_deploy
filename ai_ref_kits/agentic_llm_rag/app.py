@@ -21,7 +21,6 @@ import sys
 import gradio as gr
 import nest_asyncio
 import logging
-import yaml
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO)
@@ -29,7 +28,6 @@ log = logging.getLogger(__name__)
 
 llm_device = "GPU"
 embedding_device = "GPU"
-
 ov_config = {
     hints.performance_mode(): hints.PerformanceMode.LATENCY,
     streams.num(): "1",
@@ -70,7 +68,7 @@ def setup_tools():
 def load_documents(text_example_en_path):
     # Check and download document if not present
     if not text_example_en_path.exists():
-        text_example_en = "test_painting_llm_rag.pdf"  # Replace with valid URL
+        text_example_en = "test_painting_llm_rag.pdf"  # TBD - Replace with valid URL
         r = requests.get(text_example_en)
         content = io.BytesIO(r.content)
         with open(text_example_en_path, "wb") as f:
@@ -160,9 +158,6 @@ def run_app(agent):
     def check_cart_size(cart):
         return len(cart)
     
-    def upload_file(file):
-        return file
-    
     def run():
         with gr.Blocks() as demo:
 
@@ -186,7 +181,6 @@ def run_app(agent):
                 )
             with gr.Row():
                 message = gr.Textbox(label="Ask the Paint Expert", scale=4)
-                file_uploader_ui = gr.File(label="Upload PDF Guide (RAG)", value="test_painting_llm_rag.pdf", file_types=[".pdf"])
                 clear = gr.ClearButton()
 
             # Ensure that individual components are passed
@@ -234,6 +228,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--chat_model", type=str, default="model/llama3.1-8B-INT4", help="Path to the chat model directory")
     parser.add_argument("--embedding_model", type=str, default="model/bge-large-FP32", help="Path to the embedding model directory")
+    parser.add_argument("--rag_pdf", type=str, default="test_painting_llm_rag.pdf", help="Path to a RAG PDF file with additional knowledge the chatbot can rely on.")
     parser.add_argument("--personality", type=str, default="personality.txt", help="Path to the TXT file with chatbot personality")
 
     args = parser.parse_args()
@@ -248,9 +243,9 @@ if __name__ == "__main__":
     multiply_tool, divide_tool, add_tool, subtract_tool, paint_cost_calculator = setup_tools()
     
     # Step 4: Load documents and create the VectorStoreIndex
-    text_example_en_path = Path("test_painting_llm_rag.pdf")
+    text_example_en_path = Path(args.rag_pdf)
     index = load_documents(text_example_en_path)
-
+    print("loading in", index)
     vector_tool = QueryEngineTool(
         index.as_query_engine(streaming=True),
         metadata=ToolMetadata(

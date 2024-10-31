@@ -116,7 +116,7 @@ The embedding model represents text data (both user queries and potential respon
 The reranker model is used in retrieval-augmented generation (RAG) setups to reorder or "rerank" retrieved results, ensuring the most relevant information is presented to the user.
 To convert the chat, embedding, and reranker models, run the following command:
 ```shell
-python convert_and_optimize_chat.py --chat_model_type llama3.1-8B --embedding_model_type bge-large --reranker_model_type bge-reranker-large --precision int4 --hf_token your_huggingface_token --model_dir model
+python convert_and_optimize_chat.py --chat_model_type llama3.1-8B --embedding_model_type bge-large --precision int4 --hf_token your_huggingface_token --model_dir model
 ```
 This script will handle the conversion and optimization of:
 
@@ -169,7 +169,7 @@ A typical personality file has the following sections:
 
 The instructions provide an introduction to the assistant, along with the title and important notes for the user. It should be clear and concise, giving users context on how to interact with the assistant.
 
-```yaml
+```txt
 instructions: | 
   # [Assistant Name]: [Brief Role Description]
 
@@ -185,7 +185,15 @@ instructions: |
 After running the script, Gradio will provide a local URL, typically `http://127.0.0.1:XXXX`, which you can open in your web browser to start interacting with the assistant. If you configured the application to be accessible publicly, Gradio will also provide a public URL.
 
 Trying Out the Application
-- TBD
+- Navigate to the provided Gradio URL in your web browser.
+- The chatbot will leverage the RAG PDF file specified via command line as a knowledge base.
+- To interact using voice:
+	- You click on the microphone icon and speak your query.
+	- You wait for the assistant to process your speech and respond.
+- To interact using text:
+	- You type your query into the text box provided.
+	- You click "Submit" or press "Enter" to send your question to the chatbot.
+- The assistant will respond to your query in text and audio form.
 
 Feel free to engage with the Chatbot, ask questions, or give commands as per the assistant's capabilities. This hands-on experience will help you understand the assistant's interactive quality and performance.
 
