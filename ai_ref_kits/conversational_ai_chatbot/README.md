@@ -2,7 +2,7 @@
   <h1>Conversational AI Chatbot with OpenVINO™ Toolkit</h1>
   <h4>
     <a href="https://www.intel.com/content/www/us/en/developer/topic-technology/edge-5g/open-potential.html">🏠&nbsp;About&nbsp;the&nbsp;Kits&nbsp;·</a>
-    <a href="">👨‍💻&nbsp;Code&nbsp;Demo&nbsp;Video</a> - Placeholder
+    <a href="">👨‍💻&nbsp;Code&nbsp;Demo&nbsp;Video</a>
   </h4>
 </div>
 
