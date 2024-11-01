@@ -147,9 +147,9 @@ This conversion script handles the conversion and optimization of:
 Before you can run the script to convert the models, you must have a Hugging Face token (`--hf_token`) for authentication, which allows you to get access to gated models, such as Llama. After the models are converted, they’re saved to the model directory you specify when you run the script.
 
 To get access to the original Llama model weights:
-1. Go to the Llama model page on Hugging Face [meta-llama/Meta-Llama 3.2-3B](https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct).
+1. Go to the Llama model page on Hugging Face [meta-llama/Meta-Llama 3.2-3B](https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct).  
 _NOTE: These instructions specify Llama 3.2-3B, but the default version is Llama 3.1._
-2. Read and accept the license agreement.
+2. Read and accept the license agreement.  
 _Requests can take up to one hour to process._
 
 After you get access to the Llama model weights, you can convert the chat, embedding, and reranker models.
@@ -238,19 +238,19 @@ After the script runs, Gradio provides a local URL (typically `http://127.0.0.1:
 
 When you test the AI Chatbot assistant, you can test both the voice interaction and text interaction capabilities of the application.
 
-1. Open a web browser and go to the Gradio-provided URL.
+1. Open a web browser and go to the Gradio-provided URL.  
     _For example, `http://127.0.0.1:XXXX`._
 2. Upload a file for RAG context.
     - Use the file upload widget to select and upload your file.
-    - Choose a PDF or TXT file for the chatbot to use as a knowledge base.
+    - Choose a PDF or TXT file for the chatbot to use as a knowledge base.  
       _For example, "Grand_Azure_Resort_Spa_Full_Guide.pdf"._    
 3. Test voice interaction with the chatbot.
     - Click the microphone icon and speak your question.
     - Wait for the assistant to process your speech and respond.
 4. Test text interaction with the chatbot.
     - Type your question in the text box.
-    - To send your question to the chatbot, click **Submit** or press **Enter**.
-    The assistant responds to your query in text and audio form.
+    - To send your question to the chatbot, click **Submit** or press **Enter**.  
+    _The assistant responds to your query in text and audio form._
 
 For further testing of the Conversational AI Chatbot, you can engage with the chatbot assistant by asking it questions, or giving it commands that align with the assistant's capabilities. This hands-on experience can help you to understand the assistant's interactive quality and performance.
 
