@@ -76,7 +76,7 @@ cd openvino_build_deploy/ai_ref_kits/conversational_ai_chatbot
 
 ### Create a Virtual Environment
 
-To create a virtual environment, open your terminal or command prompt, and go  to the directory where you want to create the environment. 
+To create a virtual environment, open your terminal or command prompt, and go to the directory where you want to create the environment. 
 
 Run the following command:
 
@@ -116,9 +116,9 @@ _NOTE: If you already have access to the Llama model weights, you can proceed to
 
 ## Convert and Optimize the Model
 
-The application operates using three separate models, and each model requires conversion and optimization for use with OpenVINO™. The following process includes a step to convert and optimize each model.
+The application uses three separate models. Each model requires conversion and optimization for use with OpenVINO™. The following process includes a step to convert and optimize each model.
 
-_NOTE: This reference kit requires more than 8GB of bandwidth and disk space for downloading models. Because of the large model size, when you run the kid for the first time, the conversion can take more than two hours and require more than  32GB of memory. After the first run, the subsequent runs should finish much faster._
+_NOTE: This reference kit requires more than 8GB of bandwidth and disk space for downloading models. Because of the large model size, when you run the kit for the first time, the conversion can take more than two hours and require more than  32GB of memory. After the first run, the subsequent runs should finish much faster._
 
 
 ### Step 1. Automated Speech Recognition Distil-Whisper Conversion  
@@ -136,7 +136,7 @@ The _chat model_ is the core of the chatbot's ability to generate meaningful and
 
 The _embedding model_ represents text data (both user queries and potential responses or knowledge base entries) as numerical vectors. These vectors are essential for tasks such as semantic search and similarity matching.
 
-The _reranker model_ is used in retrieval-augmented generation (RAG) configurations to reorder or "rerank" retrieved results, to make sure that the most relevant information is presented to the user.
+The _reranker model_ is used in retrieval-augmented generation (RAG) configurations to reorder or _rerank_ retrieved results, to make sure that the most relevant information is presented to the user.
 
 This conversion script handles the conversion and optimization of:
 
@@ -217,7 +217,7 @@ A typical YAML personality file has the following sections:
 
 #### Tips for Creating the YAML File 
 
-The YAML file _instructions_ section should provide an introduction to the assistant, the title, and important notes for the user. It should be clear and concise, and give users context for how to interact with the assistant.
+The YAML file _instructions_ section should provide an introduction to the assistant, the title of the assistant, and important notes for the user. It should be clear and concise, and give users context for how to interact with the assistant.
 
 ```yaml
 instructions: | 
@@ -250,7 +250,7 @@ When you test the AI Chatbot assistant, you can test both the voice interaction 
 4. Test text interaction with the chatbot.
     - Type your question in the text box.
     - To send your question to the chatbot, click **Submit** or press **Enter**.  
-    _The assistant responds to your query in text and audio form._
+    _The assistant responds to your question in text and audio form._
 
 For further testing of the Conversational AI Chatbot, you can engage with the chatbot assistant by asking it questions, or giving it commands that align with the assistant's capabilities. This hands-on experience can help you to understand the assistant's interactive quality and performance.
 
