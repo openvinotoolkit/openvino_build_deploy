@@ -231,7 +231,7 @@ When you test the AI Insight Agent with RAG appplication, you can test both the 
 
 For further testing of the AI Insight Agent with RAG appplication, you can engage with the chatbot assistant by asking it questions, or giving it commands that align with the assistant's capabilities. This hands-on experience can help you to understand the assistant's interactive quality and performance.
 
-Enjoy exploring the capabilities of your Chatbot!
+Enjoy exploring the capabilities of your AI Insight Agent with RAG appplication!
 
 # Additional Resources
 - Learn more about [OpenVINO](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html)
