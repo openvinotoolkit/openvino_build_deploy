@@ -124,7 +124,7 @@ The Conversational AI Chatbot is an open-source, voice-driven chat agent that an
 
 | [AI Insight Agent with RAG](ai-insight-agent-with-rag) |                                                                                                                                                         |
 |--------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Related AI concepts                                    | Speech Recognition, Natural Language Understanding, Large Language Models (LLMs), Retrieval Augmented Generation (RAG), Speech Synthesis, Generative AI |
+| Related AI concepts                                    | Speech Recognition, Natural Language Understanding, Large Language Models (LLMs), Retrieval Augmented Generation (RAG), Speech Synthesis, Agentic AI, Generative AI |
 | Example industries                                     | Retail                                                                                                                                                 |
 | Demo                                                   |                                                                                                                                                         |
 
