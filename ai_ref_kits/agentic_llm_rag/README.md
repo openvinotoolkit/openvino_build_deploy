@@ -8,11 +8,13 @@
 
 [![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/LICENSE.txt)
 
-The AI Insight Agent with RAG uses the OpenVINO™ toolkit to create a streamlined, voice-activated interface that consumers and retail employees can use as a smart, personalized retail assistant. The AI Insight Agent with RAG can performing math, understanding instructional documents, and engage in conversations. At its core, the application harnesses models for speech recognition and text-to-speech (TTS) synthesis. It is configured to understand user prompts, engage in meaningful dialogue using agents powered by Large Language Models (LLM), understand guides and information uploaded to it with Retrieval-Augmented Generation (RAG), and provide spoken responses. It's an interactive and user-friendly personalized assistant that simulates the experience of a interactive kiosk.
+The AI Insight Agent with RAG uses the OpenVINO™ toolkit to create a streamlined, voice-activated interface that consumers and retail employees can use as a smart, personalized retail assistant. The AI Insight Agent with RAG can perform math, understand instructional documents, and engage in conversations. At its core, the application harnesses models for speech recognition and text-to-speech (TTS) synthesis. It is configured to understand user prompts, engage in meaningful dialogue using agents powered by Large Language Models (LLM), understand guides and information uploaded to it with Retrieval-Augmented Generation (RAG), and provide spoken responses. It's an interactive and user-friendly personalized assistant that simulates the experience of a interactive kiosk.
 
 This kit uses the following technology stack:
 - [OpenVINO toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([Docs](https://docs.openvino.ai/))
 - [Meta’s Llama](https://llama.meta.com/llama3/)
+- [OpenAI Whisper](https://openai.com/index/whisper/)
+- [Gradio interface](https://www.gradio.app/docs/gradio/chatinterface)
 
 For other Intel AI kits, see the [Edge AI Reference Kits repository](/).
 
