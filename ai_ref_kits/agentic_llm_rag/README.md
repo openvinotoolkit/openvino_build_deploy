@@ -2,13 +2,13 @@
   <h1>AI Insight Agent with RAG</h1>
   <h4>
     <a href="https://www.intel.com/content/www/us/en/developer/topic-technology/edge-5g/open-potential.html">🏠&nbsp;About&nbsp;the&nbsp;Kits&nbsp;·</a>
-    <a href="">👨‍💻&nbsp;Code&nbsp;Demo&nbsp;Video</a> - Placeholder
+    <a href="">👨‍💻&nbsp;Code&nbsp;Demo&nbsp;Video</a>
   </h4>
 </div>
 
 [![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/LICENSE.txt)
 
-The AI Insight Agent with RAG uses the OpenVINO™ toolkit to create a streamlined, voice-activated interface that consumers and retail employees can use as a smart, personalized retail assistant. The AI Insight Agent with RAG can perform math, understand instructional documents, and engage in conversations. At its core, the application harnesses models for speech recognition and text-to-speech (TTS) synthesis. It is configured to understand user prompts, engage in meaningful dialogue using agents powered by Large Language Models (LLM), understand guides and information uploaded to it with Retrieval-Augmented Generation (RAG), and provide spoken responses. It's an interactive and user-friendly personalized assistant that simulates the experience of a interactive kiosk.
+The AI Insight Agent with RAG uses the OpenVINO™ toolkit to create a streamlined, voice-activated interface that consumers and retail employees can use as a smart, personalized retail assistant. The AI Insight Agent with RAG can perform math, understand instructional documents, and engage in conversations. At its core, the application harnesses models for speech recognition. It is configured to understand user prompts, engage in meaningful dialogue using agents powered by Large Language Models (LLM), understand guides and information uploaded to it with Retrieval-Augmented Generation (RAG), and provide spoken responses. It's an interactive and user-friendly personalized assistant that simulates the experience of a interactive kiosk.
 
 This kit uses the following technology stack:
 - [OpenVINO toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([Docs](https://docs.openvino.ai/))
@@ -131,29 +131,26 @@ The _chat model_ is the core of the chatbot's ability to generate meaningful and
 
 The _embedding model_ represents text data (both user queries and potential responses or knowledge base entries) as numerical vectors. These vectors are essential for tasks such as semantic search and similarity matching.
 
-The _reranker model_ is used in retrieval-augmented generation (RAG) configurations to reorder or _rerank_ retrieved results, to make sure that the most relevant information is presented to the user.
-
 This conversion script handles the conversion and optimization of:
 
-- The chat model (`llama3.2-3B`) with `int4` precision.
+- The chat model (`llama3.1-8B`) with `int4` precision.
 - The embedding model (`bge-large`) with `FP32` precision.
 
 Before you can run the script to convert the models, you must have a Hugging Face token (`--hf_token`) for authentication, which allows you to get access to gated models, such as Llama. After the models are converted, they’re saved to the model directory you specify when you run the script.
 
 To get access to the original Llama model weights:
-1. Go to the Llama model page on Hugging Face [meta-llama/Meta-Llama 3.2-3B](https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct).  
-_NOTE: These instructions specify Llama 3.2-3B, but the default version is Llama 3.1._
+1. Go to the Llama model page on Hugging Face [meta-llama/Meta-Llama 3.1-8B](https://huggingface.co/meta-llama/Llama-3.1-8B).  
 2. Read and accept the license agreement.  
 _Requests can take up to one hour to process._
 
-After you get access to the Llama model weights, you can convert the chat, embedding, and reranker models.
+After you get access to the Llama model weights, you can convert the chat and embedding models.
 
 To convert the chat and embedding models, run:
 ```shell
-python convert_and_optimize_chat.py --chat_model_type llama3.2-3B --embedding_model_type bge-large --precision int4 --hf_token your_huggingface_token --model_dir model
+python convert_and_optimize_chat.py --chat_model_type llama3.1-8B --embedding_model_type bge-large --precision int4 --hf_token your_huggingface_token --model_dir model
 ```
 
-After you run the conversion scripts, you can run app.py to launch the application.
+After you run the conversion scripts, you can run `app.py` to launch the application.
 
 ## Run the Application (Gradio Interface)
 
@@ -216,16 +213,16 @@ instructions: |
 After the script runs, Gradio provides a local URL (typically `http://127.0.0.1:XXXX`) that you can open in your web browser to interact with the assistant. If you configured the application to be accessible publicly, Gradio also provides a public URL.
 
 #### Test the Application
-When you test the AI Insight Agent with RAG appplication, you can test both the voice ainteraction and text interaction capabilities of the application.
+When you test the AI Insight Agent with RAG appplication, you can test both the voice interaction and text interaction capabilities of the application.
 
 1. Open a web browers and go to the Gradio-provided URL.  
   _For example, `http://127.0.0.1:XXXX`._
-2. Upload a a PDF file for RAG context.  
-  Use the command line to seelct and upload a file.
-3. Test voice interaction with the application.
+2. Upload a a PDF file for RAG context.   
+  Use the command line to select and upload a file.
+3. Test voice interaction with the application.  
   - Click the microphone icon and speak your question.
   - Wait for the assistant to process your speech and respons.
-4. Test text interaction with the application.
+4. Test text interaction with the application.  
   - Type your question in the text box.
   - To send your question to the chatbot, click **Submit** or press **Enter**.
   _The assistant responds to your question in text and audio form._

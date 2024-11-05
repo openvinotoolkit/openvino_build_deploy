@@ -116,3 +116,4 @@ pipcache_openvino/
 # NodeJS 
 demos/*/node_modules/**
 **/kernel.errors.txt
+.DS_Store
