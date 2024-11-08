@@ -64,7 +64,8 @@ To clone the repository, run this command:
 git clone https://github.com/openvinotoolkit/openvino_build_deploy.git
 ```
 
-This command  clones the repository into a directory named "openvino_build_deploy" in the current directory. After the directory is cloned, run the following command to go to that directory:
+This command clones the repository into a directory named "openvino_build_deploy" in the current directory. After the directory is cloned, run the following command to go to that directory:
+
 
 ```shell
 cd openvino_build_deploy/ai_ref_kits/agentic_llm_rag
