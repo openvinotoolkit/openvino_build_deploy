@@ -118,7 +118,7 @@ _NOTE: If you already have access to the Llama model weights, you can proceed to
 
 The application uses three separate models. Each model requires conversion and optimization for use with OpenVINO™. The following process includes a step to convert and optimize each model.
 
-_NOTE: This reference kit requires more than 8GB of bandwidth and disk space for downloading models. Because of the large model size, when you run the kit for the first time, the conversion can take more than two hours and require more than  32GB of memory. After the first run, the subsequent runs should finish much faster._
+_NOTE: This reference kit requires more than 8GB of bandwidth and disk space for downloading models. Because of the large model size, when you run the kit for the first time, the conversion can take more than two hours and require more than 32GB of memory. After the first run, the subsequent runs should finish much faster._
 
 
 ### Step 1. Automated Speech Recognition Distil-Whisper Conversion  
