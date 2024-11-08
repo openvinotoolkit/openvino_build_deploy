@@ -4,7 +4,7 @@ const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs');
 
-module.exports = { detectDevices, runModel, takeTime, blurImage }
+module.exports = { detectDevices, runModel, takeTime, blurImage, addWatermark }
 
 // GLOBAL VARIABLES
 // OpenVINO:
@@ -19,6 +19,19 @@ let prevDevice = null;
 
 const inputSize = { w: 256, h: 256 };
 let outputMask = null;
+
+const ovLogo = sharp('assets/openvino-logo.png')
+    .flop()
+    .composite([{
+        input: Buffer.from([255, 255, 255, 100]), // 50% transparent white
+        raw: {
+            width: 1,
+            height: 1,
+            channels: 4
+        },
+        tile: true,
+        blend: 'dest-in'
+    }])
 
 
 async function detectDevices() {
@@ -105,7 +118,7 @@ function postprocessMask(resultTensor) {
     const imageBuffer = Buffer.alloc(inputSize.w * inputSize.h * channels);
 
     for (let i = 0; i < normalizedData.length; i += 6) {
-        const indexOffset = i/6 * channels;
+        const indexOffset = i / 6 * channels;
         const value = 255 * normalizedData[i];
 
         imageBuffer[indexOffset] = value;
@@ -190,10 +203,11 @@ async function blurImage(image, width, height) {
         }])
         .toBuffer();
 
+    const blurSize = Math.floor(width * 0.01)
     const screen = await sharp(image.data, {
         raw: { channels: 4, width, height },
     })
-        .blur(10)
+        .blur(blurSize)
         .composite([{
             input: person,
             raw: { channels: 4, width, height },
@@ -202,8 +216,32 @@ async function blurImage(image, width, height) {
         .raw()
         .toBuffer();
 
-    return{
+    return {
         img: new Uint8ClampedArray(screen.buffer),
+        width: width,
+        height: height,
+    };
+}
+
+
+async function addWatermark(image, width, height) {
+    const watermarkWidth = Math.floor(width * 0.3);
+    const watermark = await ovLogo
+        .resize({ width: watermarkWidth })
+        .toBuffer()
+
+    const result = await sharp(image.data, {
+        raw: { channels: 4, width, height },
+    })
+        .composite([{
+            input: watermark,
+            gravity: 'southwest'
+        }])
+        .raw()
+        .toBuffer()
+
+    return {
+        img: new Uint8ClampedArray(result.buffer),
         width: width,
         height: height,
     };

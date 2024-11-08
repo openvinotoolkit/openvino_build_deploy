@@ -56,9 +56,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (inferenceActive) {
         let resultMask = await window.electronAPI.runModel(imageData, canvasElement.width, canvasElement.height, device);
-        const result = await window.electronAPI.blurImage(imageData, canvasElement.width, canvasElement.height);
-
+        let result = await window.electronAPI.blurImage(imageData, canvasElement.width, canvasElement.height);
         let blurredImage = new ImageData(result.img, result.width, result.height);
+
+        result = await window.electronAPI.addWatermark(blurredImage, canvasElement.width, canvasElement.height);
+        blurredImage = new ImageData(result.img, result.width, result.height);
+
         ctx.putImageData(blurredImage, 0, 0);
 
         let inferenceTime = resultMask.inferenceTime;
