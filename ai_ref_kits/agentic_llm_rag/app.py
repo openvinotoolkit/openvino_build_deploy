@@ -80,11 +80,12 @@ def load_documents(text_example_en_path):
     
     return index
 
-#Function to simulate adding items to cart
+#Function to simulate adding items to cart, and to check size of cart
 def purchase_click(selected_items, current_cart):
     """simulate the purchase button click by adding items to the cart."""
     updated_cart = current_cart + selected_items
-    return updated_cart, f"Added {len(selected_items)} items to cart."
+    return updated_cart, f"Added {len(selected_items)} items to cart.", len(current_cart)
+    
 # Custom function to handle reasoning failures
 def custom_handle_reasoning_failure(callback_manager, exception):
     return "Hmm...I didn't quite that. Could you please rephrase your question to be simpler?"
@@ -153,10 +154,6 @@ def run_app(agent):
     def _reset_chat():
         agent.reset()
         return "", [], []  # Reset both chat and logs (initialize log as empty list)
-
-    #Function to check the size of the cart
-    def check_cart_size(cart):
-        return len(cart)
     
     def run():
         with gr.Blocks() as demo:
@@ -213,9 +210,7 @@ def run_app(agent):
             
             with gr.Column():
                 #Click event for adding items to cart
-                purchase.click(purchase_click, [items_dropdown, cart], [cart, purchased_textbox])
-                # Button to check cart size
-                gr.Button("Check Cart Size").click(check_cart_size, cart, cart_size)
+                purchase.click(purchase_click, [items_dropdown, cart], [cart, purchased_textbox, cart_size])
         demo.launch()
         #demo.launch(server_name='10.3.233.70', server_port=8694, share=True)
 
