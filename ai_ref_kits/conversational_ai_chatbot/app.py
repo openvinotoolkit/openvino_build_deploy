@@ -366,15 +366,20 @@ def transcribe(audio: Tuple[int, np.ndarray], prompt: str, conversation: List[Li
     return conversation
 
 
-def synthesize(conversation: List[List[str]]) -> Tuple[int, np.ndarray]:
+def synthesize(conversation: List[List[str]], audio: Tuple[int, np.ndarray]) -> Optional[Tuple[int, np.ndarray]]:
     """
     Synthesizes speech from chatbot's response
 
     Params:
         conversation: conversation history with the chatbot
+        audio: audio widget to check if used
     Returns:
         Chatbot voice response (audio)
     """
+    # if audio wasn't used in the conversation, return None
+    if not audio:
+        return None
+
     prompt = conversation[-1][1]
 
     start_time = time.time()
@@ -436,7 +441,7 @@ def create_UI(initial_message: str) -> gr.Blocks:
             .then(transcribe, inputs=[input_audio_ui, input_text_ui, chatbot_ui], outputs=chatbot_ui) \
             .then(lambda: None, outputs=input_text_ui) \
             .then(chat, chatbot_ui, chatbot_ui) \
-            .then(synthesize, inputs=chatbot_ui, outputs=output_audio_ui) \
+            .then(synthesize, inputs=[chatbot_ui, input_audio_ui], outputs=output_audio_ui) \
             .then(lambda: None, outputs=input_audio_ui) \
             .then(lambda: gr.Button(interactive=True), outputs=clear_btn)
 
