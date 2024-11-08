@@ -35,7 +35,6 @@ from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5Hif
 TARGET_AUDIO_SAMPLE_RATE = 16000
 SPEAKER_INDEX = 7306
 
-EXAMPLE_PDF_PATH = os.path.join(os.path.dirname(__file__), "Grand_Azure_Resort_Spa_Full_Guide.pdf")
 MODEL_DIR = Path("model")
 inference_lock = threading.Lock()
 
@@ -238,7 +237,7 @@ def load_file(file_path: Path) -> Document:
         raise ValueError(f"{ext} file is not supported for now")
 
 
-def load_context(file_path: str) -> None:
+def load_context(file_path: Path) -> None:
     """
     Load context (document) and create a RAG pipeline
 
@@ -255,7 +254,7 @@ def load_context(file_path: str) -> None:
         ov_chat_engine = SimpleChatEngine.from_defaults(llm=ov_llm, system_prompt=chatbot_config["system_configuration"], memory=memory)
         return
 
-    document = load_file(Path(file_path))
+    document = load_file(file_path)
 
     # a splitter to divide document into chunks
     splitter = LangchainNodeParser(RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100))
@@ -401,12 +400,13 @@ def synthesize(conversation: List[List[str]], audio: Tuple[int, np.ndarray]) -> 
     return TARGET_AUDIO_SAMPLE_RATE, speech
 
 
-def create_UI(initial_message: str) -> gr.Blocks:
+def create_UI(initial_message: str, example_pdf_path: Path) -> gr.Blocks:
     """
     Create web user interface
 
     Params:
         initial_message: message to start with
+        example_pdf_path: path to the pdf file
     Returns:
         Demo UI
     """
@@ -414,7 +414,7 @@ def create_UI(initial_message: str) -> gr.Blocks:
         gr.Markdown(chatbot_config["instructions"])
         with gr.Row():
             with gr.Column(scale=1):
-                file_uploader_ui = gr.File(label="Hotel guide", file_types=[".pdf", ".txt"], value=EXAMPLE_PDF_PATH)
+                file_uploader_ui = gr.File(label="Hotel guide", file_types=[".pdf", ".txt"], value=str(example_pdf_path))
                 input_audio_ui = gr.Audio(sources=["microphone"], label="Your voice input")
                 input_text_ui = gr.Textbox(label="Your text input")
                 submit_btn = gr.Button("Submit", variant="primary", interactive=False)
@@ -448,7 +448,7 @@ def create_UI(initial_message: str) -> gr.Blocks:
         return demo
 
 
-def run(asr_model_dir: Path, chat_model_dir: Path, tts_model_dir: Path, vocoder_model_dir: Path, embedding_model_dir: Path, reranker_model_dir: Path, personality_file_path: Path, public_interface: bool = False) -> None:
+def run(asr_model_dir: Path, chat_model_dir: Path, tts_model_dir: Path, vocoder_model_dir: Path, embedding_model_dir: Path, reranker_model_dir: Path, personality_file_path: Path, example_pdf_path: Path, public_interface: bool = False) -> None:
     """
     Run the chatbot application
 
@@ -460,6 +460,7 @@ def run(asr_model_dir: Path, chat_model_dir: Path, tts_model_dir: Path, vocoder_
         embedding_model_dir: dir with the embedding model
         reranker_model_dir: dir with the reranker model
         personality_file_path: path to the chatbot personality specification file
+        example_pdf_path: path to the pdf file
         public_interface: whether UI should be available publicly
     """
     # set up logging
@@ -480,10 +481,10 @@ def run(asr_model_dir: Path, chat_model_dir: Path, tts_model_dir: Path, vocoder_
     initial_message = generate_initial_greeting()
 
     # load initial context
-    load_context(EXAMPLE_PDF_PATH)
+    load_context(example_pdf_path)
 
     # create user interface
-    demo = create_UI(initial_message)
+    demo = create_UI(initial_message, example_pdf_path)
     # launch demo
     demo.queue().launch(share=public_interface)
 
@@ -497,8 +498,9 @@ if __name__ == "__main__":
     parser.add_argument("--embedding_model", type=str, default="model/bge-small-FP32", help="Path to the embedding model directory")
     parser.add_argument("--reranker_model", type=str, default="model/bge-reranker-large-FP32", help="Path to the reranker model directory")
     parser.add_argument("--personality", type=str, default="concierge_personality.yaml", help="Path to the YAML file with chatbot personality")
+    parser.add_argument("--example_pdf", type=str, default="Grand_Azure_Resort_Spa_Full_Guide.pdf", help="Path to the PDF file which is an additional context")
     parser.add_argument("--public", default=False, action="store_true", help="Whether interface should be available publicly")
 
     args = parser.parse_args()
-    run(Path(args.asr_model), Path(args.chat_model), args.tts_model, args.vocoder_model, Path(args.embedding_model), Path(args.reranker_model), Path(args.personality), args.public)
+    run(Path(args.asr_model), Path(args.chat_model), args.tts_model, args.vocoder_model, Path(args.embedding_model), Path(args.reranker_model), Path(args.personality), Path(args.example_pdf), args.public)
     
