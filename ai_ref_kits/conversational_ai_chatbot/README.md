@@ -134,7 +134,7 @@ python convert_and_optimize_asr.py --asr_model_type distil-whisper-large-v3 --pr
   
 The _chat model_ is the core of the chatbot's ability to generate meaningful and context-aware responses. It processes the text input from the ASR model and produces a human-like response.  
 
-The _embedding model_ represents text data (both user queries and potential responses or knowledge base entries) as numerical vectors. These vectors are essential for tasks such as semantic search and similarity matching.
+The _embedding model_ converts text data (both user queries and potential responses or knowledge base entries) to numerical vectors. These vectors are essential for tasks such as semantic search and similarity matching.
 
 The _reranker model_ is used in retrieval-augmented generation (RAG) configurations to reorder or _rerank_ retrieved results, to make sure that the most relevant information is presented to the user.
 
