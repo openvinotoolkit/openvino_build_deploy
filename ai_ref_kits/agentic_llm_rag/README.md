@@ -116,7 +116,7 @@ The embedding model represents text data (both user queries and potential respon
 The reranker model is used in retrieval-augmented generation (RAG) setups to reorder or "rerank" retrieved results, ensuring the most relevant information is presented to the user.
 To convert the chat, embedding, and reranker models, run the following command:
 ```shell
-python convert_and_optimize_chat.py --chat_model_type llama3.1-8B --embedding_model_type bge-large --precision int4 --hf_token your_huggingface_token --model_dir model
+python convert_and_optimize_llm.py --chat_model_type llama3.1-8B --embedding_model_type bge-large --precision int4 --hf_token your_huggingface_token --model_dir model
 ```
 This script will handle the conversion and optimization of:
 
