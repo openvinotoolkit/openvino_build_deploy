@@ -242,7 +242,7 @@ def run_app(agent):
                     scale=1  # Set lower scale to make it narrower than the Chatbot
                 )
             with gr.Row():
-                message = gr.Textbox(label="Ask the Paint Expert", scale=4, placeholder="Enter your prompt and press Enter")
+                message = gr.Textbox(label="Ask the Paint Expert", scale=4, placeholder="Type your prompt/Question and press Enter")
                 clear = gr.ClearButton()
 
             # Ensure that individual components are passed
