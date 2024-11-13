@@ -148,7 +148,7 @@ After you get access to the Llama model weights, you can convert the chat and em
 
 To convert the chat and embedding models, run:
 ```shell
-python convert_and_optimize_chat.py --chat_model_type llama3.1-8B --embedding_model_type bge-large --precision int4 --hf_token your_huggingface_token --model_dir model
+python convert_and_optimize_llm.py --chat_model_type llama3.1-8B --embedding_model_type bge-large --precision int4 --hf_token <your_huggingface_token> --model_dir model
 ```
 
 After you run the conversion scripts, you can run `app.py` to launch the application.

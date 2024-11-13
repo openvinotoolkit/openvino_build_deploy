@@ -21,10 +21,14 @@ import sys
 import gradio as gr
 import nest_asyncio
 import logging
+import warnings
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
+
+#Filter unnecessary warnings for demonstration
+warnings.filterwarnings("ignore")
 
 llm_device = "GPU"
 embedding_device = "GPU"
@@ -80,11 +84,66 @@ def load_documents(text_example_en_path):
     
     return index
 
-#Function to simulate adding items to cart
-def purchase_click(selected_items, current_cart):
-    """simulate the purchase button click by adding items to the cart."""
-    updated_cart = current_cart + selected_items
-    return updated_cart, f"Added {len(selected_items)} items to cart."
+#Function to simulate adding items to cart, and to check size of cart    
+def purchase_click(cart, *components):
+
+    """Update the cart with unique selected items and their quantities."""
+
+    selected_items = []
+
+    quantities = []
+
+    for i in range(0, len(components), 2):
+
+        item_checkbox = components[i]
+
+        quantity_box = components[i + 1]
+
+        if item_checkbox is True:  # Fix to check if checkbox is selected
+
+            selected_items.append(item_components[i // 2][0].label)
+
+            quantities.append(quantity_box)
+ 
+    updated_cart = cart.copy()
+
+    for item, quantity in zip(selected_items, quantities):
+
+        if item and quantity > 0:
+
+            item_entry = (item, quantity)
+
+            # Update or add the item with quantity in the cart
+
+            for idx, cart_item in enumerate(updated_cart):
+
+                if cart_item[0] == item:
+
+                    updated_cart[idx] = item_entry
+
+                    break
+
+            else:
+
+                updated_cart.append(item_entry)
+ 
+    # Calculate the total quantity of items in the cart
+
+    cart_size = sum(quantity for _, quantity in updated_cart)
+ 
+    # Update purchase action to list items and their quantities
+
+    if selected_items:
+
+        item_details = ", ".join([f"{item} (Quantity: {quantity})" for item, quantity in zip(selected_items, quantities)])
+
+        purchase_action = f"Added the following items to cart: {item_details}."
+
+    else:
+
+        purchase_action = "No items selected."
+ 
+    return updated_cart, purchase_action, cart_size
 # Custom function to handle reasoning failures
 def custom_handle_reasoning_failure(callback_manager, exception):
     return "Hmm...I didn't quite that. Could you please rephrase your question to be simpler?"
@@ -118,7 +177,6 @@ def run_app(agent):
                 response = agent.stream_chat(chat_history[-1][0])
             except ValueError:
                 response = agent.stream_chat(chat_history[-1][0])
-
         end_thought_time = time.time()
         thought_process_time = end_thought_time - start_thought_time
     
@@ -133,9 +191,18 @@ def run_app(agent):
         start_response_time = time.time()
 
         # Gradually yield the response from the agent to the chat
+        # Quick fix for agent occasionally repeating the first word of its repsponse
+        last_token = "Dummy Token"
+        i = 0
         for token in response.response_gen:
-            chat_history[-1][1] += token
+            if i==0:
+                last_token = token
+            if i==1 and token.split()[0] == last_token.split()[0]:
+                chat_history[-1][1] += token.split()[1] + " "
+            else:
+                chat_history[-1][1] += token
             yield chat_history, "\n".join(log_history)  # Ensure log_history is a string
+            if i <= 2: i += 1
 
         end_response_time = time.time()
         response_time = end_response_time - start_response_time        
@@ -153,22 +220,17 @@ def run_app(agent):
     def _reset_chat():
         agent.reset()
         return "", [], []  # Reset both chat and logs (initialize log as empty list)
-
-    #Function to check the size of the cart
-    def check_cart_size(cart):
-        return len(cart)
     
     def run():
         with gr.Blocks() as demo:
 
             gr.Markdown("# Smart Retail Assistant 🤖: Agentic LLMs with RAG 💭")
             gr.Markdown("Ask me about paint! 🎨")
-
             
             with gr.Row():
                 chat_window = gr.Chatbot(
                     label="Paint Purchase Helper",
-                    avatar_images=(None, "https://docs.openvino.ai/2024/_static/favicon.ico"),
+                    avatar_images=(None, "favicon.ico"),
 		            height=400,  # Adjust height as per your preference
                     scale=2  # Set a higher scale value for Chatbot to make it wider
                    #autoscroll=True,  # Enable auto-scrolling for better UX
@@ -198,24 +260,46 @@ def run_app(agent):
 
             gr.Markdown("------------------------------")
             gr.Markdown("### Purchase items")
-            #Stateful cart to keep track of items
+
             cart = gr.State([])
-            with gr.Row():
-                items_dropdown = gr.Dropdown(
-                    ["Behr Premium Plus", "AwesomeSplash", "TheBrush", "PaintFinish"], 
-                    multiselect=True, 
-                    label="Items In-Stock", 
-                    info="Which items would you like to purchase?"
-                )
-                purchase = gr.Button(value="Add to Cart")
-                cart_size = gr.Number(label="Cart Size")
-                purchased_textbox = gr.Textbox(label="Purchase Action")
-            
-            with gr.Column():
-                #Click event for adding items to cart
-                purchase.click(purchase_click, [items_dropdown, cart], [cart, purchased_textbox])
-                # Button to check cart size
-                gr.Button("Check Cart Size").click(check_cart_size, cart, cart_size)
+    
+            # Define items with checkbox and numeric quantity
+
+            items = ["Behr Premium Plus", "AwesomeSplash", "TheBrush", "PaintFinish"]
+
+            global item_components
+
+            item_components = []
+
+            for item in items:
+
+                with gr.Row(equal_height=True):
+
+                    item_checkbox = gr.Checkbox(label=f"{item}", value=False)
+
+                    quantity_box = gr.Number(
+
+                        label=f"{item} Quantity", value=1, precision=0, interactive=False, minimum=1
+
+                    )
+
+                    item_checkbox.change(
+
+                        fn=lambda selected, box=quantity_box: gr.update(interactive=selected, value=1 if selected else 0),
+
+                        inputs=item_checkbox,
+
+                        outputs=quantity_box,
+
+                    )
+
+                    item_components.append((item_checkbox, quantity_box))
+            purchase = gr.Button(value="Add to Cart")
+            cart_size = gr.Number(label="Cart Size", interactive=False)
+            purchased_textbox = gr.Textbox(label="Purchase Action", interactive=False)
+            # Gather inputs from all item checkbox and number box pairs
+            component_inputs = [cart] + [comp for pair in item_components for comp in pair]
+            purchase.click(fn=purchase_click, inputs=component_inputs, outputs=[cart, purchased_textbox, cart_size])
         demo.launch()
         #demo.launch(server_name='10.3.233.70', server_port=8694, share=True)
 

@@ -135,7 +135,7 @@ def convert_embedding_model(model_type: str, model_dir: Path) -> Path:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--chat_model_type", type=str, choices=["llama2-7B", "llama2-13B", "llama3-8B", "qwen2-7B", "llama3.2-3B", "llama3.1-8B", "llama3.2-11B"],
-                        default="llama3.2-11B", help="Chat model to be converted")
+                        default="llama3.1-8B", help="Chat model to be converted")
     parser.add_argument("--embedding_model_type", type=str, choices=["bge-small", "bge-large", "bge-m3"],
                         default="bge-large", help="Embedding model to be converted")
     parser.add_argument("--precision", type=str, default="int4", choices=["fp16", "int8", "int4"], help="Model precision")
