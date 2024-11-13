@@ -18,7 +18,7 @@ This kit uses the following technology stack:
 
 For other Intel AI kits, see the [Edge AI Reference Kits repository](/).
 
-![agentic-ai-llm-rag](tbd)
+![ai-insight-agent-with-rag](https://github.com/user-attachments/assets/1a7ca6bc-3bde-4e97-be61-83a3709e9b73)
 
 ### What's New
 
@@ -215,6 +215,8 @@ After the script runs, Gradio provides a local URL (typically `http://127.0.0.1:
 
 #### Test the Application
 When you test the AI Insight Agent with RAG appplication, you can test both the voice interaction and text interaction capabilities of the application.
+
+**Note:** The Voice Interaction aspect is work-in-progress.
 
 1. Open a web browers and go to the Gradio-provided URL.  
   _For example, `http://127.0.0.1:XXXX`._
