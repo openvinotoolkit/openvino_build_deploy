@@ -50,11 +50,10 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r ${{ matrix.subproject }}/requirements.txt
 
-    - name: Download sample video file from artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: sample-video-artifact
-        path: ./sample_video.mp4  # Path where the video will be stored locally
+    - name: Download sample video file
+      run: |
+        cd ${{ matrix.subproject }}
+        curl -L -o sample_video.mp4 https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4
 
     - name: Check if --stream is a valid option
       id: check-stream-option
