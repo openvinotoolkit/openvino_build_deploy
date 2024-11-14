@@ -47,7 +47,7 @@ jobs:
 
     - name: Install dependencies for ${{ matrix.subproject }}
       run: |
-        cd demos/${{ matrix.subproject }}
+        cd ${{ matrix.subproject }}
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
@@ -60,7 +60,7 @@ jobs:
     - name: Check if --stream is a valid option
       id: check-stream-option
       run: |
-        cd demos/${{ matrix.subproject }}
+        cd ${{ matrix.subproject }}
         if python main.py -h | grep -q -- "--stream"; then
           echo "Stream option found"
           echo "stream=true" >> $GITHUB_ENV
@@ -71,7 +71,7 @@ jobs:
 
     - name: Run the demo (main.py or main.ipynb)
       run: |
-        cd demos/${{ matrix.subproject }}
+        cd ${{ matrix.subproject }}
         if [ "${{ env.stream }}" = "true" ]; then
           # Run the demo with --stream if it requires video input
           python main.py --stream ./sample_video.mp4
