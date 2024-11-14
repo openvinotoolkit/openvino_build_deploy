@@ -27,7 +27,7 @@ jobs:
           subprojects=$(find demos/* -maxdepth 0 -type d -exec basename {} \;)
           subproject_list=$(echo "$subprojects" | jq -R -s -c 'split("\n")[:-1]')
           echo "$subproject_list"
-          echo "subproject_list=$subproject_list" >> $GITHUB_OUTPUT  # Use GITHUB_OUTPUT file
+          echo "::set-output name=subproject_list::$subproject_list"
                     
   check-repo:
     needs: find-subprojects
@@ -37,7 +37,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python: [3.9, 3.13]
-        subproject: ${{ fromJson(needs.define-subprojects.outputs.subprojects) }}
+        subproject: ${{ fromJson(needs.find-subprojects.outputs.subprojects) }}
 
     steps:
     - uses: actions/checkout@v4
