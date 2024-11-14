@@ -13,13 +13,30 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  find-subprojects:
+    runs-on: ubuntu-latest
+    outputs:
+      subprojects: ${{ steps.get-subprojects.outputs.subproject_list }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Get list of subprojects in demos folder
+        id: get-subprojects
+        run: |
+          subprojects=$(find demos/* -maxdepth 0 -type d -exec basename {} \;)
+          subproject_list=$(echo "$subprojects" | jq -R -s -c 'split("\n")[:-1]')
+          echo "::set-output name=subproject_list::$subproject_list"
+          
+  check:
+    needs: find-subprojects
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: true
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python: [3.9, 3.13]
+        subproject: ${{ fromJson(needs.define-subprojects.outputs.subprojects) }}
 
     steps:
     - uses: actions/checkout@v4
@@ -27,8 +44,8 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python }}
-    - name: Install dependencies
+    - name: Install dependencies for ${{ matrix.subproject }}
       run: |
         python -m pip install --upgrade pip
-        pip install flake8 pytest
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        pip install -r ./demos/${{ matrix.subproject }}/requirements.txt
+
