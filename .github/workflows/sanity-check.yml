@@ -36,10 +36,7 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python: [3.11]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.subprojects) }}
-
-    env:
-      DISPLAY: ":99"  # Set the DISPLAY variable for all steps in this job
-
+        
     steps:
     - uses: actions/checkout@v4
 
