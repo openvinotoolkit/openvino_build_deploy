@@ -67,7 +67,7 @@ jobs:
           echo "stream=false" >> $GITHUB_ENV
         fi
 
-    - name: Run the demo (main.py or main.ipynb)
+    - name: Run the demo
       run: |
         cd ${{ matrix.subproject }}
         if [ "${{ env.stream }}" = "true" ]; then
