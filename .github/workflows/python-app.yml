@@ -21,14 +21,14 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
 
-      - name: Get list of subprojects in demos folder, excluding utils
+      - name: Get list of Python subprojects (with requirements.txt)
         id: get-subprojects
         run: |
-          # Find all subdirectories in 'demos' excluding 'utils' and format as JSON array
-          subprojects=$(find demos/* -maxdepth 0 -type d ! -name "utils" -exec basename {} \;)
+          # Find all directories in 'demos' that contain a requirements.txt file, excluding 'utils'
+          subprojects=$(find . -type f -name "requirements.txt" -exec dirname {} \; | sort -u)
           subproject_list=$(echo "$subprojects" | jq -R -s -c 'split("\n")[:-1]')
           echo "$subproject_list"
-          echo "subproject_list=$subproject_list" >> $GITHUB_OUTPUT  # Correctly use GITHUB_OUTPUT file for setting outputs
+          echo "subproject_list=$subproject_list" >> $GITHUB_OUTPUT  # Use GITHUB_OUTPUT file for setting outputs
                     
   check-repo:
     needs: find-subprojects
