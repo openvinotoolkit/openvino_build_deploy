@@ -29,7 +29,7 @@ jobs:
           subproject_list=$(echo "$subprojects" | jq -R -s -c 'split("\n")[:-1]')
           echo "$subproject_list"
           echo "subproject_list=$subproject_list" >> $GITHUB_OUTPUT  # Use GITHUB_OUTPUT file for setting outputs
-                    
+
   check-repo:
     needs: find-subprojects
     runs-on: ${{ matrix.os }}
@@ -46,10 +46,10 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python }}
-    - name: Change directory to ${{ matrix.subproject }}
-      run: |
-        cd ${{ matrix.subproject }}
     - name: Install dependencies for ${{ matrix.subproject }}
       run: |
+        # Change to the subproject directory
+        cd ${{ matrix.subproject }}
+        # Install dependencies
         python -m pip install --upgrade pip
         pip install -r requirements.txt
