@@ -39,17 +39,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-
-    - name: Set up Python ${{ matrix.python }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python }}
-
-    - name: Install dependencies for ${{ matrix.subproject }}
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r ${{ matrix.subproject }}/requirements.txt
-
+    
     - name: Install Xvfb (Virtual Display)
       run: |
         sudo apt-get update
@@ -60,6 +50,17 @@ jobs:
         export DISPLAY=:99.0
         Xvfb :99 -screen 0 1024x768x16 &  # Start the virtual display
 
+
+    - name: Set up Python ${{ matrix.python }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python }}
+
+    - name: Install dependencies for ${{ matrix.subproject }}
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r ${{ matrix.subproject }}/requirements.txt
+        
     - name: Download sample video file
       run: |
         cd ${{ matrix.subproject }}
