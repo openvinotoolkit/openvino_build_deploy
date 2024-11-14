@@ -37,6 +37,9 @@ jobs:
         python: [3.11]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.subprojects) }}
 
+    env:
+      DISPLAY: ":99"  # Set the DISPLAY variable for all steps in this job
+
     steps:
     - uses: actions/checkout@v4
 
@@ -67,11 +70,6 @@ jobs:
           echo "Stream option not found"
           echo "stream=false" >> $GITHUB_ENV
         fi
-
-    - name: Set environment to avoid OpenCV GUI errors
-      run: |
-        # This will prevent OpenCV from trying to display any GUI windows during execution
-        echo "DISPLAY=:99" >> $GITHUB_ENV
 
     - name: Run the demo
       run: |
