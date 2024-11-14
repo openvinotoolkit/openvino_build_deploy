@@ -28,7 +28,7 @@ jobs:
           subproject_list=$(echo "$subprojects" | jq -R -s -c 'split("\n")[:-1]')
           echo "::set-output name=subproject_list::$subproject_list"
           
-  check:
+  check-repo:
     needs: find-subprojects
     runs-on: ${{ matrix.os }}
     strategy:
