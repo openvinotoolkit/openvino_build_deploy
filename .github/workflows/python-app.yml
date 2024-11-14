@@ -37,7 +37,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python: [3.12]
+        python: [3.11]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.subprojects) }}
 
     steps:
