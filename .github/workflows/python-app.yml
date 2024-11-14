@@ -26,8 +26,9 @@ jobs:
         run: |
           subprojects=$(find demos/* -maxdepth 0 -type d -exec basename {} \;)
           subproject_list=$(echo "$subprojects" | jq -R -s -c 'split("\n")[:-1]')
-          echo "::set-output name=subproject_list::$subproject_list"
-          
+          echo "$subproject_list"
+          echo "subproject_list=$subproject_list" >> $GITHUB_OUTPUT  # Use GITHUB_OUTPUT file
+                    
   check-repo:
     needs: find-subprojects
     runs-on: ${{ matrix.os }}
