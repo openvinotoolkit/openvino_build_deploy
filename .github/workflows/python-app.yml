@@ -24,7 +24,7 @@ jobs:
       - name: Get list of subprojects in demos folder
         id: get-subprojects
         run: |
-          subprojects=$(find demos/* -maxdepth 0 -type d -exec basename {} \;)
+          subprojects=$(find demos/* -maxdepth 0 -type d ! -name "utils" -exec basename {} \;)
           subproject_list=$(echo "$subprojects" | jq -R -s -c 'split("\n")[:-1]')
           echo "$subproject_list"
           echo "::set-output name=subproject_list::$subproject_list"
@@ -33,7 +33,7 @@ jobs:
     needs: find-subprojects
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python: [3.9, 3.13]
