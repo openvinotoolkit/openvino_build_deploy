@@ -72,7 +72,8 @@ jobs:
         cd ${{ matrix.subproject }}
         if [ "${{ env.stream }}" = "true" ]; then
           # Run the demo with --stream if it requires video input
-          python main.py --stream ./sample_video.mp4
+          python main.py --stream sample_video.mp4
         else
           # Run the demo without --stream if it does not require video input
           python main.py
+        fi
