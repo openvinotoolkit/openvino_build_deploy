@@ -24,7 +24,7 @@ jobs:
       - name: Get list of Python subprojects (with requirements.txt)
         id: get-subprojects
         run: |
-          # Find all directories in 'demos' that contain a requirements.txt file, excluding 'utils'
+          # Find all directories in repo that contain a requirements.txt file
           subprojects=$(find . -type f -name "requirements.txt" -exec dirname {} \; | sort -u)
           subproject_list=$(echo "$subprojects" | jq -R -s -c 'split("\n")[:-1]')
           echo "$subproject_list"
@@ -49,4 +49,4 @@ jobs:
     - name: Install dependencies for ${{ matrix.subproject }}
       run: |
         python -m pip install --upgrade pip
-        pip install -r ./demos/${{ matrix.subproject }}/requirements.txt
+        pip install -r ./${{ matrix.subproject }}/requirements.txt
