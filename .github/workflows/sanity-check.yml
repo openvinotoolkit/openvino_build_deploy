@@ -9,10 +9,6 @@ on:
 permissions:
   contents: read
 
-env:
-  OS_LIST: "ubuntu-latest,windows-latest,macos-latest"
-  PYTHON_VERSIONS: "3.11"
-
 jobs:
   find-subprojects:
     runs-on: ubuntu-latest
@@ -57,11 +53,12 @@ jobs:
 
   notebook:
     needs: find-subprojects
+    if: ${{ needs.find-subprojects.outputs.notebook != '[]' }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: ${{ fromJson(env.OS_LIST) }}
-        python: ${{ fromJson(env.PYTHON_VERSIONS) }}
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: [3.11]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.notebook) }}
     steps:
       - uses: actions/checkout@v4
@@ -80,11 +77,12 @@ jobs:
 
   gradio:
     needs: find-subprojects
+    if: ${{ needs.find-subprojects.outputs.gradio != '[]' }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: ${{ fromJson(env.OS_LIST) }}
-        python: ${{ fromJson(env.PYTHON_VERSIONS) }}
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: [3.11]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.gradio) }}
     steps:
       - uses: actions/checkout@v4
@@ -103,11 +101,12 @@ jobs:
 
   webcam:
     needs: find-subprojects
+    if: ${{ needs.find-subprojects.outputs.webcam != '[]' }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: ${{ fromJson(env.OS_LIST) }}
-        python: ${{ fromJson(env.PYTHON_VERSIONS) }}
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: [3.11]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.webcam) }}
     steps:
       - uses: actions/checkout@v4
@@ -130,10 +129,11 @@ jobs:
 
   js:
     needs: find-subprojects
+    if: ${{ needs.find-subprojects.outputs.js != '[]' }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: ${{ fromJson(env.OS_LIST) }}
+        os: [ubuntu-latest, windows-latest, macos-latest]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.js) }}
     steps:
       - uses: actions/checkout@v4
