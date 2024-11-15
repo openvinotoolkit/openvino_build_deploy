@@ -30,12 +30,12 @@ jobs:
           js=()
           
           for dir in $(find demos -type d); do
-            if [ -f "$dir/main.ipynb" ]; then
+            if [ -f "$dir/package.json" ]; then
+              js+=("$dir")
+            elif [ -f "$dir/main.ipynb" ]; then
               notebook+=("$dir")
             elif grep -q "gradio" "$dir/requirements.txt"; then
               gradio+=("$dir")
-            elif [ -f "$dir/package.json" ]; then
-              js+=("$dir")
             elif python $dir/main.py -h 2>/dev/null | grep -q -- "--stream"; then
               webcam+=("$dir")
             fi
