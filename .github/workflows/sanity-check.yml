@@ -36,13 +36,8 @@ jobs:
               notebook+=("$dir")
             elif grep -q "gradio" "$dir/requirements.txt"; then
               gradio+=("$dir")
-            elif [ -f "$dir/main.py" ]; then
-              echo "Checking $dir/main.py for --stream"
-              if python $dir/main.py -h 2>/dev/null | grep -q -- "--stream"; then
-                webcam+=("$dir")
-              else
-                echo "$dir/main.py does not support --stream"
-              fi
+            elif python $dir/main.py -h | grep -q "--stream"; then
+              webcam+=("$dir")
             fi
           done
 
