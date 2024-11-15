@@ -36,7 +36,7 @@ jobs:
               notebook+=("$dir")
             elif grep -q "gradio" "$dir/requirements.txt"; then
               gradio+=("$dir")
-            elif grep -q "--stream" "$dir/main.py"; then
+            elif grep -q -- "--stream" "$dir/main.py"; then
               webcam+=("$dir")
             fi
           done
