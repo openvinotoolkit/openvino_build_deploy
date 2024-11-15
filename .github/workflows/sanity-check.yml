@@ -10,8 +10,9 @@ permissions:
   contents: read
 
 env:
-  OS_LIST: ubuntu-latest,windows-latest,macos-latest
-  PYTHON_VERSIONS: '["3.11"]'
+  OS_LIST: ["ubuntu-latest", "windows-latest", "macos-latest"]
+  PYTHON_VERSIONS: ["3.11"]
+
 
 jobs:
   find-subprojects:
