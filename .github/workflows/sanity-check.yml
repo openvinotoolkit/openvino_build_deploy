@@ -11,7 +11,7 @@ permissions:
 
 env:
   OS_LIST: ubuntu-latest,windows-latest,macos-latest
-  PYTHON_VERSIONS: 3.11
+  PYTHON_VERSIONS: "3.11"
 
 jobs:
   find-subprojects:
