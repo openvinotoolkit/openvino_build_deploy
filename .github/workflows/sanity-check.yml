@@ -29,7 +29,7 @@ jobs:
           webcam=()
           js=()
           
-          for dir in $(find demos -type f -name "requirements.txt" -exec dirname {} \; | sort -u); do
+          for dir in $(find demos -type d); do
             if [ -f "$dir/main.ipynb" ]; then
               notebook+=("$dir")
             elif grep -q "gradio" "$dir/requirements.txt"; then
