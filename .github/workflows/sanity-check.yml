@@ -46,10 +46,10 @@ jobs:
           webcam_json=$(printf '%s\n' "${webcam[@]}" | jq -R -s -c 'split("\n")[:-1]')
           js_json=$(printf '%s\n' "${js[@]}" | jq -R -s -c 'split("\n")[:-1]')
           
-          echo "notebook=$notebook_json" >> $GITHUB_OUTPUT
-          echo "gradio=$gradio_json" >> $GITHUB_OUTPUT
-          echo "webcam=$webcam_json" >> $GITHUB_OUTPUT
-          echo "js=$js_json" >> $GITHUB_OUTPUT
+          echo "notebook=$notebook_json" | tee -a $GITHUB_OUTPUT
+          echo "gradio=$gradio_json" | tee -a $GITHUB_OUTPUT
+          echo "webcam=$webcam_json" | tee -a $GITHUB_OUTPUT
+          echo "js=$js_json" | tee -a $GITHUB_OUTPUT
 
   notebook:
     needs: find-subprojects
