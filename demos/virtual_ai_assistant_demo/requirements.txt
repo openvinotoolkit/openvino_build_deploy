@@ -2,6 +2,7 @@
 
 openvino==2024.4.0
 optimum-intel==1.19.0
+optimum==1.22.0
 nncf==2.13.0
 
 llama-index==0.11.2
@@ -10,7 +11,7 @@ llama-index-embeddings-openvino==0.3.1
 
 onnx==1.16.1
 onnxruntime==1.17.3
-torch==2.3.1
+torch==2.4.1
 
 transformers==4.43.4
 librosa==0.10.2
