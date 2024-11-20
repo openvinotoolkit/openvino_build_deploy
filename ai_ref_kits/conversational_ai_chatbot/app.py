@@ -29,11 +29,12 @@ from llama_index.postprocessor.openvino_rerank import OpenVINORerank
 from llama_index.vector_stores.faiss import FaissVectorStore
 from optimum.intel import OVModelForSpeechSeq2Seq
 from transformers import AutoProcessor, TextIteratorStreamer
-from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
+from melo.api import TTS
 
 # Global variables initialization
 TARGET_AUDIO_SAMPLE_RATE = 16000
 SPEAKER_INDEX = 7306
+TARGET_AUDIO_SAMPLE_RATE_TTS = 44100
 
 MODEL_DIR = Path("model")
 inference_lock = threading.Lock()
@@ -45,10 +46,7 @@ ov_llm: Optional[OpenVINOLLM] = None
 ov_embedding: Optional[OpenVINOEmbedding] = None
 ov_reranker: Optional[OpenVINORerank] = None
 ov_chat_engine: Optional[BaseChatEngine] = None
-ov_tts_model: Optional[SpeechT5ForTextToSpeech] = None
-ov_tts_vocoder: Optional[SpeechT5HifiGan] = None
-tts_processor: Optional[SpeechT5Processor] = None
-speaker_embeddings: Optional[torch.Tensor] = None
+ov_tts_model: Optional[torch.Tensor] = None
 
 chatbot_config = {}
 
@@ -185,28 +183,26 @@ def load_speaker_embeddings(speaker_index: int) -> torch.Tensor:
     return torch.tensor(embeddings_dataset[speaker_index]["xvector"]).unsqueeze(0)
 
 
-def load_tts_model(model_dir: Path, vocoder_model_dir: Path) -> None:
+def load_tts_model() -> None:
     """
     Load text-to-speech model and assign it to a global variable
 
     Params:
         model_dir: dir with the tts model
     """
-    global ov_tts_model, ov_tts_vocoder, tts_processor, speaker_embeddings
+    global ov_tts_model
 
     nltk.download('punkt_tab', quiet=True)
+    nltk.download('averaged_perceptron_tagger_eng')
 
-    tts_processor = SpeechT5Processor.from_pretrained(model_dir)
-    tts_model = SpeechT5ForTextToSpeech.from_pretrained(model_dir)
-    tts_vocoder = SpeechT5HifiGan.from_pretrained(vocoder_model_dir)
-    speaker_embeddings = load_speaker_embeddings(SPEAKER_INDEX)
+    # CPU is sufficient for real-time inference.
+    device = 'cpu' # Will automatically use GPU if available
+    model = TTS(language='EN', device=device)
+    
+    # Compile the model with OpenVINO backend for accelerated inference
+    ov_tts_model = torch.compile(model, backend='openvino')
 
-    # Compile the TTS model and vocoder with OpenVINO
-    opts = {"device": "CPU", "config":{'PERFORMANCE_HINT': "LATENCY"}}
-    ov_tts_model = torch.compile(tts_model, backend="openvino", options=opts)
-    ov_tts_vocoder = torch.compile(tts_vocoder, backend="openvino", options=opts)
-
-    log.info(f"Running {type(ov_tts_model.base_model).__name__} on {ov_tts_model.device.__str__().upper()}")
+    log.info(f"Running {type(ov_tts_model).__name__} on {ov_tts_model.device.__str__().upper()}")
 
 
 def load_file(file_path: Path) -> Document:
@@ -365,39 +361,27 @@ def transcribe(audio: Tuple[int, np.ndarray], prompt: str, conversation: List[Li
     return conversation
 
 
-def synthesize(conversation: List[List[str]], audio: Tuple[int, np.ndarray]) -> Optional[Tuple[int, np.ndarray]]:
+def synthesize(conversation: List[List[str]]) -> Tuple[int, np.ndarray]:
     """
     Synthesizes speech from chatbot's response
 
     Params:
         conversation: conversation history with the chatbot
-        audio: audio widget to check if used
     Returns:
         Chatbot voice response (audio)
     """
-    # if audio wasn't used in the conversation, return None
-    if not audio:
-        return None
 
     prompt = conversation[-1][1]
-
     start_time = time.time()
 
+    # English 
     # Existing logic to synthesize speech
-    sentences = nltk.sent_tokenize(prompt)
-    audio_segments = []
-    for sentence in sentences:
-        inputs = tts_processor(text=sentence, return_tensors="pt")
-        with torch.no_grad():
-            interim_speech = ov_tts_model.generate_speech(inputs["input_ids"], speaker_embeddings, vocoder=ov_tts_vocoder)
-            audio_segments.append(interim_speech.numpy())
-
-    speech = np.concatenate(audio_segments, axis=0)
+    speech = ov_tts_model.tts_to_file(prompt, ov_tts_model.hps.data.spk2id['EN-US'], output_path=None, speed=1.0)
 
     end_time = time.time()
     log.info(f"TTS model response time: {end_time - start_time:.2f} seconds")
 
-    return TARGET_AUDIO_SAMPLE_RATE, speech
+    return TARGET_AUDIO_SAMPLE_RATE_TTS, speech
 
 
 def create_UI(initial_message: str, example_pdf_path: Path) -> gr.Blocks:
@@ -493,8 +477,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--asr_model", type=str, default="model/distil-whisper-large-v3-FP16", help="Path of the automatic speech recognition model directory")
     parser.add_argument("--chat_model", type=str, default="model/llama3.1-8B-INT4", help="Path to the chat model directory")
-    parser.add_argument("--tts_model", type=str, default="microsoft/speecht5_tts", help="Path to the tts model directory")
-    parser.add_argument("--vocoder_model", type=str, default="microsoft/speecht5_hifigan", help="Path to the vocoder model directory for tts")
     parser.add_argument("--embedding_model", type=str, default="model/bge-small-FP32", help="Path to the embedding model directory")
     parser.add_argument("--reranker_model", type=str, default="model/bge-reranker-large-FP32", help="Path to the reranker model directory")
     parser.add_argument("--personality", type=str, default="concierge_personality.yaml", help="Path to the YAML file with chatbot personality")
@@ -502,5 +484,5 @@ if __name__ == "__main__":
     parser.add_argument("--public", default=False, action="store_true", help="Whether interface should be available publicly")
 
     args = parser.parse_args()
-    run(Path(args.asr_model), Path(args.chat_model), args.tts_model, args.vocoder_model, Path(args.embedding_model), Path(args.reranker_model), Path(args.personality), Path(args.example_pdf), args.public)
+    run(Path(args.asr_model), Path(args.chat_model), Path(args.embedding_model), Path(args.reranker_model), Path(args.personality), Path(args.example_pdf), args.public)
     
