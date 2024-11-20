@@ -17,7 +17,7 @@ This kit uses the following technology stack:
 - [OpenVINO toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([Docs](https://docs.openvino.ai/))
 - [Meta’s Llama 3.2](https://llama.meta.com/llama3/)
 - [OpenAI Whisper](https://openai.com/index/whisper/)
-- [Microsoft SpeechT5](https://github.com/microsoft/SpeechT5)
+- [MeloTTS](https://github.com/myshell-ai/MeloTTS/tree/main)
 - [Gradio interface](https://www.gradio.app/docs/gradio/chatinterface)
 
 For other Intel AI kits, see the [Edge AI Reference Kits repository](/).
@@ -102,12 +102,21 @@ source venv\Scripts\activate   # This command is for Windows operating systems
 ```
 This activates the virtual environment and changes your shell's prompt to indicate that you are now working in that environment.
 
+### Install the Packages for Text-to-Speech
+
+MeloTTS is a high-quality multi-lingual text-to-speech library by MIT and MyShell.ai. However, the installation of this model's dependencies needs to sepearted from the rest of the dependency installation process, due to some potential confliction issues. Details of this model could be found [here](https://github.com/myshell-ai/MeloTTS). Using the follow command to install MeloTTS locally.
+
+```shell
+python -m pip install --upgrade pip 
+pip install git+https://github.com/myshell-ai/MeloTTS.git@5b538481e24e0d578955be32a95d88fcbde26dc8
+python -m unidic download
+```
+
 ### Install the Packages
 
 To install the required packages, run the following commands:
 
-```shell
-python -m pip install --upgrade pip 
+```shell 
 pip install -r requirements.txt
 ```
 ## Get Access to Llama
@@ -161,7 +170,7 @@ python convert_and_optimize_chat.py --chat_model_type llama3.2-3B --embedding_mo
 
 ### Step 3. Text-to-Speech (TTS) Model Conversion
 
-The text-to-speech (TTS) model converts the chatbot's text responses to spoken words, which enables voice output. The application uses Microsoft's SpeechT5 model for TTS. The TTS model and vocoder don’t require conversion. They are compiled at runtime using ``torch.compile`` with the OpenVINO backend.
+The text-to-speech (TTS) model converts the chatbot's text responses to spoken words, which enables voice output. The application uses MeloTTS model for TTS. The TTS model doesn't require conversion. They are compiled at runtime using ``torch.compile`` with the OpenVINO backend.
 
 After you run the conversion scripts, you can run app.py to launch the application.
 
@@ -184,10 +193,6 @@ This file defines the assistant's personality, including instructions, system co
 
 - `--reranker_model path/to/reranker_model`: The path to your reranker model directory (for example, `model/bge-reranker-large-FP32`). This model reranks responses to ensure relevance and accuracy.
 
-- `--tts_model tts_model_name`: The Hugging Face name of your TTS (text-to-speech) model (for example, `microsoft/speecht5_tts`) for converting text responses to spoken words.
-
-- `--vocoder_model vocoder_model_name`: The Hugging Face name of your vocoder model (for example, `microsoft/speecht5_hifigan`), which enhances the audio quality of the spoken responses.
-
 - `--public`: Include this flag to make the Gradio interface publicly accessible over the network. Without this flag, the interface is only available on your local machine.
 
 To run the application, execute the `app.py` script with the following command. Make sure to include all necessary model directory arguments.
@@ -198,8 +203,6 @@ python app.py \
   --chat_model path/to/chat_model \
   --embedding_model path/to/embedding_model \
   --reranker_model path/to/reranker_model \
-  --tts_model tts_model_name \
-  --vocoder_model vocoder_model_name \
   --public
 ```
 
