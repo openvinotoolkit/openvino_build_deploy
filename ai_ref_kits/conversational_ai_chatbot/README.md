@@ -182,9 +182,6 @@ _NOTE: This application requires more than 16GB of memory because the models are
 
 For the python script, you must include the following model directory arguments.
 
-- `--personality path/to/personality.yaml`: The path to your custom personality YAML file (for example, `concierge_personality.yaml`).  
-This file defines the assistant's personality, including instructions, system configuration, and greeting prompts. You can create and specify your own custom personality file.
-
 - `--asr_model path/to/asr_model`: The path to your ASR (Automatic Speech Recognition) model directory, which uses `int8` precision (for example,  `model/distil-whisper-large-v3-int8`) for efficient speech recognition.
 
 - `--chat_model path/to/chat_model`: The path to your chat model directory (for example, `model/llama3.2-3B-INT4`) that drives conversation flow and response generation.
@@ -193,16 +190,23 @@ This file defines the assistant's personality, including instructions, system co
 
 - `--reranker_model path/to/reranker_model`: The path to your reranker model directory (for example, `model/bge-reranker-large-FP32`). This model reranks responses to ensure relevance and accuracy.
 
+- `--personality path/to/personality.yaml`: The path to your custom personality YAML file (for example, `concierge_personality.yaml`).  
+This file defines the assistant's personality, including instructions, system configuration, and greeting prompts. You can create and specify your own custom personality file.
+
+- `--example_pdf path/to/personality.yaml`: The path to your custom PDF file which is an additional context (for example, `Grand_Azure_Resort_Spa_Full_Guide.pdf`).  
+This file defines the knowledge of the resort in this concierge use case. You can use your own custom file to build a local knowledge base.
+
 - `--public`: Include this flag to make the Gradio interface publicly accessible over the network. Without this flag, the interface is only available on your local machine.
 
 To run the application, execute the `app.py` script with the following command. Make sure to include all necessary model directory arguments.
 ```shell
 python app.py \
-  --personality concierge_personality.yaml \
   --asr_model path/to/asr_model \
   --chat_model path/to/chat_model \
   --embedding_model path/to/embedding_model \
   --reranker_model path/to/reranker_model \
+  --personality concierge_personality.yaml \
+  --example_pdf Grand_Azure_Resort_Spa_Full_Guide.pdf \
   --public
 ```
 
