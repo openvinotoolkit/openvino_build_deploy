@@ -135,9 +135,13 @@ jobs:
           curl -L -o sample_video.mp4 https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4
       - name: Run Webcam Demo
         run: |
-          cd ${{ matrix.subproject }}
-          python main.py --stream sample_video.mp4
-
+          # linux requires virtual display
+          if [ "${{ runner.os }}" == "Linux" ]; then
+            xvfb-run python main.py --stream sample_video.mp4
+          else
+            python main.py --stream sample_video.mp4
+          fi
+          
   js:
     needs: find-subprojects
     if: ${{ needs.find-subprojects.outputs.js != '[]' }}
