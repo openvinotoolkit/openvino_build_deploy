@@ -136,7 +136,7 @@ jobs:
       - name: Run Webcam Demo
         run: |
           cd ${{ matrix.subproject }}
-          xvfb-run python main.py --stream sample_video.mp4
+          python main.py --stream sample_video.mp4
 
   js:
     needs: find-subprojects
