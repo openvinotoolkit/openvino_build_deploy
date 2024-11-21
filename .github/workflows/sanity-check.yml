@@ -155,4 +155,4 @@ jobs:
       - name: Run JS Project
         run: |
           cd ${{ matrix.subproject }}
-          npm run start
+          npm start
