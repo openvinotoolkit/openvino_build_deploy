@@ -137,7 +137,7 @@ jobs:
         shell: bash
         run: |
           cd ${{ matrix.subproject }}          
-          # linux requires virtual display
+          # linux requires a virtual display
           if [ "${{ runner.os }}" == "Linux" ]; then
             xvfb-run python main.py --stream sample_video.mp4
           else
@@ -169,9 +169,10 @@ jobs:
           cd ${{ matrix.subproject }}
           npm install
       - name: Run JS Project
+        shell: bash
         run: |
           cd ${{ matrix.subproject }}
-          # linux requires virtual display
+          # linux requires a virtual display
           if [ "${{ runner.os }}" == "Linux" ]; then
             xvfb-run npm start
           else 
