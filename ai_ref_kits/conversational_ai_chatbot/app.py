@@ -1,6 +1,5 @@
 import argparse
 import logging as log
-import os
 import threading
 import time
 from pathlib import Path
@@ -16,7 +15,6 @@ import openvino as ov
 import torch
 import yaml
 import nltk
-from datasets import load_dataset
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from llama_index.core import Document, VectorStoreIndex, Settings, StorageContext
 from llama_index.core.chat_engine import SimpleChatEngine
@@ -33,7 +31,6 @@ from melo.api import TTS
 
 # Global variables initialization
 TARGET_AUDIO_SAMPLE_RATE = 16000
-SPEAKER_INDEX = 7306
 TARGET_AUDIO_SAMPLE_RATE_TTS = 44100
 
 MODEL_DIR = Path("model")
@@ -170,25 +167,9 @@ def load_rag_models(chat_model_dir: Path, embedding_model_dir: Path, reranker_mo
                                                     memory=ChatMemoryBuffer.from_defaults())
 
 
-def load_speaker_embeddings(speaker_index: int) -> torch.Tensor:
-    """
-    Load embeddings for selected speaker
-
-    Params:
-        speaker_index: index in Matthijs/cmu-arctic-xvectors database (val subset)
-    Returns:
-        Speaker embeddings
-    """
-    embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation")
-    return torch.tensor(embeddings_dataset[speaker_index]["xvector"]).unsqueeze(0)
-
-
 def load_tts_model() -> None:
     """
-    Load text-to-speech model and assign it to a global variable
-
-    Params:
-        model_dir: dir with the tts model
+    Load text-to-speech model (MeloTTS) and assign it to a global variable
     """
     global ov_tts_model
 
@@ -196,8 +177,7 @@ def load_tts_model() -> None:
     nltk.download('averaged_perceptron_tagger_eng')
 
     # CPU is sufficient for real-time inference.
-    device = 'cpu' # Will automatically use GPU if available
-    model = TTS(language='EN', device=device)
+    model = TTS(language='EN', device='cpu')
     
     # Compile the model with OpenVINO backend for accelerated inference
     ov_tts_model = torch.compile(model, backend='openvino')
@@ -361,24 +341,27 @@ def transcribe(audio: Tuple[int, np.ndarray], prompt: str, conversation: List[Li
     return conversation
 
 
-def synthesize(conversation: List[List[str]]) -> Tuple[int, np.ndarray]:
+def synthesize(conversation: List[List[str]], audio: Tuple[int, np.ndarray]) -> Optional[Tuple[int, np.ndarray]]:
     """
     Synthesizes speech from chatbot's response
 
     Params:
         conversation: conversation history with the chatbot
+        audio: audio widget to check if used
     Returns:
         Chatbot voice response (audio)
     """
+    # if audio wasn't used in the conversation, return None
+    if not audio:
+        return None
 
     prompt = conversation[-1][1]
+
     start_time = time.time()
-
-    # English 
-    # Existing logic to synthesize speech
+    # English
     speech = ov_tts_model.tts_to_file(prompt, ov_tts_model.hps.data.spk2id['EN-US'], output_path=None, speed=1.0)
-
     end_time = time.time()
+
     log.info(f"TTS model response time: {end_time - start_time:.2f} seconds")
 
     return TARGET_AUDIO_SAMPLE_RATE_TTS, speech
@@ -432,7 +415,7 @@ def create_UI(initial_message: str, example_pdf_path: Path) -> gr.Blocks:
         return demo
 
 
-def run(asr_model_dir: Path, chat_model_dir: Path, tts_model_dir: Path, vocoder_model_dir: Path, embedding_model_dir: Path, reranker_model_dir: Path, personality_file_path: Path, example_pdf_path: Path, public_interface: bool = False) -> None:
+def run(asr_model_dir: Path, chat_model_dir: Path, embedding_model_dir: Path, reranker_model_dir: Path, personality_file_path: Path, example_pdf_path: Path, public_interface: bool = False) -> None:
     """
     Run the chatbot application
 
@@ -455,7 +438,7 @@ def run(asr_model_dir: Path, chat_model_dir: Path, tts_model_dir: Path, vocoder_
     # load chat models
     load_rag_models(chat_model_dir, embedding_model_dir, reranker_model_dir, personality_file_path)
     # load tts model
-    load_tts_model(tts_model_dir, vocoder_model_dir)
+    load_tts_model()
 
     if asr_model is None or ov_llm is None or ov_embedding is None:
         log.error("Required models are not loaded. Exiting...")
