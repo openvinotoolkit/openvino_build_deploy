@@ -134,6 +134,7 @@ jobs:
           cd ${{ matrix.subproject }}
           curl -L -o sample_video.mp4 https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4
       - name: Run Webcam Demo
+        shell: bash
         run: |
           # linux requires virtual display
           if [ "${{ runner.os }}" == "Linux" ]; then
