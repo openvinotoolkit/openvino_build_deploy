@@ -136,6 +136,7 @@ jobs:
       - name: Run Webcam Demo
         shell: bash
         run: |
+          cd ${{ matrix.subproject }}          
           # linux requires virtual display
           if [ "${{ runner.os }}" == "Linux" ]; then
             xvfb-run python main.py --stream sample_video.mp4
