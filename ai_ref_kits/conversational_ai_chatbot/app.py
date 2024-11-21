@@ -380,15 +380,18 @@ def create_UI(initial_message: str, example_pdf_path: Path) -> gr.Blocks:
     with gr.Blocks(title="Adrishuo - the Conversational AI Chatbot") as demo:
         gr.Markdown(chatbot_config["instructions"])
         with gr.Row():
-            with gr.Column(scale=1):
-                file_uploader_ui = gr.File(label="Hotel guide", file_types=[".pdf", ".txt"], value=str(example_pdf_path))
-                input_audio_ui = gr.Audio(sources=["microphone"], label="Your voice input")
-                input_text_ui = gr.Textbox(label="Your text input")
-                submit_btn = gr.Button("Submit", variant="primary", interactive=False)
-            with gr.Column(scale=2):
+            file_uploader_ui = gr.File(label="Hotel guide", file_types=[".pdf", ".txt"], value=str(example_pdf_path), scale=1)
+            with gr.Column(scale=4):
                 chatbot_ui = gr.Chatbot(value=[[None, initial_message]], label="Chatbot")
-                output_audio_ui = gr.Audio(label="Chatbot voice response", autoplay=True)
-                clear_btn = gr.Button("Start over", variant="secondary")
+                with gr.Tab(label="Voice"):
+                    with gr.Row():
+                        input_audio_ui = gr.Audio(sources=["microphone"], label="Your voice input")
+                        output_audio_ui = gr.Audio(label="Chatbot voice response", autoplay=True)
+                with gr.Tab(label="Text"):
+                    input_text_ui = gr.Textbox(label="Your text input")
+                with gr.Row():
+                    clear_btn = gr.Button("Start over", variant="secondary")
+                    submit_btn = gr.Button("Submit", variant="primary", interactive=False)
 
         # events
         # block submit button when no audio or text input
