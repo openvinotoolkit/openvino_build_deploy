@@ -99,6 +99,7 @@ jobs:
           pip install -r ${{ matrix.subproject }}/requirements.txt
           pip list
       - name: Run Gradio App
+        timeout-minutes: 1
         run: |
           cd ${{ matrix.subproject }}
           python main.py
