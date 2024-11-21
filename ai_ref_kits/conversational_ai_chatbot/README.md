@@ -102,23 +102,22 @@ source venv\Scripts\activate   # This command is for Windows operating systems
 ```
 This activates the virtual environment and changes your shell's prompt to indicate that you are now working in that environment.
 
-### Install the Packages for Text-to-Speech
+### Install the Packages
 
-MeloTTS is a high-quality multi-lingual text-to-speech library by MIT and MyShell.ai. However, the installation of this model's dependencies needs to sepearted from the rest of the dependency installation process, due to some potential confliction issues. Details of this model could be found [here](https://github.com/myshell-ai/MeloTTS). Using the follow command to install MeloTTS locally.
+MeloTTS is a high-quality multilingual text-to-speech library by MIT and MyShell.ai. However, the installation of this model's dependencies needs to separated from the rest of the dependency installation process, due to some potential conflict issues. Details of this model could be found [here](https://github.com/myshell-ai/MeloTTS). Using the following command to install MeloTTS locally.
 
 ```shell
 python -m pip install --upgrade pip 
-pip install git+https://github.com/myshell-ai/MeloTTS.git@5b538481e24e0d578955be32a95d88fcbde26dc8
+pip install git+https://github.com/myshell-ai/MeloTTS.git@5b538481e24e0d578955be32a95d88fcbde26dc8 --no-deps
 python -m unidic download
 ```
 
-### Install the Packages
-
-To install the required packages, run the following commands:
+To install the other packages, run the following commands:
 
 ```shell 
 pip install -r requirements.txt
 ```
+
 ## Get Access to Llama
 
 _NOTE: If you already have access to the Llama model weights, you can proceed to the authentication step, which is mandatory to convert the Llama model._
