@@ -19,19 +19,7 @@ let prevDevice = null;
 
 const inputSize = { w: 256, h: 256 };
 let outputMask = null;
-
-const ovLogo = sharp('assets/openvino-logo.png')
-    .flop()
-    .composite([{
-        input: Buffer.from([255, 255, 255, 100]), // 50% transparent white
-        raw: {
-            width: 1,
-            height: 1,
-            channels: 4
-        },
-        tile: true,
-        blend: 'dest-in'
-    }])
+let ovLogo = null;
 
 
 async function detectDevices() {
@@ -46,15 +34,37 @@ function average(array){
 
 
 async function getModelPath() {
-    const archivePath = path.join(__dirname, '../../app.asar.unpacked/models/selfie_multiclass_256x256.xml');
-    const devPath = path.join(__dirname, '../models/selfie_multiclass_256x256.xml');
-
-    try {
-        await fs.access(archivePath, fs.constants.F_OK);
-        return archivePath;
-    } catch(e) {
-        return devPath;
+    if (fs.existsSync(path.join(__dirname, '../../app.asar'))){     
+        //if running compiled program
+        return path.join(__dirname, "../../app.asar.unpacked/models/selfie_multiclass_256x256.xml");
+    } else {    
+        //if running npm start
+    return path.join(__dirname, "../models/selfie_multiclass_256x256.xml");
     }
+}
+
+
+function getOvLogo(){
+    let imgPath = null;
+    if (fs.existsSync(path.join(__dirname, '../../app.asar'))){     
+        //if running compiled program
+        imgPath = path.join(__dirname, "../../app.asar.unpacked/assets/openvino-logo.png");
+    } else {    
+        //if running npm start
+        imgPath = path.join(__dirname, "../assets/openvino-logo.png");
+    }
+    return sharp(imgPath)
+        .flop()
+        .composite([{
+            input: Buffer.from([255, 255, 255, 100]), // 50% transparent white
+            raw: {
+                width: 1,
+                height: 1,
+                channels: 4
+            },
+            tile: true,
+            blend: 'dest-in'
+    }])
 }
 
 
@@ -225,6 +235,9 @@ async function blurImage(image, width, height) {
 
 
 async function addWatermark(image, width, height) {
+    if (ovLogo == null){
+        ovLogo = getOvLogo();
+    }
     const watermarkWidth = Math.floor(width * 0.3);
     const watermark = await ovLogo
         .resize({ width: watermarkWidth })
