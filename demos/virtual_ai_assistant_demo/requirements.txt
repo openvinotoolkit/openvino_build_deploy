@@ -14,7 +14,7 @@ onnxruntime==1.17.3
 torch==2.4.1
 
 transformers==4.43.4
-pypdf==4.3.1
+pymupdf==1.24.10
 pyyaml==6.0.1
 
 gradio==4.42.0

@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 from typing import List, Optional, Set
 
+import fitz
 import gradio as gr
 import numpy as np
 import openvino as ov
@@ -15,10 +16,10 @@ from llama_index.core.chat_engine.types import BaseChatEngine, ChatMode
 from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.embeddings.huggingface_openvino import OpenVINOEmbedding
 from llama_index.llms.openvino import OpenVINOLLM
-from llama_index.readers.file import PDFReader
 from openvino.runtime import opset10 as ops
 from openvino.runtime import passes
-from optimum.intel import OVModelForCausalLM, OVModelForFeatureExtraction, OVWeightQuantizationConfig, OVConfig, OVQuantizer
+from optimum.intel import OVModelForCausalLM, OVModelForFeatureExtraction, OVWeightQuantizationConfig, OVConfig, \
+    OVQuantizer
 from transformers import AutoTokenizer
 
 # Global variables initialization
@@ -127,12 +128,19 @@ def load_chat_models(chat_model_name: str, embedding_model_name: str, personalit
 def load_file(file_path: Path) -> Document:
     ext = file_path.suffix
     if ext == ".pdf":
-        reader = PDFReader()
-        return reader.load_data(file_path)[0]
+        # Using PyMuPDF (fitz) to read PDF content
+        text = ""
+        with fitz.open(file_path) as pdf:
+            for page in pdf:
+                text += page.get_text("text") + "\n"  # Extract text from each page
+            return Document(text=text, metadata={"file_name": file_path.name})
+
     elif ext == ".txt":
+        # Reading text files as usual
         with open(file_path) as f:
             content = f.read()
             return Document(text=content, metadata={"file_name": file_path.name})
+
     else:
         raise ValueError(f"{ext} file is not supported for now")
 
