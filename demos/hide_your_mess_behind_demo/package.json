@@ -33,7 +33,8 @@
       "assets/**/*"
     ],
     "asarUnpack": [
-      "models/**"
+      "models/**",
+      "assets/openvino-logo.png"
     ]
   },
   "devDependencies": {
