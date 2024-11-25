@@ -48,7 +48,6 @@ function getOvLogo(){
     let imgPath = null;
     if (fs.existsSync(path.join(__dirname, '../../app.asar'))){     
         //if running compiled program
-        console.log("EXE");
         imgPath = path.join(__dirname, "../../app.asar.unpacked/assets/openvino-logo.png");
     } else {    
         //if running npm start
