@@ -18,8 +18,7 @@ from llama_index.embeddings.huggingface_openvino import OpenVINOEmbedding
 from llama_index.llms.openvino import OpenVINOLLM
 from openvino.runtime import opset10 as ops
 from openvino.runtime import passes
-from optimum.intel import OVModelForCausalLM, OVModelForFeatureExtraction, OVWeightQuantizationConfig, OVConfig, \
-    OVQuantizer
+from optimum.intel import OVModelForCausalLM, OVModelForFeatureExtraction, OVWeightQuantizationConfig, OVConfig, OVQuantizer
 from transformers import AutoTokenizer
 
 # Global variables initialization
@@ -191,13 +190,13 @@ def transcribe(prompt: str, conversation: List[List[str]]) -> List[List[str]]:
     return conversation
 
 
-def summarize(conversation: List) -> str:
-    conversation.append([chatbot_config["summarize_the_user_prompt"], None])
+def extra_action(conversation: List) -> str:
+    conversation.append([chatbot_config["extra_action_prompt"], None])
     for partial_summary in chat(conversation):
         yield partial_summary[-1][1]
 
 
-def create_UI(initial_message: str) -> gr.Blocks:
+def create_UI(initial_message: str, action_name: str) -> gr.Blocks:
     with gr.Blocks(title="Your Virtual AI Assistant") as demo:
         gr.Markdown(chatbot_config["instructions"])
 
@@ -210,8 +209,8 @@ def create_UI(initial_message: str) -> gr.Blocks:
                     submit_btn = gr.Button("Submit", variant="primary", interactive=False, scale=1)
                     clear_btn = gr.Button("Start over", variant="secondary", scale=1)
 
-        summarize_button = gr.Button("Summarize", variant="primary", interactive=False)
-        summary_ui = gr.Textbox(label="Summary (Click 'Summarize' to trigger)", interactive=False)
+        extra_action_button = gr.Button(action_name, variant="primary", interactive=False)
+        summary_ui = gr.Textbox(label=f"Summary (Click '{action_name}' to trigger)", interactive=False)
 
         # events
         # block submit button when no audio or text input
@@ -223,24 +222,24 @@ def create_UI(initial_message: str) -> gr.Blocks:
 
         clear_btn.click(lambda: ([[None, initial_message]], None), outputs=[chatbot_ui, summary_ui]) \
             .then(load_context, inputs=file_uploader_ui) \
-            .then(lambda: gr.Button(interactive=False), outputs=summarize_button)
+            .then(lambda: gr.Button(interactive=False), outputs=extra_action_button)
 
         # block buttons, do the transcription and conversation, clear audio, unblock buttons
         gr.on(triggers=[submit_btn.click, input_text_ui.submit], fn=lambda: gr.Button(interactive=False), outputs=submit_btn) \
-            .then(lambda: gr.Button(interactive=False), outputs=summarize_button) \
+            .then(lambda: gr.Button(interactive=False), outputs=extra_action_button) \
             .then(lambda: gr.Button(interactive=False), outputs=clear_btn) \
             .then(transcribe, inputs=[input_text_ui, chatbot_ui], outputs=chatbot_ui) \
             .then(lambda: None, outputs=input_text_ui) \
             .then(chat, chatbot_ui, chatbot_ui) \
             .then(lambda: gr.Button(interactive=True), outputs=clear_btn) \
-            .then(lambda: gr.Button(interactive=True), outputs=summarize_button)
+            .then(lambda: gr.Button(interactive=True), outputs=extra_action_button)
 
-        # block button, do the summarization, unblock button
-        summarize_button.click(lambda: gr.Button(interactive=False), outputs=summarize_button) \
+        # block button, do the action, unblock button
+        extra_action_button.click(lambda: gr.Button(interactive=False), outputs=extra_action_button) \
             .then(lambda: gr.Button(interactive=False), outputs=clear_btn) \
-            .then(summarize, inputs=chatbot_ui, outputs=summary_ui) \
+            .then(extra_action, inputs=chatbot_ui, outputs=summary_ui) \
             .then(lambda: gr.Button(interactive=True), outputs=clear_btn) \
-            .then(lambda: gr.Button(interactive=True), outputs=summarize_button)
+            .then(lambda: gr.Button(interactive=True), outputs=extra_action_button)
 
         return demo
 
@@ -256,7 +255,7 @@ def run(chat_model_name: str, embedding_model_name: str, personality_file_path: 
     initial_message = generate_initial_greeting()
 
     # create user interface
-    demo = create_UI(initial_message)
+    demo = create_UI(initial_message, chatbot_config["extra_action_name"])
     # launch demo
     demo.queue().launch(share=public_interface)
 
