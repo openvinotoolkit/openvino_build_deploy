@@ -71,10 +71,11 @@ jobs:
         with:
           python: ${{ matrix.python }}
           project: ${{ matrix.subproject }}
-      - name: Execute Notebook
-        run: |
-          cd ${{ matrix.subproject }}
-          jupyter nbconvert --to notebook --execute main.ipynb
+      - uses: ./.github/reusable-steps/timeouted-action
+        name: Run Notebook
+        with:
+          command: jupyter nbconvert --to notebook --execute main.ipynb
+          project: ${{ matrix.subproject }}
 
   gradio:
     needs: find-subprojects
@@ -97,11 +98,11 @@ jobs:
         with:
           python: ${{ matrix.python }}
           project: ${{ matrix.subproject }}
-      - name: Run Gradio App
-        run: |
-          cd ${{ matrix.subproject }}
-          # the timeout trick "gracefully" kills the app after 5 minutes (waiting for user input otherwise)
-          timeout 5m python main.py || [[ $? -eq 124 ]]
+      - uses: ./.github/reusable-steps/timeouted-action
+        name: Run Gradio App
+        with:
+          command: python main.py
+          project: ${{ matrix.subproject }}
 
   webcam:
     needs: find-subprojects
@@ -120,16 +121,11 @@ jobs:
         with:
           python: ${{ matrix.python }}
           project: ${{ matrix.subproject }}
-      - name: Run Webcam Demo
-        shell: bash
-        run: |
-          cd ${{ matrix.subproject }}          
-          # linux requires a virtual display
-          if [ "${{ runner.os }}" == "Linux" ]; then
-            xvfb-run python main.py --stream sample_video.mp4
-          else
-            python main.py --stream sample_video.mp4
-          fi
+      - uses: ./.github/reusable-steps/timeouted-action
+        name: Run Webcam Demo
+        with:
+          command: python main.py --stream sample_video.mp4
+          project: ${{ matrix.subproject }}
           
   js:
     needs: find-subprojects
@@ -151,14 +147,9 @@ jobs:
         run: |
           cd ${{ matrix.subproject }}
           npm install
-      - name: Run JS Project
-        shell: bash
-        run: |
-          cd ${{ matrix.subproject }}
-          # linux requires a virtual display
-          if [ "${{ runner.os }}" == "Linux" ]; then
-            # the timeout trick "gracefully" kills the app after 1 minute (waiting for user input otherwise) 
-            timeout 1m xvfb-run npm start || [[ $? -eq 124 ]]
-          else 
-            timeout 1m npm start || [[ $? -eq 124 ]]
-          fi
+      - uses: ./.github/reusable-steps/timeouted-action
+        name: Run JS Project
+        with:
+          command: npm start
+          project: ${{ matrix.subproject }}
+          timeout: 1m
