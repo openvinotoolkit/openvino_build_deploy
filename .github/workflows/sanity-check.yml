@@ -160,6 +160,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb
+      - name: Install coreutils
+        if: runner.is == 'macOS'
+        run: |
+          brew install coreutils
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
@@ -174,7 +178,7 @@ jobs:
           cd ${{ matrix.subproject }}
           # linux requires a virtual display
           if [ "${{ runner.os }}" == "Linux" ]; then
-            timeout 1 xvfb-run npm start
+            timeout 1 xvfb-run npm start || [[ $? v-eq 124 ]]
           else 
-            timeout 1 npm start
+            timeout 1 npm start || [[ $? v-eq 124 ]]
           fi
