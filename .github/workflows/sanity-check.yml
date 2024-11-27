@@ -98,6 +98,10 @@ jobs:
         with:
           python: ${{ matrix.python }}
           project: ${{ matrix.subproject }}
+      - name: Login to HF
+        shell: bash
+        run: |
+          huggingface-cli login --token ${{ secrets.HF_TOKEN }}
       - uses: ./.github/reusable-steps/timeouted-action
         name: Run Gradio App
         with:
