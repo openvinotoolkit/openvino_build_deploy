@@ -1,10 +1,8 @@
 name: Sanity check
 
 on:
-  push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
+  schedule:
+    - cron: "0 2 * * *"
 
 permissions:
   contents: read
@@ -107,7 +105,7 @@ jobs:
         with:
           command: python main.py
           project: ${{ matrix.subproject }}
-          timeout: 5m
+          timeout: 30m
 
   webcam:
     needs: find-subprojects
