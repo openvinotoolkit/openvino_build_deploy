@@ -153,8 +153,8 @@ def load_files(file_paths: List[str]) -> list[Document]:
 def load_context(file_paths: List[str]) -> None:
     global ov_chat_engine
 
-    # limit chat history to 3000 tokens
-    memory = ChatMemoryBuffer.from_defaults()
+    # limit chat history to 1024 tokens
+    memory = ChatMemoryBuffer.from_defaults(token_limit=1024)
 
     if not file_paths:
         ov_chat_engine = SimpleChatEngine.from_defaults(llm=ov_llm, system_prompt=chatbot_config["system_configuration"], memory=memory)
