@@ -1,0 +1,25 @@
+name: Run action with timeout
+
+inputs:
+  command:
+    required: true
+  project:
+    required: true
+  timeout:
+    required: false
+    default: 1h
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Run JS Project
+      shell: bash
+      run: |
+        cd ${{ inputs.project }}
+        # linux requires a virtual display
+        if [ "${{ runner.os }}" == "Linux" ]; then
+          # the timeout trick "gracefully" kills the app after specified time (waiting for user input otherwise) 
+          timeout ${{ inputs.timeout }} xvfb-run ${{ inputs.command }} || [[ $? -eq 124 ]]
+        else 
+          timeout ${{ inputs.timeout }} ${{ inputs.command }} || [[ $? -eq 124 ]]
+        fi
