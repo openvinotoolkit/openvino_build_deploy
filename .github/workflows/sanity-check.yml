@@ -89,6 +89,10 @@ jobs:
         subproject: ${{ fromJson(needs.find-subprojects.outputs.gradio) }}
     steps:
       - uses: actions/checkout@v4
+      - name: Install coreutils
+        if: runner.os == 'macOS'
+        run: |
+          brew install coreutils
       - name: Set up Python ${{ matrix.python }}
         uses: actions/setup-python@v5
         with:
@@ -101,7 +105,8 @@ jobs:
       - name: Run Gradio App
         run: |
           cd ${{ matrix.subproject }}
-          python main.py
+          # the timeout trick "gracefully" kills the app after 5 minutes (waiting for user input otherwise)
+          timeout 5m python main.py || [[ $? -eq 124 ]]
 
   webcam:
     needs: find-subprojects
