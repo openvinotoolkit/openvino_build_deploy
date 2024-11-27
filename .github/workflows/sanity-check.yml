@@ -69,6 +69,7 @@ jobs:
           python-version: ${{ matrix.python }}
       - uses: ./.github/reusable-steps/setup-python
         with:
+          python: ${{ matrix.python }}
           project: ${{ matrix.subproject }}
       - name: Execute Notebook
         run: |
@@ -94,6 +95,7 @@ jobs:
           python-version: ${{ matrix.python }}
       - uses: ./.github/reusable-steps/setup-python
         with:
+          python: ${{ matrix.python }}
           project: ${{ matrix.subproject }}
       - name: Run Gradio App
         run: |
@@ -114,12 +116,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/reusable-steps/setup-os
-      - name: Set up Python ${{ matrix.python }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python }}
       - uses: ./.github/reusable-steps/setup-python
         with:
+          python: ${{ matrix.python }}
           project: ${{ matrix.subproject }}
       - name: Run Webcam Demo
         shell: bash
