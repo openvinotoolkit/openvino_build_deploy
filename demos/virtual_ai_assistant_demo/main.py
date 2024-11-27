@@ -213,9 +213,9 @@ def create_UI(initial_message: str, action_name: str) -> gr.Blocks:
                 with gr.Row():
                     input_text_ui = gr.Textbox(label="Your text input", scale=6)
                     submit_btn = gr.Button("Submit", variant="primary", interactive=False, scale=1)
+                with gr.Row():
                     clear_btn = gr.Button("Start over", variant="secondary", scale=1)
-
-        extra_action_button = gr.Button(action_name, variant="primary", interactive=False)
+                    extra_action_button = gr.Button(action_name, variant="primary", interactive=False)
         summary_ui = gr.Textbox(label=f"Summary (Click '{action_name}' to trigger)", interactive=False)
 
         # events
