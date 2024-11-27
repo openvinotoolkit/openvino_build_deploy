@@ -161,7 +161,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y xvfb
       - name: Install coreutils
-        if: runner.is == 'macOS'
+        if: runner.os == 'macOS'
         run: |
           brew install coreutils
       - name: Install Node.js
@@ -178,7 +178,8 @@ jobs:
           cd ${{ matrix.subproject }}
           # linux requires a virtual display
           if [ "${{ runner.os }}" == "Linux" ]; then
-            timeout 1 xvfb-run npm start || [[ $? -eq 124 ]]
+            # the timeout trick "gracefully" kills the app after 1 minute (waiting for user input otherwise) 
+            timeout 1m xvfb-run npm start || [[ $? -eq 124 ]]
           else 
-            timeout 1 npm start || [[ $? -eq 124 ]]
+            timeout 1m npm start || [[ $? -eq 124 ]]
           fi
