@@ -89,7 +89,7 @@ jobs:
         subproject: ${{ fromJson(needs.find-subprojects.outputs.gradio) }}
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/setup-os
+      - uses: .github/setup-os
       - name: Set up Python ${{ matrix.python }}
         uses: actions/setup-python@v5
         with:
