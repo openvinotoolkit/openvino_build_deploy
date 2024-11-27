@@ -187,6 +187,8 @@ emotion_mapping = {"neutral": "Rudolph", "happy": "Cupid", "surprise": "Blitzen"
 
 
 def run_demo(source, face_detection_model, face_landmarks_model, face_emotions_model, model_precision, device, flip):
+    device_mapping = utils.available_devices()
+
     face_detection_model_path = download_model(face_detection_model, model_precision)
     face_landmarks_model_path = download_model(face_landmarks_model, model_precision)
     face_emotions_model_path = download_model(face_emotions_model, model_precision)
@@ -275,13 +277,24 @@ def run_demo(source, face_detection_model, face_landmarks_model, face_emotions_m
             # Mean processing time [ms].
             processing_time = np.mean(processing_times) * 1000
             fps = 1000 / processing_time
-            utils.draw_text(frame, f"Inference time: {processing_time:.1f}ms ({fps:.1f} FPS)", (20, 20))
+            utils.draw_text(frame, text=f"Currently running models ({model_precision}) on {device}", point=(10, 10))
+            utils.draw_text(frame, f"Inference time: {processing_time:.1f}ms ({fps:.1f} FPS)", (10, 50))
 
             cv2.imshow(winname=title, mat=frame)
             key = cv2.waitKey(1)
-            # escape = 27
-            if key == 27:
+
+            # escape = 27 or 'q' to close the app
+            if key == 27 or key == ord('q'):
                 break
+
+            for i, dev in enumerate(device_mapping.keys()):
+                if key == ord('1') + i:
+                    del fd_model, fl_model, fe_model
+                    fd_model, fd_input, fd_output = load_model(face_detection_model_path, dev)
+                    fl_model, fl_input, fl_output = load_model(face_landmarks_model_path, dev)
+                    fe_model, fe_input, fe_output = load_model(face_emotions_model_path, dev)
+                    device = dev
+                    processing_times.clear()
     # ctrl-c
     except KeyboardInterrupt:
         print("Interrupted")
@@ -298,7 +311,7 @@ def run_demo(source, face_detection_model, face_landmarks_model, face_emotions_m
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--stream', default="0", type=str, help="Path to a video file or the webcam number")
-    parser.add_argument('--device', default="AUTO", type=str, help="Device to run inference on")
+    parser.add_argument('--device', default="AUTO", type=str, help="Device to start inference on")
     parser.add_argument("--detection_model_name", type=str, default="face-detection-adas-0001", help="Face detection model to be used")
     parser.add_argument("--landmarks_model_name", type=str, default="landmarks-regression-retail-0009", help="Face landmarks regression model to be used")
     parser.add_argument("--emotions_model_name", type=str, default="emotions-recognition-retail-0003", help="Face emotions recognition model to be used")

@@ -1,15 +1,14 @@
+import os
 import os.path
 import threading
 import time
-from typing import Tuple
-
-import cv2
-
-import os
 import urllib.parse
 from os import PathLike
 from pathlib import Path
+from typing import Tuple, Dict
 
+import cv2
+import openvino as ov
 from numpy import ndarray
 
 
@@ -209,7 +208,35 @@ class VideoPlayer:
 logo_img = cv2.imread(os.path.join(os.path.dirname(__file__), "openvino-logo.png"), cv2.IMREAD_UNCHANGED)
 
 
-def draw_ov_watermark(frame: ndarray, alpha: float = 0.35, size: float = 0.15) -> None:
+def available_devices() -> Dict[str, str]:
+    device_mapping = {"AUTO": "AUTO device"}
+
+    core = ov.Core()
+    for device in core.available_devices:
+        device_name = core.get_property(device, "FULL_DEVICE_NAME")
+        if "nvidia" not in device_name.lower():
+            device_mapping[device] = device_name
+
+    return device_mapping
+
+
+def draw_control_panel(frame: ndarray, device_mapping: Dict[str, str], include_precisions: bool = True, include_devices: bool = True) -> None:
+    h, w = frame.shape[:2]
+    line_space = 40
+    start_y = h - (include_devices * len(device_mapping) + include_precisions * 2 + 1) * line_space - 20
+    draw_text(frame, "Control panel. Press:", (10, start_y))
+    next_y = start_y + line_space
+    if include_precisions:
+        draw_text(frame, "f: FP16 model", (10, next_y))
+        draw_text(frame, "i: INT8 model", (10, next_y + line_space))
+        next_y += 2 * line_space
+    if include_devices:
+        for i, (device_name, device_info) in enumerate(device_mapping.items(), start=1):
+            draw_text(frame, f"{i}: {device_name} - {device_info}", (10, next_y))
+            next_y += line_space
+
+
+def draw_ov_watermark(frame: ndarray, alpha: float = 0.35, size: float = 0.2) -> None:
     scale = size * frame.shape[1] / logo_img.shape[1]
     watermark = cv2.resize(logo_img, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
 

@@ -19,7 +19,8 @@ system_configuration: >
 greet_the_user_prompt: >
   Please introduce yourself and greet the patient
 
-summarize_the_user_prompt: >
+extra_action_name: Summarize
+extra_action_prompt: >
   You are now required to summarize the patient's provided context and symptoms for the doctor's review.
   Strictly do not mention any personal data like age, name, gender, contact, non-health information etc. when summarizing.
   Summarize the health-related concerns mentioned by the patient in this conversation or in the provided context.

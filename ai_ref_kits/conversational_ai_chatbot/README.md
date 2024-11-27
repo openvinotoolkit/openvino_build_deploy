@@ -17,7 +17,7 @@ This kit uses the following technology stack:
 - [OpenVINO toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([Docs](https://docs.openvino.ai/))
 - [Meta’s Llama 3.2](https://llama.meta.com/llama3/)
 - [OpenAI Whisper](https://openai.com/index/whisper/)
-- [Microsoft SpeechT5](https://github.com/microsoft/SpeechT5)
+- [MeloTTS](https://github.com/myshell-ai/MeloTTS/tree/main)
 - [Gradio interface](https://www.gradio.app/docs/gradio/chatinterface)
 
 For other Intel AI kits, see the [Edge AI Reference Kits repository](/).
@@ -104,12 +104,20 @@ This activates the virtual environment and changes your shell's prompt to indica
 
 ### Install the Packages
 
-To install the required packages, run the following commands:
+MeloTTS is a high-quality multilingual text-to-speech library by MIT and MyShell.ai. However, the installation of this model's dependencies needs to separated from the rest of the dependency installation process, due to some potential conflict issues. Details of this model could be found [here](https://github.com/myshell-ai/MeloTTS). Using the following command to install MeloTTS locally.
 
 ```shell
 python -m pip install --upgrade pip 
+pip install git+https://github.com/myshell-ai/MeloTTS.git@5b538481e24e0d578955be32a95d88fcbde26dc8 --no-deps
+python -m unidic download
+```
+
+To install the other packages, run the following commands:
+
+```shell 
 pip install -r requirements.txt
 ```
+
 ## Get Access to Llama
 
 _NOTE: If you already have access to the Llama model weights, you can proceed to the authentication step, which is mandatory to convert the Llama model._
@@ -161,7 +169,7 @@ python convert_and_optimize_chat.py --chat_model_type llama3.2-3B --embedding_mo
 
 ### Step 3. Text-to-Speech (TTS) Model Conversion
 
-The text-to-speech (TTS) model converts the chatbot's text responses to spoken words, which enables voice output. The application uses Microsoft's SpeechT5 model for TTS. The TTS model and vocoder don’t require conversion. They are compiled at runtime using ``torch.compile`` with the OpenVINO backend.
+The text-to-speech (TTS) model converts the chatbot's text responses to spoken words, which enables voice output. The application uses MeloTTS model for TTS. The TTS model doesn't require conversion. They are compiled at runtime using ``torch.compile`` with the OpenVINO backend.
 
 After you run the conversion scripts, you can run app.py to launch the application.
 
@@ -173,9 +181,6 @@ _NOTE: This application requires more than 16GB of memory because the models are
 
 For the python script, you must include the following model directory arguments.
 
-- `--personality path/to/personality.yaml`: The path to your custom personality YAML file (for example, `concierge_personality.yaml`).  
-This file defines the assistant's personality, including instructions, system configuration, and greeting prompts. You can create and specify your own custom personality file.
-
 - `--asr_model path/to/asr_model`: The path to your ASR (Automatic Speech Recognition) model directory, which uses `int8` precision (for example,  `model/distil-whisper-large-v3-int8`) for efficient speech recognition.
 
 - `--chat_model path/to/chat_model`: The path to your chat model directory (for example, `model/llama3.2-3B-INT4`) that drives conversation flow and response generation.
@@ -184,22 +189,23 @@ This file defines the assistant's personality, including instructions, system co
 
 - `--reranker_model path/to/reranker_model`: The path to your reranker model directory (for example, `model/bge-reranker-large-FP32`). This model reranks responses to ensure relevance and accuracy.
 
-- `--tts_model tts_model_name`: The Hugging Face name of your TTS (text-to-speech) model (for example, `microsoft/speecht5_tts`) for converting text responses to spoken words.
+- `--personality path/to/personality.yaml`: The path to your custom personality YAML file (for example, `concierge_personality.yaml`).  
+This file defines the assistant's personality, including instructions, system configuration, and greeting prompts. You can create and specify your own custom personality file.
 
-- `--vocoder_model vocoder_model_name`: The Hugging Face name of your vocoder model (for example, `microsoft/speecht5_hifigan`), which enhances the audio quality of the spoken responses.
+- `--example_pdf path/to/personality.yaml`: The path to your custom PDF file which is an additional context (for example, `Grand_Azure_Resort_Spa_Full_Guide.pdf`).  
+This file defines the knowledge of the resort in this concierge use case. You can use your own custom file to build a local knowledge base.
 
 - `--public`: Include this flag to make the Gradio interface publicly accessible over the network. Without this flag, the interface is only available on your local machine.
 
 To run the application, execute the `app.py` script with the following command. Make sure to include all necessary model directory arguments.
 ```shell
 python app.py \
-  --personality concierge_personality.yaml \
   --asr_model path/to/asr_model \
   --chat_model path/to/chat_model \
   --embedding_model path/to/embedding_model \
   --reranker_model path/to/reranker_model \
-  --tts_model tts_model_name \
-  --vocoder_model vocoder_model_name \
+  --personality concierge_personality.yaml \
+  --example_pdf Grand_Azure_Resort_Spa_Full_Guide.pdf \
   --public
 ```
 

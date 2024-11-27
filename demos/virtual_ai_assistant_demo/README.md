@@ -4,7 +4,7 @@ The demo works as a virtual AI assistant. The default personality is a healthcar
 
 The personality and behaviour can be easily changed with the config file (see Step 2).
 
-![](https://github.com/user-attachments/assets/d3ede3e5-d6af-46c7-8e00-250fc2137ed3)
+![](https://github.com/user-attachments/assets/f1ca6a23-0a5d-4a7d-94d4-89d0ef2b68ea)
 
 Here are the steps involved in this demo:
 
@@ -20,7 +20,7 @@ Now, let's dive into the steps starting with installing Python.
 
 ## Step 0: Install Python and prerequisites 
 
-This project requires Python 3.8 or higher and a few libraries. If you don't have Python installed on your machine, go to https://www.python.org/downloads/ and download the latest version for your operating system. Follow the prompts to install Python, making sure to check the option to add Python to your PATH environment variable.
+This project requires Python 3.9 or higher and a few libraries. If you don't have Python installed on your machine, go to https://www.python.org/downloads/ and download the latest version for your operating system. Follow the prompts to install Python, making sure to check the option to add Python to your PATH environment variable.
 
 Install libraries and tools:
 
@@ -122,20 +122,21 @@ Set Up a Hugging Face Account: If you don't have one, create a [Hugging Face acc
 Authenticate with Meta AI: Go to the [LlaMA model](https://huggingface.co/meta-llama) (v2 or v3) page on Hugging Face. To authenticate, enter the same email address you used for the Meta AI website. After authentication, you'll gain access to the model.
 
 To use the model, authenticate using the Hugging Face CLI:
+
 ```
 huggingface-cli login
 ```
+
 When prompted to add the token as a git credential, respond with 'n'. This step ensures that you are logged into the Hugging Face API and ready to download the model.
 
 Now, you're ready to download and optimize the models required to run the application.
 
-
-
-To run the application, use the following command. The application will start downloading Llama 3, and Distil-Whisper by default. 
+To run the application, use the following command. The application will start downloading Llama 3 by default. 
 
 ```shell
 python main.py --hf_token [replace-with-your-token]
 ```
+
 It will take up to an hour (depending on your internet speed) for the first time running this application due to the large downloads and conversion of the models. 
 Once the models are cached, the subsequent executions will be much faster.
 
@@ -145,10 +146,10 @@ To change the personality and behaviour by providing a new YAML config file:
 python main.py --personality use_your_personality.yaml
 ```
 
-You can also change chat, asr or embedding model:
+You can also change chat, or embedding model:
 
 ```shell
-python main.py --asr_model distil-whisper/distil-large-v2 --chat_model OpenVINO/Phi-3-medium-4k-instruct-int4-ov --embedding_model BAAI/bge-large-en-v1.5
+python main.py --chat_model OpenVINO/Phi-3-medium-4k-instruct-int4-ov --embedding_model BAAI/bge-large-en-v1.5
 ```
 
 Running with `--public` will allow you to access from any computer:
