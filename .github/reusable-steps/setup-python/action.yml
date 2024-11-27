@@ -27,3 +27,7 @@ runs:
       shell: bash
       run: |
         pip list
+    - name: Login to HF
+      shell: bash
+      run: |
+        huggingface-cli login --token ${{ secrets.HF_TOKEN }}
