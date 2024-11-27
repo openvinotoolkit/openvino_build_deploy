@@ -5,10 +5,12 @@ runs:
   steps:
     - name: Install coreutils
       if: runner.os == 'macOS'
+      shell: bash
       run: |
         brew install coreutils
     - name: Install virtual display
       if: runner.os == 'Linux'
+      shell: bash
       run: |
         sudo apt-get update
         sudo apt-get install -y xvfb
