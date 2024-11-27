@@ -1,0 +1,29 @@
+name: Python setup
+
+inputs:
+  python:
+    required: true
+  project:
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Download sample video file
+      shell: bash
+      run: |
+        cd ${{ inputs.project }}
+        curl -L -o sample_video.mp4 https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4
+    - name: Set up Python ${{ inputs.python }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python }}
+    - name: Install dependencies
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r ${{ inputs.project }}/requirements.txt
+    - name: List dependencies
+      shell: bash
+      run: |
+        pip list
