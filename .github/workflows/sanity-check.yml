@@ -174,7 +174,7 @@ jobs:
           cd ${{ matrix.subproject }}
           # linux requires a virtual display
           if [ "${{ runner.os }}" == "Linux" ]; then
-            xvfb-run npm start
+            timeout 1 xvfb-run npm start
           else 
-            npm start
+            timeout 1 npm start
           fi
