@@ -5,20 +5,25 @@ import time
 from pathlib import Path
 from typing import List, Optional, Set
 
+import faiss
 import fitz
 import gradio as gr
 import numpy as np
 import openvino as ov
 import yaml
-from llama_index.core import Document, VectorStoreIndex, Settings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from llama_index.core import Document, VectorStoreIndex, Settings, StorageContext
 from llama_index.core.chat_engine import SimpleChatEngine
 from llama_index.core.chat_engine.types import BaseChatEngine, ChatMode
 from llama_index.core.memory import ChatMemoryBuffer
+from llama_index.core.node_parser import LangchainNodeParser
 from llama_index.embeddings.huggingface_openvino import OpenVINOEmbedding
 from llama_index.llms.openvino import OpenVINOLLM
+from llama_index.postprocessor.openvino_rerank import OpenVINORerank
+from llama_index.vector_stores.faiss import FaissVectorStore
 from openvino.runtime import opset10 as ops
 from openvino.runtime import passes
-from optimum.intel import OVModelForCausalLM, OVModelForFeatureExtraction, OVWeightQuantizationConfig, OVConfig, OVQuantizer
+from optimum.intel import OVModelForCausalLM, OVModelForFeatureExtraction, OVWeightQuantizationConfig, OVConfig, OVQuantizer, OVModelForSequenceClassification
 from transformers import AutoTokenizer
 
 # Global variables initialization
@@ -28,6 +33,7 @@ inference_lock = threading.Lock()
 # Initialize Model variables
 ov_llm: Optional[OpenVINOLLM] = None
 ov_embedding: Optional[OpenVINOEmbedding] = None
+ov_reranker: Optional[OpenVINORerank] = None
 ov_chat_engine: Optional[BaseChatEngine] = None
 
 chatbot_config = {}
@@ -99,7 +105,7 @@ def load_embedding_model(model_name: str) -> OpenVINOEmbedding:
     model_path = MODEL_DIR / model_name
 
     if not model_path.exists():
-        embedding_model = OVModelForFeatureExtraction.from_pretrained(model_name, export=True)
+        embedding_model = OVModelForFeatureExtraction.from_pretrained(model_name, export=True, compile=False)
         optimize_model_for_npu(embedding_model)
         embedding_model.save_pretrained(model_path)
         embedding_tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -109,8 +115,20 @@ def load_embedding_model(model_name: str) -> OpenVINOEmbedding:
     return OpenVINOEmbedding(str(model_path), device=device, embed_batch_size=1, model_kwargs={"dynamic_shapes": False})
 
 
-def load_chat_models(chat_model_name: str, embedding_model_name: str, personality_file_path: Path, auth_token: str = None) -> None:
-    global ov_llm, ov_chat_engine, ov_embedding, chatbot_config
+def load_reranker_model(model_name: str) -> OpenVINORerank:
+    model_path = MODEL_DIR / model_name
+
+    if not model_path.exists():
+        reranker_model = OVModelForSequenceClassification.from_pretrained(model_name, export=True, compile=False)
+        reranker_model.save_pretrained(model_path)
+        reranker_tokenizer = AutoTokenizer.from_pretrained(model_name)
+        reranker_tokenizer.save_pretrained(model_path)
+
+    return OpenVINORerank(model_id_or_path=str(model_path), device="CPU", top_n=3)
+
+
+def load_chat_models(chat_model_name: str, embedding_model_name: str, reranker_model_name: str, personality_file_path: Path, auth_token: str = None) -> None:
+    global ov_llm, ov_chat_engine, ov_embedding, chatbot_config, ov_reranker
 
     with open(personality_file_path) as f:
         chatbot_config = yaml.safe_load(f)
@@ -119,6 +137,8 @@ def load_chat_models(chat_model_name: str, embedding_model_name: str, personalit
     log.info(f"Running {embedding_model_name} on {ov_embedding._model.request.get_property('EXECUTION_DEVICES')}")
     ov_llm = load_chat_model(chat_model_name, auth_token)
     log.info(f"Running {chat_model_name} on {','.join(ov_llm._model.request.get_compiled_model().get_property('EXECUTION_DEVICES'))}")
+    ov_reranker = load_reranker_model(reranker_model_name)
+    log.info(f"Running {reranker_model_name} on {','.join(ov_reranker._model.request.get_property('EXECUTION_DEVICES'))}")
 
     ov_chat_engine = SimpleChatEngine.from_defaults(llm=ov_llm, system_prompt=chatbot_config["system_configuration"],
                                                     memory=ChatMemoryBuffer.from_defaults())
@@ -161,10 +181,22 @@ def load_context(file_paths: List[str]) -> None:
         return
 
     documents = load_files(file_paths)
+
+    # a splitter to divide document into chunks
+    splitter = LangchainNodeParser(RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100))
+
+    dim = ov_embedding._model.request.outputs[0].get_partial_shape()[2].get_length()
+    # a memory database to store chunks
+    faiss_index = faiss.IndexFlatL2(dim)
+    vector_store = FaissVectorStore(faiss_index=faiss_index)
+    storage_context = StorageContext.from_defaults(vector_store=vector_store)
+
+    # set embedding model
     Settings.embed_model = ov_embedding
-    index = VectorStoreIndex.from_documents(documents)
+    index = VectorStoreIndex.from_documents(documents, storage_context, transformations=[splitter])
+    # create a RAG pipeline
     ov_chat_engine = index.as_chat_engine(llm=ov_llm, chat_mode=ChatMode.CONTEXT, system_prompt=chatbot_config["system_configuration"],
-                                          memory=memory)
+                                          memory=memory, node_postprocessors=[ov_reranker])
 
 
 def generate_initial_greeting() -> str:
@@ -177,6 +209,7 @@ def chat(history: List[List[str]]) -> List[List[str]]:
     with inference_lock:
         start_time = time.time()
 
+        chat_streamer = ov_chat_engine.chat(history[-1][0])
         chat_streamer = ov_chat_engine.stream_chat(history[-1][0]).response_gen
         for partial_text in chat_streamer:
             history[-1][1] += partial_text
@@ -250,12 +283,12 @@ def create_UI(initial_message: str, action_name: str) -> gr.Blocks:
         return demo
 
 
-def run(chat_model_name: str, embedding_model_name: str, personality_file_path: Path, hf_token: str = None, public_interface: bool = False) -> None:
+def run(chat_model_name: str, embedding_model_name: str, reranker_model_name: str, personality_file_path: Path, hf_token: str = None, public_interface: bool = False) -> None:
     # set up logging
     log.getLogger().setLevel(log.INFO)
 
     # load chat models
-    load_chat_models(chat_model_name, embedding_model_name, personality_file_path, hf_token)
+    load_chat_models(chat_model_name, embedding_model_name, reranker_model_name, personality_file_path, hf_token)
 
     # get initial greeting
     initial_message = generate_initial_greeting()
@@ -270,9 +303,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--chat_model", type=str, default="meta-llama/Llama-3.2-3B-Instruct", help="Path/name of the chat model")
     parser.add_argument("--embedding_model", type=str, default="BAAI/bge-small-en-v1.5", help="Path/name of the model for embeddings")
+    parser.add_argument("--reranker_model", type=str, default="BAAI/bge-reranker-large", help="Path/name of the reranker model")
     parser.add_argument("--personality", type=str, default="healthcare_personality.yaml", help="Path to the YAML file with chatbot personality")
     parser.add_argument("--hf_token", type=str, help="HuggingFace access token to get Llama3")
     parser.add_argument("--public", default=False, action="store_true", help="Whether interface should be available publicly")
 
     args = parser.parse_args()
-    run(args.chat_model, args.embedding_model, Path(args.personality), args.hf_token, args.public)
+    run(args.chat_model, args.embedding_model, args.reranker_model, Path(args.personality), args.hf_token, args.public)

@@ -30,7 +30,7 @@ The demo counts people standing in front of the webcam, presenting differences i
 
 | [People Counter](people_counter_demo) |                                                            |
 |---------------------------------------|------------------------------------------------------------|
-| Related AI concepts                   | object detection, object counting, YOLOv8                  |
+| Related AI concepts                   | object detection, object counting, YOLOv11, YOLOv8         |
 | Platforms                             | Client (CPU, GPU, NPU), Edge (CPU)                         |
 | Owner                                 | [@adrianboguszewski](https://github.com/adrianboguszewski) |
 
@@ -40,10 +40,10 @@ The demo works as a virtual AI assistant. The default personality is a healthcar
 
 [![image](https://github.com/user-attachments/assets/f1ca6a23-0a5d-4a7d-94d4-89d0ef2b68ea)](virtual_ai_assistant_demo)
 
-| [Virtual AI Assistant](virtual_ai_assistant_demo) |                                                        |
-|---------------------------------------------------|--------------------------------------------------------|
-| Related AI concepts                               | LLM, RAG, GenAI, Llama3                      |
-| Platforms                                         | Client (CPU, GPU, NPU), Cloud (CPU, GPU)               |
+| [Virtual AI Assistant](virtual_ai_assistant_demo) |                                                            |
+|---------------------------------------------------|------------------------------------------------------------|
+| Related AI concepts                               | LLM, RAG, GenAI, Llama3, LLamaIndex                        |
+| Platforms                                         | Client (CPU, GPU, NPU), Cloud (CPU, GPU)                   |
 | Owner                                             | [@adrianboguszewski](https://github.com/adrianboguszewski) |
 
 ### 🔮 Hide Your Mess Behind

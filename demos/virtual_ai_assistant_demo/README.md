@@ -91,7 +91,7 @@ A typical YAML personality file has the following sections:
 
 ### Some tips for creating this YAML file: 
 
-The instructions provides an introduction to the assistant, along with the title and important notes for the user. It should be clear and concise, giving users context on how to interact with the assistant.
+The instructions provide an introduction to the assistant, along with the title and important notes for the user. It should be clear and concise, giving users context on how to interact with the assistant.
 
 ```yaml
 instructions: | 

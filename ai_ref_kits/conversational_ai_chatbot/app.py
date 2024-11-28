@@ -222,7 +222,7 @@ def load_context(file_path: Path) -> None:
     """
     global ov_chat_engine
 
-    # limit chat history to 3000 tokens
+    # limit chat history
     memory = ChatMemoryBuffer.from_defaults()
 
     # when context removed, no longer RAG pipeline is needed
