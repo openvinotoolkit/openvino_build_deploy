@@ -147,7 +147,8 @@ def get_annotators(json_path: str, resolution_wh: Tuple[int, int], colorful: boo
     return zones, zone_annotators, box_annotators, masks_annotators
 
 
-def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str, people_limit: int = 3, model_name: str = "", colorful: bool = False, last_frames: int = 50) -> None:
+def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str, people_limit: int = 3, model_name: str = "",
+        flip: bool = True, colorful: bool = False, last_frames: int = 50) -> None:
     # set up logging
     log.getLogger().setLevel(log.INFO)
 
@@ -171,7 +172,7 @@ def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str,
     # initialize video player to deliver frames
     if isinstance(video_path, str) and video_path.isnumeric():
         video_path = int(video_path)
-    player = utils.VideoPlayer(video_path, size=(1920, 1080), fps=60, flip=True)
+    player = utils.VideoPlayer(video_path, size=(1920, 1080), fps=60, flip=flip)
 
     # get zones, and zone and box annotators for zones
     zones, zone_annotators, box_annotators, masks_annotators = get_annotators(json_path=zones_config_file, resolution_wh=(player.width, player.height), colorful=colorful)
@@ -284,8 +285,9 @@ if __name__ == '__main__':
     parser.add_argument("--model_dir", type=str, default="model", help="Directory to place the model in")
     parser.add_argument('--zones_config_file', type=str, default="zones.json", help="Path to the zone config file (json)")
     parser.add_argument('--people_limit', type=int, default=3, help="The maximum number of people in the area")
+    parser.add_argument("--flip", type=bool, default=True, help="Mirror input video")
     parser.add_argument('--colorful', action="store_true", help="If people should be annotated with random colors")
 
     args = parser.parse_args()
     model_paths = convert(args.model_name, Path(args.model_dir))
-    run(args.stream, model_paths, args.zones_config_file, args.people_limit, args.model_name, args.colorful)
+    run(args.stream, model_paths, args.zones_config_file, args.people_limit, args.model_name, args.flip, args.colorful)
