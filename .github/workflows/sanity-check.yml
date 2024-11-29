@@ -23,7 +23,6 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
       - name: Determine subprojects to test
-        id: determine-updates
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             # Get unique subproject directories from changed files in PR
@@ -53,11 +52,10 @@ jobs:
             fi
           done
 
-          notebook_json=$(printf '%s\n' "${notebook[@]}" | jq -R -s -c 'split("\n")[:-1]')
-          gradio_json=$(printf '%s\n' "${gradio[@]}" | jq -R -s -c 'split("\n")[:-1]')
-          webcam_json=$(printf '%s\n' "${webcam[@]}" | jq -R -s -c 'split("\n")[:-1]')
-          js_json=$(printf '%s\n' "${js[@]}" | jq -R -s -c 'split("\n")[:-1]')
-
+          notebook_json=$(printf '%s\n' "${notebook[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          gradio_json=$(printf '%s\n' "${gradio[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          webcam_json=$(printf '%s\n' "${webcam[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          js_json=$(printf '%s\n' "${js[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
 
           echo "notebook=$notebook_json" >> $GITHUB_OUTPUT
           echo "gradio=$gradio_json" >> $GITHUB_OUTPUT
