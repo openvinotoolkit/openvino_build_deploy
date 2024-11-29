@@ -26,7 +26,7 @@ jobs:
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             # Get unique subproject directories from changed files in PR
-            subproject_dirs=$(git diff --name-only origin/main...HEAD | grep '^demos/' | xargs -I{} dirname "{}" | sort -u)
+            subproject_dirs=$(git diff --name-only origin/master...HEAD | grep '^demos/' | xargs -I{} dirname "{}" | sort -u)
           else
             # For scheduled runs, process all subprojects
             subproject_dirs=$(find demos -type d -mindepth 1 -maxdepth 1 ! -name utils)
