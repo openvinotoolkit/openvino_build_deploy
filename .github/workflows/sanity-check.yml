@@ -1,0 +1,179 @@
+name: Sanity check
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  find-subprojects:
+    runs-on: ubuntu-latest
+    outputs:
+      notebook: ${{ steps.categorize-subprojects.outputs.notebook }}
+      gradio: ${{ steps.categorize-subprojects.outputs.gradio }}
+      webcam: ${{ steps.categorize-subprojects.outputs.webcam }}
+      js: ${{ steps.categorize-subprojects.outputs.js }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Determine subprojects to test
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            # Get unique subproject directories from changed files in PR
+            subproject_dirs=$(git diff --name-only origin/master..HEAD | grep '^demos/' | xargs -I{} dirname "{}" | sort -u)
+          else
+            # For scheduled runs, process all subprojects
+            subproject_dirs=$(find demos -type d -mindepth 1 -maxdepth 1 ! -name utils)
+          fi
+          echo "subproject_dirs=$subproject_dirs" >> $GITHUB_ENV
+      - name: Categorize subprojects
+        id: categorize-subprojects
+        run: |
+          notebook=()
+          gradio=()
+          webcam=()
+          js=()
+
+          for dir in ${{ env.subproject_dirs }}; do
+            if [ -f "$dir/package.json" ]; then
+              js+=("$dir")
+            elif [ -f "$dir/main.ipynb" ]; then
+              notebook+=("$dir")
+            elif grep -q "gradio" "$dir/requirements.txt"; then
+              gradio+=("$dir")
+            elif grep -q -- "--stream" "$dir/main.py"; then
+              webcam+=("$dir")
+            fi
+          done
+
+          notebook_json=$(printf '%s\n' "${notebook[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          gradio_json=$(printf '%s\n' "${gradio[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          webcam_json=$(printf '%s\n' "${webcam[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          js_json=$(printf '%s\n' "${js[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+
+          echo "notebook=$notebook_json" >> $GITHUB_OUTPUT
+          echo "gradio=$gradio_json" >> $GITHUB_OUTPUT
+          echo "webcam=$webcam_json" >> $GITHUB_OUTPUT
+          echo "js=$js_json" >> $GITHUB_OUTPUT
+      - name: Print subprojects to test
+        run: |
+          echo "Notebook subprojects: ${{ steps.categorize-subprojects.outputs.notebook }}"
+          echo "Gradio subprojects: ${{ steps.categorize-subprojects.outputs.gradio }}"
+          echo "Webcam subprojects: ${{ steps.categorize-subprojects.outputs.webcam }}"
+          echo "JS subprojects: ${{ steps.categorize-subprojects.outputs.js }}"
+          
+  notebook:
+    needs: find-subprojects
+    if: ${{ needs.find-subprojects.outputs.notebook != '[]' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: [3.9, 3.12]
+        subproject: ${{ fromJson(needs.find-subprojects.outputs.notebook) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: ./.github/reusable-steps/setup-python
+        with:
+          python: ${{ matrix.python }}
+          project: ${{ matrix.subproject }}
+      - uses: ./.github/reusable-steps/timeouted-action
+        name: Run Notebook
+        with:
+          command: jupyter nbconvert --to notebook --execute main.ipynb
+          project: ${{ matrix.subproject }}
+
+  gradio:
+    needs: find-subprojects
+    if: ${{ needs.find-subprojects.outputs.gradio != '[]' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: [3.9, 3.12]
+        subproject: ${{ fromJson(needs.find-subprojects.outputs.gradio) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/reusable-steps/setup-os
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: ./.github/reusable-steps/setup-python
+        with:
+          python: ${{ matrix.python }}
+          project: ${{ matrix.subproject }}
+      - name: Login to HF
+        shell: bash
+        run: |
+          huggingface-cli login --token ${{ secrets.HF_TOKEN }}
+      - uses: ./.github/reusable-steps/timeouted-action
+        name: Run Gradio App
+        with:
+          command: python main.py
+          project: ${{ matrix.subproject }}
+          timeout: 30m
+
+  webcam:
+    needs: find-subprojects
+    if: ${{ needs.find-subprojects.outputs.webcam != '[]' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: [3.9, 3.12]
+        subproject: ${{ fromJson(needs.find-subprojects.outputs.webcam) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/reusable-steps/setup-os
+      - uses: ./.github/reusable-steps/setup-python
+        with:
+          python: ${{ matrix.python }}
+          project: ${{ matrix.subproject }}
+      - uses: ./.github/reusable-steps/timeouted-action
+        name: Run Webcam Demo
+        with:
+          command: python main.py --stream sample_video.mp4
+          project: ${{ matrix.subproject }}
+
+  js:
+    needs: find-subprojects
+    if: ${{ needs.find-subprojects.outputs.js != '[]' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        subproject: ${{ fromJson(needs.find-subprojects.outputs.js) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/reusable-steps/setup-os
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: |
+          cd ${{ matrix.subproject }}
+          npm install
+      - uses: ./.github/reusable-steps/timeouted-action
+        name: Run JS Project
+        with:
+          command: npm start
+          project: ${{ matrix.subproject }}
+          timeout: 1m

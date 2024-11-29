@@ -4,13 +4,13 @@ import os
 import sys
 import time
 from pathlib import Path
+from typing import Tuple
 
 import cv2
 import numpy as np
 import openvino as ov
-from numpy.lib.stride_tricks import as_strided
-
-from decoder import OpenPoseDecoder
+from ultralytics import YOLO
+from ultralytics.engine.results import Results
 
 SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "utils")
 sys.path.append(os.path.dirname(SCRIPT_DIR))
@@ -18,62 +18,34 @@ sys.path.append(os.path.dirname(SCRIPT_DIR))
 from utils import demo_utils as utils
 
 
-# 2D pooling in numpy (from: https://stackoverflow.com/a/54966908/1624463)
-def pool2d(A, kernel_size, stride, padding, pool_mode="max"):
-    """
-    2D Pooling
+def export_model(model_name: str) -> Path:
+    model_dir = Path("model")
+    model_path = model_dir / f"{model_name}.pt"
+    # create a YOLO pose estimation model
+    yolo_model = YOLO(model_path)
 
-    Parameters:
-        A: input 2D array
-        kernel_size: int, the size of the window
-        stride: int, the stride of the window
-        padding: int, implicit zero paddings on both sides of the input
-        pool_mode: string, 'max' or 'avg'
-    """
-    # Padding
-    A = np.pad(A, padding, mode="constant")
-
-    # Window view of A
-    output_shape = (
-        (A.shape[0] - kernel_size) // stride + 1,
-        (A.shape[1] - kernel_size) // stride + 1,
-    )
-    kernel_size = (kernel_size, kernel_size)
-    A_w = as_strided(
-        A,
-        shape=output_shape + kernel_size,
-        strides=(stride * A.strides[0], stride * A.strides[1]) + A.strides
-    )
-    A_w = A_w.reshape(-1, *kernel_size)
-
-    # Return the result of pooling.
-    if pool_mode == "max":
-        return A_w.max(axis=(1, 2)).reshape(output_shape)
-    elif pool_mode == "avg":
-        return A_w.mean(axis=(1, 2)).reshape(output_shape)
+    ov_model_path = model_dir / f"{model_name}_int8_openvino_model"
+    # export the model to OpenVINO format (INT8)
+    if not ov_model_path.exists():
+        yolo_model.export(format="openvino", dynamic=False, int8=True)
+    return ov_model_path / f"{model_name}.xml"
 
 
-# non maximum suppression
-def heatmap_nms(heatmaps, pooled_heatmaps):
-    return heatmaps * (heatmaps == pooled_heatmaps)
+def load_and_compile_model(model_path: Path, device: str) -> YOLO:
+    core = ov.Core()
+    model = core.read_model(model_path)
+    compiled_model = core.compile_model(model=model, device_name=device, config={"PERFORMANCE_HINT": "LATENCY"})
 
+    pose_model = YOLO(model_path.parent, task="pose")
 
-# Get poses from results.
-def process_results(img, pafs, heatmaps, model, decoder):
-    # This processing comes from
-    # https://github.com/openvinotoolkit/open_model_zoo/blob/master/demos/common/python/models/open_pose.py
-    pooled_heatmaps = np.array(
-        [[pool2d(h, kernel_size=3, stride=1, padding=1, pool_mode="max") for h in heatmaps[0]]]
-    )
-    nms_heatmaps = heatmap_nms(heatmaps, pooled_heatmaps)
+    if pose_model.predictor is None:
+        custom = {"conf": 0.25, "batch": 1, "save": False, "mode": "predict"}  # method defaults
+        pose_model.predictor = pose_model._smart_load("predictor")(overrides={**pose_model.overrides, **custom}, _callbacks=pose_model.callbacks)
+        pose_model.predictor.setup_model(model=pose_model.model)
 
-    # Decode poses.
-    poses, scores = decoder(heatmaps, nms_heatmaps, pafs)
-    output_shape = list(model.output(index=0).partial_shape)
-    output_scale = img.shape[1] / output_shape[3].get_length(), img.shape[0] / output_shape[2].get_length()
-    # Multiply coordinates by a scaling factor.
-    poses[:, :, :2] *= output_scale
-    return poses, scores
+    pose_model.predictor.model.ov_compiled_model = compiled_model
+
+    return pose_model
 
 
 colors = ((255, 0, 0), (255, 0, 255), (170, 0, 255), (255, 0, 85), (255, 0, 170), (85, 255, 0),
@@ -84,58 +56,33 @@ default_skeleton = ((15, 13), (13, 11), (16, 14), (14, 12), (11, 12), (5, 11), (
                     (6, 8), (7, 9), (8, 10), (1, 2), (0, 1), (0, 2), (1, 3), (2, 4), (3, 5), (4, 6))
 
 
-def draw_poses(img, poses, point_score_threshold, skeleton=default_skeleton):
-    if poses.size == 0:
+def draw_poses(img: np.ndarray, detections: Results, point_score_threshold: float = 0.5, skeleton: Tuple[Tuple[int, int]] = default_skeleton):
+    poses = detections.keypoints.xy.numpy()
+    scores = detections.keypoints.conf.numpy()
+    if len(poses) == 0:
         return img
 
     img_limbs = np.copy(img)
-    for pose in poses:
-        points = pose[:, :2].astype(np.int32)
-        points_scores = pose[:, 2]
+    for pose, score in zip(poses, scores):
+        points = pose.astype(np.int32)
         # Draw joints.
-        for i, (p, v) in enumerate(zip(points, points_scores)):
+        for i, (p, v) in enumerate(zip(points, score)):
             if v > point_score_threshold:
                 cv2.circle(img, tuple(p), 1, colors[i], 2)
         # Draw limbs.
         for i, j in skeleton:
-            if points_scores[i] > point_score_threshold and points_scores[j] > point_score_threshold:
+            if score[i] > point_score_threshold and score[j] > point_score_threshold:
                 cv2.line(img_limbs, tuple(points[i]), tuple(points[j]), color=colors[j], thickness=4)
     cv2.addWeighted(img, 0.4, img_limbs, 0.6, 0, dst=img)
     return img
 
 
-def load_and_compile_model(model_name, precision, device):
-    base_model_dir = Path("model")
+def run_pose_estimation(source: str, model_name: str, device: str, flip: bool = True) -> None:
+    device_mapping = utils.available_devices()
 
-    model_path = base_model_dir / "intel" / model_name / precision / f"{model_name}.xml"
+    model_path = export_model(model_name)
+    pose_model = load_and_compile_model(model_path, device)
 
-    if not model_path.exists():
-        model_url_dir = f"https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/3/{model_name}/{precision}/"
-        utils.download_file(model_url_dir + model_name + '.xml', model_path.name, model_path.parent)
-        utils.download_file(model_url_dir + model_name + '.bin', model_path.with_suffix('.bin').name, model_path.parent)
-
-    # Initialize OpenVINO Runtime
-    core = ov.Core()
-    # Read the network from a file.
-    model = core.read_model(model_path)
-    # Let the AUTO device decide where to load the model (you can use CPU, GPU as well).
-    compiled_model = core.compile_model(model=model, device_name=device, config={"PERFORMANCE_HINT": "LATENCY"})
-    return compiled_model
-
-
-def run_pose_estimation(source, model_name, model_precision, device, flip):
-    decoder = OpenPoseDecoder()
-
-    compiled_model = load_and_compile_model(model_name, model_precision, device)
-
-    # Get the input and output names of nodes.
-    input_layer = compiled_model.input(0)
-
-    # Get the input size.
-    height, width = list(input_layer.shape)[2:]
-
-    pafs_output_key = compiled_model.output("Mconv7_stage2_L1")
-    heatmaps_output_key = compiled_model.output("Mconv7_stage2_L2")
     player = None
     try:
         if isinstance(source, str) and source.isnumeric():
@@ -157,28 +104,17 @@ def run_pose_estimation(source, model_name, model_precision, device, flip):
                 print("Source ended")
                 break
 
-            # Resize the image and change dims to fit neural network input.
-            # (see https://github.com/openvinotoolkit/open_model_zoo/tree/master/models/intel/human-pose-estimation-0001)
-            input_img = cv2.resize(frame, (width, height), interpolation=cv2.INTER_AREA)
-            # Create a batch of images (size = 1).
-            input_img = input_img.transpose((2,0,1))[np.newaxis, ...]
-
             # Measure processing time.
             start_time = time.time()
             # Get results.
-            results = compiled_model([input_img])
+            results = pose_model(frame, verbose=False)[0]
             stop_time = time.time()
 
             # Draw watermark
             utils.draw_ov_watermark(frame)
 
-            pafs = results[pafs_output_key]
-            heatmaps = results[heatmaps_output_key]
-            # Get poses from network results.
-            poses, scores = process_results(frame, pafs, heatmaps, compiled_model, decoder)
-
             # Draw poses on a frame.
-            frame = draw_poses(frame, poses, 0.1)
+            frame = draw_poses(frame, results)
 
             processing_times.append(stop_time - start_time)
             # Use processing times from last 200 frames.
@@ -189,13 +125,23 @@ def run_pose_estimation(source, model_name, model_precision, device, flip):
             # mean processing time [ms]
             processing_time = np.mean(processing_times) * 1000
             fps = 1000 / processing_time
-            utils.draw_text(frame, f"Inference time: {processing_time:.1f}ms ({fps:.1f} FPS)", (20, 20))
+            utils.draw_text(frame, text=f"Currently running {model_name} (INT8) on {device}", point=(10, 10))
+            utils.draw_text(frame, f"Inference time: {processing_time:.1f}ms ({fps:.1f} FPS)", (10, 50))
 
             cv2.imshow(title, frame)
             key = cv2.waitKey(1)
-            # escape = 27
-            if key == 27:
+
+            # escape = 27 or 'q' to close the app
+            if key == 27 or key == ord('q'):
                 break
+
+            for i, dev in enumerate(device_mapping.keys()):
+                if key == ord('1') + i:
+                    del pose_model
+                    pose_model = load_and_compile_model(model_path, device)
+
+                    device = dev
+                    processing_times.clear()
     # ctrl-c
     except KeyboardInterrupt:
         print("Interrupted")
@@ -214,9 +160,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--stream', default="0", type=str, help="Path to a video file or the webcam number")
     parser.add_argument('--device', default="AUTO", type=str, help="Device to run inference on")
-    parser.add_argument("--model_name", type=str, default="human-pose-estimation-0001", help="Pose estimation model to be used")
-    parser.add_argument("--model_precision", type=str, default="FP16-INT8", choices=["FP16-INT8", "FP16", "FP32"], help="Pose estimation model precision")
+    parser.add_argument("--model_name", default="yolo11n-pose",  type=str, help="Model version to be converted",
+                        choices=["yolov8n-pose", "yolov8s-pose", "yolov8m-pose", "yolov8l-pose", "yolov8x-pose",
+                                 "yolo11n-pose", "yolo11s-pose", "yolo11m-pose", "yolo11l-pose", "yolo11x-pose"])
     parser.add_argument("--flip", type=bool, default=True, help="Mirror input video")
 
     args = parser.parse_args()
-    run_pose_estimation(args.stream, args.model_name, args.model_precision, args.device, args.flip)
+    run_pose_estimation(args.stream, args.model_name, args.device, args.flip)

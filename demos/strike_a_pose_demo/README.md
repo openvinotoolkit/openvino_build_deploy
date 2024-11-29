@@ -16,7 +16,7 @@ Now, let's dive into the steps starting with installing Python.
 
 ## Step 0
 
-This project requires Python 3.8 or higher and a few libraries. If you don't have Python installed on your machine, go to https://www.python.org/downloads/ and download the latest version for your operating system. Follow the prompts to install Python, making sure to check the option to add Python to your PATH environment variable.
+This project requires Python 3.9 or higher and a few libraries. If you don't have Python installed on your machine, go to https://www.python.org/downloads/ and download the latest version for your operating system. Follow the prompts to install Python, making sure to check the option to add Python to your PATH environment variable.
 
 Install libraries and tools:
 
@@ -80,8 +80,8 @@ To run the application, use the following command:
 python main.py --stream 0
 ```
 
-To change the model, precision or device use:
+To change the model or device use:
 
 ```shell
-python main.py --stream 0 --device AUTO --model_name human-pose-estimation-0001 --model_precision FP16-INT8
+python main.py --stream 0 --device AUTO --model_name yolo11n-pose
 ```

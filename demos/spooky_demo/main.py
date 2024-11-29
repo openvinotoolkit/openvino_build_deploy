@@ -196,22 +196,23 @@ def load_and_compile_model(model_name, precision, device):
     model = core.read_model(model_path)
     # Let the AUTO device decide where to load the model (you can use CPU, GPU as well).
     compiled_model = core.compile_model(model=model, device_name=device, config={"PERFORMANCE_HINT": "LATENCY"})
-    return compiled_model
+
+    input_layer = compiled_model.input(0)
+    pafs_output_key = compiled_model.output("Mconv7_stage2_L1")
+    heatmaps_output_key = compiled_model.output("Mconv7_stage2_L2")
+
+    return compiled_model, input_layer, pafs_output_key, heatmaps_output_key
 
 
 def run_demo(source, model_name, model_precision, device, flip):
+    device_mapping = utils.available_devices()
+
     decoder = OpenPoseDecoder()
-
-    compiled_model = load_and_compile_model(model_name, model_precision, device)
-
-    # Get the input and output names of nodes.
-    input_layer = compiled_model.input(0)
+    compiled_model, input_layer, pafs_output_key, heatmaps_output_key = load_and_compile_model(model_name, model_precision, device)
 
     # Get the input size.
     height, width = list(input_layer.shape)[2:]
 
-    pafs_output_key = compiled_model.output("Mconv7_stage2_L1")
-    heatmaps_output_key = compiled_model.output("Mconv7_stage2_L2")
     player = None
     try:
         if isinstance(source, str) and source.isnumeric():
@@ -265,13 +266,22 @@ def run_demo(source, model_name, model_precision, device, flip):
             # mean processing time [ms]
             processing_time = np.mean(processing_times) * 1000
             fps = 1000 / processing_time
-            utils.draw_text(frame, f"Inference time: {processing_time:.1f}ms ({fps:.1f} FPS)", (20, 20))
+            utils.draw_text(frame, text=f"Currently running models ({model_precision}) on {device}", point=(10, 10))
+            utils.draw_text(frame, f"Inference time: {processing_time:.1f}ms ({fps:.1f} FPS)", (10, 50))
 
             cv2.imshow(title, frame)
             key = cv2.waitKey(1)
-            # escape = 27
-            if key == 27:
+
+            # escape = 27 or 'q' to close the app
+            if key == 27 or key == ord('q'):
                 break
+
+            for i, dev in enumerate(device_mapping.keys()):
+                if key == ord('1') + i:
+                    del compiled_model
+                    compiled_model, input_layer, pafs_output_key, heatmaps_output_key = load_and_compile_model(model_name, model_precision, device)
+                    device = dev
+                    processing_times.clear()
     # ctrl-c
     except KeyboardInterrupt:
         print("Interrupted")
@@ -289,7 +299,7 @@ def run_demo(source, model_name, model_precision, device, flip):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--stream', default="0", type=str, help="Path to a video file or the webcam number")
-    parser.add_argument('--device', default="AUTO", type=str, help="Device to run inference on")
+    parser.add_argument('--device', default="AUTO", type=str, help="Device to start inference on")
     parser.add_argument("--model_name", type=str, default="human-pose-estimation-0001", help="Pose estimation model to be used")
     parser.add_argument("--model_precision", type=str, default="FP16-INT8", choices=["FP16-INT8", "FP16", "FP32"], help="Pose estimation model precision")
     parser.add_argument("--flip", type=bool, default=True, help="Mirror input video")

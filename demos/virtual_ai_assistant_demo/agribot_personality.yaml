@@ -15,7 +15,8 @@ greet_the_user_prompt: >
   Welcome them to the agricultural tech assistance session and ask how you can assist them with their farming technology needs.
   Ensure the greeting is professional and friendly, appropriate for a tech support role in the agriculture industry.
 
-summarize_the_user_prompt: >
+extra_action_name: Summarize
+extra_action_prompt: >
   You are now required to summarize the user’s technology-related inquiry for further analysis.
   Strictly do not mention any personal data like age, name, contact, etc. when summarizing.
   Summarize the agriculture technology concerns or inquiries mentioned by the user, focusing only on the provided details without adding assumptions or unrelated information.

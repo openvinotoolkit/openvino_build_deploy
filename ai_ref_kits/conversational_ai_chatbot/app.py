@@ -1,6 +1,5 @@
 import argparse
 import logging as log
-import os
 import threading
 import time
 from pathlib import Path
@@ -16,7 +15,6 @@ import openvino as ov
 import torch
 import yaml
 import nltk
-from datasets import load_dataset
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from llama_index.core import Document, VectorStoreIndex, Settings, StorageContext
 from llama_index.core.chat_engine import SimpleChatEngine
@@ -29,11 +27,11 @@ from llama_index.postprocessor.openvino_rerank import OpenVINORerank
 from llama_index.vector_stores.faiss import FaissVectorStore
 from optimum.intel import OVModelForSpeechSeq2Seq
 from transformers import AutoProcessor, TextIteratorStreamer
-from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
+from melo.api import TTS
 
 # Global variables initialization
 TARGET_AUDIO_SAMPLE_RATE = 16000
-SPEAKER_INDEX = 7306
+TARGET_AUDIO_SAMPLE_RATE_TTS = 44100
 
 MODEL_DIR = Path("model")
 inference_lock = threading.Lock()
@@ -45,10 +43,7 @@ ov_llm: Optional[OpenVINOLLM] = None
 ov_embedding: Optional[OpenVINOEmbedding] = None
 ov_reranker: Optional[OpenVINORerank] = None
 ov_chat_engine: Optional[BaseChatEngine] = None
-ov_tts_model: Optional[SpeechT5ForTextToSpeech] = None
-ov_tts_vocoder: Optional[SpeechT5HifiGan] = None
-tts_processor: Optional[SpeechT5Processor] = None
-speaker_embeddings: Optional[torch.Tensor] = None
+ov_tts_model: Optional[torch.Tensor] = None
 
 chatbot_config = {}
 
@@ -172,41 +167,22 @@ def load_rag_models(chat_model_dir: Path, embedding_model_dir: Path, reranker_mo
                                                     memory=ChatMemoryBuffer.from_defaults())
 
 
-def load_speaker_embeddings(speaker_index: int) -> torch.Tensor:
+def load_tts_model() -> None:
     """
-    Load embeddings for selected speaker
-
-    Params:
-        speaker_index: index in Matthijs/cmu-arctic-xvectors database (val subset)
-    Returns:
-        Speaker embeddings
+    Load text-to-speech model (MeloTTS) and assign it to a global variable
     """
-    embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation")
-    return torch.tensor(embeddings_dataset[speaker_index]["xvector"]).unsqueeze(0)
-
-
-def load_tts_model(model_dir: Path, vocoder_model_dir: Path) -> None:
-    """
-    Load text-to-speech model and assign it to a global variable
-
-    Params:
-        model_dir: dir with the tts model
-    """
-    global ov_tts_model, ov_tts_vocoder, tts_processor, speaker_embeddings
+    global ov_tts_model
 
     nltk.download('punkt_tab', quiet=True)
+    nltk.download('averaged_perceptron_tagger_eng')
 
-    tts_processor = SpeechT5Processor.from_pretrained(model_dir)
-    tts_model = SpeechT5ForTextToSpeech.from_pretrained(model_dir)
-    tts_vocoder = SpeechT5HifiGan.from_pretrained(vocoder_model_dir)
-    speaker_embeddings = load_speaker_embeddings(SPEAKER_INDEX)
+    # CPU is sufficient for real-time inference.
+    model = TTS(language='EN', device='cpu')
+    
+    # Compile the model with OpenVINO backend for accelerated inference
+    ov_tts_model = torch.compile(model, backend='openvino')
 
-    # Compile the TTS model and vocoder with OpenVINO
-    opts = {"device": "CPU", "config":{'PERFORMANCE_HINT': "LATENCY"}}
-    ov_tts_model = torch.compile(tts_model, backend="openvino", options=opts)
-    ov_tts_vocoder = torch.compile(tts_vocoder, backend="openvino", options=opts)
-
-    log.info(f"Running {type(ov_tts_model.base_model).__name__} on {ov_tts_model.device.__str__().upper()}")
+    log.info(f"Running {type(ov_tts_model).__name__} on {ov_tts_model.device.__str__().upper()}")
 
 
 def load_file(file_path: Path) -> Document:
@@ -246,7 +222,7 @@ def load_context(file_path: Path) -> None:
     """
     global ov_chat_engine
 
-    # limit chat history to 3000 tokens
+    # limit chat history
     memory = ChatMemoryBuffer.from_defaults()
 
     # when context removed, no longer RAG pipeline is needed
@@ -382,22 +358,13 @@ def synthesize(conversation: List[List[str]], audio: Tuple[int, np.ndarray]) -> 
     prompt = conversation[-1][1]
 
     start_time = time.time()
-
-    # Existing logic to synthesize speech
-    sentences = nltk.sent_tokenize(prompt)
-    audio_segments = []
-    for sentence in sentences:
-        inputs = tts_processor(text=sentence, return_tensors="pt")
-        with torch.no_grad():
-            interim_speech = ov_tts_model.generate_speech(inputs["input_ids"], speaker_embeddings, vocoder=ov_tts_vocoder)
-            audio_segments.append(interim_speech.numpy())
-
-    speech = np.concatenate(audio_segments, axis=0)
-
+    # English
+    speech = ov_tts_model.tts_to_file(prompt, ov_tts_model.hps.data.spk2id['EN-US'], output_path=None, speed=1.0)
     end_time = time.time()
+
     log.info(f"TTS model response time: {end_time - start_time:.2f} seconds")
 
-    return TARGET_AUDIO_SAMPLE_RATE, speech
+    return TARGET_AUDIO_SAMPLE_RATE_TTS, speech
 
 
 def create_UI(initial_message: str, example_pdf_path: Path) -> gr.Blocks:
@@ -413,15 +380,18 @@ def create_UI(initial_message: str, example_pdf_path: Path) -> gr.Blocks:
     with gr.Blocks(title="Adrishuo - the Conversational AI Chatbot") as demo:
         gr.Markdown(chatbot_config["instructions"])
         with gr.Row():
-            with gr.Column(scale=1):
-                file_uploader_ui = gr.File(label="Hotel guide", file_types=[".pdf", ".txt"], value=str(example_pdf_path))
-                input_audio_ui = gr.Audio(sources=["microphone"], label="Your voice input")
-                input_text_ui = gr.Textbox(label="Your text input")
-                submit_btn = gr.Button("Submit", variant="primary", interactive=False)
-            with gr.Column(scale=2):
+            file_uploader_ui = gr.File(label="Hotel guide", file_types=[".pdf", ".txt"], value=str(example_pdf_path), scale=1)
+            with gr.Column(scale=4):
                 chatbot_ui = gr.Chatbot(value=[[None, initial_message]], label="Chatbot")
-                output_audio_ui = gr.Audio(label="Chatbot voice response", autoplay=True)
-                clear_btn = gr.Button("Start over", variant="secondary")
+                with gr.Tab(label="Voice"):
+                    with gr.Row():
+                        input_audio_ui = gr.Audio(sources=["microphone"], label="Your voice input")
+                        output_audio_ui = gr.Audio(label="Chatbot voice response", autoplay=True)
+                with gr.Tab(label="Text"):
+                    input_text_ui = gr.Textbox(label="Your text input")
+                with gr.Row():
+                    clear_btn = gr.Button("Start over", variant="secondary")
+                    submit_btn = gr.Button("Submit", variant="primary", interactive=False)
 
         # events
         # block submit button when no audio or text input
@@ -448,7 +418,7 @@ def create_UI(initial_message: str, example_pdf_path: Path) -> gr.Blocks:
         return demo
 
 
-def run(asr_model_dir: Path, chat_model_dir: Path, tts_model_dir: Path, vocoder_model_dir: Path, embedding_model_dir: Path, reranker_model_dir: Path, personality_file_path: Path, example_pdf_path: Path, public_interface: bool = False) -> None:
+def run(asr_model_dir: Path, chat_model_dir: Path, embedding_model_dir: Path, reranker_model_dir: Path, personality_file_path: Path, example_pdf_path: Path, public_interface: bool = False) -> None:
     """
     Run the chatbot application
 
@@ -471,7 +441,7 @@ def run(asr_model_dir: Path, chat_model_dir: Path, tts_model_dir: Path, vocoder_
     # load chat models
     load_rag_models(chat_model_dir, embedding_model_dir, reranker_model_dir, personality_file_path)
     # load tts model
-    load_tts_model(tts_model_dir, vocoder_model_dir)
+    load_tts_model()
 
     if asr_model is None or ov_llm is None or ov_embedding is None:
         log.error("Required models are not loaded. Exiting...")
@@ -493,8 +463,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--asr_model", type=str, default="model/distil-whisper-large-v3-FP16", help="Path of the automatic speech recognition model directory")
     parser.add_argument("--chat_model", type=str, default="model/llama3.1-8B-INT4", help="Path to the chat model directory")
-    parser.add_argument("--tts_model", type=str, default="microsoft/speecht5_tts", help="Path to the tts model directory")
-    parser.add_argument("--vocoder_model", type=str, default="microsoft/speecht5_hifigan", help="Path to the vocoder model directory for tts")
     parser.add_argument("--embedding_model", type=str, default="model/bge-small-FP32", help="Path to the embedding model directory")
     parser.add_argument("--reranker_model", type=str, default="model/bge-reranker-large-FP32", help="Path to the reranker model directory")
     parser.add_argument("--personality", type=str, default="concierge_personality.yaml", help="Path to the YAML file with chatbot personality")
@@ -502,5 +470,5 @@ if __name__ == "__main__":
     parser.add_argument("--public", default=False, action="store_true", help="Whether interface should be available publicly")
 
     args = parser.parse_args()
-    run(Path(args.asr_model), Path(args.chat_model), args.tts_model, args.vocoder_model, Path(args.embedding_model), Path(args.reranker_model), Path(args.personality), Path(args.example_pdf), args.public)
+    run(Path(args.asr_model), Path(args.chat_model), Path(args.embedding_model), Path(args.reranker_model), Path(args.personality), Path(args.example_pdf), args.public)
     

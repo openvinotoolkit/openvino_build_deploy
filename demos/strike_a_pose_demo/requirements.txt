@@ -1,4 +1,8 @@
-openvino==2024.4.0
-opencv-python==4.10.0.82
-tqdm==4.66.3
-requests==2.32.3
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+openvino==2024.5.0
+nncf==2.14.0
+ultralytics==8.3.38
+opencv-python==4.10.0.84
+numpy==1.26.4
+torch==2.4.1
