@@ -28,10 +28,10 @@ The demo counts people standing in front of the webcam, presenting differences i
 
 [![image](https://github.com/openvinotoolkit/openvino_build_deploy/assets/4547501/e386c632-34f3-41c7-9713-c5aca8c1842a)](people_counter_demo)
 
-| [People Counter](people_counter_demo) |                                                            |
-|---------------------------------------|------------------------------------------------------------|
-| Related AI concepts                   | object detection, object counting, YOLOv11, YOLOv8         |
-| Platforms                             | Client (CPU, GPU, NPU), Edge (CPU)                         |
+| [People Counter](people_counter_demo) |                                                           |
+|---------------------------------------|-----------------------------------------------------------|
+| Related AI concepts                   | object detection, object counting, YOLO11, YOLOv8         |
+| Platforms                             | Client (CPU, GPU, NPU), Edge (CPU)                        |
 | Owner                                 | [@adrianboguszewski](https://github.com/adrianboguszewski) |
 
 ### 🏥 Virtual Assistant
@@ -66,7 +66,7 @@ The demo estimates poses of all people standing in front of the webcam.
 
 | [Strike a Pose](strike_a_pose_demo) |                                                            |
 |-------------------------------------|------------------------------------------------------------|
-| Related AI concepts                 | pose estimation, Open Pose                                 |
+| Related AI concepts                 | pose estimation, YOLO11, YOLOv8                            |
 | Platforms                           | Client (CPU, GPU, NPU), Edge (CPU)                         |
 | Owner                               | [@adrianboguszewski](https://github.com/adrianboguszewski) |
 
