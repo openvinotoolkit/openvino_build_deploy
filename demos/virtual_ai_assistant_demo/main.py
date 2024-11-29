@@ -130,7 +130,7 @@ def load_reranker_model(model_name: str) -> OpenVINORerank:
 def load_chat_models(chat_model_name: str, embedding_model_name: str, reranker_model_name: str, personality_file_path: Path, auth_token: str = None) -> None:
     global ov_llm, ov_chat_engine, ov_embedding, chatbot_config, ov_reranker
 
-    with open(personality_file_path) as f:
+    with open(personality_file_path, "rb") as f:
         chatbot_config = yaml.safe_load(f)
 
     ov_embedding = load_embedding_model(embedding_model_name)
@@ -160,7 +160,7 @@ def load_files(file_paths: List[str]) -> list[Document]:
 
         elif ext == ".txt":
             # Reading text files as usual
-            with open(file_path) as f:
+            with open(file_path, "rb") as f:
                 content = f.read()
                 documents.append(Document(text=content, metadata={"file_name": file_path.name}))
 
@@ -209,7 +209,6 @@ def chat(history: List[List[str]]) -> List[List[str]]:
     with inference_lock:
         start_time = time.time()
 
-        chat_streamer = ov_chat_engine.chat(history[-1][0])
         chat_streamer = ov_chat_engine.stream_chat(history[-1][0]).response_gen
         for partial_text in chat_streamer:
             history[-1][1] += partial_text
@@ -303,7 +302,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--chat_model", type=str, default="meta-llama/Llama-3.2-3B-Instruct", help="Path/name of the chat model")
     parser.add_argument("--embedding_model", type=str, default="BAAI/bge-small-en-v1.5", help="Path/name of the model for embeddings")
-    parser.add_argument("--reranker_model", type=str, default="BAAI/bge-reranker-large", help="Path/name of the reranker model")
+    parser.add_argument("--reranker_model", type=str, default="BAAI/bge-base-en-v1.5", help="Path/name of the reranker model")
     parser.add_argument("--personality", type=str, default="healthcare_personality.yaml", help="Path to the YAML file with chatbot personality")
     parser.add_argument("--hf_token", type=str, help="HuggingFace access token to get Llama3")
     parser.add_argument("--public", default=False, action="store_true", help="Whether interface should be available publicly")
