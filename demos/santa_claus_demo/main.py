@@ -19,7 +19,7 @@ def download_model(model_name, precision):
     base_model_dir = Path("model")
 
     model_path = base_model_dir / "intel" / model_name / precision / f"{model_name}.xml"
-
+    a=2
     if not model_path.exists():
         model_url_dir = f"https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/3/{model_name}/{precision}/"
         utils.download_file(model_url_dir + model_name + '.bin', model_path.with_suffix('.bin').name, model_path.parent)
