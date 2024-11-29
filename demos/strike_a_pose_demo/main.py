@@ -57,9 +57,10 @@ default_skeleton = ((15, 13), (13, 11), (16, 14), (14, 12), (11, 12), (5, 11), (
 
 
 def draw_poses(img: np.ndarray, detections: Results, point_score_threshold: float = 0.5, skeleton: Tuple[Tuple[int, int]] = default_skeleton):
-    poses = detections.keypoints.xy.numpy()
-    scores = detections.keypoints.conf.numpy()
-    if len(poses) == 0:
+    keypoints = detections.keypoints
+    poses = keypoints.xy.numpy()
+    scores = keypoints.conf.numpy() if keypoints.conf is not None else np.ones_like(poses[..., 0])
+    if poses.size == 0:
         return img
 
     img_limbs = np.copy(img)
