@@ -1,6 +1,6 @@
 {
   "name": "hide-your-mess-behind",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
@@ -33,7 +33,8 @@
       "assets/**/*"
     ],
     "asarUnpack": [
-      "models/**"
+      "models/**",
+      "assets/openvino-logo.png"
     ]
   },
   "devDependencies": {

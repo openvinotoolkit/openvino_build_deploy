@@ -28,21 +28,21 @@ The demo counts people standing in front of the webcam, presenting differences i
 
 [![image](https://github.com/openvinotoolkit/openvino_build_deploy/assets/4547501/e386c632-34f3-41c7-9713-c5aca8c1842a)](people_counter_demo)
 
-| [People Counter](people_counter_demo) |                                                            |
-|---------------------------------------|------------------------------------------------------------|
-| Related AI concepts                   | object detection, object counting, YOLOv8                  |
-| Platforms                             | Client (CPU, GPU, NPU), Edge (CPU)                         |
+| [People Counter](people_counter_demo) |                                                           |
+|---------------------------------------|-----------------------------------------------------------|
+| Related AI concepts                   | object detection, object counting, YOLO11, YOLOv8         |
+| Platforms                             | Client (CPU, GPU, NPU), Edge (CPU)                        |
 | Owner                                 | [@adrianboguszewski](https://github.com/adrianboguszewski) |
 
-### 🏥 Healthcare Assistant
+### 🏥 Virtual Assistant
 
-The demo works as a virtual healthcare assistant, whose task is to greet the patient and summarize the patient's condition based on the conversation and uploaded examination report. 
+The demo works as a virtual AI assistant. The default personality is a healthcare assistant, whose task is to greet the patient and summarize the patient's condition based on the conversation and uploaded examination report.
 
-[![image](https://github.com/user-attachments/assets/d3ede3e5-d6af-46c7-8e00-250fc2137ed3)](healthcare_assistant_demo)
+[![image](https://github.com/user-attachments/assets/f1ca6a23-0a5d-4a7d-94d4-89d0ef2b68ea)](virtual_ai_assistant_demo)
 
 | [Virtual AI Assistant](virtual_ai_assistant_demo) |                                                            |
 |---------------------------------------------------|------------------------------------------------------------|
-| Related AI concepts                               | LLM, RAG, ASR, GenAI, Llama3, Whisper                      |
+| Related AI concepts                               | LLM, RAG, GenAI, Llama3, LLamaIndex                        |
 | Platforms                                         | Client (CPU, GPU, NPU), Cloud (CPU, GPU)                   |
 | Owner                                             | [@adrianboguszewski](https://github.com/adrianboguszewski) |
 
@@ -66,7 +66,7 @@ The demo estimates poses of all people standing in front of the webcam.
 
 | [Strike a Pose](strike_a_pose_demo) |                                                            |
 |-------------------------------------|------------------------------------------------------------|
-| Related AI concepts                 | pose estimation, Open Pose                                 |
+| Related AI concepts                 | pose estimation, YOLO11, YOLOv8                            |
 | Platforms                           | Client (CPU, GPU, NPU), Edge (CPU)                         |
 | Owner                               | [@adrianboguszewski](https://github.com/adrianboguszewski) |
 

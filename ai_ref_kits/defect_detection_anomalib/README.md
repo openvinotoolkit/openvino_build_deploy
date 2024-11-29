@@ -2,8 +2,8 @@
   <h1>Defect Detection with Anomalib and OpenVINO™ Toolkit</h1>
   <h4>
     <a href="https://www.intel.com/content/www/us/en/developer/topic-technology/edge-5g/open-potential.html">🏠&nbsp;About&nbsp;the&nbsp;Kits&nbsp;·</a>
-    <a href="https://github.com/openvinotoolkit/anomalib/blob/main/notebooks/500_use_cases/501_dobot/501a_training_a_model_with_cubes_from_a_robotic_arm.ipynb">📔&nbsp;Jupter Notebook: Training</a>,
-    <a href="https://github.com/openvinotoolkit/anomalib/blob/main/notebooks/500_use_cases/501_dobot/501b_inference_with_a_robotic_arm.ipynb">Inference&nbsp;·</a>
+    <a href="https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/ai_ref_kits/defect_detection_anomalib/501a_training_a_model_with_cubes_from_a_robotic_arm.ipynb">📔&nbsp;Jupter Notebook: Training</a>,
+    <a href="https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/ai_ref_kits/defect_detection_anomalib/501b_inference_with_a_robotic_arm.ipynb">Inference&nbsp;·</a>
     <a href="https://www.youtube.com/watch?v=ho6R69EDyao">📺&nbsp;Overview&nbsp;Video&nbsp;·</a>
     <a href="https://www.youtube.com/watch?v=OifcJbZRaGM">👨‍💻&nbsp;Code&nbsp;Demo&nbsp;Video&nbsp;·</a>
     <a href="https://www.intel.com/content/www/us/en/developer/articles/training/defect-detection-with-anomalib.html">📚&nbsp;Step&#8209;by&#8209;step&nbsp;Tutorial</a>
@@ -73,13 +73,13 @@ d. Then, replace those coordinates in the notebook
 
 ### Data Acquisition and Inferencing
 
-For data acquisition and inferencing we will use [501b notebook](https://github.com/openvinotoolkit/anomalib/blob/main/notebooks/500_use_cases/501_dobot/501b_inference_with_a_robotic_arm.ipynb). There we need to identify the `acquisition` flag, **True** for _acquisition mode_ and **False** for _inferencing mode_. In acquisition mode be aware of the _normal_ or _abnormal_ folder we want to create, in this mode the notebook will save every image in the anomalib/datasets/cubes/{FOLDER} for further training. In inferencing mode the notebook won't save images, it will run the inference and show the results.
+For data acquisition and inferencing we will use [501b notebook](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/ai_ref_kits/defect_detection_anomalib/501b_inference_with_a_robotic_arm.ipynb). There we need to identify the `acquisition` flag, **True** for _acquisition mode_ and **False** for _inferencing mode_. In acquisition mode be aware of the _normal_ or _abnormal_ folder we want to create, in this mode the notebook will save every image in the anomalib/datasets/cubes/{FOLDER} for further training. In inferencing mode the notebook won't save images, it will run the inference and show the results.
 
-_Note_: If you don't have the robot you could jump to another notebook [501a](https://github.com/openvinotoolkit/anomalib/blob/main/notebooks/500_use_cases/501_dobot/501a_training_a_model_with_cubes_from_a_robotic_arm.ipynb) and download the dataset from this [link](https://github.com/openvinotoolkit/anomalib/releases/tag/dobot)
+_Note_: If you don't have the robot you could jump to another notebook [501a](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/ai_ref_kits/defect_detection_anomalib/501a_training_a_model_with_cubes_from_a_robotic_arm.ipynb) and download the dataset from this [link](https://github.com/openvinotoolkit/anomalib/releases/tag/dobot)
 
 ### Training
 
-For training, we will use the [501a notebook](https://github.com/openvinotoolkit/anomalib/blob/main/notebooks/500_use_cases/501_dobot/501a_training_a_model_with_cubes_from_a_robotic_arm.ipynb). In this example we are using "Padim" model and we are using Anomalib API for setting up the dataset, model, metrics, and the optimization process with OpenVINO.
+For training, we will use the [501a notebook](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/ai_ref_kits/defect_detection_anomalib/501a_training_a_model_with_cubes_from_a_robotic_arm.ipynb). In this example we are using "Padim" model and we are using Anomalib API for setting up the dataset, model, metrics, and the optimization process with OpenVINO.
 
 # Additional Resources
 - Learn more about [OpenVINO](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html)

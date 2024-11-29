@@ -147,18 +147,8 @@ def get_annotators(json_path: str, resolution_wh: Tuple[int, int], colorful: boo
     return zones, zone_annotators, box_annotators, masks_annotators
 
 
-def draw_info(image, device_mapping):
-    h, w = image.shape[:2]
-    line_space = 40
-    start_y = (len(device_mapping) + 3) * line_space + 20
-    utils.draw_text(image, "Control panel. Press:", (10, h - start_y))
-    utils.draw_text(image, "f: FP16 model", (10, h - start_y + line_space))
-    utils.draw_text(image, "i: INT8 model", (10, h - start_y + 2 * line_space))
-    for i, (device_name, device_info) in enumerate(device_mapping.items(), start=1):
-        utils.draw_text(image, f"{i}: {device_name} - {device_info}", (10, h - start_y + (i + 2) * line_space))
-
-
-def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str, people_limit: int = 3, model_name: str = "", colorful: bool = False, last_frames: int = 50) -> None:
+def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str, people_limit: int = 3, model_name: str = "",
+        flip: bool = True, colorful: bool = False, last_frames: int = 50) -> None:
     # set up logging
     log.getLogger().setLevel(log.INFO)
 
@@ -167,17 +157,12 @@ def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str,
         "INT8": model_paths[1],
     }
 
-    device_mapping = {"AUTO": "AUTO device"}
-
-    core = ov.Core()
-    for device in core.available_devices:
-        device_name = core.get_property(device, "FULL_DEVICE_NAME")
-        if "nvidia" not in device_name.lower():
-            device_mapping[device] = device_name
+    device_mapping = utils.available_devices()
 
     model_type = "INT8"
     device_type = "AUTO"
 
+    core = ov.Core()
     core.set_property({"CACHE_DIR": "cache"})
     # initialize and load model
     model = get_model(model_mapping[model_type], device_type)
@@ -187,7 +172,7 @@ def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str,
     # initialize video player to deliver frames
     if isinstance(video_path, str) and video_path.isnumeric():
         video_path = int(video_path)
-    player = utils.VideoPlayer(video_path, size=(1920, 1080), fps=60, flip=True)
+    player = utils.VideoPlayer(video_path, size=(1920, 1080), fps=60, flip=flip)
 
     # get zones, and zone and box annotators for zones
     zones, zone_annotators, box_annotators, masks_annotators = get_annotators(json_path=zones_config_file, resolution_wh=(player.width, player.height), colorful=colorful)
@@ -259,7 +244,7 @@ def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str,
         utils.draw_text(frame, text=f"Inference time: {processing_time:.0f}ms ({fps:.1f} FPS)", point=(f_width * 3 // 5, 10))
         utils.draw_text(frame, text=f"Currently running {model_name} ({model_type}) on {device_type}", point=(f_width * 3 // 5, 50))
 
-        draw_info(frame, device_mapping)
+        utils.draw_control_panel(frame, device_mapping)
         utils.draw_ov_watermark(frame)
         # show the output live
         cv2.imshow(title, frame)
@@ -300,8 +285,9 @@ if __name__ == '__main__':
     parser.add_argument("--model_dir", type=str, default="model", help="Directory to place the model in")
     parser.add_argument('--zones_config_file', type=str, default="zones.json", help="Path to the zone config file (json)")
     parser.add_argument('--people_limit', type=int, default=3, help="The maximum number of people in the area")
+    parser.add_argument("--flip", type=bool, default=True, help="Mirror input video")
     parser.add_argument('--colorful', action="store_true", help="If people should be annotated with random colors")
 
     args = parser.parse_args()
     model_paths = convert(args.model_name, Path(args.model_dir))
-    run(args.stream, model_paths, args.zones_config_file, args.people_limit, args.model_name, args.colorful)
+    run(args.stream, model_paths, args.zones_config_file, args.people_limit, args.model_name, args.flip, args.colorful)

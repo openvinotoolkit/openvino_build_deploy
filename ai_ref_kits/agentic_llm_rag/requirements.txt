@@ -22,3 +22,4 @@ PyMuPDF==1.24.10
 
 gradio==4.42.0
 fastapi==0.112.4
+pydantic==2.9.2
