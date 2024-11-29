@@ -4,6 +4,7 @@ import random
 import sys
 import time
 from pathlib import Path
+from typing import Optional
 
 import gradio as gr
 import numpy as np
@@ -21,8 +22,8 @@ from utils import demo_utils as utils
 MAX_SEED = np.iinfo(np.int32).max
 MODEL_DIR = Path("model")
 
-ov_pipeline: OVLatentConsistencyModelPipeline | None = None
-safety_checker: StableDiffusionSafetyChecker | None = None
+ov_pipeline: Optional[OVLatentConsistencyModelPipeline] = None
+safety_checker: Optional[StableDiffusionSafetyChecker] = None
 
 try:
     safety_checker = StableDiffusionSafetyChecker.from_pretrained("CompVis/stable-diffusion-safety-checker", local_files_only=True)
@@ -32,7 +33,7 @@ except (LocalEntryNotFoundError, EnvironmentError):
 ov_pipelines = {}
 
 stop_generating: bool = True
-hf_model_name: str | None = None
+hf_model_name: Optional[str] = None
 
 
 def get_available_devices() -> list[str]:
