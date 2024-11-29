@@ -22,7 +22,17 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v4
-
+      - name: Determine subproject directories
+        id: determine-directories
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            # Get unique subproject directories from changed files in PR
+            subproject_dirs=$(git diff --name-only origin/main...HEAD | grep '^demos/' | xargs -I{} dirname "{}" | sort -u)
+          else
+            # For scheduled runs, process all subprojects
+            subproject_dirs=$(find demos -type d -mindepth 1 -maxdepth 1 ! -name utils)
+          fi
+          echo "subproject_dirs=$subproject_dirs" >> $GITHUB_ENV
       - name: Categorize subprojects
         id: categorize-subprojects
         run: |
@@ -31,24 +41,14 @@ jobs:
           webcam=()
           js=()
 
-          # Determine the list of directories to process
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            # Get unique subproject directories from changed files in PR
-            subproject_dirs=$(git diff --name-only origin/main...HEAD | grep '^demos/' | xargs -I{} dirname "{}" | sort -u)
-          else
-            # For scheduled runs, process all subprojects
-            subproject_dirs=$(find demos -type d -mindepth 1 -maxdepth 1 ! -name utils)
-          fi
-
-          # Categorize subprojects
-          for dir in $subproject_dirs; do
+          for dir in ${{ env.subproject_dirs }}; do
             if [ -f "$dir/package.json" ]; then
               js+=("$dir")
             elif [ -f "$dir/main.ipynb" ]; then
               notebook+=("$dir")
-            elif grep -q "gradio" "$dir/requirements.txt" 2>/dev/null; then
+            elif grep -q "gradio" "$dir/requirements.txt"; then
               gradio+=("$dir")
-            elif grep -q -- "--stream" "$dir/main.py" 2>/dev/null; then
+            elif grep -q -- "--stream" "$dir/main.py"; then
               webcam+=("$dir")
             fi
           done
@@ -57,6 +57,7 @@ jobs:
           gradio_json=$(printf '%s\n' "${gradio[@]}" | jq -R -s -c 'split("\n")[:-1]')
           webcam_json=$(printf '%s\n' "${webcam[@]}" | jq -R -s -c 'split("\n")[:-1]')
           js_json=$(printf '%s\n' "${js[@]}" | jq -R -s -c 'split("\n")[:-1]')
+
 
           echo "notebook=$notebook_json" >> $GITHUB_OUTPUT
           echo "gradio=$gradio_json" >> $GITHUB_OUTPUT
