@@ -30,15 +30,25 @@ jobs:
           gradio=()
           webcam=()
           js=()
-          
-          for dir in $(find demos -type d -mindepth 1 -maxdepth 1 ! -name utils); do
+
+          # Determine the list of directories to process
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            # Get unique subproject directories from changed files in PR
+            subproject_dirs=$(git diff --name-only origin/main...HEAD | grep '^demos/' | xargs -I{} dirname "{}" | sort -u)
+          else
+            # For scheduled runs, process all subprojects
+            subproject_dirs=$(find demos -type d -mindepth 1 -maxdepth 1 ! -name utils)
+          fi
+
+          # Categorize subprojects
+          for dir in $subproject_dirs; do
             if [ -f "$dir/package.json" ]; then
               js+=("$dir")
             elif [ -f "$dir/main.ipynb" ]; then
               notebook+=("$dir")
-            elif grep -q "gradio" "$dir/requirements.txt"; then
+            elif grep -q "gradio" "$dir/requirements.txt" 2>/dev/null; then
               gradio+=("$dir")
-            elif grep -q -- "--stream" "$dir/main.py"; then
+            elif grep -q -- "--stream" "$dir/main.py" 2>/dev/null; then
               webcam+=("$dir")
             fi
           done
@@ -47,11 +57,11 @@ jobs:
           gradio_json=$(printf '%s\n' "${gradio[@]}" | jq -R -s -c 'split("\n")[:-1]')
           webcam_json=$(printf '%s\n' "${webcam[@]}" | jq -R -s -c 'split("\n")[:-1]')
           js_json=$(printf '%s\n' "${js[@]}" | jq -R -s -c 'split("\n")[:-1]')
-          
-          echo "notebook=$notebook_json" | tee -a $GITHUB_OUTPUT
-          echo "gradio=$gradio_json" | tee -a $GITHUB_OUTPUT
-          echo "webcam=$webcam_json" | tee -a $GITHUB_OUTPUT
-          echo "js=$js_json" | tee -a $GITHUB_OUTPUT
+
+          echo "notebook=$notebook_json" >> $GITHUB_OUTPUT
+          echo "gradio=$gradio_json" >> $GITHUB_OUTPUT
+          echo "webcam=$webcam_json" >> $GITHUB_OUTPUT
+          echo "js=$js_json" >> $GITHUB_OUTPUT
 
   notebook:
     needs: find-subprojects
@@ -133,7 +143,7 @@ jobs:
         with:
           command: python main.py --stream sample_video.mp4
           project: ${{ matrix.subproject }}
-          
+
   js:
     needs: find-subprojects
     if: ${{ needs.find-subprojects.outputs.js != '[]' }}
