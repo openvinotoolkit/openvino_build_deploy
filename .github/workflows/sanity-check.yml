@@ -22,8 +22,8 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v4
-      - name: Determine subproject directories
-        id: determine-directories
+      - name: Determine subprojects to test
+        id: determine-updates
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             # Get unique subproject directories from changed files in PR
@@ -63,7 +63,13 @@ jobs:
           echo "gradio=$gradio_json" >> $GITHUB_OUTPUT
           echo "webcam=$webcam_json" >> $GITHUB_OUTPUT
           echo "js=$js_json" >> $GITHUB_OUTPUT
-
+      - name: Print subprojects to test
+        run: |
+          echo "Notebook subprojects: ${{ steps.categorize-subprojects.outputs.notebook }}"
+          echo "Gradio subprojects: ${{ steps.categorize-subprojects.outputs.gradio }}"
+          echo "Webcam subprojects: ${{ steps.categorize-subprojects.outputs.webcam }}"
+          echo "JS subprojects: ${{ steps.categorize-subprojects.outputs.js }}"
+          
   notebook:
     needs: find-subprojects
     if: ${{ needs.find-subprojects.outputs.notebook != '[]' }}
