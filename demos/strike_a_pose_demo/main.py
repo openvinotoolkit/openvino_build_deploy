@@ -23,7 +23,7 @@ def export_model(model_name: str) -> Path:
     model_path = model_dir / f"{model_name}.pt"
     # create a YOLO pose estimation model
     yolo_model = YOLO(model_path)
-    s=3
+
     ov_model_path = model_dir / f"{model_name}_int8_openvino_model"
     # export the model to OpenVINO format (INT8)
     if not ov_model_path.exists():
