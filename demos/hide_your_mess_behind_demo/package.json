@@ -7,6 +7,16 @@
     "dist": "electron-builder"
   },
   "build": {
+    "extraFiles": [
+      {
+        "from": "/usr/lib/x86_64-linux-gnu/libvips-cpp.so.42",
+        "to": "./libvips-cpp.so.42"
+      },
+      {
+        "from": "/usr/lib/x86_64-linux-gnu/libvips.so.42",
+        "to": "./libvips.so.42"
+      }
+    ],
     "appId": "com.example.hideyourmessbehind",
     "mac": {
       "icon": "assets/icons/icon.png"
@@ -18,7 +28,6 @@
     "linux": {
       "target": [
         "deb",
-        "rpm",
         "zip"
       ],
       "icon": "assets/icons/icon.png",
@@ -42,17 +51,15 @@
     "electron-builder": "^25.0.5"
   },
   "dependencies": {
+    "@napi-rs/canvas": "^0.1.52",
     "buffer": "^6.0.3",
     "openvino-node": "2024.3.0",
-    "sharp": "^0.33.5",
-    "@napi-rs/canvas": "^0.1.52"
+    "sharp": "^0.33.5"
   },
   "keywords": [],
   "author": "Mikołaj Roszczyk <mikolaj.roszczyk@intel.com>",
   "contributors": [
-    {
-      "name": "Adrian Boguszewski"
-    }
+    "Adrian Boguszewski"
   ],
   "homepage": "https://github.com/openvinotoolkit/openvino_build_deploy",
   "license": "Apache-2.0",
