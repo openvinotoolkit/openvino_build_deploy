@@ -20,6 +20,6 @@ librosa==0.10.2
 pyyaml==6.0.1
 PyMuPDF==1.24.10
 
-gradio==4.42.0
+gradio==5.5.0
 fastapi==0.112.4
 pydantic==2.9.2
