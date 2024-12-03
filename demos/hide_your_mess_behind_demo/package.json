@@ -17,7 +17,7 @@
         "to": "./libvips.so.42"
       }
     ],
-    "appId": "com.example.hideyourmessbehind",
+    "appId": "ai.openvino.hideyourmessbehind",
     "mac": {
       "icon": "assets/icons/icon.png"
     },
@@ -64,7 +64,8 @@
   "keywords": [],
   "author": "Mikołaj Roszczyk <mikolaj.roszczyk@intel.com>",
   "contributors": [
-    "Adrian Boguszewski"
+    "Adrian Boguszewski <adrian.boguszewski@intel.com>",
+    "Antonio Martinez"
   ],
   "homepage": "https://github.com/openvinotoolkit/openvino_build_deploy",
   "license": "Apache-2.0",
