@@ -1,6 +1,8 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
+
 jupyterlab==4.2.5
 ipywidgets==8.1.5
+
 openvino==2024.3.0
 onnx==1.16.0
 onnxruntime-openvino==1.19.0
