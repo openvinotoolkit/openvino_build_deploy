@@ -21,6 +21,7 @@ Download installers of the compiled app. They are available for Windows and Linu
 
 ```bash
 sudo dpkg -i hide-your-mess-behind_1.1.0_amd64.deb
+hide-your-mess-behind
 ```
 
 ## Running the demo using source code and NodeJS
