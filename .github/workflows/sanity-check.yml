@@ -76,8 +76,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python: [3.9, 3.12]
+        # onnxruntime-openvino is not available on mac and python<3.10
+        os: [ubuntu-latest, windows-latest]
+        python: [3.10, 3.11]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.notebook) }}
     steps:
       - uses: actions/checkout@v4
