@@ -33,6 +33,11 @@
       "icon": "assets/icons/icon.png",
       "category": "Utility"
     },
+    "deb": {
+      "depends": [
+        "libvips42"
+      ]
+    },
     "files": [
       "src/**/*.js",
       "src/index.html",
