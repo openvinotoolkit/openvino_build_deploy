@@ -22,7 +22,7 @@
     4. The chatbot will respond based on the provided information and will not assume or guess unknown details.
     5. Follow up with the chatbot for further paint guidance, but always encourage employees to consult senior in-store staff for more complex queries or unavailable information.
 
-    'restrictions: |
+    'restrictions: >
     Do not speculate or provide answers outside the scope of the shared knowledge.
     Do not refer to any external documents directly unless they are a part of the provided RAG document.
     Do not ask for or store any personal information from the customer.

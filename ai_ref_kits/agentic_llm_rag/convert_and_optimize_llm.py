@@ -5,12 +5,8 @@ import numpy as np
 import openvino as ov
 from openvino.runtime import opset10 as ops
 from openvino.runtime import passes
-from optimum.intel import OVModelForCausalLM, OVModelForFeatureExtraction, OVWeightQuantizationConfig, OVConfig, \
-    OVQuantizer, OVModelForSequenceClassification
+from optimum.intel import OVModelForCausalLM, OVModelForFeatureExtraction, OVWeightQuantizationConfig, OVConfig, OVQuantizer
 from transformers import AutoTokenizer
-
-#TBD Add Embedding Model Conversion
-
 
 MODEL_MAPPING = {
     "llama3-8B": "meta-llama/Meta-Llama-3-8B-Instruct",
@@ -105,7 +101,8 @@ def convert_chat_model(model_type: str, precision: str, model_dir: Path, access_
     tokenizer.save_pretrained(output_dir)
 
     return Path(output_dir) / "openvino_model.xml"
-    
+
+
 def convert_embedding_model(model_type: str, model_dir: Path) -> Path:
     """
     Convert embedding model
@@ -134,7 +131,7 @@ def convert_embedding_model(model_type: str, model_dir: Path) -> Path:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--chat_model_type", type=str, choices=["llama2-7B", "llama2-13B", "llama3-8B", "qwen2-7B", "llama3.2-3B", "llama3.1-8B", "llama3.2-11B"],
+    parser.add_argument("--chat_model_type", type=str, choices=["llama2-7B", "llama2-13B", "llama3-8B", "llama3.1-8B", "llama3.2-3B", "llama3.2-11B", "qwen2-7B"],
                         default="llama3.1-8B", help="Chat model to be converted")
     parser.add_argument("--embedding_model_type", type=str, choices=["bge-small", "bge-large", "bge-m3"],
                         default="bge-large", help="Embedding model to be converted")
