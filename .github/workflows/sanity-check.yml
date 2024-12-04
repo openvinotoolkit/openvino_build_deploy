@@ -44,7 +44,7 @@ jobs:
           for dir in $subproject_dirs; do
             if [ -f "$dir/package.json" ]; then
               js+=("$dir")
-            elif [ -f "$dir/*.ipynb" ]; then
+            elif find "$dir" -maxdepth 1 -name "*.ipynb" | grep -q "."; then
               notebook+=("$dir")
             elif [ -f "$dir/requirements.txt" ] && grep -q "gradio" "$dir/requirements.txt"; then
               gradio+=("$dir")
