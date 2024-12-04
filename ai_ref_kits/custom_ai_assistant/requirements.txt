@@ -5,13 +5,12 @@ optimum-intel==1.19.0
 optimum==1.22.0
 nncf==2.13.0
 
+# onnx>1.16.1 doesn't work on windows
 onnx==1.16.1
 onnxruntime==1.17.3
-torch==2.3.1
+torch==2.4.1
 
-transformers==4.43.4
+transformers==4.44.2
 librosa==0.10.2
 
-gradio==4.42.0
-fastapi==0.112.4
-pydantic==2.9.2
+gradio==5.7.1
