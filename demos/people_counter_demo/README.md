@@ -21,10 +21,10 @@ This project requires Python 3.9 or higher and a few libraries. If you don't hav
 Install libraries and tools:
 
 ```shell
-sudo apt install git git-lfs gcc python3-venv python3-dev
+sudo apt install git python3-venv python3-dev
 ```
 
-_NOTE: If you are using Windows, you will probably need to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe) also._
+_NOTE: If you are using Windows, you may need to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe) also._
 
 ## Step 1
 
@@ -88,7 +88,13 @@ python main.py --stream input.mp4
 By default, the YOLOv8n model is used. To change this, select another model from the family:
 
 ```shell
-python main.py --stream 0 --model_name yolov8x
+python main.py --stream 0 --model_name yolo11x
 ```
 
-The demo will show alert "Intel employee is required in zone 0" if there are more than 3 people standing in front of the camera. To change this number override `--people_limit` option.
+The demo will show alert "Intel employee is required in zone 0" if there are more than 3 people standing in front of the camera. To change this number override `--people_limit` option. 
+
+Run the following to see all available options.
+
+```shell
+python main.py --help
+```

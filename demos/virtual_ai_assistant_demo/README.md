@@ -25,10 +25,10 @@ This project requires Python 3.10 or higher and a few libraries. If you don't ha
 Install libraries and tools:
 
 ```shell
-sudo apt install git git-lfs gcc python3-venv python3-dev
+sudo apt install git python3-venv python3-dev
 ```
 
-_NOTE: If you are using Windows, you will probably need to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe) also._
+_NOTE: If you are using Windows, you may need to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe) also._
 
 ## Step 1: Set up the environment
 
@@ -87,7 +87,8 @@ A typical YAML personality file has the following sections:
 1. **Instructions**: A brief, descriptive title for the assistant.
 2. **System Configuration**: Instructions that define the assistant's behavior and limitations.
 3. **Greet the User Prompt**: The first interaction where the assistant introduces itself.
-4. **Summarize the User Prompt**: Instructions on how the assistant summarizes the conversation.
+4. **Extra Action Name**: Name of the extra action to show on the button (e.g. summarize the conversation).
+5. **Extra Action Prompt**: Instructions on how the assistant does the extra action (e.g. summarize the conversation).
 
 ### Some tips for creating this YAML file: 
 
@@ -104,7 +105,6 @@ instructions: |
 
         **Note: [Add a disclaimer or key note about what the assistant can and cannot do].**
 ```
-
 
 ## Step 3: Run the Application
 
@@ -156,4 +156,10 @@ Running with `--public` will allow you to access from any computer:
 
 ```shell
 python main.py --public
+```
+
+Run the following to see all available options.
+
+```shell
+python main.py --help
 ```

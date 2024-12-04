@@ -1,6 +1,6 @@
 # Paint Your Dreams with OpenVINO™
 
-The demo generates images in a reasonable time (seconds) on Intel hardware. There are many options to customize the demo behaviour:
+The demo generates images in seconds on Intel hardware. There are many options to customize the demo behaviour:
 - inference device
 - number of steps
 - image size
@@ -32,10 +32,10 @@ This project requires Python 3.10 or higher and a few libraries. If you don't ha
 Install libraries and tools:
 
 ```shell
-sudo apt install git git-lfs gcc python3-venv python3-dev
+sudo apt install git python3-venv python3-dev
 ```
 
-_NOTE: If you are using Windows, you will probably need to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe) also._
+_NOTE: If you are using Windows, you may need to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe) also._
 
 ## Step 1
 
@@ -93,10 +93,10 @@ python main.py
 
 During the first run (i.e., before generating the first image), the application will download the model online. Please wait until the process is completed and do not disconnect the internet or close the application. Additionally, the first run may take significantly longer due to caching and other behavior, and you will notice a significant speed-up after warm-up. 
 
-To change the model precision to INT8, run:
+To change the model precision to FP16, run:
 
 ```shell
-python main.py --model_name OpenVINO/LCM_Dreamshaper_v7-int8-ov
+python main.py --model_name OpenVINO/LCM_Dreamshaper_v7-fp16-ov
 ```
 
 This change will provide speed up on CPU, and a slight improvement on GPU. Also, there is slight degradation in the image generation quality. You can increase the number of step by 1 or 2 to improve that.  
@@ -105,4 +105,10 @@ The demo will be available for localhost only (i.e., the application is not acce
 
 ```shell
 python main.py --local_network
+```
+
+Run the following to see all available options.
+
+```shell
+python main.py --help
 ```

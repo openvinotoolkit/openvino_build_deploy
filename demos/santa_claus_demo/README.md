@@ -21,10 +21,10 @@ This project requires Python 3.9 or higher and a few libraries. If you don't hav
 Install libraries and tools:
 
 ```shell
-sudo apt install git git-lfs gcc python3-venv python3-dev
+sudo apt install git python3-venv python3-dev
 ```
 
-_NOTE: If you are using Windows, you will probably need to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe) also._
+_NOTE: If you are using Windows, you may need to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe) also._
 
 ## Step 1
 
@@ -84,4 +84,10 @@ To change the models, precision or device use:
 
 ```shell
 python main.py --stream 0 --device AUTO --detection_model_name face-detection-adas-0001 --landmarks_model_name landmarks-regression-retail-0009 --emotions_model_name emotions-recognition-retail-0003 --model_precision FP16-INT8
+```
+
+Run the following to see all available options.
+
+```shell
+python main.py --help
 ```
