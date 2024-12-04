@@ -26,12 +26,11 @@ jobs:
           fetch-depth: 0
       - name: Determine subprojects to test
         run: |
+          # Ensure the directories are passed correctly to the environment variable
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            # Get unique subproject directories from changed files in PR
-            subproject_dirs=$(git diff --name-only origin/master..HEAD | grep '^demos/' | xargs -I{} dirname "{}" | sort -u)
+            subproject_dirs=$(git diff --name-only origin/master..HEAD | grep '^demos/' | xargs -I{} dirname "{}" | sort -u | tr '\n' ' ')
           else
-            # For scheduled runs, process all subprojects
-            subproject_dirs=$(find demos -type d -mindepth 1 -maxdepth 1 ! -name utils)
+            subproject_dirs=$(find demos -mindepth 1 -maxdepth 1 -type d ! -name utils | tr '\n' ' ')
           fi
           echo "subproject_dirs=$subproject_dirs" >> $GITHUB_ENV
       - name: Categorize subprojects
@@ -42,7 +41,7 @@ jobs:
           webcam=()
           js=()
 
-          for dir in ${{ env.subproject_dirs }}; do
+          for dir in $subproject_dirs; do
             if [ -f "$dir/package.json" ]; then
               js+=("$dir")
             elif [ -f "$dir/main.ipynb" ]; then
@@ -77,8 +76,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python: [3.9, 3.12]
+        # onnxruntime-openvino is not available on mac and python<3.10
+        os: [ubuntu-latest, windows-latest]
+        python: [3.11]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.notebook) }}
     steps:
       - uses: actions/checkout@v4

@@ -12,8 +12,10 @@ class Math(object):
     def divide(self, a: float, b: float) -> float:
         """Divide two numbers and returns the quotient"""
         return a / b
-    
-class Paint_Cost_Calculator(object):
+
+
+class PaintCostCalculator(object):
+
     def calculate_paint_cost(self, area: int, price_per_gallon: int, add_paint_supply_costs: bool) -> float:
         """Assuming 2 gallons are needed for 400 square feet"""
         gallons_needed = (area / 400) * 2

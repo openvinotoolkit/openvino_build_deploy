@@ -9,7 +9,6 @@ MODEL_MAPPING = {
     "belle-distil-whisper-large-v3-zh": "BELLE-2/Belle-whisper-large-v3-zh",
 }
 
-
 def convert_asr_model(model_type: str, precision: str, model_dir: Path) -> Path:
     """
     Convert speech-to-text model
