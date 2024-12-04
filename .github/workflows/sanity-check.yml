@@ -28,9 +28,9 @@ jobs:
         run: |
           # Ensure the directories are passed correctly to the environment variable
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            subproject_dirs=$(git diff --name-only origin/master..HEAD | grep '^demos/' | xargs -I{} dirname "{}" | sort -u | tr '\n' ' ')
+            subproject_dirs=$(git diff --name-only origin/master..HEAD | grep -e '^demos' -e '^notebooks' | xargs -I{} dirname "{}" | sort -u | tr '\n' ' ')
           else
-            subproject_dirs=$(find demos -mindepth 1 -maxdepth 1 -type d ! -name utils | tr '\n' ' ')
+            subproject_dirs=$(find demos notebooks -mindepth 1 -maxdepth 1 -type d ! -name utils | tr '\n' ' ')
           fi
           echo "subproject_dirs=$subproject_dirs" >> $GITHUB_ENV
       - name: Categorize subprojects
@@ -44,11 +44,11 @@ jobs:
           for dir in $subproject_dirs; do
             if [ -f "$dir/package.json" ]; then
               js+=("$dir")
-            elif [ -f "$dir/main.ipynb" ]; then
+            elif [ -f "$dir/*.ipynb" ]; then
               notebook+=("$dir")
-            elif grep -q "gradio" "$dir/requirements.txt"; then
+            elif [ -f "$dir/requirements.txt" ] && grep -q "gradio" "$dir/requirements.txt"; then
               gradio+=("$dir")
-            elif grep -q -- "--stream" "$dir/main.py"; then
+            elif [ -f "$dir/main.py" ] && grep -q -- "--stream" "$dir/main.py"; then
               webcam+=("$dir")
             fi
           done
