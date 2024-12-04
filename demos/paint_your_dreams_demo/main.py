@@ -97,8 +97,9 @@ def generate_images(prompt: str, seed: int, size: int, guidance_scale: float, nu
 
 def build_ui():
     examples = [
-        "portrait photo of a girl, photograph, highly detailed face, depth of field, moody light, golden hour,"
-        "style by Dan Winters, Russell James, Steve McCurry, centered, extremely detailed, Nikon D850, award winning photography",
+        "A sail boat on a grass field with mountains in the morning and sunny day",
+        "Portrait photo of a girl, photograph, highly detailed face, depth of field, moody light, golden hour,"
+        "Style by Dan Winters, Russell James, Steve McCurry, centered, extremely detailed, Nikon D850, award winning photography",
         "Self-portrait oil painting, a beautiful cyborg with golden hair, 8k",
         "Astronaut in a jungle, cold color palette, muted colors, detailed, 8k",
         "A photo of beautiful mountain with realistic sunset and blue lake, highly detailed, masterpiece",

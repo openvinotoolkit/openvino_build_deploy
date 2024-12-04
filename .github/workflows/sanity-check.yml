@@ -28,7 +28,7 @@ jobs:
         run: |
           # Ensure the directories are passed correctly to the environment variable
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            subproject_dirs=$(git diff --name-only origin/master..HEAD | grep -e '^demos' -e '^notebooks' | xargs -I{} dirname "{}" | sort -u | tr '\n' ' ')
+            subproject_dirs=$(git diff --name-only origin/master..HEAD | grep -e '^demos' -e '^notebooks' | grep -v 'README.md$' |  xargs -I{} dirname "{}" | sort -u | tr '\n' ' ')
           else
             subproject_dirs=$(find demos notebooks -mindepth 1 -maxdepth 1 -type d ! -name utils | tr '\n' ' ')
           fi
@@ -110,7 +110,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python: [3.9, 3.12]
+        python: ["3.10", 3.12]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.gradio) }}
     steps:
       - uses: actions/checkout@v4
