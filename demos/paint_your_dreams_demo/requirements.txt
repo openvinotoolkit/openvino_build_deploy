@@ -6,6 +6,7 @@ optimum==1.23.3
 diffusers==0.31.0
 transformers==4.46.3
 torch==2.5.1
+# onnx>1.16.1 doesn't work on windows
 onnx==1.16.1
 opencv-python==4.10.0.84
 tqdm==4.67.1
