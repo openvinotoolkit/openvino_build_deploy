@@ -6,7 +6,7 @@ The goal of any demo in this directory is to present OpenVINO as an optimization
 
 Rules:
 - The demo must be standalone - no dependencies to other demos (dependency to utils is ok)
-- The demo must be a Python script (preferable one) called `main.py` or a Jupyter notebook
+- The demo must be a Python script called `main.py`
 - All dependencies must be pinned to specific, stable, and tested versions and provided in the corresponding `requirements.txt` file (script) or the first code cell (notebook) 
 - If the demo is visual (produces any video/image output) it must add an OpenVINO watermark to the output video/image (see utils)
 - The demo must provide a README file with the instructions on installing the environment, setting up and running (+ changing the behavior if applicable)
