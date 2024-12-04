@@ -214,8 +214,8 @@ def run_app(agent):
             with gr.Row():
                 chat_window = gr.Chatbot(
                     label="Paint Purchase Helper",
-                    avatar_images=(None, "favicon.ico"),
-                    height=400,  # Adjust height as per your preference
+                    avatar_images=(None, "https://docs.openvino.ai/2024/_static/favicon.ico"),
+		                height=400,  # Adjust height as per your preference
                     scale=2  # Set a higher scale value for Chatbot to make it wider
                     #autoscroll=True,  # Enable auto-scrolling for better UX
                 )
@@ -226,7 +226,7 @@ def run_app(agent):
                     scale=1  # Set lower scale to make it narrower than the Chatbot
                 )
             with gr.Row():
-                message = gr.Textbox(label="Ask the Paint Expert", scale=4)
+                message = gr.Textbox(label="Ask the Paint Expert", scale=4, placeholder="Type your prompt/Question and press Enter")
                 clear = gr.ClearButton()
 
             # Ensure that individual components are passed
