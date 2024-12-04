@@ -94,7 +94,7 @@ jobs:
         shell: bash
         run: |
           cd ${{ matrix.subproject }}
-          find notebooks/ -name "*.ipynb" -exec sed -E -i "s/stream\s*=\s*(['\"]?.*?['\"]?)/stream=\"sample_video.mp4\"/g" {} +
+          find . -name "*.ipynb" -exec sed -E -i "s/stream\s*=\s*(['\"]?.*?['\"]?)/stream=\"sample_video.mp4\"/g" {} +
       - uses: ./.github/reusable-steps/timeouted-action
         name: Run Notebook
         with:
