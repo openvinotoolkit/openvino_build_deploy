@@ -90,9 +90,9 @@ jobs:
         with:
           python: ${{ matrix.python }}
           project: ${{ matrix.subproject }}
-      - name: Use video as a stream
+      - name: Use downloaded video as a stream
         run: |
-          sed -E -i 's/stream\s*=\s*(["']?.*?["']?)/stream="sample_video.mp4"/g' *.ipynb
+          sed -E -i "s/stream\s*=\s*(['\"]?.*?['\"]?)/stream=\"sample_video.mp4\"/g" *.ipynb
       - uses: ./.github/reusable-steps/timeouted-action
         name: Run Notebook
         with:
