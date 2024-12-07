@@ -8,19 +8,18 @@
 
 [![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/LICENSE.txt)
 
-An in-depth demo of how the Multimodal AI Visual Generator Kit creates a real-time visual generative AI workflow. This allows the intake of multimodal inputs from sources like a camera, voice, or typed text to produce visual outputs driven by AI models. This kit facilitates rapid prototyping, instant iteration, and easy visualization of complex concepts. This is done by combining image creation with generative AI, automatic speech recognition (ASR), and speech synthesis with large language models (LLM) and natural language processing (NLP).
-
+The Multimodal AI Visual Generator is designed for rapid prototyping, instant iteration, and seamless visualization of complex concepts. The kit integrates image creation with generative AI, automatic speech recognition (ASR), speech synthesis, large language models (LLMs), and natural language processing (NLP). It processes multimodal inputs from sources such as cameras, voice commands, or typed text to generate AI-driven visual outputs. Utilizing the Intel OpenVINO™ toolkit, the system enables seamless deployment of deep learning models across hardware platforms. Explore the demo to see its real-time visual generative AI workflow in action.
 
 This kit uses the following technology stack:
-- [OpenVINO toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([Docs](https://docs.openvino.ai/))
+- [OpenVINO Toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([docs](https://docs.openvino.ai/))
 - [nanoLLaVA (multimodal)](https://huggingface.co/qnguyen3/nanoLLaVA)
 - [Whisper](https://github.com/openai/whisper)
-- [Llama3-8b-instruct](https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct)
-- [AI Super Resolution](https://arxiv.org/abs/1807.06779)
+- [Llama3-8b-Instruct](https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct)
+- [Single Image Super Resolution](https://arxiv.org/abs/1807.06779)
 - [Latent Consistency Models](https://arxiv.org/abs/2310.04378)
-- [Depth Anything v2](https://github.com/DepthAnything/Depth-Anything-V2)
+- [Depth Anything V2](https://github.com/DepthAnything/Depth-Anything-V2)
 
-Check out our [Edge AI Reference Kits repository](/) for other kits.
+Check out our [AI Reference Kits repository](/) for other kits.
 
 ![kit-gif](https://github.com/user-attachments/assets/f113a126-4b44-4488-be4e-e4bf52a6cebc)
 
@@ -34,7 +33,7 @@ New updates will be added here.
   
 - [Getting Started](#getting-started)
   - [Installing Prerequisites](#installing-prerequisites)
-  - [Setting up your Environment](#setting-up-your-environment)
+  - [Setting Up Your Environment](#setting-up-your-environment)
   - [Running the Application](#running-the-application)
 - [Additional Resources](#additional-resources)
 
@@ -55,7 +54,7 @@ sudo apt install git git-lfs gcc python3-venv python3-dev
 
 _NOTE: If you are using Windows, you will probably need to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe) also._
 
-## Setting up your Environment
+## Setting Up Your Environment
 ### Cloning the Repository
 
 To clone the repository, run the following command:
