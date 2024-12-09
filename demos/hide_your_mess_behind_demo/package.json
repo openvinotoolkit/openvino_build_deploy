@@ -4,7 +4,8 @@
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder"
+    "dist": "electron-builder",
+    "postdist": "sudo chmod 4755 dist/linux-unpacked/chrome-sandbox && sudo chown root:root dist/linux-unpacked/chrome-sandbox"
   },
   "build": {
     "extraFiles": [
