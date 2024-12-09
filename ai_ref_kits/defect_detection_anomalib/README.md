@@ -12,13 +12,13 @@
 
 [![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/LICENSE.txt)
 
-Intel’s OpenVINO™ Defect Detection with Anomalib offers a comprehensive solution to quality control through real-time detection of manufacturing defects. The kit trains a model to detect defects using Anomalib, an open-source deep-learning library, to make it easy to train, test, and deploy different anomaly detection algorithms on public and custom datasets. The model can be exported to the OpenVINO™ Intermediate Representation and deployed on Intel hardware. They are optimized for inference performance, trainable on CPU, and require low memory use, making them suitable for deployment on the edge.
+Intel’s OpenVINO™ Defect Detection with Anomalib offers a comprehensive solution to quality control through near-real-time detection of manufacturing defects. The kit uses Anomalib, an open-source deep-learning library, to simplify training, testing, and deploying anomaly detection models on public and custom datasets. Models can be exported to the OpenVINO™ Intermediate Representation and deployed on Intel hardware. Optimized for inference performance, these models are trainable on CPU, require low memory, and are well-suited for edge deployment. 
 
-This kit uses the notebooks in the actual Anomalib repository. Here you will find that repository as a submodule. This kit uses the following technology stack:
-- [OpenVINO toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([Docs](https://docs.openvino.ai/))
+This kit uses the following technology stack:
+- [OpenVINO Toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([docs](https://docs.openvino.ai/))
 - [Anomalib](https://github.com/openvinotoolkit/anomalib)
 
-Check out our [Edge AI Reference Kits repository](/) for other kits.
+Check out our [AI Reference Kits repository](/) for other kits.
 
 ![defect-detection](https://github.com/openvinotoolkit/openvino_notebooks/assets/138901786/cf933593-31f7-44a5-9cd1-fc68e8a719a9)
 
