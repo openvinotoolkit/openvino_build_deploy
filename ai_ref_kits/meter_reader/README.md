@@ -17,7 +17,7 @@ This kit uses the following technology stack:
 - [OpenVINO toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([Docs](https://docs.openvino.ai/))
 - [Models from PaddlePaddle](https://github.com/PaddlePaddle)
 
-Check out our [Edge AI Reference Kits repository](/) for other kits.
+Check out our [AI Reference Kits repository](/) for other kits.
 
 ![smart-meter-scanning](https://github.com/openvinotoolkit/openvino_notebooks/assets/138901786/0136d123-15c9-4696-bf4d-b169b3c7db4d)
 
