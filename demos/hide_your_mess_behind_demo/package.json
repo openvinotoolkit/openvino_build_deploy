@@ -4,7 +4,8 @@
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder"
+    "dist": "electron-builder",
+    "postdist": "sudo chmod 4755 dist/linux-unpacked/chrome-sandbox && sudo chown root:root dist/linux-unpacked/chrome-sandbox"
   },
   "build": {
     "extraFiles": [
@@ -28,6 +29,7 @@
     "linux": {
       "target": [
         "deb",
+        "rpm",
         "zip"
       ],
       "icon": "assets/icons/icon.png",
@@ -44,7 +46,7 @@
       "src/styles.css",
       "package.json",
       "models/**",
-      "assets/**/*"
+      "assets/**/*"      
     ],
     "asarUnpack": [
       "models/**",
@@ -65,7 +67,7 @@
   "author": "Mikołaj Roszczyk <mikolaj.roszczyk@intel.com>",
   "contributors": [
     "Adrian Boguszewski <adrian.boguszewski@intel.com>",
-    "Antonio Martinez"
+    "Antonio Martinez <jose.antonio.martinez.torres@intel.com>"
   ],
   "homepage": "https://github.com/openvinotoolkit/openvino_build_deploy",
   "license": "Apache-2.0",
