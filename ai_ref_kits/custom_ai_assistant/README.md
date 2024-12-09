@@ -8,13 +8,13 @@
 
 [![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/LICENSE.txt)
 
-The Custom AI Assistant utilizes the OpenVINO™ toolkit to create a streamlined, voice-activated interface that developers can easily integrate and deploy. At its core, the application harnesses state-of-the-art models for speech recognition and natural language understanding. It's configured to understand user prompts and engage in dialogue, facilitating an interactive and user-friendly conversational agent.
+The Custom AI Assistant is designed to understand user prompts and engage in dialogue, providing an interactive and user-friendly experience. Harnessing state-of-the-art models for speech recognition and natural language processing (NLP), the application utilizes the OpenVINO™ toolkit to create a streamlined, voice-activated interface that developers can easily integrate and deploy.
 
 This kit uses the following technology stack:
-- [OpenVINO toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([Docs](https://docs.openvino.ai/))
-- [Meta’s Llama](https://llama.meta.com/llama3/)
+- [OpenVINO Toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([docs](https://docs.openvino.ai/))
+- [Llama 2](https://llama.meta.com/llama3/)
 
-Check out our [Edge AI Reference Kits repository](/) for other kits.
+Check out our [AI Reference Kits repository](/) for other kits.
 
 ![custom-ai-assistant](https://github.com/openvinotoolkit/openvino_notebooks/assets/138901786/e0c2f2db-c213-4071-970b-09ebc1eea710)
 
@@ -26,8 +26,8 @@ New updates will be added here.
   
 - [Getting Started](#getting-started)
   - [Installing Prerequisites](#installing-prerequisites)
-  - [Setting up your Environment](#setting-up-your-environment)
-  - [How to Access LlaMA](#how-to-access-llama)
+  - [Setting Up Your Environment](#setting-up-your-environment)
+  - [Accessing Llama](#how-to-access-llama)
   - [Running the Application](#running-the-application)
 - [Additional Resources](#additional-resources)
 
@@ -49,7 +49,7 @@ sudo apt install git gcc python3-venv python3-dev
 
 _NOTE: If you are using Windows, you may also need to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe)._
 
-## Setting up your Environment
+## Setting Up Your Environment
 
 ### Cloning the Repository
 
@@ -94,22 +94,22 @@ To install the required packages, run the following commands:
 python -m pip install --upgrade pip 
 pip install -r requirements.txt
 ```
-## How to Access LlaMA
+## Accessing Llama
 
-_NOTE: If you already have access to the LlaMA model weights, skip to the authentication step, which is mandatory for converting the LlaMA model._
+_NOTE: If you already have access to the Llama model weights, skip to the authentication step, which is mandatory for converting the Llama model._
 
 ### Accessing Original Weights from Meta AI
 
-To access the original LlaMA model weights:
+To access the original Llama model weights:
 
 Visit [Meta AI's website](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) and fill in your details, including your name, email, and organization.
 Accept the terms and submit the form. You will receive an email granting access to download the model weights.
 
-### Using LlaMA with Hugging Face
+### Using Llama with Hugging Face
 
 Set Up a Hugging Face Account: If you don't have one, create a [Hugging Face account](https://huggingface.co/welcome).
 
-Authenticate with Meta AI: Go to the LlaMA model (v2 or v3) page on Hugging Face. To authenticate, enter the same email address you used for the Meta AI website. After authentication, you'll gain access to the model.
+Authenticate with Meta AI: Go to the Llama model (v2 or v3) page on Hugging Face. To authenticate, enter the same email address you used for the Meta AI website. After authentication, you'll gain access to the model.
 
 To use the model, authenticate using the Hugging Face CLI:
 
