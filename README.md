@@ -16,11 +16,11 @@ Welcome to the **Build and Deploy AI Solutions** repository! This repository con
   
 ## Repo Contents
 
-### [Edge AI Reference Kits](https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/ai_ref_kits): Production-Ready OpenVINO Code
+### [AI Reference Kits](https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/ai_ref_kits): Production-Ready OpenVINO Code
 
 Start development of your AI applications, including deep learning and Gen AI, on top of our code samples, conference demos, and [here](https://www.intel.com/content/www/us/en/developer/topic-technology/edge-5g/open-potential.html).
 
-Each Edge AI Reference Kit includes:
+Each AI Reference Kit includes:
 - Detailed documentation
 - Pre-configured demos
 - Code samples to seamlessly integrate AI functionalities into your projects.
@@ -57,9 +57,7 @@ Hello, we're the AI Evangelist team at Intel! We’re a group of experts in AI s
 
 | | | |
 |---|---|---|
-|[![ray](https://github.com/openvinotoolkit/openvino_notebooks/assets/138901786/747ab608-235a-4db9-b959-c9e158b40b12)](https://www.linkedin.com/in/raymondlo84/)|[![ria](https://github.com/openvinotoolkit/openvino_notebooks/assets/138901786/05b43e99-5204-4986-b06f-99db1ca1449d)](https://www.linkedin.com/in/ria-cheruvu-54348a173/)|[![paula](https://github.com/openvinotoolkit/openvino_notebooks/assets/138901786/7b884f49-7221-45e9-ad96-08b341022279)](https://www.linkedin.com/in/paula-ramos-41097319/)|
-|**[Raymond Lo](https://www.linkedin.com/in/raymondlo84/)** <br> Global Lead <br> (Santa Clara – HQ, California) <br><br> PhD in Computer Engineering <br> 9+ Years as Entrepreneur Executive & Evangelist|**[Ria Cheruvu](https://www.linkedin.com/in/ria-cheruvu-54348a173/)** <br> Ria AI Software Architect <br> (Tempe, Arizona) <br><br> MSc in Data Science <br> 5+ Years as AI SW Lead Architect & Research Engineer|**[Paula Ramos](https://www.linkedin.com/in/paula-ramos-41097319/)** <br> Computer Vision Scientist <br> (Raleigh, NC) <br><br> PhD in Engineering <br> 17+ Years of Experience as a Researcher|
+|[![ray](https://github.com/openvinotoolkit/openvino_notebooks/assets/138901786/747ab608-235a-4db9-b959-c9e158b40b12)](https://www.linkedin.com/in/raymondlo84/)|[![ria](https://github.com/openvinotoolkit/openvino_notebooks/assets/138901786/05b43e99-5204-4986-b06f-99db1ca1449d)](https://www.linkedin.com/in/ria-cheruvu-54348a173/)|
+|**[Raymond Lo](https://www.linkedin.com/in/raymondlo84/)** <br> Global Lead <br> (Santa Clara – HQ, California) <br><br> PhD in Computer Engineering <br> 9+ Years as Entrepreneur Executive & Evangelist|**[Ria Cheruvu](https://www.linkedin.com/in/ria-cheruvu-54348a173/)** <br> Ria AI Software Architect <br> (Tempe, Arizona) <br><br> MSc in Data Science <br> 5+ Years as AI SW Lead Architect & Research Engineer
 |[![adrian](https://github.com/openvinotoolkit/openvino_notebooks/assets/138901786/10d11bf5-63f0-485b-93cb-581354203723)](https://www.linkedin.com/in/adrianboguszewski/)|[![anisha](https://github.com/openvinotoolkit/openvino_notebooks/assets/138901786/d3641d44-f6b4-410d-96ce-4c401e99b35c)](https://www.linkedin.com/in/anisha-uday/)|[![zhuo](https://github.com/openvinotoolkit/openvino_notebooks/assets/138901786/be02c0af-182a-4504-bac5-4780849f9e47)](https://www.linkedin.com/in/wuzhuo/)|
 |**[Adrian Boguszewski](https://www.linkedin.com/in/adrianboguszewski/)** <br> Deep Learning Expert <br> (Warsaw, Poland) <br><br> MSc in Computer Science <br> 5+ years as DL Engineer|**[Anisha Udayakumar](https://www.linkedin.com/in/anisha-uday/)** <br> Anisha AI Innovation Consultant <br> (Bengaluru, India) <br><br> BTech in Civil Engineering <br> 5+ years as a Innovation Consultant|**[Zhuo Wu](https://www.linkedin.com/in/wuzhuo/)** <br> Professor and Research Scientist <br> (Shanghai, China) <br><br> PhD in Electronics <br> 15+ Years as a Researcher and Professor|
-|[![dmitriy](https://github.com/user-attachments/assets/92fa69d1-10f4-4f1a-968a-501ab6c65cab)](https://www.linkedin.com/in/dmitriy-pastushenkov/)|
-|**[Dmitriy Pastushenkov​](https://www.linkedin.com/in/dmitriy-pastushenkov/)** <br> AI PC Evangelist <br> (Bavaria, Germany) <br><br> MSc in Computer Science <br> 20+ years as a Software Engineer and Architect, Technical Manager |
