@@ -46,8 +46,7 @@
       "src/styles.css",
       "package.json",
       "models/**",
-      "assets/**/*",
-      "!**/chrome-sandbox"
+      "assets/**/*"      
     ],
     "asarUnpack": [
       "models/**",
