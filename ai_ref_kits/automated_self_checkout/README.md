@@ -11,14 +11,14 @@
 
 [![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/LICENSE.txt)
 
-Automated Self-Checkout is an application designed to help automate checkout for retail businesses, by analyzing video streams and detecting and tracking interactions with retail products. It uses OpenVINO, a toolkit that enables developers to deploy deep learning models on various hardware platforms.
+Automated Self-Checkout is designed to help automate checkout for retail businesses by analyzing video streams and detecting and tracking interactions with retail products. It uses OpenVINO™, a toolkit that enables developers to deploy deep learning models on various hardware platforms.
 
 This kit uses the following technology stack:
-- [OpenVINO toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([Docs](https://docs.openvino.ai/))
-- [Ultralytic’s YOLOv8](https://github.com/ultralytics/ultralytics)
-- [Roboflow’s supervision](https://supervision.roboflow.com/latest/)
+- [OpenVINO Toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([docs](https://docs.openvino.ai/))
+- [Ultralytic YOLOv8](https://github.com/ultralytics/ultralytics)
+- [Roboflow Supervision](https://supervision.roboflow.com/latest/)
 
-Check out our [Edge AI Reference Kits repository](/) for other kits.
+Check out our [AI Reference Kits repository](/) for other kits.
 
 ![automated-self-checkout](https://github.com/openvinotoolkit/openvino_notebooks/assets/138901786/965a6604-fa15-427e-9d44-c23fa0bbeb6b)
 
@@ -30,9 +30,9 @@ New updates will be added here.
   
 - [Getting Started](#getting-started)
   - [Installing Prerequisites](#installing-prerequisites)
-  - [Setting up your Environment](#setting-up-your-environment)
+  - [Setting Up Your Environment](#setting-up-your-environment)
   - [Running the Application](#running-the-application)
-- [Benchmarking the Model with OpenVINO's `benchmark_app`](#benchmarking-the-model-with-openvinos-benchmark_app)
+- [Benchmarking the Model with OpenVINO's `Benchmark_App`](#benchmarking-the-model-with-openvinos-benchmark_app)
 - [Additional Resources](#additional-resources)
 
 </details>
@@ -53,7 +53,7 @@ sudo apt install git git-lfs gcc python3-venv python3-dev
 
 _NOTE: If you are using Windows, you will probably need to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe) also._
 
-## Setting up your Environment
+## Setting Up Your Environment
 
 ### Cloning the Repository
 
