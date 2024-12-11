@@ -12,7 +12,7 @@ The Custom AI Assistant is designed to understand user prompts and engage in dia
 
 This kit uses the following technology stack:
 - [OpenVINO Toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([docs](https://docs.openvino.ai/))
-- [Llama 2](https://llama.meta.com/llama3/)
+- [Llama 3](https://llama.meta.com/llama3/)
 
 Check out our [AI Reference Kits repository](/) for other kits.
 
