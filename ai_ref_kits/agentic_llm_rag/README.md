@@ -8,15 +8,15 @@
 
 [![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/LICENSE.txt)
 
-The AI Insight Agent with RAG uses the OpenVINO™ toolkit to create a streamlined, voice-activated interface that consumers and retail employees can use as a smart, personalized retail assistant. The AI Insight Agent with RAG can perform math, understand instructional documents, and engage in conversations. At its core, the application harnesses models for speech recognition. It is configured to understand user prompts, engage in meaningful dialogue using agents powered by Large Language Models (LLM), understand guides and information uploaded to it with Retrieval-Augmented Generation (RAG), and provide spoken responses. It's an interactive and user-friendly personalized assistant that simulates the experience of a interactive kiosk.
+The AI Insight Agent with RAG uses Large Language Models (LLMs) and Retrieval-Augmented Generation (RAG) to interpret user prompts, engage in meaningful dialogue, perform calculations, and deliver spoken responses through advanced speech recognition. This solution uses the OpenVINO™ toolkit to power a streamlined, voice-activated interface. Designed for both consumers and employees, it functions as a smart, personalized retail assistant, offering an interactive and user-friendly experience similar to an advanced digital kiosk.
 
 This kit uses the following technology stack:
-- [OpenVINO toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([Docs](https://docs.openvino.ai/))
-- [Meta’s Llama](https://llama.meta.com/llama3/)
-- [OpenAI Whisper](https://openai.com/index/whisper/)
+- [OpenVINO Toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([docs](https://docs.openvino.ai/))
+- [Llama](https://llama.meta.com/llama3/)
+- [Whisper](https://openai.com/index/whisper/)
 - [Gradio interface](https://www.gradio.app/docs/gradio/chatinterface)
 
-For other Intel AI kits, see the [Edge AI Reference Kits repository](/).
+Check out our [AI Reference Kits repository](/) for other kits.
 
 ![ai-insight-agent-with-rag](https://github.com/user-attachments/assets/1a7ca6bc-3bde-4e97-be61-83a3709e9b73)
 
@@ -26,21 +26,21 @@ New updates will be added to this contents list.
 
 <details open><summary><b>Table of Contents</b></summary>
   
-- [Get Started](#get-started)
-  - [Install Prerequisites](#install-prerequisites)
-  - [Set Up  Your Environment](#set-up-your-environment)
-  - [Get Access to Llama](#get-access-to-llama)
-  - [Convert and Optimize the Model](*convert-and-optimize-the-model)
-  - [Run the Application](#run-the-application)
+- [Getting Started](#get-started)
+  - [Installing Prerequisites](#install-prerequisites)
+  - [Setting Up Your Environment](#set-up-your-environment)
+  - [Accessing Llama](#get-access-to-llama)
+  - [Converting and Optimizing the Model](*convert-and-optimize-the-model)
+  - [Running the Application](#run-the-application)
 - [Additional Resources](#additional-resources)
 
 </details>
 
-# Get Started
+# Getting Started
 
 To get started with the AI Insight Agent with RAG, you install Python, set up your environment, and then you can run the application. We recommend using Ubuntu to set up and run this project.
 
-## Install Prerequisites
+## Installing Prerequisites
 
 This project requires Python 3.8 or higher and a few libraries. If you don't already have Python installed on your machine, go to [https://www.python.org/downloads/](https://www.python.org/downloads/) and download the latest version for your operating system. Follow the prompts to install Python, and make  sure to select the option to add Python to your PATH environment variable.
 
@@ -52,7 +52,7 @@ sudo apt install git gcc python3-venv python3-dev
 
 _NOTE: If you are using Windows, you might also have to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe)._
 
-## Set Up Your Environment
+## Setting Up Your Environment
 
 To set up your environment, you first clone the repository, then create a virtual environment, activate the environment, and install the packages.
 
@@ -107,11 +107,11 @@ To install the required packages, run the following commands:
 python -m pip install --upgrade pip 
 pip install -r requirements.txt
 ```
-## Get Access to Llama
+## Accessing Llama
 
 _NOTE: If you already have access to the Llama model weights, you can proceed to the authentication step, which is mandatory to convert the Llama model._
 
-## Convert and Optimize the Model
+## Converting and Optimizing the Model
 
 The application uses three separate models. Each model requires conversion and optimization for use with OpenVINO™. The following process includes a step to convert and optimize each model.
 
@@ -144,7 +144,7 @@ python convert_and_optimize_llm.py --chat_model_type llama3.1-8B --embedding_mod
 
 After you run the conversion scripts, you can run `app.py` to launch the application.
 
-## Run the Application (Gradio Interface)
+## Running the Application (Gradio Interface)
 
 To run the AI Insight Agent with RAG application, you execute the following python script. Make sure to include all of the necessary model directory arguments. 
 
