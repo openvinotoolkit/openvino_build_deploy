@@ -9,14 +9,14 @@
 
 [![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/LICENSE.txt)
 
-The Explainable AI kit demonstrates how to use data quality measurements and saliency maps to understand the predictions and performance of computer vision models during inference. Data and model explainability help us understand how predictions are made to help refine models for efficiency and performance.
+Explainable AI uses data quality measurements and saliency maps to understand the predictions and performance of computer vision models during inference. Data and model explainability provide insights into how predictions are made, helping refine models for efficiency and performance. This application utilizes the Intel OpenVINO™ toolkit, enabling seamless deployment of deep learning models across hardware platforms.
 
 This kit uses the following technology stack:
-- [OpenVINO toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([Docs](https://docs.openvino.ai/))
+- [OpenVINO Toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([docs](https://docs.openvino.ai/))
 - [OpenVINO Datumaro](https://docs.openvino.ai/2023.3/datumaro_documentation.html)
-- [Ultralytic’s YOLOv8](https://github.com/ultralytics/ultralytics)
+- [Ultralytic YOLOv8](https://github.com/ultralytics/ultralytics)
 
-Check out our [Edge AI Reference Kits repository](/) for other kits.
+Check out our [AI Reference Kits repository](/) for other kits.
 
 ![explainable-ai](https://github.com/openvinotoolkit/openvino_notebooks/assets/138901786/14958589-433b-4617-b3ea-e2307fe6cb53)
 
@@ -28,9 +28,9 @@ New updates will be added here.
   
 - [Getting Started](#getting-started)
   - [Installing Prerequisites](#installing-prerequisites)
-  - [Setting up your Environment](#setting-up-your-environment)
+  - [Setting Up Your Environment](#setting-up-your-environment)
   - [Running the Application](#running-the-application)
-- [Benchmarking the Model with OpenVINO's `benchmark_app`](#benchmarking-the-model-with-openvinos-benchmark_app)
+- [Benchmarking the Model with OpenVINO's `Benchmark_App`](#benchmarking-the-model-with-openvinos-benchmark_app)
 - [Additional Resources](#additional-resources)
 
 </details>
@@ -49,7 +49,7 @@ sudo apt install git git-lfs gcc python3-venv python3-dev
 
 _NOTE: If you are using Windows, you would need to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe) also._
 
-## Setting up your Environment
+## Setting Up Your Environment
 
 ### Cloning the Repository
 
@@ -155,6 +155,6 @@ Platform Configurations for Performance Benchmarks for YOLOv8m Model
 
 # Additional Resources
 - [DarwinAI Case Study](https://www.intel.com/content/www/us/en/internet-of-things/ai-in-production/partners/documents/darwinai-delivers-explainable-ai-case-study.html): See how others are implementing Explainable AI practices with Intel.
-- [Interview on building Ethical AI with Explainable AI](https://www.youtube.com/watch?v=wWjlWpI4EIE): Learn more about key topics around Explainable AI from Ria, our evangelist ​and creator of the Explainable AI kit.
+- [Interview on Building Ethical AI with Explainable AI](https://www.youtube.com/watch?v=wWjlWpI4EIE): Learn more about key topics around Explainable AI from Ria, our evangelist ​and creator of the Explainable AI kit.
 
 <p align="right"><a href="#top">Back to top ⬆️</a></p>
