@@ -145,7 +145,7 @@ jobs:
           cd ${{ matrix.subproject }}
           
           # Start the Gradio app in the background
-          python main.py 2>&1 | tee gradio_log.txt &
+          nohup python main.py 2>&1 | tee gradio_log.txt &
           # Assign process id to the var
           app_pid=$!
       
@@ -159,6 +159,9 @@ jobs:
 
           # Kill the app process in all cases
           echo "Stopping the Gradio app..."
+          echo "Gradio app PID: $app_pid"
+          ps aux | grep python
+
           pkill -P $app_pid || echo "No child processes to kill."
           kill -9 $app_pid 2>/dev/null || echo "App process already terminated."
           wait $app_pid 2>/dev/null || echo "App process cleanup complete."
