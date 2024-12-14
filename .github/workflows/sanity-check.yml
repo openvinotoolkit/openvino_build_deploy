@@ -149,7 +149,7 @@ jobs:
           nohup python main.py 2>&1 | tee gradio_log.txt &
           echo "1"
           # Assign process id to the var
-          app_pid=$(ps -ef | grep '[p]ython main.py' | awk '{print $2}')
+          app_pid=$(ps aux | grep '[p]ython main.py' | awk '{print $2}')
           echo "2"
           # Wait for the specific log message
           timeout 30m bash -c "
