@@ -12,6 +12,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   find-subprojects:
     runs-on: ubuntu-latest
@@ -146,7 +150,7 @@ jobs:
           app_pid=$!
       
           # Wait for the specific log message
-          timeout 30m grep -q "Demo is ready!" <(tail -f gradio_log.txt)
+          timeout 30m grep -q "INFO:root:Demo is ready!" <(tail -f gradio_log.txt)
       
           # Capture the app status
           status=$?
