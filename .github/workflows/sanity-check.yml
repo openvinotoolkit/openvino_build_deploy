@@ -143,9 +143,10 @@ jobs:
         shell: bash
         run: |
           cd ${{ matrix.subproject }}
-          
+
+          echo "0"
           # Start the Gradio app in the background
-          python main.py 2>&1 | tee gradio_log.txt &
+          nohup python main.py 2>&1 | tee gradio_log.txt &
           echo "1"
           # Assign process id to the var
           app_pid=$(ps -ef | grep '[p]ython main.py' | awk '{print $2}')
