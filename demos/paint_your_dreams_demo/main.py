@@ -192,7 +192,6 @@ def run_endless_lcm(model_name: str, local_network: bool = False, public_interfa
 if __name__ == '__main__':
     # set up logging
     log.getLogger().setLevel(log.INFO)
-    raise RuntimeException()
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", type=str, default="OpenVINO/LCM_Dreamshaper_v7-int8-ov",
