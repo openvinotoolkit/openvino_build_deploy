@@ -135,12 +135,28 @@ jobs:
         shell: bash
         run: |
           huggingface-cli login --token ${{ secrets.HF_TOKEN }}
-      - uses: ./.github/reusable-steps/timeouted-action
-        name: Run Gradio App
-        with:
-          command: python main.py --twwst
-          project: ${{ matrix.subproject }}
-          timeout: 30m
+      - name: Run Gradio App
+        shell: bash
+        run: |
+          cd ${{ matrix.subproject }}
+          
+          # Start the Gradio app in the background
+          python main.py 2>&1 | tee gradio_log.txt &
+          # Assign process id to the var
+          app_pid=$!
+      
+          # Wait for the specific log message
+          timeout 30m grep -q "Demo is ready!" <(tail -f gradio_log.txt)
+      
+          # Capture the app status
+          status=$?
+
+          # Kill the app process in all cases
+          kill $app_pid
+          wait $app_pid 2>/dev/null || echo "Gradio app stopped."
+      
+          # Exit with the readiness check status
+          exit $status
 
   webcam:
     needs: find-subprojects
