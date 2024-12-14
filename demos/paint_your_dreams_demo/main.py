@@ -185,7 +185,7 @@ def run_endless_lcm(model_name: str, local_network: bool = False, public_interfa
     server_name = "0.0.0.0" if local_network else None
 
     demo = build_ui()
-    log.info("Demo is running! Click the URL below")
+    log.info("Demo is ready!")
     demo.launch(server_name=server_name, share=public_interface)
 
 
