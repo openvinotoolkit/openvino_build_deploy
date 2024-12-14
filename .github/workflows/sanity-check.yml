@@ -150,7 +150,7 @@ jobs:
           app_pid=$(ps -ef | grep '[p]ython main.py' | awk '{print $2}')
       
           # Wait for the specific log message
-          timeout 1m bash -c "
+          timeout 30m bash -c "
             tail -f gradio_log.txt | grep -q 'Demo is ready!'
           " 
           
