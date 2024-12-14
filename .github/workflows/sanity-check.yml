@@ -145,9 +145,9 @@ jobs:
           cd ${{ matrix.subproject }}
           
           # Start the Gradio app in the background
-          nohup python main.py 2>&1 | tee gradio_log.txt &
+          python main.py 2>&1 | tee gradio_log.txt &
           # Assign process id to the var
-          app_pid=$!
+          app_pid=$(ps -ef | grep '[p]ython main.py' | awk '{print $2}')
       
           # Wait for the specific log message
           timeout 30m bash -c "
@@ -163,8 +163,8 @@ jobs:
           ps aux | grep python
 
           pkill -P $app_pid || echo "No child processes to kill."
-          kill -9 $app_pid 2>/dev/null || echo "App process already terminated."
-          wait $app_pid 2>/dev/null || echo "App process cleanup complete."
+          kill -9 $app_pid || echo "App process already terminated."
+          wait $app_pid || echo "App process cleanup complete."
       
           # Exit with the readiness check status
           exit $status
