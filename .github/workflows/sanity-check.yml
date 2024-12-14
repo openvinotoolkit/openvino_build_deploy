@@ -158,8 +158,10 @@ jobs:
           status=$?
 
           # Kill the app process in all cases
-          pkill -P $app_pid && kill -9 $app_pid
-          wait $app_pid || echo "Gradio app stopped."
+          echo "Stopping the Gradio app..."
+          pkill -P $app_pid || echo "No child processes to kill."
+          kill -9 $app_pid 2>/dev/null || echo "App process already terminated."
+          wait $app_pid 2>/dev/null || echo "App process cleanup complete."
       
           # Exit with the readiness check status
           exit $status
