@@ -150,7 +150,9 @@ jobs:
           app_pid=$!
       
           # Wait for the specific log message
-          timeout 30m bash -c "tail -f gradio_log.txt | grep -q 'Demo is ready!'" 
+          timeout 30m bash -c "
+            tail -f gradio_log.txt | grep -q 'Demo is ready!'
+          " 
           
           # Capture the app status
           status=$?
