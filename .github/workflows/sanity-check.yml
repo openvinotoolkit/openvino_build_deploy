@@ -159,11 +159,8 @@ jobs:
 
           # Kill the app process in all cases
           echo "Stopping the Gradio app..."
-          echo "Gradio app PID: $app_pid"
-          ps aux | grep python
-
           pkill -P $app_pid || echo "No child processes to kill."
-          kill -9 $app_pid || echo "App process already terminated."
+          kill $app_pid || echo "App process already terminated."
           wait $app_pid || echo "App process cleanup complete."
       
           # Exit with the readiness check status
