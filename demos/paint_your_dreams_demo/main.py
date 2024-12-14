@@ -184,7 +184,7 @@ def run_endless_lcm(model_name: str, local_network: bool = False, public_interfa
     server_name = "0.0.0.0" if local_network else None
 
     demo = build_ui()
-    demo.launch(server_name=server_name, share=public_interface)
+    demo.launch(server_name=server_name, share=public_interface, verbose=True)
 
 
 if __name__ == '__main__':
