@@ -3,12 +3,26 @@ const { performance } = require('perf_hooks');
 const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 
 module.exports = { detectDevices, runModel, takeTime, blurImage, addWatermark }
+
+// Sharp settings
+sharp.cache(100);  // Increased cache size
+sharp.concurrency(2);  // Allow 2 concurrent operations since we're using Promise.all
+sharp.simd(true);  // Ensure SIMD optimizations are enabled
 
 // GLOBAL VARIABLES
 // OpenVINO:
 const core = new ov.Core();
+if (core.getAvailableDevices().includes('CPU')) {
+    core.setProperty("CPU", {
+        "INFERENCE_NUM_THREADS": Math.max(2, os.cpus().length - 1),
+        "INFERENCE_PRECISION_HINT": "f32",
+        "PERFORMANCE_HINT": "LATENCY",
+        "ENABLE_HYPER_THREADING": "YES"
+    });
+}
 const ovModels = new Map(); // compiled models
 let model = null; // read model
 
@@ -20,7 +34,6 @@ let prevDevice = null;
 const inputSize = { w: 256, h: 256 };
 let outputMask = null;
 let ovLogo = null;
-
 
 async function detectDevices() {
     return ["AUTO"].concat(core.getAvailableDevices());
@@ -139,100 +152,115 @@ function postprocessMask(resultTensor) {
 }
 
 
-function calculateAverageInferenceTime(inferenceTime, device) {
-    if (prevDevice !== device){
-        infTimes = [];
-        prevDevice = device;
-    }
-    if (infTimes.length >= 50){
-        infTimes.pop();
-    }
-    infTimes.unshift(inferenceTime);
-    return average(infTimes);
-}
+// function calculateAverageInferenceTime(inferenceTime, device) {
+//     if (prevDevice !== device){
+//         infTimes = [];
+//         prevDevice = device;
+//     }
+//     if (infTimes.length >= 50){
+//         infTimes.pop();
+//     }
+//     infTimes.unshift(inferenceTime);
+//     return average(infTimes);
+// }
 
 
 async function runModel(img, width, height, device){
+    
     const originalImg = sharp(img.data, { raw: { channels: 4, width, height } });
-
+    const inputTensor = await preprocess(originalImg);   
+    
     let model = await getModel(device);
-
-    const inputTensor = await preprocess(originalImg);
-
-    const startTime = performance.now();            // TIME MEASURING : START
-
-    // OpenVINO INFERENCE
     let inferRequest = model.createInferRequest();
-
     inferRequest.setInputTensor(inputTensor);
     inferRequest.infer();
     const outputLayer = model.outputs[0];
-    const resultTensor = inferRequest.getTensor(outputLayer);
-
-    const endTime = performance.now();              // TIME MEASURING : END
-    const inferenceTime = endTime - startTime;
-
-    avgInfTime = calculateAverageInferenceTime(inferenceTime, device)
-
-    // POSTPROCESSING
+    const resultTensor = inferRequest.getTensor(outputLayer);       
     outputMask = postprocessMask(resultTensor);
-
     return {
-        width : width,
-        height : height,
-        inferenceTime : avgInfTime.toFixed(2).toString()
+        width: width,
+        height: height   
     };
 }
 
 
 async function blurImage(image, width, height) {
-    if (outputMask == null)
+    if (outputMask == null) {
         return {
             img: image.data,
             width: width,
             height: height
         };
+    }    
 
-    const person = await sharp(outputMask, {
-        raw: {
-            channels: 3,
-            width: inputSize.w,
-            height: inputSize.h,
-        }
-    })
-        .resize(width, height, { fit: 'fill' })
-        .unflatten()
-        .composite([{
-            input: image.data,
-            raw: {
-                channels: 4,
-                width,
-                height,
-            },
-            blend: 'in',
-        }])
-        .toBuffer();
-
-    const blurSize = Math.floor(width * 0.01)
-    const screen = await sharp(image.data, {
-        raw: { channels: 4, width, height },
-    })
-        .blur(blurSize)
-        .composite([{
-            input: person,
+    const blurSize = Math.floor(width * 0.01);
+    
+    try {        
+        const blurPipeline = sharp(image.data, {
             raw: { channels: 4, width, height },
-            blend: 'atop'
-        }])
-        .raw()
-        .toBuffer();
+            limitInputPixels: false,
+        });
 
-    return {
-        img: new Uint8ClampedArray(screen.buffer),
-        width: width,
-        height: height,
-    };
+        const maskPipeline = sharp(outputMask, {
+            raw: {
+                channels: 3,
+                width: inputSize.w,
+                height: inputSize.h,
+            },
+            limitInputPixels: false,
+        });
+
+        const [blurred, person] = await Promise.all([
+            blurPipeline
+                .blur(blurSize)
+                .raw()
+                .toBuffer({ resolveWithObject: false }),
+
+            maskPipeline
+                .resize(width, height, { 
+                    fit: 'fill',
+                    kernel: 'cubic',
+                    fastShrinkOnLoad: true
+                })
+                .unflatten()
+                .composite([{
+                    input: image.data,
+                    raw: {
+                        channels: 4,
+                        width,
+                        height,
+                    },
+                    blend: 'in',
+                }])
+                .raw()
+                .toBuffer({ resolveWithObject: false })
+        ]);        
+        const screen = await sharp(blurred, {
+            raw: { channels: 4, width, height },
+            limitInputPixels: false,
+        })
+            .composite([{
+                input: person,
+                raw: { channels: 4, width, height },
+                blend: 'atop'
+            }])
+            .raw()
+            .toBuffer();
+
+        return {
+            img: new Uint8ClampedArray(screen.buffer),
+            width: width,
+            height: height,
+        };
+    } catch (error) {
+        console.error('Error in blur processing:', error);
+        return {
+            img: image.data,
+            width: width,
+            height: height
+        };
+    }
 }
-
 
 async function addWatermark(image, width, height) {
     if (ovLogo == null){

@@ -46,40 +46,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   // CAPTURING FRAMES
-  async function processFrame() {
-    if (!streamingActive) return;
+const processingTimes = [];
 
-    let device = deviceSelect.value;
-    try {
-      ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
-      const imageData = ctx.getImageData(0, 0, canvasElement.width, canvasElement.height);
+async function processFrame() {
+  if (!streamingActive) return;
 
-      if (inferenceActive) {
-        let resultMask = await window.electronAPI.runModel(imageData, canvasElement.width, canvasElement.height, device);
-        let result = await window.electronAPI.blurImage(imageData, canvasElement.width, canvasElement.height);
-        let blurredImage = new ImageData(result.img, result.width, result.height);
+  let device = deviceSelect.value;
+  try {
+    ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+    const imageData = ctx.getImageData(0, 0, canvasElement.width, canvasElement.height);
 
-        result = await window.electronAPI.addWatermark(blurredImage, canvasElement.width, canvasElement.height);
-        blurredImage = new ImageData(result.img, result.width, result.height);
+    if (inferenceActive) {
+      // Start timing
+      const startTime = performance.now();      
+      let resultMask = await window.electronAPI.runModel(imageData, canvasElement.width, canvasElement.height, device);
+      // End timing
+      const stopTime = performance.now();
+      let result = await window.electronAPI.blurImage(imageData, canvasElement.width, canvasElement.height);
+      let blurredImage = new ImageData(result.img, result.width, result.height);
 
-        ctx.putImageData(blurredImage, 0, 0);
+      result = await window.electronAPI.addWatermark(blurredImage, canvasElement.width, canvasElement.height);
+      blurredImage = new ImageData(result.img, result.width, result.height);
+      
+      const frameTime = stopTime - startTime;
+      processingTimes.push(frameTime);
+      
+      if (processingTimes.length > 200) {
+        processingTimes.shift();
+      }      
+      const processingTime = processingTimes.reduce((sum, t) => sum + t, 0) / processingTimes.length;
+      const fps = (1000 / processingTime).toFixed(1);
 
-        let inferenceTime = resultMask.inferenceTime;
-        if (!streamingActive) return;
-        processingTimeElement.innerText = `Inference time: ${inferenceTime} ms (${(1000 / inferenceTime).toFixed(1)} FPS)`;
-      } else {
-        processingTimeElement.innerText = `Inference OFF`;
-      }
+      ctx.putImageData(blurredImage, 0, 0);
 
       if (!streamingActive) return;
-      imgElement.src = canvasElement.toDataURL('image/jpeg');
-
-      requestAnimationFrame(processFrame);
-    } catch (error) {
-      console.error('Error during capture:', error);
+      processingTimeElement.innerText = `Inference time: ${processingTime.toFixed(2)} ms (${fps} FPS)`;
+    } else {
+      processingTimeElement.innerText = `Inference OFF`;
     }
-  }
 
+    if (!streamingActive) return;
+    imgElement.src = canvasElement.toDataURL('image/jpeg');
+
+    requestAnimationFrame(processFrame);
+  } catch (error) {
+    console.error('Error during capture:', error);
+  }
+}
 
   // START STREAMING
   async function startWebcam(deviceId) {
