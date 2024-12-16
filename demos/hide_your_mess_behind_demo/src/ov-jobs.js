@@ -5,7 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
-module.exports = { detectDevices, runModel, blurImage, addWatermark }
+module.exports = { detectDevices, runModel, blurImage }
 
 // Sharp settings
 sharp.cache(100);  // Increased cache size
@@ -37,6 +37,7 @@ let ovLogo = null;
 
 const preprocessBuffer = new Float32Array(inputSize.w * inputSize.h * 3);
 const normalizedBuffer = new Float32Array(inputSize.w * inputSize.h * 6);
+const inferRequests = new Map();
 
 async function detectDevices() {
     return ["AUTO"].concat(core.getAvailableDevices());
@@ -176,24 +177,39 @@ function postprocessMask(resultTensor) {
 //     return average(infTimes);
 // }
 
-
-async function runModel(img, width, height, device){
+async function getInferRequest(device) {
+    if (inferRequests.has(device)) {
+        return inferRequests.get(device);
+    }
     
+    const model = await getModel(device);
+    const inferRequest = model.createInferRequest();
+    inferRequests.set(device, inferRequest);
+    return inferRequest;
+}
+
+
+async function runModel(img, width, height, device) {
     const originalImg = sharp(img.data, { raw: { channels: 4, width, height } });
     const inputTensor = await preprocess(originalImg);   
     
-    let model = await getModel(device);
-    let inferRequest = model.createInferRequest();
-    //console.time('inference');
+    const inferRequest = await getInferRequest(device);
+    
+    // Match Python's time.time() measurement
+    const startTime = performance.now() / 1000;  // Convert to seconds to match Python
     inferRequest.setInputTensor(inputTensor);
     inferRequest.infer();
-    const outputLayer = model.outputs[0];
-    const resultTensor = inferRequest.getTensor(outputLayer);       
-    //console.timeEnd('inference');
+    const outputLayer = (await getModel(device)).outputs[0];
+    const resultTensor = inferRequest.getTensor(outputLayer);
+    const stopTime = performance.now() / 1000;  // Convert to seconds to match Python
+    const inferenceTime = (stopTime - startTime) * 1000;  // Convert back to ms
+        
     outputMask = postprocessMask(resultTensor);
+    
     return {
         width: width,
-        height: height   
+        height: height,
+        inferenceTime: inferenceTime
     };
 }
 
@@ -281,30 +297,4 @@ async function blurImage(image, width, height) {
             height: height
         };
     }
-}
-
-async function addWatermark(image, width, height) {
-    if (ovLogo == null){
-        ovLogo = getOvLogo();
-    }
-    const watermarkWidth = Math.floor(width * 0.3);
-    const watermark = await ovLogo
-        .resize({ width: watermarkWidth })
-        .toBuffer()
-
-    const result = await sharp(image.data, {
-        raw: { channels: 4, width, height },
-    })
-        .composite([{
-            input: watermark,
-            gravity: 'southwest'
-        }])
-        .raw()
-        .toBuffer()
-
-    return {
-        img: new Uint8ClampedArray(result.buffer),
-        width: width,
-        height: height,
-    };
 }

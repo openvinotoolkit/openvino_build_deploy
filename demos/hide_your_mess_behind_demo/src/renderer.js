@@ -57,30 +57,27 @@ async function processFrame() {
     const imageData = ctx.getImageData(0, 0, canvasElement.width, canvasElement.height);
 
     if (inferenceActive) {
-      // Start timing
-      const startTime = performance.now();      
-      let resultMask = await window.electronAPI.runModel(imageData, canvasElement.width, canvasElement.height, device);
-      // End timing
-      const stopTime = performance.now();
+      let resultMask = await window.electronAPI.runModel(imageData, canvasElement.width, canvasElement.height, device);            
       let result = await window.electronAPI.blurImage(imageData, canvasElement.width, canvasElement.height);
-      let blurredImage = new ImageData(result.img, result.width, result.height);
-
-      result = await window.electronAPI.addWatermark(blurredImage, canvasElement.width, canvasElement.height);
+      let blurredImage = new ImageData(result.img, result.width, result.height);      
       blurredImage = new ImageData(result.img, result.width, result.height);
       
-      const frameTime = stopTime - startTime;
-      processingTimes.push(frameTime);
+      // Add the inference time to the processing times array
+      processingTimes.push(resultMask.inferenceTime / 1000); // Convert ms to seconds to match Python
       
+      // Keep only last 200 frames like Python code
       if (processingTimes.length > 200) {
         processingTimes.shift();
-      }      
-      const processingTime = processingTimes.reduce((sum, t) => sum + t, 0) / processingTimes.length;
-      const fps = (1000 / processingTime).toFixed(1);
+      }
+      
+      // Calculate mean processing time in milliseconds
+      const processingTime = (processingTimes.reduce((a, b) => a + b, 0) / processingTimes.length) * 1000;
+      const fps = 1000 / processingTime;
 
       ctx.putImageData(blurredImage, 0, 0);
 
       if (!streamingActive) return;
-      processingTimeElement.innerText = `Inference time: ${processingTime.toFixed(2)} ms (${fps} FPS)`;
+      processingTimeElement.innerText = `Inference time: ${processingTime.toFixed(1)}ms (${fps.toFixed(1)} FPS)`;
     } else {
       processingTimeElement.innerText = `Inference OFF`;
     }
@@ -88,10 +85,11 @@ async function processFrame() {
     if (!streamingActive) return;
     imgElement.src = canvasElement.toDataURL('image/jpeg');
 
-    requestAnimationFrame(processFrame);
   } catch (error) {
     console.error('Error during capture:', error);
   }
+
+  requestAnimationFrame(processFrame);
 }
 
   // START STREAMING
