@@ -124,6 +124,7 @@ function normalizeArray(array) {
 
 
 async function preprocess(originalImg) {
+    console.time('preprocess');
     const inputImg = await originalImg
         .resize(inputSize.w, inputSize.h, { fit: 'fill' })
         .removeAlpha()
@@ -131,11 +132,13 @@ async function preprocess(originalImg) {
     const resizedImageData = new Uint8ClampedArray(inputImg.buffer);
     const tensorData = Float32Array.from(resizedImageData, x => x / 255);
     const shape = [1, inputSize.w, inputSize.h, 3];
+    console.timeEnd('preprocess');
     return new ov.Tensor(ov.element.f32, shape, tensorData);
 }
 
 
 function postprocessMask(resultTensor) {
+    console.time('postprocess');
     const channels = 3;
     const normalizedData = normalizeArray(resultTensor.data);
     const imageBuffer = Buffer.alloc(inputSize.w * inputSize.h * channels);
@@ -148,6 +151,7 @@ function postprocessMask(resultTensor) {
         imageBuffer[indexOffset + 1] = value;
         imageBuffer[indexOffset + 2] = value;
     }
+    console.timeEnd('postprocess');
     return imageBuffer;
 }
 
@@ -172,10 +176,12 @@ async function runModel(img, width, height, device){
     
     let model = await getModel(device);
     let inferRequest = model.createInferRequest();
+    console.time('inference');
     inferRequest.setInputTensor(inputTensor);
     inferRequest.infer();
     const outputLayer = model.outputs[0];
     const resultTensor = inferRequest.getTensor(outputLayer);       
+    console.timeEnd('inference');
     outputMask = postprocessMask(resultTensor);
     return {
         width: width,
@@ -183,9 +189,10 @@ async function runModel(img, width, height, device){
     };
 }
 
-
 async function blurImage(image, width, height) {
+    console.time('blur');
     if (outputMask == null) {
+        console.timeEnd('blur');
         return {
             img: image.data,
             width: width,
@@ -193,60 +200,61 @@ async function blurImage(image, width, height) {
         };
     }    
 
-    const blurSize = Math.floor(width * 0.01);
+    const blurSize = Math.max(10, Math.floor(width * 0.02));
     
-    try {        
-        const blurPipeline = sharp(image.data, {
-            raw: { channels: 4, width, height },
-            limitInputPixels: false,
-        });
-
-        const maskPipeline = sharp(outputMask, {
-            raw: {
-                channels: 3,
-                width: inputSize.w,
-                height: inputSize.h,
-            },
-            limitInputPixels: false,
-        });
-
+    try {
         const [blurred, person] = await Promise.all([
-            blurPipeline
-                .blur(blurSize)
-                .raw()
-                .toBuffer({ resolveWithObject: false }),
+            sharp(image.data, {
+                raw: { channels: 4, width, height },
+                limitInputPixels: false,
+                sequentialRead: true
+            })
+            .blur(blurSize)
+            .raw()
+            .toBuffer({ resolveWithObject: false }),
 
-            maskPipeline
-                .resize(width, height, { 
-                    fit: 'fill',
-                    kernel: 'cubic',
-                    fastShrinkOnLoad: true
-                })
-                .unflatten()
-                .composite([{
-                    input: image.data,
-                    raw: {
-                        channels: 4,
-                        width,
-                        height,
-                    },
-                    blend: 'in',
-                }])
-                .raw()
-                .toBuffer({ resolveWithObject: false })
+            sharp(outputMask, {
+                raw: {
+                    channels: 3,
+                    width: inputSize.w,
+                    height: inputSize.h,
+                },
+                limitInputPixels: false,
+                sequentialRead: true
+            })
+            .resize(width, height, { 
+                fit: 'fill',
+                kernel: 'cubic',
+                fastShrinkOnLoad: true
+            })
+            .unflatten()
+            .composite([{
+                input: image.data,
+                raw: {
+                    channels: 4,
+                    width,
+                    height,
+                },
+                blend: 'in'
+            }])
+            .raw()
+            .toBuffer({ resolveWithObject: false })
         ]);        
+
         const screen = await sharp(blurred, {
             raw: { channels: 4, width, height },
             limitInputPixels: false,
+            sequentialRead: true
         })
-            .composite([{
-                input: person,
-                raw: { channels: 4, width, height },
-                blend: 'atop'
-            }])
-            .raw()
-            .toBuffer();
+        .composite([{
+            input: person,
+            raw: { channels: 4, width, height },
+            blend: 'over'
+        }])
+        .raw()
+        .toBuffer();
 
+        console.timeEnd('blur');
         return {
             img: new Uint8ClampedArray(screen.buffer),
             width: width,
@@ -254,6 +262,7 @@ async function blurImage(image, width, height) {
         };
     } catch (error) {
         console.error('Error in blur processing:', error);
+        console.timeEnd('blur');
         return {
             img: image.data,
             width: width,
