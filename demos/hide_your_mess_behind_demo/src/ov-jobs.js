@@ -36,6 +36,7 @@ let outputMask = null;
 let ovLogo = null;
 
 const preprocessBuffer = new Float32Array(inputSize.w * inputSize.h * 3);
+const normalizedBuffer = new Float32Array(inputSize.w * inputSize.h * 6);
 
 async function detectDevices() {
     return ["AUTO"].concat(core.getAvailableDevices());
@@ -102,26 +103,27 @@ async function getModel(device) {
 
 
 function normalizeArray(array) {
-    // Find the minimum and maximum values in the array
     const throughput = 0.5;
     let min = Infinity;
-    let max = -Infinity;
+    let max = -Infinity;    
+    
     for (let i = 0; i < array.length; i++) {
         const val = array[i];
-
         if (val < min) min = val;
         if (val > max) max = val;
     }
+    
+    if (max === min) {
+        normalizedBuffer.fill(0);
+        return normalizedBuffer;
+    }
+    
+    for (let i = 0; i < array.length; i++) {
+        const coef = (array[i] - min) / (max - min);
+        normalizedBuffer[i] = coef > throughput ? 1 : 0;
+    }
 
-    // If max equals min, all values are the same and can be set to 0 or 1
-    if (max === min) return new Array(array.length).fill(0);
-
-    // Normalize each element of the array
-    return array.map(value => {
-        const coef = (value - min) / (max - min);
-
-        return coef > throughput ? 1 : 0;
-    });
+    return normalizedBuffer;
 }
 
 
