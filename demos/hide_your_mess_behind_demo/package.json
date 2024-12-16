@@ -3,7 +3,7 @@
   "version": "1.1.0",
   "main": "src/main.js",
   "scripts": {
-    "start": "G_SLICE=always-malloc electron .",
+    "start": "electron .",
     "dist": "electron-builder",
     "postdist": "sudo chmod 4755 dist/linux-unpacked/chrome-sandbox && sudo chown root:root dist/linux-unpacked/chrome-sandbox"
   },
