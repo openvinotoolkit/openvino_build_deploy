@@ -195,14 +195,13 @@ async function runModel(img, width, height, device) {
     
     const inferRequest = await getInferRequest(device);
     
-    // Match Python's time.time() measurement
-    const startTime = performance.now() / 1000;  // Convert to seconds to match Python
+    const startTime = performance.now() / 1000;
     inferRequest.setInputTensor(inputTensor);
     inferRequest.infer();
     const outputLayer = (await getModel(device)).outputs[0];
     const resultTensor = inferRequest.getTensor(outputLayer);
-    const stopTime = performance.now() / 1000;  // Convert to seconds to match Python
-    const inferenceTime = (stopTime - startTime) * 1000;  // Convert back to ms
+    const stopTime = performance.now() / 1000;
+    const inferenceTime = (stopTime - startTime) * 1000;
         
     outputMask = postprocessMask(resultTensor);
     

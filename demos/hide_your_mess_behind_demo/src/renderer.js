@@ -62,15 +62,12 @@ async function processFrame() {
       let blurredImage = new ImageData(result.img, result.width, result.height);      
       blurredImage = new ImageData(result.img, result.width, result.height);
       
-      // Add the inference time to the processing times array
-      processingTimes.push(resultMask.inferenceTime / 1000); // Convert ms to seconds to match Python
       
-      // Keep only last 200 frames like Python code
+      processingTimes.push(resultMask.inferenceTime / 1000);
+            
       if (processingTimes.length > 200) {
         processingTimes.shift();
-      }
-      
-      // Calculate mean processing time in milliseconds
+      }            
       const processingTime = (processingTimes.reduce((a, b) => a + b, 0) / processingTimes.length) * 1000;
       const fps = 1000 / processingTime;
 
