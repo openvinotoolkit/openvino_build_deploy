@@ -35,6 +35,8 @@ const inputSize = { w: 256, h: 256 };
 let outputMask = null;
 let ovLogo = null;
 
+const preprocessBuffer = new Float32Array(inputSize.w * inputSize.h * 3);
+
 async function detectDevices() {
     return ["AUTO"].concat(core.getAvailableDevices());
 }
@@ -129,11 +131,15 @@ async function preprocess(originalImg) {
         .resize(inputSize.w, inputSize.h, { fit: 'fill' })
         .removeAlpha()
         .raw().toBuffer();
-    const resizedImageData = new Uint8ClampedArray(inputImg.buffer);
-    const tensorData = Float32Array.from(resizedImageData, x => x / 255);
+    
+    // Reuse existing buffer instead of creating new one
+    for (let i = 0; i < inputImg.length; i++) {
+        preprocessBuffer[i] = inputImg[i] / 255;
+    }
+    
     const shape = [1, inputSize.w, inputSize.h, 3];
     //console.timeEnd('preprocess');
-    return new ov.Tensor(ov.element.f32, shape, tensorData);
+    return new ov.Tensor(ov.element.f32, shape, preprocessBuffer);
 }
 
 
