@@ -26,14 +26,8 @@ if (core.getAvailableDevices().includes('CPU')) {
 const ovModels = new Map(); // compiled models
 let model = null; // read model
 
-// variables used to calculate inference time:
-let infTimes = [];
-let avgInfTime = 0;
-let prevDevice = null;
-
 const inputSize = { w: 256, h: 256 };
 let outputMask = null;
-let ovLogo = null;
 
 const preprocessBuffer = new Float32Array(inputSize.w * inputSize.h * 3);
 const normalizedBuffer = new Float32Array(inputSize.w * inputSize.h * 6);
@@ -42,13 +36,6 @@ const inferRequests = new Map();
 async function detectDevices() {
     return ["AUTO"].concat(core.getAvailableDevices());
 }
-
-
-function average(array){
-    let sum = array.reduce((accumulator, currentValue) => accumulator + currentValue, 0);
-    return (sum / array.length);
-}
-
 
 async function getModelPath() {
     if (fs.existsSync(path.join(__dirname, '../../app.asar'))){     
@@ -105,7 +92,7 @@ function normalizeArray(array) {
 
 
 async function preprocess(originalImg) {
-    console.time('preprocess');
+    //console.time('preprocess');
     const inputImg = await originalImg
         .resize(inputSize.w, inputSize.h, { fit: 'fill' })
         .removeAlpha()
@@ -117,13 +104,13 @@ async function preprocess(originalImg) {
     }
     
     const shape = [1, inputSize.w, inputSize.h, 3];
-    console.timeEnd('preprocess');
+    //console.timeEnd('preprocess');
     return new ov.Tensor(ov.element.f32, shape, preprocessBuffer);
 }
 
 
 function postprocessMask(resultTensor) {
-    console.time('postprocess');
+    //console.time('postprocess');
     const channels = 3;
     const normalizedData = normalizeArray(resultTensor.data);
     const imageBuffer = Buffer.alloc(inputSize.w * inputSize.h * channels);
@@ -136,7 +123,7 @@ function postprocessMask(resultTensor) {
         imageBuffer[indexOffset + 1] = value;
         imageBuffer[indexOffset + 2] = value;
     }
-    console.timeEnd('postprocess');
+    //console.timeEnd('postprocess');
     return imageBuffer;
 }
 
@@ -158,12 +145,12 @@ async function runModel(img, width, height, device) {
     const inferRequest = await getInferRequest(device);
     
     const startTime = performance.now() / 1000;
-    console.time('inference');
+    //console.time('inference');
     inferRequest.setInputTensor(inputTensor);
     inferRequest.infer();
     const outputLayer = (await getModel(device)).outputs[0];
     const resultTensor = inferRequest.getTensor(outputLayer);
-    console.timeEnd('inference');
+    //console.timeEnd('inference');
     const stopTime = performance.now() / 1000;
     const inferenceTime = (stopTime - startTime) * 1000;
         
@@ -177,7 +164,7 @@ async function runModel(img, width, height, device) {
 }
 
 async function blurImage(image, width, height) {
-    console.time('blur');
+    //console.time('blur');
     if (outputMask == null) {
         //console.timeEnd('blur');
         return {
@@ -245,7 +232,7 @@ async function blurImage(image, width, height) {
             .raw()
             .toBuffer();
 
-        console.timeEnd('blur');
+        //console.timeEnd('blur');
         return {
             img: new Uint8ClampedArray(screen.buffer),
             width: width,
