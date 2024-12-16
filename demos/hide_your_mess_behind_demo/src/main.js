@@ -1,7 +1,7 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 
-const { detectDevices, runModel, takeTime, blurImage, addWatermark } = require('./ov-jobs')
+const { detectDevices, runModel, blurImage, addWatermark } = require('./ov-jobs')
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -56,7 +56,7 @@ ipcMain.handle('detect-webcam', async () => {
   return navigator.mediaDevices.enumerateDevices();
 });
 
-ipcMain.handle('take-time', async () => {
-  return takeTime();
-});
+// ipcMain.handle('take-time', async () => {
+//   return takeTime();
+// });
 

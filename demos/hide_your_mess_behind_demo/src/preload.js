@@ -8,6 +8,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   detectDevices: () => ipcRenderer.invoke('detect-devices'),
   runModel: (img, width, height, device) => ipcRenderer.invoke('run-model', img, width, height, device),
   blurImage: (image, width, height) => ipcRenderer.invoke('blur-image', image, width, height),
-  addWatermark: (image, width, height) => ipcRenderer.invoke('add-watermark', image, width, height),
-  takeTime: () => ipcRenderer.invoke('take-time')
+  addWatermark: (image, width, height) => ipcRenderer.invoke('add-watermark', image, width, height)  
 });
