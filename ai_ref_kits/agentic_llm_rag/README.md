@@ -8,15 +8,15 @@
 
 [![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/LICENSE.txt)
 
-The AI Insight Agent with RAG uses the OpenVINO™ toolkit to create a streamlined, voice-activated interface that consumers and retail employees can use as a smart, personalized retail assistant. The AI Insight Agent with RAG can perform math, understand instructional documents, and engage in conversations. At its core, the application harnesses models for speech recognition. It is configured to understand user prompts, engage in meaningful dialogue using agents powered by Large Language Models (LLM), understand guides and information uploaded to it with Retrieval-Augmented Generation (RAG), and provide spoken responses. It's an interactive and user-friendly personalized assistant that simulates the experience of a interactive kiosk.
+The AI Insight Agent with RAG uses Large Language Models (LLMs) and Retrieval-Augmented Generation (RAG) to interpret user prompts, engage in meaningful dialogue, perform calculations, and deliver spoken responses through advanced speech recognition. This solution uses the OpenVINO™ toolkit to power a streamlined, voice-activated interface. Designed for both consumers and employees, it functions as a smart, personalized retail assistant, offering an interactive and user-friendly experience similar to an advanced digital kiosk.
 
 This kit uses the following technology stack:
-- [OpenVINO toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([Docs](https://docs.openvino.ai/))
-- [Meta’s Llama](https://llama.meta.com/llama3/)
-- [OpenAI Whisper](https://openai.com/index/whisper/)
+- [OpenVINO Toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([docs](https://docs.openvino.ai/))
+- [Llama](https://llama.meta.com/llama3/)
+- [Whisper](https://openai.com/index/whisper/)
 - [Gradio interface](https://www.gradio.app/docs/gradio/chatinterface)
 
-For other Intel AI kits, see the [Edge AI Reference Kits repository](/).
+Check out our [AI Reference Kits repository](/) for other kits.
 
 ![ai-insight-agent-with-rag](https://github.com/user-attachments/assets/1a7ca6bc-3bde-4e97-be61-83a3709e9b73)
 
@@ -26,21 +26,21 @@ New updates will be added to this contents list.
 
 <details open><summary><b>Table of Contents</b></summary>
   
-- [Get Started](#get-started)
-  - [Install Prerequisites](#install-prerequisites)
-  - [Set Up  Your Environment](#set-up-your-environment)
-  - [Get Access to Llama](#get-access-to-llama)
-  - [Convert and Optimize the Model](*convert-and-optimize-the-model)
-  - [Run the Application](#run-the-application)
+- [Getting Started](#get-started)
+  - [Installing Prerequisites](#install-prerequisites)
+  - [Setting Up Your Environment](#set-up-your-environment)
+  - [Accessing Llama](#get-access-to-llama)
+  - [Converting and Optimizing the Model](*convert-and-optimize-the-model)
+  - [Running the Application](#run-the-application)
 - [Additional Resources](#additional-resources)
 
 </details>
 
-# Get Started
+# Getting Started
 
 To get started with the AI Insight Agent with RAG, you install Python, set up your environment, and then you can run the application. We recommend using Ubuntu to set up and run this project.
 
-## Install Prerequisites
+## Installing Prerequisites
 
 This project requires Python 3.8 or higher and a few libraries. If you don't already have Python installed on your machine, go to [https://www.python.org/downloads/](https://www.python.org/downloads/) and download the latest version for your operating system. Follow the prompts to install Python, and make  sure to select the option to add Python to your PATH environment variable.
 
@@ -52,7 +52,7 @@ sudo apt install git gcc python3-venv python3-dev
 
 _NOTE: If you are using Windows, you might also have to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe)._
 
-## Set Up Your Environment
+## Setting Up Your Environment
 
 To set up your environment, you first clone the repository, then create a virtual environment, activate the environment, and install the packages.
 
@@ -95,7 +95,7 @@ source venv/bin/activate   # For Unix-based operating systems such as Linux or m
 To activate the virtual environment for a **Windows** operating system, run:
 
 ```shell
-source venv\Scripts\activate   # This command is for Windows operating systems
+venv\Scripts\activate  # This command is for Windows operating systems
 ```
 This activates the virtual environment and changes your shell's prompt to indicate that you are now working in that environment.
 
@@ -107,26 +107,17 @@ To install the required packages, run the following commands:
 python -m pip install --upgrade pip 
 pip install -r requirements.txt
 ```
-## Get Access to Llama
+## Accessing Llama
 
 _NOTE: If you already have access to the Llama model weights, you can proceed to the authentication step, which is mandatory to convert the Llama model._
 
-## Convert and Optimize the Model
+## Converting and Optimizing the Model
 
 The application uses three separate models. Each model requires conversion and optimization for use with OpenVINO™. The following process includes a step to convert and optimize each model.
 
 _NOTE: This reference kit requires more than 8GB of bandwidth and disk space for downloading models. Because of the large model size, when you run the kit for the first time, the conversion can take more than two hours and require more than  32GB of memory. After the first run, the subsequent runs should finish much faster._
 
-### Step 1. Automated Speech Recognition Distil-Whisper Conversion  
-
-The ASR model converts spoken language (audio) to written text. This functionality is crucial because it enables the chatbot to understand and process voice-based user queries.
-
-To convert and optimize the automatic speech recognition (ASR) model performing weights quantization, run:
-```shell
-python convert_and_optimize_asr.py --asr_model_type distil-whisper-large-v3 --precision int8
-```
-
-### Step 2. Chat Model and Embedding Model Conversion
+## Chat Model and Embedding Model Conversion
   
 The _chat model_ is the core of the chatbot's ability to generate meaningful and context-aware responses. It processes the text input from the ASR model and produces a human-like response.  
 
@@ -153,7 +144,7 @@ python convert_and_optimize_llm.py --chat_model_type llama3.1-8B --embedding_mod
 
 After you run the conversion scripts, you can run `app.py` to launch the application.
 
-## Run the Application (Gradio Interface)
+## Running the Application (Gradio Interface)
 
 To run the AI Insight Agent with RAG application, you execute the following python script. Make sure to include all of the necessary model directory arguments. 
 
@@ -164,9 +155,9 @@ For the python script, you must include the following model directory arguments.
 - `--personality path/to/personality.txt`: The path to your custom personality txt file (for example, `personality.txt`).  
 This file defines the assistant's personality, including instructions, system configuration, and greeting prompts. You can create and specify your own custom personality file.
 
-- `--asr_model path/to/asr_model`: The path to your ASR (Automatic Speech Recognition) model directory, which uses `int8` precision (for example, `model/distil-whisper-large-v3-int8`) for efficient speech recognition.
-
 - `--chat_model path/to/chat_model`: The path to your chat model directory (for example, `model/llama3.1-8B-INT4`) that drives conversation flow and response generation.
+
+- `--rag_pdf`: The path to the document (for example, test_painting_llm_rag.pdf) that contains additional knowledge for Retrieval-Augmented Generation (RAG).
 
 - `--embedding_model path/to/embedding_model`: The path to your embedding model directory (for example, `model/bge-small-FP32`) for understanding and matching text inputs.
 
@@ -176,9 +167,9 @@ To run the application, execute the `app.py` script with the following command. 
 ```shell
 python app.py \
   --personality personality.txt \
-  --asr_model path/to/asr_model \
   --chat_model path/to/chat_model \
   --embedding_model path/to/embedding_model \
+  --rag_pdf path/to/rag_document \  
   --public
 ```
 
@@ -214,21 +205,16 @@ instructions: |
 After the script runs, Gradio provides a local URL (typically `http://127.0.0.1:XXXX`) that you can open in your web browser to interact with the assistant. If you configured the application to be accessible publicly, Gradio also provides a public URL.
 
 #### Test the Application
-When you test the AI Insight Agent with RAG appplication, you can test both the voice interaction and text interaction capabilities of the application.
-
-**Note:** The Voice Interaction aspect is work-in-progress.
+When you test the AI Insight Agent with RAG application, you can test both the interaction with the agent and the product selection capabilities.
 
 1. Open a web browers and go to the Gradio-provided URL.  
   _For example, `http://127.0.0.1:XXXX`._
-2. Upload a a PDF file for RAG context.   
-  Use the command line to select and upload a file.
-3. Test voice interaction with the application.  
-  - Click the microphone icon and speak your question.
-  - Wait for the assistant to process your speech and respons.
-4. Test text interaction with the application.  
-  - Type your question in the text box.
-  - To send your question to the chatbot, click **Submit** or press **Enter**.
-  _The assistant responds to your question in text and audio form._
+2. Test text interaction with the application.  
+  - Type your question in the text box and press **Enter**.
+  _The assistant responds to your question in text form._
+3. To add products to the cart:
+  - Select the products displayed in the interface and specify the quantity.
+  - Click the Add to Cart button to update your cart.
 
 
 For further testing of the AI Insight Agent with RAG appplication, you can engage with the chatbot assistant by asking it questions, or giving it commands that align with the assistant's capabilities. This hands-on experience can help you to understand the assistant's interactive quality and performance.

@@ -7,12 +7,14 @@ The goal of any demo in this directory is to present OpenVINO as an optimization
 Rules:
 - The demo must be standalone - no dependencies to other demos (dependency to utils is ok)
 - The demo must be a Python script called `main.py`
-- All dependencies must be pinned to specific, stable, and tested versions and provided in the corresponding `requirements.txt` file (script) or the first code cell (notebook) 
+- All dependencies must be pinned to specific, stable, and tested versions and provided in the corresponding `requirements.txt`
 - If the demo is visual (produces any video/image output) it must add an OpenVINO watermark to the output video/image (see utils)
-- The demo must provide a README file with the instructions on installing the environment, setting up and running (+ changing the behavior if applicable)
+- The demo must provide a README file with the instructions on supporting python versions, installing the environment, setting up and running (+ changing the behavior if applicable)
 - The demo should provide a nice UI (Gradio is preferred)
+- Gradio demos must provide both --local_network and --puiblic parameters
+- Webcam demos must provide a --stream parameter
 - The demo should use utils for playing video streams, downloading files, and adding the watermark
-- The demo should work and be tested for Windows and Linux
+- The demo should work and be tested for Windows, Linux and macOS (it may be verified through Github Actions)
 
 ## Merging
 
