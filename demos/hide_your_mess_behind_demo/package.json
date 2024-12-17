@@ -28,6 +28,7 @@
     "linux": {
       "target": [
         "deb",
+        "rpm",
         "zip"
       ],
       "icon": "assets/icons/icon.png",
@@ -65,7 +66,7 @@
   "author": "Mikołaj Roszczyk <mikolaj.roszczyk@intel.com>",
   "contributors": [
     "Adrian Boguszewski <adrian.boguszewski@intel.com>",
-    "Antonio Martinez"
+    "Antonio Martinez <jose.antonio.martinez.torres@intel.com>"
   ],
   "homepage": "https://github.com/openvinotoolkit/openvino_build_deploy",
   "license": "Apache-2.0",
