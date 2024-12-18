@@ -283,7 +283,7 @@ if __name__ == "__main__":
     parser.add_argument("--chat_model", type=str, default="model/llama3.1-8B-INT4", help="Path to the chat model directory")
     parser.add_argument("--embedding_model", type=str, default="model/bge-large-FP32", help="Path to the embedding model directory")
     parser.add_argument("--rag_pdf", type=str, default="test_painting_llm_rag.pdf", help="Path to a RAG PDF file with additional knowledge the chatbot can rely on.")
-    parser.add_argument("--personality", type=str, default="paint_concierge_personality.txt", help="Path to the TXT file with chatbot personality")
+    parser.add_argument("--personality", type=str, default="paint_concierge_personality.yaml", help="Path to the yaml file with chatbot personality")
 
     args = parser.parse_args()
 
