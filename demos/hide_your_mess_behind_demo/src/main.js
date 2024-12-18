@@ -1,7 +1,7 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 
-const { detectDevices, runModel, blurImage } = require('./ov-jobs')
+const { detectDevices, runModel, blurImage, addWatermark, clearWatermarkCache, initializeWatermark } = require('./ov-jobs')
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -22,9 +22,13 @@ function createWindow() {
   mainWindow.loadFile('src/index.html');
 }
 
-app.on('ready', createWindow);
+app.on('ready', async () => {
+  await initializeWatermark();
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
+  clearWatermarkCache();
   if (process.platform !== 'darwin') {
     app.quit();
   }
@@ -50,5 +54,13 @@ ipcMain.handle('blur-image', async (event, image, width, height) => {
 
 ipcMain.handle('detect-webcam', async () => {
   return navigator.mediaDevices.enumerateDevices();
+});
+
+ipcMain.handle('add-watermark', async (event, image, width, height) => {
+  return addWatermark(image, width, height);
+})
+
+ipcMain.handle('clear-watermark-cache', async () => {
+  return clearWatermarkCache();
 });
 

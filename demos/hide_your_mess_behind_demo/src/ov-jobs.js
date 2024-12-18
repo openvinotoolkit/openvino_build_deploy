@@ -5,7 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
-module.exports = { detectDevices, runModel, blurImage }
+module.exports = { detectDevices, runModel, blurImage, addWatermark, clearWatermarkCache, initializeWatermark }
 
 // Sharp settings
 sharp.cache(100);  // Increased cache size
@@ -25,6 +25,9 @@ if (core.getAvailableDevices().includes('CPU')) {
 }
 const ovModels = new Map(); // compiled models
 let model = null; // read model
+const watermarkCache = new Map();
+let baseWatermark = null;
+let isInitialized = false;
 
 const inputSize = { w: 256, h: 256 };
 let outputMask = null;
@@ -32,6 +35,61 @@ let outputMask = null;
 const preprocessBuffer = new Float32Array(inputSize.w * inputSize.h * 3);
 const normalizedBuffer = new Float32Array(inputSize.w * inputSize.h * 6);
 const inferRequests = new Map();
+
+async function initializeWatermark() {
+    
+    if (isInitialized) return;
+    
+    let imgPath = null;
+    if (fs.existsSync(path.join(__dirname, '../../app.asar'))) {     
+        imgPath = path.join(__dirname, "../../app.asar.unpacked/assets/openvino-logo.png");
+    } else {    
+        imgPath = path.join(__dirname, "../assets/openvino-logo.png");
+    }    
+    
+    baseWatermark = await sharp(imgPath)
+        .flop()
+        .composite([{
+            input: Buffer.from([255, 255, 255, 100]),
+            raw: {
+                width: 1,
+                height: 1,
+                channels: 4
+            },
+            tile: true,
+            blend: 'dest-in'
+        }])
+        .toBuffer();
+    
+    isInitialized = true;
+}
+
+async function getWatermarkForSize(width) {
+    const watermarkWidth = Math.floor(width * 0.3);    
+    
+    if (watermarkCache.has(watermarkWidth)) {
+        return watermarkCache.get(watermarkWidth);
+    }    
+
+    if (!isInitialized) {
+        await initializeWatermark();
+    }
+    
+    const resizedWatermark = await sharp(baseWatermark)
+        .resize({ 
+            width: watermarkWidth,
+            fastShrinkOnLoad: true,
+            kernel: 'cubic' })
+        .toBuffer({ resolveWithObject: false });
+    
+    if (watermarkCache.size > 5) {
+        const firstKey = watermarkCache.keys().next().value;
+        watermarkCache.delete(firstKey);
+    }
+
+    watermarkCache.set(watermarkWidth, resizedWatermark);
+    return resizedWatermark;
+}
 
 async function detectDevices() {
     return ["AUTO"].concat(core.getAvailableDevices());
@@ -46,7 +104,6 @@ async function getModelPath() {
     return path.join(__dirname, "../models/selfie_multiclass_256x256.xml");
     }
 }
-
 
 async function getModel(device) {
     // if model not loaded
@@ -247,4 +304,42 @@ async function blurImage(image, width, height) {
             height: height
         };
     }
+}
+
+async function addWatermark(image, width, height) {
+    try {
+        const watermark = await getWatermarkForSize(width);
+
+        const result = await sharp(image.data, {
+            raw: { channels: 4, width, height },
+        })
+            .composite([{
+                input: watermark,
+                gravity: 'southwest'
+            }])
+            .raw()
+            .toBuffer();
+
+        return {
+            img: new Uint8ClampedArray(result.buffer),
+            width: width,
+            height: height,
+        };
+    } catch (error) {
+        console.error('Error adding watermark:', error);
+        // Return original image if watermark fails
+        return {
+            img: image.data,
+            width: width,
+            height: height,
+        };
+    }
+}
+
+// Clear cache method for memory management
+function clearWatermarkCache() {
+    watermarkCache.clear();
+    baseWatermark = null;
+    isInitialized = false;
+    return Promise.resolve();
 }

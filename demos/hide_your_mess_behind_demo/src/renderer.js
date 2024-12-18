@@ -39,9 +39,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   // ON/OF INFERENCE BUTTON
-  toggleInferenceSwitch.addEventListener('change', () => {
+  toggleInferenceSwitch.addEventListener('change', async() => {
     toggleValue.textContent = toggleInferenceSwitch.checked ? 'on' : 'off';
     inferenceActive = toggleInferenceSwitch.checked;
+    if (!inferenceActive) {
+      await window.electronAPI.clearWatermarkCache();
+  }
   });
 
 
@@ -59,7 +62,8 @@ async function processFrame() {
     if (inferenceActive) {
       let resultMask = await window.electronAPI.runModel(imageData, canvasElement.width, canvasElement.height, device);            
       let result = await window.electronAPI.blurImage(imageData, canvasElement.width, canvasElement.height);
-      let blurredImage = new ImageData(result.img, result.width, result.height);      
+      let blurredImage = new ImageData(result.img, result.width, result.height); 
+      result = await window.electronAPI.addWatermark(blurredImage, canvasElement.width, canvasElement.height);     
       blurredImage = new ImageData(result.img, result.width, result.height);
       
       
