@@ -3,18 +3,14 @@
   "version": "1.1.0",
   "main": "src/main.js",
   "scripts": {
-    "start": "electron .",
+    "start": "electron . --no-sandbox",
     "dist": "electron-builder"
   },
   "build": {
     "extraFiles": [
       {
-        "from": "/usr/lib/x86_64-linux-gnu/libvips-cpp.so.42",
+        "from": "./node_modules/@img/sharp-libvips-linux-x64/lib/libvips-cpp.so.42",
         "to": "./libvips-cpp.so.42"
-      },
-      {
-        "from": "/usr/lib/x86_64-linux-gnu/libvips.so.42",
-        "to": "./libvips.so.42"
       }
     ],
     "appId": "ai.openvino.hideyourmessbehind",
