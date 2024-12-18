@@ -61,8 +61,14 @@
   "keywords": [],
   "author": "Mikołaj Roszczyk <mikolaj.roszczyk@intel.com>",
   "contributors": [
-    "Adrian Boguszewski <adrian.boguszewski@intel.com>",
-    "Antonio Martinez <jose.antonio.martinez.torres@intel.com>"
+    {
+      "name": "Adrian Boguszewski",
+      "email": "adrian.boguszewski@intel.com"
+    },
+    {
+      "name": "Antonio Martinez",
+      "email": "jose.antonio.martinez.torres@intel.com"
+    }
   ],
   "homepage": "https://github.com/openvinotoolkit/openvino_build_deploy",
   "license": "Apache-2.0",
