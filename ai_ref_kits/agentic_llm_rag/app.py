@@ -149,7 +149,7 @@ def run_app(agent):
 
 
     def _generate_response(chat_history, log_history):
-        print("log_history", log_history)
+        log.info(f"log_history {log_history}")
         if not isinstance(log_history, list):
             log_history = []
 
@@ -299,7 +299,7 @@ if __name__ == "__main__":
     # Step 4: Load documents and create the VectorStoreIndex
     text_example_en_path = Path(args.rag_pdf)
     index = load_documents(text_example_en_path)
-    print("loading in", index)
+    log.info(f"loading in {index}")
     vector_tool = QueryEngineTool(
         index.as_query_engine(streaming=True),
         metadata=ToolMetadata(
@@ -317,7 +317,7 @@ if __name__ == "__main__":
         chatbot_config = f.read()
 
     react_system_prompt = PromptTemplate(chatbot_config)
-    print("react_system_prompt", react_system_prompt)
+    log.info(f"react_system_prompt {react_system_prompt}")
     #Define agent and available tools
     agent = ReActAgent.from_tools([multiply_tool, divide_tool, add_tool, subtract_tool, paint_cost_calculator, vector_tool],
                                   llm=llm,
