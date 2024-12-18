@@ -4,7 +4,7 @@
   "main": "src/main.js",
   "scripts": {
     "start": "electron . --no-sandbox",
-    "dist": "electron-builder"    
+    "dist": "electron-builder"
   },
   "build": {
     "extraFiles": [
@@ -41,7 +41,7 @@
       "src/styles.css",
       "package.json",
       "models/**",
-      "assets/**/*"      
+      "assets/**/*"
     ],
     "asarUnpack": [
       "models/**",
