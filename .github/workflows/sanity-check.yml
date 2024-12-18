@@ -7,6 +7,7 @@ on:
     branches: [master]
   push:
     branches: [master]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -26,9 +27,16 @@ jobs:
           fetch-depth: 0
       - name: Determine subprojects to test
         run: |
-          # Ensure the directories are passed correctly to the environment variable
+          # Include the workflow file as a trigger for running all subprojects
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            subproject_dirs=$(git diff --name-only origin/master..HEAD | grep -e '^demos' -e '^notebooks' | grep -v 'README.md$' |  xargs -I{} dirname "{}" | sort -u | tr '\n' ' ')
+            changed_files=$(git diff --name-only origin/master..HEAD)
+            if echo "$changed_files" | grep -q '.github/workflows/.*.yml'; then
+              # Workflow file changed; run all subprojects
+              subproject_dirs=$(find demos notebooks -mindepth 1 -maxdepth 1 -type d ! -name utils | tr '\n' ' ')
+            else
+              # Only run subprojects affected by changes
+              subproject_dirs=$(echo "$changed_files" | grep -e '^demos' -e '^notebooks' | grep -v 'README.md$' | xargs -I{} dirname "{}" | sort -u | tr '\n' ' ')
+            fi
           else
             subproject_dirs=$(find demos notebooks -mindepth 1 -maxdepth 1 -type d ! -name utils | tr '\n' ' ')
           fi
@@ -78,7 +86,7 @@ jobs:
       matrix:
         # onnxruntime-openvino is not available on mac and python<3.10
         os: [ubuntu-latest, windows-latest]
-        python: [3.11]
+        python: [3.11, 3.12]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.notebook) }}
     steps:
       - uses: actions/checkout@v4
