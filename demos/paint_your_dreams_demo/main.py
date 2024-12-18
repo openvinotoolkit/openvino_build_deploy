@@ -1,4 +1,5 @@
 import argparse
+import logging as log
 import os
 import random
 import sys
@@ -184,10 +185,14 @@ def run_endless_lcm(model_name: str, local_network: bool = False, public_interfa
     server_name = "0.0.0.0" if local_network else None
 
     demo = build_ui()
+    log.info("Demo is ready!")
     demo.launch(server_name=server_name, share=public_interface)
 
 
 if __name__ == '__main__':
+    # set up logging
+    log.getLogger().setLevel(log.INFO)
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", type=str, default="OpenVINO/LCM_Dreamshaper_v7-fp16-ov",
                         choices=["OpenVINO/LCM_Dreamshaper_v7-int8-ov", "OpenVINO/LCM_Dreamshaper_v7-fp16-ov"], help="Visual GenAI model to be used")

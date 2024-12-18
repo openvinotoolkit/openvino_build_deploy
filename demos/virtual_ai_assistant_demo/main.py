@@ -300,6 +300,7 @@ def run(chat_model_name: str, embedding_model_name: str, reranker_model_name: st
     # create user interface
     demo = create_UI(initial_message, chatbot_config["extra_action_name"])
     # launch demo
+    log.info("Demo is ready!")
     demo.queue().launch(server_name=server_name, share=public_interface)
 
 

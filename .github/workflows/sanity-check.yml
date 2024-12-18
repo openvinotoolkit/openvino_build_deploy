@@ -12,6 +12,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   find-subprojects:
     runs-on: ubuntu-latest
@@ -135,12 +139,34 @@ jobs:
         shell: bash
         run: |
           huggingface-cli login --token ${{ secrets.HF_TOKEN }}
-      - uses: ./.github/reusable-steps/timeouted-action
-        name: Run Gradio App
-        with:
-          command: python main.py
-          project: ${{ matrix.subproject }}
-          timeout: 30m
+      - name: Run Gradio App
+        shell: bash
+        run: |
+          cd ${{ matrix.subproject }}
+
+          echo "0"
+          # Start the Gradio app in the background
+          nohup python main.py 2>&1 | tee gradio_log.txt &
+          echo "1"
+          # Assign process id to the var
+          app_pid=$(ps aux | grep -i '[p]ython main.py' | awk '{print $2}')
+          echo "2"
+          # Wait for the specific log message
+          timeout 30m bash -c "
+            tail -f gradio_log.txt | grep -q 'Demo is ready!'
+          " 
+          echo "3"
+          # Capture the app status
+          status=$?
+
+          # Kill the app process in all cases
+          echo "Stopping the Gradio app..."
+          pkill -P $app_pid || echo "No child processes to kill."
+          kill $app_pid || echo "App process already terminated."
+          wait $app_pid || echo "App process cleanup complete."
+      
+          # Exit with the readiness check status
+          exit $status
 
   webcam:
     needs: find-subprojects
