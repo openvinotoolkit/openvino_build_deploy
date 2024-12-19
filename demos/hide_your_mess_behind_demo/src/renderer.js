@@ -39,47 +39,59 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   // ON/OF INFERENCE BUTTON
-  toggleInferenceSwitch.addEventListener('change', () => {
+  toggleInferenceSwitch.addEventListener('change', async() => {
     toggleValue.textContent = toggleInferenceSwitch.checked ? 'on' : 'off';
     inferenceActive = toggleInferenceSwitch.checked;
+    if (!inferenceActive) {
+      await window.electronAPI.clearWatermarkCache();
+  }
   });
 
 
   // CAPTURING FRAMES
-  async function processFrame() {
-    if (!streamingActive) return;
+const processingTimes = [];
 
-    let device = deviceSelect.value;
-    try {
-      ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
-      const imageData = ctx.getImageData(0, 0, canvasElement.width, canvasElement.height);
+async function processFrame() {
+  if (!streamingActive) return;
 
-      if (inferenceActive) {
-        let resultMask = await window.electronAPI.runModel(imageData, canvasElement.width, canvasElement.height, device);
-        let result = await window.electronAPI.blurImage(imageData, canvasElement.width, canvasElement.height);
-        let blurredImage = new ImageData(result.img, result.width, result.height);
+  let device = deviceSelect.value;
+  try {
+    ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+    const imageData = ctx.getImageData(0, 0, canvasElement.width, canvasElement.height);
 
-        result = await window.electronAPI.addWatermark(blurredImage, canvasElement.width, canvasElement.height);
-        blurredImage = new ImageData(result.img, result.width, result.height);
+    if (inferenceActive) {
+      let resultMask = await window.electronAPI.runModel(imageData, canvasElement.width, canvasElement.height, device);            
+      let result = await window.electronAPI.blurImage(imageData, canvasElement.width, canvasElement.height);
+      let blurredImage = new ImageData(result.img, result.width, result.height); 
+      result = await window.electronAPI.addWatermark(blurredImage, canvasElement.width, canvasElement.height);     
+      blurredImage = new ImageData(result.img, result.width, result.height);
+      
+      
+      processingTimes.push(resultMask.inferenceTime / 1000);
+            
+      if (processingTimes.length > 200) {
+        processingTimes.shift();
+      }            
+      const processingTime = (processingTimes.reduce((a, b) => a + b, 0) / processingTimes.length) * 1000;
+      const fps = 1000 / processingTime;
 
-        ctx.putImageData(blurredImage, 0, 0);
-
-        let inferenceTime = resultMask.inferenceTime;
-        if (!streamingActive) return;
-        processingTimeElement.innerText = `Inference time: ${inferenceTime} ms (${(1000 / inferenceTime).toFixed(1)} FPS)`;
-      } else {
-        processingTimeElement.innerText = `Inference OFF`;
-      }
+      ctx.putImageData(blurredImage, 0, 0);
 
       if (!streamingActive) return;
-      imgElement.src = canvasElement.toDataURL('image/jpeg');
-
-      requestAnimationFrame(processFrame);
-    } catch (error) {
-      console.error('Error during capture:', error);
+      processingTimeElement.innerText = `Inference time: ${processingTime.toFixed(1)}ms (${fps.toFixed(1)} FPS)`;
+    } else {
+      processingTimeElement.innerText = `Inference OFF`;
     }
+
+    if (!streamingActive) return;
+    imgElement.src = canvasElement.toDataURL('image/jpeg');
+
+  } catch (error) {
+    console.error('Error during capture:', error);
   }
 
+  requestAnimationFrame(processFrame);
+}
 
   // START STREAMING
   async function startWebcam(deviceId) {
