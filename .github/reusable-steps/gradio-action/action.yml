@@ -56,11 +56,12 @@ runs:
         $app_pid = (Get-Process | Where-Object { $_.Path -match "python.*main.py" }).Id
         Write-Host "Gradio app PID: $app_pid"
 
+        $timeout = [int]${{ inputs.timeout }}
         # Wait for the specific log message
         $start_time = Get-Date
         Get-Content -Wait gradio_log.txt | ForEach-Object {
           if ($_ -match "Demo is ready!") { break }
-          if ((Get-Date) - $start_time).TotalSeconds -ge ${{ inputs.timeout }}) {
+          if ((Get-Date) - $start_time).TotalSeconds -ge $timeout) {
             Write-Host "Timeout waiting for 'Demo is ready!'"
             exit 1
           }
