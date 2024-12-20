@@ -1,3 +1,4 @@
+
 import argparse
 import io
 import logging
@@ -13,6 +14,7 @@ import openvino.properties as props
 import openvino.properties.hint as hints
 import openvino.properties.streams as streams
 import requests
+import yaml
 from llama_index.core import PromptTemplate
 from llama_index.core import SimpleDirectoryReader
 from llama_index.core import VectorStoreIndex, Settings
@@ -215,7 +217,7 @@ def run_app(agent):
                 chat_window = gr.Chatbot(
                     label="Paint Purchase Helper",
                     avatar_images=(None, "https://docs.openvino.ai/2024/_static/favicon.ico"),
-		                height=400,  # Adjust height as per your preference
+                        height=400,  # Adjust height as per your preference
                     scale=2  # Set a higher scale value for Chatbot to make it wider
                     #autoscroll=True,  # Enable auto-scrolling for better UX
                 )
@@ -313,10 +315,12 @@ if __name__ == "__main__":
 
     # Load agent config
     personality_file_path = Path(args.personality)
-    with open(personality_file_path) as f:
-        chatbot_config = f.read()
 
-    react_system_prompt = PromptTemplate(chatbot_config)
+    with open(personality_file_path, "rb") as f:
+        chatbot_config = yaml.safe_load(f)
+        print("chatbot_config is", chatbot_config)
+
+    react_system_prompt = PromptTemplate(chatbot_config['system_configuration'])
     log.info(f"react_system_prompt {react_system_prompt}")
     #Define agent and available tools
     agent = ReActAgent.from_tools([multiply_tool, divide_tool, add_tool, subtract_tool, paint_cost_calculator, vector_tool],
