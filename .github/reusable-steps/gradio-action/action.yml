@@ -53,7 +53,7 @@ runs:
         Start-Sleep -Seconds 5
 
         # Assign process ID
-        $app_pid = (Get-Process -Name python).Id
+        $app_pid = (Get-Process | Where-Object { $_.Path -match "python.*main.py" }).Id
         Write-Host "Gradio app PID: $app_pid"
 
         # Wait for the specific log message
