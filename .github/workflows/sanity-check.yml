@@ -139,68 +139,10 @@ jobs:
         shell: bash
         run: |
           huggingface-cli login --token ${{ secrets.HF_TOKEN }}
-      - name: Run Gradio App (Linux/Mac)
-        if: ${{ runner.os != 'Windows' }}
-        shell: bash
-        run: |
-          cd ${{ matrix.subproject }}
-
-          # Start the Gradio app in the background
-          python main.py 2>&1 | tee gradio_log.txt &
-          
-          # Assign process ID
-          app_pid=$(ps aux | grep -i '[p]ython main.py' | awk '{print $2}')
-
-          # Wait for the specific log message
-          timeout 30m bash -c "
-            (tail -f gradio_log.txt &) | awk '/Demo is ready!/ {exit}'
-          "
-
-          # Capture the readiness status
-          status=$?
-
-          # Stop the Gradio app process
-          echo "Stopping the Gradio app..."
-          pkill -P $app_pid || echo "No child processes to kill."
-          kill $app_pid || echo "App process already terminated."
-          wait $app_pid || echo "App process cleanup complete."
-
-          # Exit with the readiness check status
-          exit $status
-      - name: Run Gradio App (Windows)
-        if: ${{ runner.os == 'Windows' }}
-        shell: powershell
-        run: |
-          cd ${{ matrix.subproject }}
-
-          # Start the Gradio app in the background
-          Start-Process -NoNewWindow -FilePath "python" -ArgumentList "main.py" -RedirectStandardOutput gradio_log.txt -RedirectStandardError gradio_log.txt
-          
-          # Wait a moment to ensure the process starts
-          Start-Sleep -Seconds 5
-
-          # Assign process ID
-          $app_pid = (Get-Process -Name python).Id
-          Write-Host "Gradio app PID: $app_pid"
-
-          # Wait for the specific log message
-          $timeout = 1800
-          $start_time = Get-Date
-          Get-Content -Wait gradio_log.txt | ForEach-Object {
-            if ($_ -match "Demo is ready!") { break }
-            if ((Get-Date) - $start_time).TotalSeconds -ge $timeout) {
-              Write-Host "Timeout waiting for 'Demo is ready!'"
-              exit 1
-            }
-          }
-
-          # Stop the Gradio app process
-          Write-Host "Stopping the Gradio app..."
-          Stop-Process -Id $app_pid -Force -ErrorAction SilentlyContinue
-          Write-Host "App process stopped."
-
-          # Exit with the readiness check status
-          exit 0
+      - uses: ./.github/reusable-steps/gradio-action
+        with:
+          script: main.py
+          project: ${{ matrix.subproject }}
 
   webcam:
     needs: find-subprojects
