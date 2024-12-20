@@ -217,7 +217,7 @@ def run_app(agent):
                 chat_window = gr.Chatbot(
                     label="Paint Purchase Helper",
                     avatar_images=(None, "https://docs.openvino.ai/2024/_static/favicon.ico"),
-                        height=400,  # Adjust height as per your preference
+                                height=400,  # Adjust height as per your preference
                     scale=2  # Set a higher scale value for Chatbot to make it wider
                     #autoscroll=True,  # Enable auto-scrolling for better UX
                 )
@@ -318,7 +318,6 @@ if __name__ == "__main__":
 
     with open(personality_file_path, "rb") as f:
         chatbot_config = yaml.safe_load(f)
-        print("chatbot_config is", chatbot_config)
 
     react_system_prompt = PromptTemplate(chatbot_config['system_configuration'])
     log.info(f"react_system_prompt {react_system_prompt}")
