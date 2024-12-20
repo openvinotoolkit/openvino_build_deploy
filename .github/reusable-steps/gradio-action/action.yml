@@ -53,13 +53,13 @@ runs:
         Start-Sleep -Seconds 5
 
         # Assign process ID
-        $app_pid = (Get-Process | Where-Object { $_.Name -eq "python" }).Id
+        $app_pid = (Get-Process | Where-Object { $_.Name -eq "python.*" }).Id
         Write-Host "Gradio app PID: $app_pid"
 
         $timeout = ${{ inputs.timeout }}
         # Wait for the specific log message
         $start_time = Get-Date
-        Get-Content -Wait gradio_log.txt | ForEach-Object {
+        Get-Content -Wait gradio_log_stderr.txt | ForEach-Object {
           if ($_ -match "Demo is ready!") { break }
           if (((Get-Date) - $start_time).TotalSeconds -ge $timeout) {
             Write-Host "Timeout waiting for 'Demo is ready!'"
