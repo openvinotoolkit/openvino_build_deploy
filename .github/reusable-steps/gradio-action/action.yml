@@ -7,7 +7,7 @@ inputs:
     required: true
   timeout:
     required: false
-    default: 1
+    default: 1800
 
 runs:
   using: 'composite'
