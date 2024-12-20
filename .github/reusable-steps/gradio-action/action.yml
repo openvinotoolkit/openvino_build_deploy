@@ -1,0 +1,72 @@
+name: Run Gradio app until ready
+
+inputs:
+  script:
+    required: true
+  project:
+    required: true
+  timeout:
+    required: false
+    default: 1800
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Run Gradio App (Linux/Mac)
+      if: ${{ runner.os != 'Windows' }}
+      shell: bash
+      run: |
+        cd ${{ inputs.project }}
+
+        # Start the Gradio app in the background
+        python ${{ inputs.script }} 2>&1 | tee gradio_log.txt &
+
+        # Assign process ID
+        app_pid=$(ps aux | grep -i '[p]ython main.py' | awk '{print $2}')
+
+        # Wait for the specific log message
+        timeout ${{ inputs.timeout }} bash -c "
+          (tail -f gradio_log.txt &) | awk '/Demo is ready!/ {exit}'
+        "
+
+        # Capture the readiness status
+        status=$?
+
+        # Stop the Gradio app process
+        echo "Stopping the Gradio app..."
+        pkill -P $app_pid || echo "No child processes to kill."
+        kill $app_pid || echo "App process already terminated."
+        wait $app_pid || echo "App process cleanup complete."
+
+        # Exit with the readiness check status
+        exit $status
+    - name: Run Gradio App (Windows)
+      if: ${{ runner.os == 'Windows' }}
+      shell: powershell
+      run: |
+        cd ${{ inputs.project }}
+
+        # Start the Gradio app in the background and redirect both output and error to the same file
+        Start-Process -NoNewWindow -FilePath "python" -ArgumentList "${{ inputs.script }}" -RedirectStandardOutput gradio_stdout.txt -RedirectStandardError gradio_stderr.txt
+
+        # Wait a moment to ensure the process starts
+        Start-Sleep -Seconds 5
+
+        # Assign process ID
+        $app_pid = (Get-Process | Where-Object { $_.Name -eq "python.*" }).Id
+
+        $timeout = ${{ inputs.timeout }}
+        # Wait for the specific log message
+        $start_time = Get-Date
+        Get-Content -Wait gradio_stderr.txt, gradio_stdout.txt | ForEach-Object {
+          if ($_ -match "Demo is ready!") { break }
+          if (((Get-Date) - $start_time).TotalSeconds -ge $timeout) {
+            exit 1
+          }
+        }
+
+        # Stop the Gradio app process
+        Stop-Process -Id $app_pid -Force -ErrorAction SilentlyContinue
+
+        # Exit with the readiness check status
+        exit 0
