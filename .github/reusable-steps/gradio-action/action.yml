@@ -46,9 +46,12 @@ runs:
       run: |
         cd ${{ inputs.project }}
 
-        # Start the Gradio app in the background
-        Start-Process -NoNewWindow -FilePath "python" -ArgumentList "main.py" -RedirectStandardOutput gradio_log.txt -RedirectStandardError gradio_log.txt
+        # Start the Gradio app in the background and redirect both output and error to the same file
+        Start-Process -NoNewWindow -FilePath "python" -ArgumentList "main.py" -RedirectStandardOutput gradio_log_stdout.txt -RedirectStandardError gradio_log_stderr.txt
         
+        # Merge the output and error streams into one file
+        Get-Content gradio_log_stdout.txt, gradio_log_stderr.txt | Set-Content gradio_log.txt
+
         # Wait a moment to ensure the process starts
         Start-Sleep -Seconds 5
 
