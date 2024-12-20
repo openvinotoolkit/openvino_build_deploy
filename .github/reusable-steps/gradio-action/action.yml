@@ -47,7 +47,7 @@ runs:
         cd ${{ inputs.project }}
 
         # Start the Gradio app in the background and redirect both output and error to the same file
-        Start-Process -NoNewWindow -FilePath "python" -ArgumentList "${{ inputs.script }}" -RedirectStandardOutput gradio_log.txt -RedirectStandardError gradio_log_stderr.txt
+        Start-Process -NoNewWindow -FilePath "python" -ArgumentList "${{ inputs.script }}" -RedirectStandardError gradio_log.txt
 
         # Wait a moment to ensure the process starts
         Start-Sleep -Seconds 5
@@ -59,7 +59,7 @@ runs:
         $timeout = ${{ inputs.timeout }}
         # Wait for the specific log message
         $start_time = Get-Date
-        Get-Content -Wait gradio_log_stderr.txt | ForEach-Object {
+        Get-Content -Wait gradio_log.txt | Tee-Object -FilePath gradio_log.txt | ForEach-Object {
           if ($_ -match "Demo is ready!") { break }
           if (((Get-Date) - $start_time).TotalSeconds -ge $timeout) {
             Write-Host "Timeout waiting for 'Demo is ready!'"
