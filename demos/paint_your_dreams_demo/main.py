@@ -34,7 +34,8 @@ hf_model_name: Optional[str] = None
 
 def get_available_devices() -> list[str]:
     core = ov.Core()
-    return list({device.split(".")[0] for device in core.available_devices})
+    # NPU is not supported with this application
+    return list({device.split(".")[0] for device in core.available_devices if device != "NPU"})
 
 
 def download_models(model_name: str, safety_checker_model: str) -> None:
