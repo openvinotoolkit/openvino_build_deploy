@@ -16,7 +16,7 @@ The Intelligent Queue Management kit is designed to help businesses manage custo
 
 This kit uses the following technology stack:
 - [OpenVINO Toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([docs](https://docs.openvino.ai/))
-- [Ultralytic YOLO11](https://github.com/ultralytics/ultralytics)
+- [Ultralytic YOLOv8](https://github.com/ultralytics/ultralytics)
 
 Check out our [AI Reference Kits repository](/) for other kits.
 
@@ -108,12 +108,12 @@ pip install -r requirements.txt
 
 ## Converting and Optimizing the Model
 
-To convert and optimize the YOLO11 model, run the following command:
+To convert and optimize the YOLOv8 model, run the following command:
 
 ```shell
-python convert_and_optimize.py --model_name yolo11 --model_dir model --data_dir data --quantize True
+python convert_and_optimize.py --model_name yolov8m --model_dir model --data_dir data --quantize True
 ```
-This will convert the YOLO11 model to an OpenVINO™ Intermediate Representation (IR) format and optimize it for use with OpenVINO™.
+This will convert the YOLOv8 model to an OpenVINO™ Intermediate Representation (IR) format and optimize it for use with OpenVINO™.
 You can run the Python script or check out [convert-and-optimize-the-model.ipynb](docs/convert-and-optimize-the-model.ipynb) to learn more.
 
 ## Running the Application
