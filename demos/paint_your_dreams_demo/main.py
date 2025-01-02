@@ -1,4 +1,5 @@
 import argparse
+import asyncio
 import logging as log
 import os
 import random
@@ -10,10 +11,10 @@ from typing import Optional
 import gradio as gr
 import numpy as np
 import openvino as ov
-import torch
-from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
-from huggingface_hub.utils import LocalEntryNotFoundError
-from optimum.intel.openvino import OVLatentConsistencyModelPipeline
+import openvino_genai as genai
+from PIL import Image
+from huggingface_hub import snapshot_download
+from transformers import Pipeline, pipeline
 
 SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "utils")
 sys.path.append(os.path.dirname(SCRIPT_DIR))
@@ -23,13 +24,7 @@ from utils import demo_utils as utils
 MAX_SEED = np.iinfo(np.int32).max
 MODEL_DIR = Path("model")
 
-ov_pipeline: Optional[OVLatentConsistencyModelPipeline] = None
-safety_checker: Optional[StableDiffusionSafetyChecker] = None
-
-try:
-    safety_checker = StableDiffusionSafetyChecker.from_pretrained("CompVis/stable-diffusion-safety-checker", local_files_only=True)
-except (LocalEntryNotFoundError, EnvironmentError):
-    safety_checker = StableDiffusionSafetyChecker.from_pretrained("CompVis/stable-diffusion-safety-checker")
+safety_checker: Optional[Pipeline] = None
 
 ov_pipelines = {}
 
@@ -42,58 +37,68 @@ def get_available_devices() -> list[str]:
     return list({device.split(".")[0] for device in core.available_devices})
 
 
-def load_pipeline(model_name: str, device: str):
-    global ov_pipeline
+def download_models(model_name: str, safety_checker_model: str) -> None:
+    global safety_checker
 
-    if device in ov_pipelines:
-        ov_pipeline = ov_pipelines[device]
-    else:
+    output_dir = MODEL_DIR / model_name
+    if not output_dir.exists():
+        snapshot_download(model_name, local_dir=output_dir)
+
+    safety_checker_dir = MODEL_DIR / safety_checker_model
+    if not safety_checker_dir.exists():
+        snapshot_download(safety_checker_model, local_dir=safety_checker_dir)
+
+    safety_checker = pipeline("image-classification", model=str(safety_checker_dir))
+
+
+async def load_pipeline(model_name: str, device: str):
+    if device not in ov_pipelines:
+        model_dir = MODEL_DIR / model_name
         ov_config = {"CACHE_DIR": "cache"}
-        ov_pipeline = OVLatentConsistencyModelPipeline.from_pretrained(model_name, compile=True, device=device,
-                                                                       safety_checker=safety_checker, ov_config=ov_config)
+
+        ov_pipeline = genai.Text2ImagePipeline(model_dir, device, **ov_config)
         ov_pipelines[device] = ov_pipeline
 
-    return device
+    return ov_pipelines[device]
 
 
-def stop():
+async def stop():
     global stop_generating
     stop_generating = True
 
 
-def generate_images(prompt: str, seed: int, size: int, guidance_scale: float, num_inference_steps: int, randomize_seed: bool, device: str, endless_generation: bool):
+async def generate_images(prompt: str, seed: int, size: int, guidance_scale: float, num_inference_steps: int, randomize_seed: bool, device: str, endless_generation: bool) -> tuple[np.ndarray, float]:
     global stop_generating
-    stop_generating = False if endless_generation else True
+    stop_generating = not endless_generation
 
-    load_pipeline(hf_model_name, device)
+    ov_pipeline = await load_pipeline(hf_model_name, device)
 
     while True:
-        local_seed = seed
         if randomize_seed:
-            local_seed = random.randint(0, MAX_SEED)
-
-        torch.manual_seed(local_seed)
-        np.random.seed(local_seed)
+            seed = random.randint(0, MAX_SEED)
 
         start_time = time.time()
-        result = ov_pipeline(prompt=prompt, num_inference_steps=num_inference_steps, width=size, height=size,
-                             guidance_scale=guidance_scale).images
+        result = ov_pipeline.generate(prompt=prompt, num_inference_steps=num_inference_steps, width=size, height=size,
+                             guidance_scale=guidance_scale, generator=genai.CppStdGenerator(seed)).data[0]
         end_time = time.time()
 
-        result, nsfw = safety_checker(ov_pipeline.feature_extractor(result, return_tensors="pt").pixel_values, np.array(result))
-        result, nsfw = result[0], nsfw[0]
-
-        if nsfw:
+        label = safety_checker(Image.fromarray(result), top_k=1)
+        if label[0]["label"].lower() == "nsfw":
+            result = np.zeros_like(result)
             h, w = result.shape[:2]
             utils.draw_text(result, "Potential NSFW content", (w // 2, h // 2), center=True, font_scale=3.0)
 
         utils.draw_ov_watermark(result, size=0.60)
 
         processing_time = end_time - start_time
+
         yield result, round(processing_time, 5)
 
         if stop_generating:
             break
+
+        # small delay necessary for endless generation
+        await asyncio.sleep(0.1)
 
 
 def build_ui():
@@ -179,10 +184,12 @@ def build_ui():
     return demo
 
 
-def run_endless_lcm(model_name: str, local_network: bool = False, public_interface: bool = False):
+def run_endless_lcm(model_name: str, safety_checker_model: str, local_network: bool = False, public_interface: bool = False):
     global hf_model_name
     hf_model_name = model_name
     server_name = "0.0.0.0" if local_network else None
+
+    download_models(model_name, safety_checker_model)
 
     demo = build_ui()
     log.info("Demo is ready!")
@@ -196,8 +203,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", type=str, default="OpenVINO/LCM_Dreamshaper_v7-fp16-ov",
                         choices=["OpenVINO/LCM_Dreamshaper_v7-int8-ov", "OpenVINO/LCM_Dreamshaper_v7-fp16-ov"], help="Visual GenAI model to be used")
+    parser.add_argument("--safety_checker_model", type=str, default="Falconsai/nsfw_image_detection",
+                        choices=["Falconsai/nsfw_image_detection"], help="The model to verify if the generated image is NSFW")
     parser.add_argument("--local_network", action="store_true", help="Whether demo should be available in local network")
     parser.add_argument("--public", default=False, action="store_true", help="Whether interface should be available publicly")
 
     args = parser.parse_args()
-    run_endless_lcm(args.model_name, args.local_network, args.public)
+    run_endless_lcm(args.model_name, args.safety_checker_model, args.local_network, args.public)
