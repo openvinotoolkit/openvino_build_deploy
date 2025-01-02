@@ -49,7 +49,7 @@ def download_models(model_name: str, safety_checker_model: str) -> None:
     if not safety_checker_dir.exists():
         snapshot_download(safety_checker_model, local_dir=safety_checker_dir)
 
-    safety_checker = pipeline("image-classification", model=str(safety_checker_dir))
+    safety_checker = pipeline("image-classification", model=str(safety_checker_dir), device="cpu")
 
 
 async def load_pipeline(model_name: str, device: str):
