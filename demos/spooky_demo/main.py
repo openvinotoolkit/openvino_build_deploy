@@ -17,6 +17,11 @@ sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 from utils import demo_utils as utils
 
+DEFAULT_SKELETON = ((15, 13), (13, 11), (16, 14), (14, 12), (11, 12), (5, 6), (5, 7), (6, 8), (7, 9), (8, 10),
+                    (1, 2), (0, 1), (0, 2), (1, 3), (2, 4), (17, 18), (20, 21), (23, 24), (26, 27), (29, 30))
+
+pumpkin_img = cv2.imread("assets/pumpkin.png", cv2.IMREAD_UNCHANGED)
+
 
 # 2D pooling in numpy (from: https://stackoverflow.com/a/54966908/1624463)
 def pool2d(A, kernel_size, stride, padding, pool_mode="max"):
@@ -76,13 +81,6 @@ def process_results(img, pafs, heatmaps, model, decoder):
     return poses, scores
 
 
-default_skeleton = ((15, 13), (13, 11), (16, 14), (14, 12), (11, 12), (5, 6), (5, 7), (6, 8), (7, 9), (8, 10),
-                    (1, 2), (0, 1), (0, 2), (1, 3), (2, 4), (17, 18), (20, 21), (23, 24), (26, 27), (29, 30))
-
-
-pumpkin_img = cv2.imread("assets/pumpkin.png", cv2.IMREAD_UNCHANGED)
-
-
 def add_artificial_points(pose, point_score_threshold):
     # neck, bellybutton, ribs
     neck = (pose[5] + pose[6]) / 2
@@ -106,7 +104,7 @@ def add_artificial_points(pose, point_score_threshold):
     return pose
 
 
-def draw_poses(img, poses, point_score_threshold, skeleton=default_skeleton):
+def draw_poses(img, poses, point_score_threshold, skeleton=DEFAULT_SKELETON):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     img = cv2.multiply(img, 0.5)
     img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
