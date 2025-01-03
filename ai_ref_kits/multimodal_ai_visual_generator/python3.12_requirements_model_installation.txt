@@ -27,7 +27,7 @@ humanfriendly==10.0
 idna==3.7
 importlib_metadata==7.1.0
 intel-openmp==2021.4.0
-Jinja2==3.1.4
+Jinja2==3.1.5
 joblib==1.4.2
 jsonschema==4.22.0
 jsonschema-specifications==2023.12.1
