@@ -98,7 +98,7 @@ def process_landmark_results(boxes, results):
     landmarks = []
 
     for box, result in zip(boxes, results):
-        # create a vector of landmarks (5x2)
+        # create a vector of landmarks (35x2)
         result = result.reshape(-1, 2)
         box = box[1]
         # move every landmark according to box origin
@@ -138,18 +138,18 @@ def draw_mask(img, mask_img, center, face_size, scale=1.0, offset_coeffs=(0.5, 0
 def draw_santa(img, detection):
     (score, box), landmarks, emotion = detection
     # draw beard
-    draw_mask(img, santa_beard_img, landmarks[2], box[2:], offset_coeffs=(0.5, -0.05))
+    draw_mask(img, santa_beard_img, landmarks[5], box[2:], offset_coeffs=(0.5, 0))
     # draw cap
-    draw_mask(img, santa_cap_img, np.mean(landmarks[:2], axis=0, dtype=np.int32), box[2:], scale=1.5, offset_coeffs=(0.56, 0.87))
+    draw_mask(img, santa_cap_img, np.mean(landmarks[13:17], axis=0, dtype=np.int32), box[2:], scale=1.5, offset_coeffs=(0.56, 0.78))
 
 
 def draw_reindeer(img, landmarks, box):
-    # draw nose
-    draw_mask(img, reindeer_nose_img, landmarks[2], box[2:], scale=0.25)
     # draw antlers
-    draw_mask(img, reindeer_antlers_img, np.mean(landmarks[:2], axis=0, dtype=np.int32), box[2:], scale=1.8, offset_coeffs=(0.5, 1.2))
+    draw_mask(img, reindeer_antlers_img, np.mean(landmarks[13:17], axis=0, dtype=np.int32), box[2:], scale=1.8, offset_coeffs=(0.5, 1.1))
     # draw sunglasses
-    draw_mask(img, reindeer_sunglasses_img, np.mean(landmarks[:2], axis=0, dtype=np.int32), box[2:], offset_coeffs=(0.5, 0.33))
+    draw_mask(img, reindeer_sunglasses_img, np.mean(landmarks[:4], axis=0, dtype=np.int32), box[2:], offset_coeffs=(0.5, 0.33))
+    # draw nose
+    draw_mask(img, reindeer_nose_img, landmarks[4], box[2:], scale=0.25)
 
 
 def draw_christmas_masks(frame, detections):
@@ -168,7 +168,7 @@ def draw_christmas_masks(frame, detections):
             fontFace=cv2.FONT_HERSHEY_SCRIPT_COMPLEX,
             fontScale=box[2] / 150,
             thickness=1)
-        point = np.mean(landmarks[:2], axis=0, dtype=np.int32) - [label_width // 2, 2 * label_height]
+        point = np.mean(landmarks[:4], axis=0, dtype=np.int32) - [label_width // 2, 2 * label_height]
         cv2.putText(
             img=frame,
             text=EMOTION_MAPPING[emotion],
@@ -310,10 +310,10 @@ def run_demo(source, face_detection_model, face_landmarks_model, face_emotions_m
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--stream', default="8", type=str, help="Path to a video file or the webcam number")
+    parser.add_argument('--stream', default="0", type=str, help="Path to a video file or the webcam number")
     parser.add_argument('--device', default="AUTO", type=str, help="Device to start inference on")
     parser.add_argument("--detection_model_name", type=str, default="face-detection-0205", help="Face detection model to be used")
-    parser.add_argument("--landmarks_model_name", type=str, default="landmarks-regression-retail-0009", help="Face landmarks regression model to be used")
+    parser.add_argument("--landmarks_model_name", type=str, default="facial-landmarks-35-adas-0002", help="Face landmarks regression model to be used")
     parser.add_argument("--emotions_model_name", type=str, default="emotions-recognition-retail-0003", help="Face emotions recognition model to be used")
     parser.add_argument("--model_precision", type=str, default="FP16-INT8", choices=["FP16-INT8", "FP16", "FP32"], help="All models precision")
     parser.add_argument("--flip", type=bool, default=True, help="Mirror input video")
