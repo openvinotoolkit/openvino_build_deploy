@@ -4,6 +4,7 @@ import threading
 import time
 from pathlib import Path
 from typing import List, Optional, Set
+import os
 
 import faiss
 import fitz
@@ -52,27 +53,47 @@ def load_chat_model(model_name: str, token: str = None) -> OpenVINOLLM:
     if not model_path.exists():
         log.info(f"Downloading {model_name}... It may take up to 1h depending on your Internet connection and model size.")
 
+        # Prepare base kwargs
+        kwargs = {
+            "export": True,
+            "compile": False,
+            "load_in_8bit": False,
+            "use_safetensors": True  # Add this to use safetensors format
+        }        
+        
+        if token:
+            kwargs["use_auth_token"] = token
+            os.environ["HUGGING_FACE_HUB_TOKEN"] = token
+
         # openvino models are used as is
         is_openvino_model = model_name.split("/")[0] == "OpenVINO"
         if is_openvino_model:
-            chat_model = OVModelForCausalLM.from_pretrained(model_name, export=False, compile=False, token=token)
-            chat_model.save_pretrained(model_path)
-        else:
-            chat_model = OVModelForCausalLM.from_pretrained(model_name, export=True, compile=False, load_in_8bit=False, token=token)
+            kwargs["export"] = False
+        
+        chat_model = OVModelForCausalLM.from_pretrained(model_name, **kwargs)
+        chat_model.save_pretrained(model_path)
 
+        if not is_openvino_model:
             quant_config = OVWeightQuantizationConfig(bits=4, sym=False, ratio=0.8)
             config = OVConfig(quantization_config=quant_config)
 
             log.info(f"Quantizing {model_name} to INT4... It may take significant amount of time depending on your machine power.")
             quantizer = OVQuantizer.from_pretrained(chat_model, task="text-generation")
             quantizer.quantize(save_directory=model_path, weights_only=True, ov_config=config)
-
-        chat_tokenizer = AutoTokenizer.from_pretrained(model_name, token=token)
+        
+        tokenizer_kwargs = {"use_auth_token": token} if token else {}
+        chat_tokenizer = AutoTokenizer.from_pretrained(model_name, **tokenizer_kwargs)
         chat_tokenizer.save_pretrained(model_path)
 
     device = "GPU" if "GPU" in get_available_devices() else "CPU"
-    return OpenVINOLLM(context_window=2048, model_id_or_path=str(model_path), max_new_tokens=512, device_map=device,
-                       model_kwargs={"ov_config": ov_config}, generate_kwargs={"do_sample": True, "temperature": 0.7, "top_k": 50, "top_p": 0.95})
+    return OpenVINOLLM(
+        context_window=2048,
+        model_id_or_path=str(model_path),
+        max_new_tokens=512,
+        device_map=device,
+        model_kwargs={"ov_config": ov_config},
+        generate_kwargs={"do_sample": True, "temperature": 0.7, "top_k": 50, "top_p": 0.95}
+    )
 
 
 def optimize_model_for_npu(model: OVModelForFeatureExtraction):
@@ -107,27 +128,46 @@ def optimize_model_for_npu(model: OVModelForFeatureExtraction):
     model.reshape(1, 512)
 
 
-def load_embedding_model(model_name: str) -> OpenVINOEmbedding:
+def load_embedding_model(model_name: str, token: str = None) -> OpenVINOEmbedding:
     model_path = MODEL_DIR / model_name
 
     if not model_path.exists():
-        embedding_model = OVModelForFeatureExtraction.from_pretrained(model_name, export=True, compile=False)
+        kwargs = {
+            "export": True,
+            "compile": False,
+            "use_safetensors": True
+        }
+        if token:
+            kwargs["use_auth_token"] = token
+
+        embedding_model = OVModelForFeatureExtraction.from_pretrained(model_name, **kwargs)
         optimize_model_for_npu(embedding_model)
         embedding_model.save_pretrained(model_path)
-        embedding_tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+        tokenizer_kwargs = {"use_auth_token": token} if token else {}
+        embedding_tokenizer = AutoTokenizer.from_pretrained(model_name, **tokenizer_kwargs)
         embedding_tokenizer.save_pretrained(model_path)
 
     device = "NPU" if "NPU" in get_available_devices() else "CPU"
     return OpenVINOEmbedding(str(model_path), device=device, embed_batch_size=1, model_kwargs={"dynamic_shapes": False})
 
 
-def load_reranker_model(model_name: str) -> OpenVINORerank:
+def load_reranker_model(model_name: str, token: str = None) -> OpenVINORerank:
     model_path = MODEL_DIR / model_name
 
     if not model_path.exists():
-        reranker_model = OVModelForSequenceClassification.from_pretrained(model_name, export=True, compile=False)
+        kwargs = {
+            "export": True,
+            "compile": False,
+            "use_safetensors": True
+        }
+        if token:
+            kwargs["use_auth_token"] = token
+            
+        reranker_model = OVModelForSequenceClassification.from_pretrained(model_name, **kwargs)
         reranker_model.save_pretrained(model_path)
-        reranker_tokenizer = AutoTokenizer.from_pretrained(model_name)
+        tokenizer_kwargs = {"use_auth_token": token} if token else {}
+        reranker_tokenizer = AutoTokenizer.from_pretrained(model_name, **tokenizer_kwargs)
         reranker_tokenizer.save_pretrained(model_path)
 
     return OpenVINORerank(model_id_or_path=str(model_path), device="CPU", top_n=3)
@@ -139,11 +179,11 @@ def load_chat_models(chat_model_name: str, embedding_model_name: str, reranker_m
     with open(personality_file_path, "rb") as f:
         chatbot_config = yaml.safe_load(f)
 
-    ov_embedding = load_embedding_model(embedding_model_name)
+    ov_embedding = load_embedding_model(embedding_model_name, token=auth_token)
     log.info(f"Running {embedding_model_name} on {ov_embedding._model.request.get_property('EXECUTION_DEVICES')}")
-    ov_llm = load_chat_model(chat_model_name, auth_token)
+    ov_llm = load_chat_model(chat_model_name, token=auth_token)
     log.info(f"Running {chat_model_name} on {','.join(ov_llm._model.request.get_compiled_model().get_property('EXECUTION_DEVICES'))}")
-    ov_reranker = load_reranker_model(reranker_model_name)
+    ov_reranker = load_reranker_model(reranker_model_name, token=auth_token)
     log.info(f"Running {reranker_model_name} on {','.join(ov_reranker._model.request.get_property('EXECUTION_DEVICES'))}")
 
     ov_chat_engine = SimpleChatEngine.from_defaults(llm=ov_llm, system_prompt=chatbot_config["system_configuration"],

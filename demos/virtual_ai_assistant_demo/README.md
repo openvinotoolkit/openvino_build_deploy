@@ -121,13 +121,7 @@ Set Up a Hugging Face Account: If you don't have one, create a [Hugging Face acc
 
 Authenticate with Meta AI: Go to the [LlaMA model](https://huggingface.co/meta-llama) (v2 or v3) page on Hugging Face. To authenticate, enter the same email address you used for the Meta AI website. After authentication, you'll gain access to the model.
 
-To use the model, authenticate using the Hugging Face CLI:
-
-```
-huggingface-cli login
-```
-
-When prompted to add the token as a git credential, respond with 'n'. This step ensures that you are logged into the Hugging Face API and ready to download the model.
+Before you can run the script to convert the models, you must have a Hugging Face token (`--hf_token`) for authentication, which allows you to get access to gated models, such as Llama. Navigate on HuggingFace website and request an Access Token with Read permissions. 
 
 Now, you're ready to download and optimize the models required to run the application.
 
