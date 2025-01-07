@@ -1,3 +1,4 @@
+
 import argparse
 import io
 import logging
@@ -13,6 +14,7 @@ import openvino.properties as props
 import openvino.properties.hint as hints
 import openvino.properties.streams as streams
 import requests
+import yaml
 from llama_index.core import PromptTemplate
 from llama_index.core import SimpleDirectoryReader
 from llama_index.core import VectorStoreIndex, Settings
@@ -149,7 +151,7 @@ def run_app(agent):
 
 
     def _generate_response(chat_history, log_history):
-        print("log_history", log_history)
+        log.info(f"log_history {log_history}")
         if not isinstance(log_history, list):
             log_history = []
 
@@ -215,7 +217,7 @@ def run_app(agent):
                 chat_window = gr.Chatbot(
                     label="Paint Purchase Helper",
                     avatar_images=(None, "https://docs.openvino.ai/2024/_static/favicon.ico"),
-		                height=400,  # Adjust height as per your preference
+                                height=400,  # Adjust height as per your preference
                     scale=2  # Set a higher scale value for Chatbot to make it wider
                     #autoscroll=True,  # Enable auto-scrolling for better UX
                 )
@@ -283,7 +285,7 @@ if __name__ == "__main__":
     parser.add_argument("--chat_model", type=str, default="model/llama3.1-8B-INT4", help="Path to the chat model directory")
     parser.add_argument("--embedding_model", type=str, default="model/bge-large-FP32", help="Path to the embedding model directory")
     parser.add_argument("--rag_pdf", type=str, default="test_painting_llm_rag.pdf", help="Path to a RAG PDF file with additional knowledge the chatbot can rely on.")
-    parser.add_argument("--personality", type=str, default="paint_concierge_personality.txt", help="Path to the TXT file with chatbot personality")
+    parser.add_argument("--personality", type=str, default="paint_concierge_personality.yaml", help="Path to the yaml file with chatbot personality")
 
     args = parser.parse_args()
 
@@ -299,7 +301,7 @@ if __name__ == "__main__":
     # Step 4: Load documents and create the VectorStoreIndex
     text_example_en_path = Path(args.rag_pdf)
     index = load_documents(text_example_en_path)
-    print("loading in", index)
+    log.info(f"loading in {index}")
     vector_tool = QueryEngineTool(
         index.as_query_engine(streaming=True),
         metadata=ToolMetadata(
@@ -313,11 +315,12 @@ if __name__ == "__main__":
 
     # Load agent config
     personality_file_path = Path(args.personality)
-    with open(personality_file_path) as f:
-        chatbot_config = f.read()
 
-    react_system_prompt = PromptTemplate(chatbot_config)
-    print("react_system_prompt", react_system_prompt)
+    with open(personality_file_path, "rb") as f:
+        chatbot_config = yaml.safe_load(f)
+
+    react_system_prompt = PromptTemplate(chatbot_config['system_configuration'])
+    log.info(f"react_system_prompt {react_system_prompt}")
     #Define agent and available tools
     agent = ReActAgent.from_tools([multiply_tool, divide_tool, add_tool, subtract_tool, paint_cost_calculator, vector_tool],
                                   llm=llm,
