@@ -1,20 +1,16 @@
 {
   "name": "hide-your-mess-behind",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "main": "src/main.js",
   "scripts": {
-    "start": "electron .",
+    "start": "electron . --no-sandbox",
     "dist": "electron-builder"
   },
   "build": {
     "extraFiles": [
       {
-        "from": "/usr/lib/x86_64-linux-gnu/libvips-cpp.so.42",
+        "from": "./node_modules/@img/sharp-libvips-linux-x64/lib/libvips-cpp.so.42",
         "to": "./libvips-cpp.so.42"
-      },
-      {
-        "from": "/usr/lib/x86_64-linux-gnu/libvips.so.42",
-        "to": "./libvips.so.42"
       }
     ],
     "appId": "ai.openvino.hideyourmessbehind",
@@ -28,6 +24,7 @@
     "linux": {
       "target": [
         "deb",
+        "rpm",
         "zip"
       ],
       "icon": "assets/icons/icon.png",
@@ -52,7 +49,7 @@
     ]
   },
   "devDependencies": {
-    "electron": "^32.1.0",
+    "electron": "^32.2.5",
     "electron-builder": "^25.0.5"
   },
   "dependencies": {
@@ -64,8 +61,14 @@
   "keywords": [],
   "author": "Mikołaj Roszczyk <mikolaj.roszczyk@intel.com>",
   "contributors": [
-    "Adrian Boguszewski <adrian.boguszewski@intel.com>",
-    "Antonio Martinez"
+    {
+      "name": "Adrian Boguszewski",
+      "email": "adrian.boguszewski@intel.com"
+    },
+    {
+      "name": "Antonio Martinez",
+      "email": "jose.antonio.martinez.torres@intel.com"
+    }
   ],
   "homepage": "https://github.com/openvinotoolkit/openvino_build_deploy",
   "license": "Apache-2.0",

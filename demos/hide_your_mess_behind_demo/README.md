@@ -51,8 +51,6 @@ Once you've completed the initial setup, you can start the app anytime by runnin
 npm start
 ```
 
-
-
 ## Using the Demo
 
 ### Turn on the video

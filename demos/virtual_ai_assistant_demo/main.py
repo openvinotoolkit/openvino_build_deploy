@@ -288,9 +288,8 @@ def create_UI(initial_message: str, action_name: str) -> gr.Blocks:
         return demo
 
 
-def run(chat_model_name: str, embedding_model_name: str, reranker_model_name: str, personality_file_path: Path, hf_token: str = None, public_interface: bool = False) -> None:
-    # set up logging
-    log.getLogger().setLevel(log.INFO)
+def run(chat_model_name: str, embedding_model_name: str, reranker_model_name: str, personality_file_path: Path, hf_token: str = None, local_network: bool = False, public_interface: bool = False) -> None:
+    server_name = "0.0.0.0" if local_network else None
 
     # load chat models
     load_chat_models(chat_model_name, embedding_model_name, reranker_model_name, personality_file_path, hf_token)
@@ -301,10 +300,14 @@ def run(chat_model_name: str, embedding_model_name: str, reranker_model_name: st
     # create user interface
     demo = create_UI(initial_message, chatbot_config["extra_action_name"])
     # launch demo
-    demo.queue().launch(share=public_interface)
+    log.info("Demo is ready!")
+    demo.queue().launch(server_name=server_name, share=public_interface)
 
 
 if __name__ == "__main__":
+    # set up logging
+    log.getLogger().setLevel(log.INFO)
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--chat_model", type=str, default="meta-llama/Llama-3.2-3B-Instruct", help="Path/name of the chat model")
     parser.add_argument("--embedding_model", type=str, default="BAAI/bge-small-en-v1.5", help="Path/name of the model for embeddings")
@@ -312,6 +315,7 @@ if __name__ == "__main__":
     parser.add_argument("--personality", type=str, default="healthcare_personality.yaml", help="Path to the YAML file with chatbot personality")
     parser.add_argument("--hf_token", type=str, help="HuggingFace access token to get Llama3")
     parser.add_argument("--public", default=False, action="store_true", help="Whether interface should be available publicly")
+    parser.add_argument("--local_network", action="store_true", help="Whether demo should be available in local network")
 
     args = parser.parse_args()
-    run(args.chat_model, args.embedding_model, args.reranker_model, Path(args.personality), args.hf_token, args.public)
+    run(args.chat_model, args.embedding_model, args.reranker_model, Path(args.personality), args.hf_token, args.local_network, args.public)

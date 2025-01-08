@@ -12,13 +12,13 @@
 
 [![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/LICENSE.txt)
 
-The Intelligent Queue Management project is an application that uses OpenVINO™, a toolkit that enables developers to deploy deep learning models on various hardware platforms. The application is designed to help businesses manage customer queues more effectively by analyzing camera video streams and detecting the number of people in each queue. The system then uses this information to optimize the queuing process and reduce customer wait times.
+The Intelligent Queue Management kit is designed to help businesses manage customer queues more effectively by analyzing camera video streams and detecting the number of people in each queue. By leveraging this data, the system optimizes the queuing process to reduce customer wait times. The kit ensures efficient performance and seamless integration by utilizing OpenVINO™, a toolkit that enables developers to deploy deep learning models across various hardware platforms.
 
 This kit uses the following technology stack:
-- [OpenVINO toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([Docs](https://docs.openvino.ai/))
-- [Ultralytic’s YOLOv8](https://github.com/ultralytics/ultralytics)
+- [OpenVINO Toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([docs](https://docs.openvino.ai/))
+- [Ultralytic YOLOv8](https://github.com/ultralytics/ultralytics)
 
-Check out our [Edge AI Reference Kits repository](/) for other kits.
+Check out our [AI Reference Kits repository](/) for other kits.
 
 ![intelligent-queue-management](https://github.com/openvinotoolkit/openvino_notebooks/assets/138901786/6874cfe8-3462-4b30-8026-c14aab7b695c)
 
@@ -30,10 +30,10 @@ New updates will be added here.
   
 - [Getting Started](#getting-started)
   - [Installing Prerequisites](#installing-prerequisites)
-  - [Setting up your Environment](#setting-up-your-environment)
+  - [Setting Up Your Environment](#setting-up-your-environment)
   - [Converting and Optimizing the Model](#converting-and-optimizing-the-model)
   - [Running the Application](#running-the-application)
-- [Benchmarking the Model with OpenVINO's `benchmark_app`](#benchmarking-the-model-with-openvinos-benchmark_app)
+- [Benchmarking the Model with OpenVINO's `Benchmark_App`](#benchmarking-the-model-with-openvinos-benchmark_app)
 - [Additional Resources](#additional-resources)
 
 </details>
@@ -54,7 +54,7 @@ sudo apt install git git-lfs gcc python3-venv python3-dev
 
 _NOTE: If you are using Windows, you will probably need to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe) also._
 
-## Setting up your Environment
+## Setting Up Your Environment
 
 ### Cloning the Repository
 
@@ -134,7 +134,7 @@ python main.py --stream sample_video.mp4
 
 <p align="right"><a href="#top">Back to top ⬆️</a></p>
 
-# Benchmarking the Model with OpenVINO's `benchmark_app`
+# Benchmarking the Model with OpenVINO's `Benchmark_App`
 
 Benchmarking provides insight into your model's real-world performance. Performance may vary based on use and configuration.
 

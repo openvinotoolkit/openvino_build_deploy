@@ -1,16 +1,16 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 
-openvino==2024.4.0
-optimum-intel==1.19.0
-optimum==1.22.0
-nncf==2.13.0
+openvino==2024.6.0
+optimum-intel==1.21.0
+optimum==1.23.3
+nncf==2.14.1
 
-llama-index==0.11.2
-llama-index-llms-openvino==0.3.1
-llama-index-embeddings-openvino==0.3.1
-llama-index-postprocessor-openvino-rerank==0.3.0
-llama-index-vector-stores-faiss==0.2.1
-langchain-text-splitters==0.2.2
+llama-index==0.12.9
+llama-index-llms-openvino==0.4.0
+llama-index-embeddings-openvino==0.5.0
+llama-index-postprocessor-openvino-rerank==0.4.0
+llama-index-vector-stores-faiss==0.3.0
+langchain-text-splitters==0.3.4
 faiss-cpu==1.9.0
 
 # onnx>1.16.1 doesn't work on windows
@@ -19,7 +19,7 @@ onnxruntime==1.20.1
 # newer torches cause segmentation fault on mac
 torch==2.2.0
 
-transformers==4.44.2
+transformers==4.46.3
 pymupdf==1.24.10
 pyyaml==6.0.1
 

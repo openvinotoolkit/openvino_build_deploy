@@ -7,6 +7,7 @@ This sample was modified from one of the [available Onnx Runtime Inference examp
     <img src="https://github.com/user-attachments/assets/a3e35991-0c3b-47e0-a94a-c70d7b135261"/>
 </p>
 
+This demo requires **Python 3.11 or 3.12**.
 
 ### Installation Instructions
 - Create a virtual environment using 
@@ -22,3 +23,6 @@ This sample was modified from one of the [available Onnx Runtime Inference examp
   pip install -r requirements.txt
   ```
 - Now you only need a Jupyter server to start.
+  ```sh
+  jupyter lab
+  ```
