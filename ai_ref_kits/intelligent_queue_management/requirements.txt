@@ -1,12 +1,13 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 
-openvino-dev==2024.2
-nncf==2.11.0
+openvino-dev==2024.6
+nncf==2.14.0
 ultralytics==8.2.10
-numpy==1.23.5
+numpy==1.26.4
 pillow==10.3.0
 opencv-python==4.10.0.82
-onnx==1.16.0
+# onnx>1.16.1 doesn't work on windows
+onnx==1.16.1
 torch==2.2.0
 torchvision==0.17.0
 supervision==0.11.0
