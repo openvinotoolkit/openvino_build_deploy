@@ -73,7 +73,7 @@ cd openvino_build_deploy/ai_ref_kits/intelligent_queue_management
 Then pull the video sample:
 
 ```shell
-git lfs -X= -I=sample_video.mp4 pull
+git lfs -X= -I=data/ pull
 ```
 
 ### Creating a Virtual Environment
@@ -121,7 +121,7 @@ You can run the Python script or check out [convert-and-optimize-the-model.ipynb
 To run the application, use the following command:
 
 ```shell
-python app.py --stream sample_video.mp4 --model_path model/yolov8m_openvino_int8_model/yolov8m.xml --zones_config_file zones.json --customers_limit 3
+python app.py --stream data/sample_video.mp4 --model_path model/yolov8m_openvino_int8_model/yolov8m.xml --zones_config_file config/zones.json --customers_limit 3
 ```
 This will run the application with the specified arguments. Replace "video_file.mp4" with the path to your input video file, "zones.json" with the path to your zones configuration file, and "3" with the maximum number of customers allowed in the queue.
 You can also run the [run-the-application.ipynb](docs/run-the-application.ipynb) to learn more about the inference process. To stop the application at any time, press 'q' or escape.
@@ -129,7 +129,7 @@ You can also run the [run-the-application.ipynb](docs/run-the-application.ipynb)
 _NOTE: Alternatively, you can run all steps with the following command:_
 
 ```shell
-python main.py --stream sample_video.mp4
+python main.py --stream data/sample_video.mp4
 ```
 
 <p align="right"><a href="#top">Back to top ⬆️</a></p>
