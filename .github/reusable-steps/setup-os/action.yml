@@ -10,7 +10,6 @@ runs:
         brew install coreutils
     - name: Free space (Ubuntu only)
       if: runner.os == 'Linux'
-      shell: bash
       uses: jlumbroso/free-disk-space@v1.3.1
       with:
         tool-cache: false
