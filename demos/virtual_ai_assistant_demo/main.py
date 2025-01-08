@@ -5,7 +5,6 @@ import time
 from pathlib import Path
 from typing import List, Optional, Set
 
-import faiss
 import fitz
 import gradio as gr
 import numpy as np
@@ -25,6 +24,9 @@ from openvino.runtime import opset10 as ops
 from openvino.runtime import passes
 from optimum.intel import OVModelForCausalLM, OVModelForFeatureExtraction, OVWeightQuantizationConfig, OVConfig, OVQuantizer, OVModelForSequenceClassification
 from transformers import AutoTokenizer
+
+# it must be imported as the last one; otherwise, it causes a crash on macOS
+import faiss
 
 # Global variables initialization
 MODEL_DIR = Path("model")
@@ -310,7 +312,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--chat_model", type=str, default="meta-llama/Llama-3.2-3B-Instruct", help="Path/name of the chat model")
-    parser.add_argument("--embedding_model", type=str, default="BAAI/bge-base-en-v1.5", help="Path/name of the model for embeddings")
+    parser.add_argument("--embedding_model", type=str, default="BAAI/bge-small-en-v1.5", help="Path/name of the model for embeddings")
     parser.add_argument("--reranker_model", type=str, default="BAAI/bge-reranker-base", help="Path/name of the reranker model")
     parser.add_argument("--personality", type=str, default="healthcare_personality.yaml", help="Path to the YAML file with chatbot personality")
     parser.add_argument("--hf_token", type=str, help="HuggingFace access token to get Llama3")
