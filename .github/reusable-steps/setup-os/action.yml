@@ -14,3 +14,9 @@ runs:
       with:
         tool-cache: false
         swap-storage: false
+        large-packages: false
+        
+        android: true
+        dotnet: true
+        haskell: true
+        docker-images: true
