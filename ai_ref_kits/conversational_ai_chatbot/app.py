@@ -352,8 +352,8 @@ def synthesize(conversation: List[List[str]], audio: Tuple[int, np.ndarray]) -> 
         Chatbot voice response (audio)
     """
     # if audio wasn't used in the conversation, return None
-    if not audio:
-        return None
+    # if not audio:
+    #     return None
 
     prompt = conversation[-1][1]
 
