@@ -3,8 +3,20 @@ name: OS setup
 runs:
   using: 'composite'
   steps:
-    - name: Install coreutils
+    - name: Install coreutils (macOS only)
       if: runner.os == 'macOS'
       shell: bash
       run: |
         brew install coreutils
+    - name: Free space (Ubuntu only)
+      if: runner.os == 'Linux'
+      uses: jlumbroso/free-disk-space@v1.3.1
+      with:
+        tool-cache: false
+        swap-storage: false
+        large-packages: false
+        
+        android: true
+        dotnet: true
+        haskell: true
+        docker-images: true
