@@ -22,6 +22,17 @@ sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 from utils import demo_utils as utils
 
+CATEGORIES = [
+    "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
+    "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow", "elephant",
+    "bear", "zebra", "giraffe", "backpack", "umbrella", "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard",
+    "sports ball", "kite", "baseball bat", "baseball glove", "skateboard", "surfboard", "tennis racket", "bottle",
+    "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple", "sandwich", "orange", "broccoli",
+    "carrot", "hot dog", "pizza", "donut", "cake", "chair", "couch", "potted plant", "bed", "dining table", "toilet",
+    "tv", "laptop", "mouse", "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator",
+    "book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush"
+]
+
 
 def convert(model_name: str, model_dir: Path) -> tuple[Path, Path]:
     model_path = model_dir / f"{model_name}.pt"
@@ -75,7 +86,8 @@ def preprocess(image: np.ndarray, input_size: Tuple[int, int]) -> Tuple[np.ndarr
     return image, padding
 
 
-def postprocess(pred_boxes: np.ndarray, pred_masks: np.ndarray, input_size: Tuple[int, int], orig_img, padding, min_conf_threshold=0.25, nms_iou_threshold=0.75, agnostic_nms=False, max_detections=100) -> sv.Detections:
+def postprocess(pred_boxes: np.ndarray, pred_masks: np.ndarray, input_size: Tuple[int, int], orig_img: np.ndarray, padding: Tuple[int, int], category_id: int,
+                min_conf_threshold: float = 0.25, nms_iou_threshold: float = 0.75, agnostic_nms: bool = False, max_detections: int = 100) -> sv.Detections:
     nms_kwargs = {"agnostic": agnostic_nms, "max_det": max_detections}
     # non-maximum suppression
     pred = ops.non_max_suppression(torch.from_numpy(pred_boxes), min_conf_threshold, nms_iou_threshold, nc=80, **nms_kwargs)[0]
@@ -96,8 +108,8 @@ def postprocess(pred_boxes: np.ndarray, pred_masks: np.ndarray, input_size: Tupl
     pred = np.array(pred)
     # create detections in supervision format
     det = sv.Detections(xyxy=pred[:, :4], mask=masks, confidence=pred[:, 4], class_id=pred[:, 5])
-    # filter out other predictions than people
-    return det[det.class_id == 0]
+    # filter out other predictions than selected category
+    return det[det.class_id == category_id]
 
 
 def get_model(model_path: Path, device: str = "AUTO") -> ov.CompiledModel:
@@ -132,12 +144,12 @@ def get_annotators(json_path: str, resolution_wh: Tuple[int, int], colorful: boo
     box_annotators = []
     masks_annotators = []
     for index, polygon in enumerate(polygons, start=1):
-        # a zone to count people in
+        # a zone to count objects in
         zone = sv.PolygonZone(polygon=polygon, frame_resolution_wh=resolution_wh)
         zones.append(zone)
         # the annotator - visual part of the zone
         zone_annotators.append(sv.PolygonZoneAnnotator(zone=zone, color=colors.by_idx(index), thickness=0))
-        # box annotator, showing boxes around people
+        # box annotator, showing boxes around objects
         box_annotator = sv.BoxAnnotator(color_lookup=ColorLookup.INDEX) if colorful else sv.BoxAnnotator(color=colors.by_idx(index))
         box_annotators.append(box_annotator)
         # mask annotator, showing transparent mask
@@ -147,8 +159,8 @@ def get_annotators(json_path: str, resolution_wh: Tuple[int, int], colorful: boo
     return zones, zone_annotators, box_annotators, masks_annotators
 
 
-def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str, people_limit: int = 3, model_name: str = "",
-        flip: bool = True, colorful: bool = False, last_frames: int = 50) -> None:
+def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", category: str = "person", zones_config_file: str = "",
+        object_limit: int = 3, flip: bool = True, colorful: bool = False, last_frames: int = 50) -> None:
     # set up logging
     log.getLogger().setLevel(log.INFO)
 
@@ -176,8 +188,9 @@ def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str,
 
     # get zones, and zone and box annotators for zones
     zones, zone_annotators, box_annotators, masks_annotators = get_annotators(json_path=zones_config_file, resolution_wh=(player.width, player.height), colorful=colorful)
+    category_id = CATEGORIES.index(category)
 
-    # people counter
+    # object counter
     queue_count = defaultdict(lambda: deque(maxlen=last_frames))
     # keep at most 100 last times
     processing_times = deque(maxlen=100)
@@ -207,7 +220,7 @@ def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str,
         boxes = results[model.outputs[0]]
         masks = results[model.outputs[1]] if len(model.outputs) > 1 else None
         # postprocessing
-        detections = postprocess(pred_boxes=boxes, pred_masks=masks, input_size=input_shape[:2], orig_img=frame, padding=padding)
+        detections = postprocess(pred_boxes=boxes, pred_masks=masks, input_size=input_shape[:2], orig_img=frame, padding=padding, category_id=category_id)
 
         # annotate the frame with the detected persons within each zone
         for zone_id, (zone, zone_annotator, box_annotator, masks_annotator) in enumerate(
@@ -218,10 +231,10 @@ def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str,
             # get detections relevant only for the zone
             mask = zone.trigger(detections=detections)
             detections_filtered = detections[mask]
-            # visualize boxes around people in the zone
+            # visualize boxes around objects in the zone
             frame = masks_annotator.annotate(scene=frame, detections=detections_filtered)
             frame = box_annotator.annotate(scene=frame, detections=detections_filtered)
-            # count how many people detected
+            # count how many objects detected
             det_count = len(detections_filtered)
 
             # add the count to the list
@@ -230,12 +243,12 @@ def run(video_path: str, model_paths: Tuple[Path, Path], zones_config_file: str,
             mean_customer_count = np.mean(queue_count[zone_id], dtype=np.int32)
 
             # add alert text to the frame if necessary, flash every second
-            if mean_customer_count > people_limit and time.time() % 2 > 1:
+            if mean_customer_count > object_limit and time.time() % 2 > 1:
                 utils.draw_text(frame, text=f"Intel employee required in zone {zone_id}!", point=(20, 20), font_color=(0, 0, 255))
 
             # print an info about number of customers in the queue, ask for the more assistants if required
             log.info(
-                f"Zone {zone_id}, avg people count: {mean_customer_count} {'Intel employee required!' if mean_customer_count > people_limit else ''}")
+                f"Zone {zone_id}, avg {category} count: {mean_customer_count} {'Intel employee required!' if mean_customer_count > object_limit else ''}")
 
         # Mean processing time [ms].
         processing_time = np.mean(processing_times) * 1000
@@ -283,11 +296,12 @@ if __name__ == '__main__':
                         choices=["yolov8n", "yolov8s", "yolov8m", "yolov8l", "yolov8x", "yolov8n-seg", "yolov8s-seg", "yolov8m-seg", "yolov8l-seg", "yolov8x-seg",
                                  "yolo11n", "yolo11s", "yolo11m", "yolo11l", "yolo11x", "yolo11n-seg", "yolo11s-seg", "yolo11m-seg", "yolo11l-seg", "yolo11x-seg"])
     parser.add_argument("--model_dir", type=str, default="model", help="Directory to place the model in")
+    parser.add_argument('--category', type=str, default="person", choices=CATEGORIES, help="The category to detect (from COCO dataset)")
     parser.add_argument('--zones_config_file', type=str, default="zones.json", help="Path to the zone config file (json)")
-    parser.add_argument('--people_limit', type=int, default=3, help="The maximum number of people in the area")
+    parser.add_argument('--object_limit', type=int, default=3, help="The maximum number of objects in the area")
     parser.add_argument("--flip", type=bool, default=True, help="Mirror input video")
-    parser.add_argument('--colorful', action="store_true", help="If people should be annotated with random colors")
+    parser.add_argument('--colorful', action="store_true", help="If objects should be annotated with random colors")
 
     args = parser.parse_args()
     model_paths = convert(args.model_name, Path(args.model_dir))
-    run(args.stream, model_paths, args.zones_config_file, args.people_limit, args.model_name, args.flip, args.colorful)
+    run(args.stream, model_paths, args.model_name, args.category, args.zones_config_file, args.object_limit, args.flip, args.colorful)
