@@ -11,7 +11,9 @@ openai-whisper==20240930
 # deep learning frameworks
 tensorflow==2.17.0
 
-onnx==1.16.1
+# onnx>1.16.1 doesn't work on windows
+onnx==1.16.1; platform_system == "Windows"
+onnx==1.17.0; platform_system != "Windows"
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch==2.4.1
 torchvision==0.19.1

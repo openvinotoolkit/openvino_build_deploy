@@ -84,7 +84,7 @@ Next, you’ll download and optimize the required models. This will involve the 
 ```shell
 python3 -m venv model_installation_venv
 source model_installation_venv/bin/activate
-pip install -r python3.12_requirements_model_installation.txt
+pip install -r requirements.txt
 python3 download_and_prepare_models.py
 ``` 
 After model installation, you can remove the `model_installation_venv` virtual environment as it is no longer needed.

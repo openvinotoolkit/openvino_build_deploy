@@ -13,7 +13,8 @@ llama-index-vector-stores-faiss==0.3.0
 faiss-cpu==1.9.0
 
 # onnx>1.16.1 doesn't work on windows
-onnx==1.16.1
+onnx==1.16.1; platform_system == "Windows"
+onnx==1.17.0; platform_system != "Windows"
 onnxruntime==1.17.3
 torch==2.5.1
 
