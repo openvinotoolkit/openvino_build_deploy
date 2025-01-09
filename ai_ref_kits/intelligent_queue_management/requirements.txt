@@ -8,8 +8,8 @@ pillow==10.3.0
 opencv-python==4.10.0.82
 # onnx>1.16.1 doesn't work on windows
 onnx==1.16.1
-torch==2.2.0
-torchvision==0.17.0
+torch==2.5.1
+torchvision==0.20.1
 supervision==0.11.0
 jupyterlab==4.2.5
 tqdm==4.66.3
