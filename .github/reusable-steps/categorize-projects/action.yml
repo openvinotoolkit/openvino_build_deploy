@@ -24,6 +24,7 @@ runs:
         gradio=()
         webcam=()
         js=()
+        echo "Debug: dir=${{ inputs.dir }}"
 
         for dir in ${{ inputs.dir }}; do
           if [ -f "$dir/package.json" ]; then
