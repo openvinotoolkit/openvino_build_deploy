@@ -29,13 +29,14 @@ jobs:
         with:
           fetch-depth: 0
       - name: Determine subprojects to test
+        id: determine-subprojects
         uses: ./.github/reusable-steps/find-updates
         with:
           dir: demos
       - name: Categorize subprojects
         uses: ./.github/reusable-steps/categorize-projects
         with:
-          dir: ${{ steps.find-subprojects.outputs.subproject_dirs }}
+          dir: ${{ steps.determine-subprojects.outputs.subproject_dirs }}
 
   gradio:
     needs: find-subprojects
