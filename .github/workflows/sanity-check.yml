@@ -36,13 +36,13 @@ jobs:
             changed_files=$(git diff --name-only origin/master..HEAD)
             if echo "$changed_files" | grep -q '.github/'; then
               # Workflow file changed; run all subprojects
-              subproject_dirs=$(find demos notebooks -mindepth 1 -maxdepth 1 -type d ! -name utils | tr '\n' ' ')
+              subproject_dirs=$(find demos notebooks ai_ref_kits -mindepth 1 -maxdepth 1 -type d ! -name utils | tr '\n' ' ')
             else
               # Only run subprojects affected by changes
-              subproject_dirs=$(echo "$changed_files" | grep -e '^demos' -e '^notebooks' | grep -v 'README.md$' | xargs -I{} dirname "{}" | sort -u | tr '\n' ' ')
+              subproject_dirs=$(echo "$changed_files" | grep -e '^demos' -e '^notebooks' -e '^ai_ref_kits' | grep -v 'README.md$' | xargs -I{} dirname "{}" | sort -u | tr '\n' ' ')
             fi
           else
-            subproject_dirs=$(find demos notebooks -mindepth 1 -maxdepth 1 -type d ! -name utils | tr '\n' ' ')
+            subproject_dirs=$(find demos notebooks ai_ref_kits -mindepth 1 -maxdepth 1 -type d ! -name utils | tr '\n' ' ')
           fi
           echo "subproject_dirs=$subproject_dirs" >> $GITHUB_ENV
       - name: Categorize subprojects
