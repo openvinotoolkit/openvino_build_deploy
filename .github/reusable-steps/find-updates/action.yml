@@ -19,7 +19,7 @@ runs:
         # Include the workflow file as a trigger for running all subprojects
         if [[ "${{ github.event_name }}" == "pull_request" ]]; then
           changed_files=$(git diff --name-only origin/master..HEAD)
-          
+          echo "$changed_files"
           if [[ -z "$changed_files" ]]; then
             # no changes in this dir
             subproject_dirs=""
