@@ -33,6 +33,7 @@ jobs:
           dir: notebooks
           ci_config_file: sanity-check-notebooks.yml
       - name: Categorize subprojects
+        id: categorize-subprojects
         uses: ./.github/reusable-steps/categorize-projects
         with:
           dir: ${{ steps.find-updates.outputs.subproject_dirs }}

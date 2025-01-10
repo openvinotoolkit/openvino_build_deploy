@@ -35,6 +35,7 @@ jobs:
           dir: demos
           ci_config_file: sanity-check-demos.yml
       - name: Categorize subprojects
+        id: categorize-subprojects
         uses: ./.github/reusable-steps/categorize-projects
         with:
           dir: ${{ steps.find-updates.outputs.subproject_dirs }}
