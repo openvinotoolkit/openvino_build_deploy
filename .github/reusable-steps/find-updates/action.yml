@@ -20,7 +20,7 @@ runs:
         if [[ "${{ github.event_name }}" == "pull_request" ]]; then
           # consider only changes in workflows or a given dir
           echo "1"
-          changed_files=$(git diff --name-only origin/master..HEAD .github ${{ inputs.dir }} || true)
+          changed_files=$(git diff --name-only origin/master..HEAD .github ${{ inputs.dir }})
           echo "dsa $changed_files das"
           echo "2"
           if [[ -z "$changed_files" ]]; then
