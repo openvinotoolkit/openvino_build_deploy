@@ -1,0 +1,121 @@
+name: Sanity check (demos)
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  find-subprojects:
+    runs-on: ubuntu-latest
+    outputs:
+      gradio: ${{ steps.categorize-subprojects.outputs.gradio }}
+      webcam: ${{ steps.categorize-subprojects.outputs.webcam }}
+      js: ${{ steps.categorize-subprojects.outputs.js }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Determine subprojects to test
+        id: find-updates
+        uses: ./.github/reusable-steps/find-updates
+        with:
+          dir: demos
+          ci_config_file: sanity-check-demos.yml
+      - name: Categorize subprojects
+        id: categorize-subprojects
+        uses: ./.github/reusable-steps/categorize-projects
+        with:
+          dir: ${{ steps.find-updates.outputs.subproject_dirs }}
+
+  gradio:
+    needs: find-subprojects
+    if: ${{ needs.find-subprojects.outputs.gradio != '[]' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.10", "3.12"]
+        subproject: ${{ fromJson(needs.find-subprojects.outputs.gradio) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/reusable-steps/setup-os
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: ./.github/reusable-steps/setup-python
+        with:
+          python: ${{ matrix.python }}
+          project: ${{ matrix.subproject }}
+      - name: Login to HF
+        shell: bash
+        run: |
+          huggingface-cli login --token ${{ secrets.HF_TOKEN }}
+      - uses: ./.github/reusable-steps/gradio-action
+        with:
+          script: main.py
+          project: ${{ matrix.subproject }}
+
+  webcam:
+    needs: find-subprojects
+    if: ${{ needs.find-subprojects.outputs.webcam != '[]' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.9", "3.12"]
+        subproject: ${{ fromJson(needs.find-subprojects.outputs.webcam) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/reusable-steps/setup-os
+      - uses: ./.github/reusable-steps/setup-python
+        with:
+          python: ${{ matrix.python }}
+          project: ${{ matrix.subproject }}
+      - uses: ./.github/reusable-steps/timeouted-action
+        name: Run Webcam Demo
+        with:
+          command: python main.py --stream sample_video.mp4
+          project: ${{ matrix.subproject }}
+
+  js:
+    needs: find-subprojects
+    if: ${{ needs.find-subprojects.outputs.js != '[]' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        subproject: ${{ fromJson(needs.find-subprojects.outputs.js) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/reusable-steps/setup-os
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install dependencies
+        run: |
+          cd ${{ matrix.subproject }}
+          npm install
+      - uses: ./.github/reusable-steps/timeouted-action
+        name: Run JS Project
+        with:
+          command: npm start
+          project: ${{ matrix.subproject }}
+          timeout: 1m

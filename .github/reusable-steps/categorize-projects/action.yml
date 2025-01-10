@@ -1,0 +1,56 @@
+name: Categorize projects
+
+inputs:
+  dir:
+    required: true
+outputs:
+  notebook:
+    value: ${{ steps.group-subprojects.outputs.notebook }}
+  gradio:
+    value: ${{ steps.group-subprojects.outputs.gradio }}
+  webcam:
+    value: ${{ steps.group-subprojects.outputs.webcam }}
+  js:
+    value: ${{ steps.group-subprojects.outputs.js }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Group subprojects
+      id: group-subprojects
+      shell: bash
+      run: |
+        notebook=()
+        gradio=()
+        webcam=()
+        js=()
+        echo "Debug: dir=${{ inputs.dir }}"
+
+        for dir in ${{ inputs.dir }}; do
+          if [ -f "$dir/package.json" ]; then
+            js+=("$dir")
+          elif find "$dir" -maxdepth 1 -name "*.ipynb" | grep -q "."; then
+            notebook+=("$dir")
+          elif [ -f "$dir/requirements.txt" ] && grep -q "gradio" "$dir/requirements.txt"; then
+            gradio+=("$dir")
+          elif [ -f "$dir/main.py" ] && grep -q -- "--stream" "$dir/main.py"; then
+            webcam+=("$dir")
+          fi
+        done
+
+        notebook_json=$(printf '%s\n' "${notebook[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+        gradio_json=$(printf '%s\n' "${gradio[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+        webcam_json=$(printf '%s\n' "${webcam[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+        js_json=$(printf '%s\n' "${js[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+
+        echo "notebook=$notebook_json" >> $GITHUB_OUTPUT
+        echo "gradio=$gradio_json" >> $GITHUB_OUTPUT
+        echo "webcam=$webcam_json" >> $GITHUB_OUTPUT
+        echo "js=$js_json" >> $GITHUB_OUTPUT
+    - name: Print subprojects to test
+      shell: bash
+      run: |
+        echo "Notebook subprojects: ${{ steps.group-subprojects.outputs.notebook }}"
+        echo "Gradio subprojects: ${{ steps.group-subprojects.outputs.gradio }}"
+        echo "Webcam subprojects: ${{ steps.group-subprojects.outputs.webcam }}"
+        echo "JS subprojects: ${{ steps.group-subprojects.outputs.js }}"
