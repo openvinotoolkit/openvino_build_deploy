@@ -50,7 +50,7 @@ runs:
     - name: Print subprojects to test
       shell: bash
       run: |
-        echo "Notebook subprojects: ${{ steps.categorize-subprojects.outputs.notebook }}"
-        echo "Gradio subprojects: ${{ steps.categorize-subprojects.outputs.gradio }}"
-        echo "Webcam subprojects: ${{ steps.categorize-subprojects.outputs.webcam }}"
-        echo "JS subprojects: ${{ steps.categorize-subprojects.outputs.js }}"
+        echo "Notebook subprojects: ${{ steps.group-subprojects.outputs.notebook }}"
+        echo "Gradio subprojects: ${{ steps.group-subprojects.outputs.gradio }}"
+        echo "Webcam subprojects: ${{ steps.group-subprojects.outputs.webcam }}"
+        echo "JS subprojects: ${{ steps.group-subprojects.outputs.js }}"
