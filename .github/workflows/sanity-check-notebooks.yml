@@ -31,6 +31,7 @@ jobs:
         uses: ./.github/reusable-steps/find-updates
         with:
           dir: notebooks
+          ci_config_file: sanity-check-notebooks.yml
       - name: Categorize subprojects
         uses: ./.github/reusable-steps/categorize-projects
         with:

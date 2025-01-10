@@ -3,6 +3,8 @@ name: Find updated projects
 inputs:
   dir:
     required: true
+  ci_config_file:
+    required: true
 outputs:
   subproject_dirs:
     value: ${{ steps.find-updates.outputs.subproject_dirs }}
@@ -17,7 +19,7 @@ runs:
         # Include the workflow file as a trigger for running all subprojects
         if [[ "${{ github.event_name }}" == "pull_request" ]]; then
           changed_files=$(git diff --name-only origin/master..HEAD)
-          if echo "$changed_files" | grep -q '.github/'; then
+          if echo "$changed_files" | grep -q -e '.github/reusable-steps' -e '.github/workflows/${{ inputs.ci_config_file }}'; then
             # Workflow file changed; run all subprojects
             subproject_dirs=$(find ${{ inputs.dir }} -mindepth 1 -maxdepth 1 -type d ! -name utils | tr '\n' ' ')
           else

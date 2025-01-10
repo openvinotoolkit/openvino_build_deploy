@@ -33,6 +33,7 @@ jobs:
         uses: ./.github/reusable-steps/find-updates
         with:
           dir: demos
+          ci_config_file: sanity-check-demos.yml
       - name: Categorize subprojects
         uses: ./.github/reusable-steps/categorize-projects
         with:
