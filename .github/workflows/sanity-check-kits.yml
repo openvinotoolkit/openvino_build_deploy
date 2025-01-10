@@ -1,4 +1,4 @@
-name: Sanity check
+name: Sanity check (AI Ref Kits)
 
 on:
   schedule:
@@ -20,10 +20,9 @@ jobs:
   find-subprojects:
     runs-on: ubuntu-latest
     outputs:
-      notebook: ${{ steps.categorize-subprojects.outputs.notebook }}
       gradio: ${{ steps.categorize-subprojects.outputs.gradio }}
       webcam: ${{ steps.categorize-subprojects.outputs.webcam }}
-      js: ${{ steps.categorize-subprojects.outputs.js }}
+      notebook: ${{ steps.categorize-subprojects.outputs.notebook }}
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -36,27 +35,24 @@ jobs:
             changed_files=$(git diff --name-only origin/master..HEAD)
             if echo "$changed_files" | grep -q '.github/'; then
               # Workflow file changed; run all subprojects
-              subproject_dirs=$(find demos notebooks ai_ref_kits -mindepth 1 -maxdepth 1 -type d ! -name utils | tr '\n' ' ')
+              subproject_dirs=$(find ai_ref_kits -mindepth 1 -maxdepth 1 -type d ! -name utils | tr '\n' ' ')
             else
               # Only run subprojects affected by changes
-              subproject_dirs=$(echo "$changed_files" | grep -e '^demos' -e '^notebooks' -e '^ai_ref_kits' | grep -v 'README.md$' | xargs -I{} dirname "{}" | sort -u | tr '\n' ' ')
+              subproject_dirs=$(echo "$changed_files" | grep -e '^ai_ref_kits' | grep -v 'README.md$' | xargs -I{} dirname "{}" | sort -u | tr '\n' ' ')
             fi
           else
-            subproject_dirs=$(find demos notebooks ai_ref_kits -mindepth 1 -maxdepth 1 -type d ! -name utils | tr '\n' ' ')
+            subproject_dirs=$(find ai_ref_kits -mindepth 1 -maxdepth 1 -type d ! -name utils | tr '\n' ' ')
           fi
           echo "subproject_dirs=$subproject_dirs" >> $GITHUB_ENV
       - name: Categorize subprojects
         id: categorize-subprojects
         run: |
-          notebook=()
           gradio=()
           webcam=()
-          js=()
+          notebook=()
 
           for dir in $subproject_dirs; do
-            if [ -f "$dir/package.json" ]; then
-              js+=("$dir")
-            elif find "$dir" -maxdepth 1 -name "*.ipynb" | grep -q "."; then
+            if find "$dir" -maxdepth 1 -name "*.ipynb" | grep -q "."; then
               notebook+=("$dir")
             elif [ -f "$dir/requirements.txt" ] && grep -q "gradio" "$dir/requirements.txt"; then
               gradio+=("$dir")
@@ -65,54 +61,18 @@ jobs:
             fi
           done
 
-          notebook_json=$(printf '%s\n' "${notebook[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
           gradio_json=$(printf '%s\n' "${gradio[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
           webcam_json=$(printf '%s\n' "${webcam[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
-          js_json=$(printf '%s\n' "${js[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          notebook_json=$(printf '%s\n' "${notebook[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
 
-          echo "notebook=$notebook_json" >> $GITHUB_OUTPUT
           echo "gradio=$gradio_json" >> $GITHUB_OUTPUT
           echo "webcam=$webcam_json" >> $GITHUB_OUTPUT
-          echo "js=$js_json" >> $GITHUB_OUTPUT
+          echo "notebook=$notebook_json" >> $GITHUB_OUTPUT
       - name: Print subprojects to test
         run: |
-          echo "Notebook subprojects: ${{ steps.categorize-subprojects.outputs.notebook }}"
           echo "Gradio subprojects: ${{ steps.categorize-subprojects.outputs.gradio }}"
           echo "Webcam subprojects: ${{ steps.categorize-subprojects.outputs.webcam }}"
-          echo "JS subprojects: ${{ steps.categorize-subprojects.outputs.js }}"
-          
-  notebook:
-    needs: find-subprojects
-    if: ${{ needs.find-subprojects.outputs.notebook != '[]' }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        # onnxruntime-openvino is not available on mac and python<3.10
-        os: [ubuntu-latest, windows-latest]
-        python: [3.11, 3.12]
-        subproject: ${{ fromJson(needs.find-subprojects.outputs.notebook) }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python ${{ matrix.python }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python }}
-      - uses: ./.github/reusable-steps/setup-python
-        with:
-          python: ${{ matrix.python }}
-          project: ${{ matrix.subproject }}
-      - name: Use downloaded video as a stream
-        shell: bash
-        run: |
-          cd ${{ matrix.subproject }}
-          # replace video_path with sample_video.mp4
-          find . -name "*.ipynb" -exec sed -E -i "s/video_path\s*=\s*(['\"]?.*?['\"]?)/video_path=\\\\\"sample_video.mp4\\\\\"\\\n\",/g" {} +
-      - uses: ./.github/reusable-steps/timeouted-action
-        name: Run Notebook
-        with:
-          command: jupyter nbconvert --to notebook --execute *.ipynb
-          project: ${{ matrix.subproject }}
+          echo "Notebook subprojects: ${{ steps.categorize-subprojects.outputs.notebook }}"
 
   gradio:
     needs: find-subprojects
@@ -167,29 +127,35 @@ jobs:
           command: python main.py --stream sample_video.mp4
           project: ${{ matrix.subproject }}
 
-  js:
+  notebook:
     needs: find-subprojects
-    if: ${{ needs.find-subprojects.outputs.js != '[]' }}
+    if: ${{ needs.find-subprojects.outputs.notebook != '[]' }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        subproject: ${{ fromJson(needs.find-subprojects.outputs.js) }}
+        # onnxruntime-openvino is not available on mac and python<3.10
+        os: [ubuntu-latest, windows-latest]
+        python: [3.9, 3.12]
+        subproject: ${{ fromJson(needs.find-subprojects.outputs.notebook) }}
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/reusable-steps/setup-os
-      - name: Install Node.js
-        uses: actions/setup-node@v4
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
         with:
-          node-version: '22'
-      - name: Install dependencies
+          python-version: ${{ matrix.python }}
+      - uses: ./.github/reusable-steps/setup-python
+        with:
+          python: ${{ matrix.python }}
+          project: ${{ matrix.subproject }}
+      - name: Use downloaded video as a stream
+        shell: bash
         run: |
           cd ${{ matrix.subproject }}
-          npm install
+          # replace video_path with sample_video.mp4
+          find . -name "*.ipynb" -exec sed -E -i "s/video_path\s*=\s*(['\"]?.*?['\"]?)/video_path=\\\\\"sample_video.mp4\\\\\"\\\n\",/g" {} +
       - uses: ./.github/reusable-steps/timeouted-action
-        name: Run JS Project
+        name: Run Notebook
         with:
-          command: npm start
+          command: jupyter nbconvert --to notebook --execute *.ipynb
           project: ${{ matrix.subproject }}
-          timeout: 1m

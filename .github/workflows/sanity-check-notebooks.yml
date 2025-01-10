@@ -1,0 +1,94 @@
+name: Sanity check (notebooks)
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  find-subprojects:
+    runs-on: ubuntu-latest
+    outputs:
+      notebook: ${{ steps.categorize-subprojects.outputs.notebook }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Determine subprojects to test
+        run: |
+          # Include the workflow file as a trigger for running all subprojects
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            changed_files=$(git diff --name-only origin/master..HEAD)
+            if echo "$changed_files" | grep -q '.github/'; then
+              # Workflow file changed; run all subprojects
+              subproject_dirs=$(find notebooks -mindepth 1 -maxdepth 1 -type d ! -name utils | tr '\n' ' ')
+            else
+              # Only run subprojects affected by changes
+              subproject_dirs=$(echo "$changed_files" | grep -e '^notebooks' | grep -v 'README.md$' | xargs -I{} dirname "{}" | sort -u | tr '\n' ' ')
+            fi
+          else
+            subproject_dirs=$(find notebooks -mindepth 1 -maxdepth 1 -type d ! -name utils | tr '\n' ' ')
+          fi
+          echo "subproject_dirs=$subproject_dirs" >> $GITHUB_ENV
+      - name: Categorize subprojects
+        id: categorize-subprojects
+        run: |
+          notebook=()
+
+          for dir in $subproject_dirs; do
+            if find "$dir" -maxdepth 1 -name "*.ipynb" | grep -q "."; then
+              notebook+=("$dir")
+            fi
+          done
+
+          notebook_json=$(printf '%s\n' "${notebook[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+
+          echo "notebook=$notebook_json" >> $GITHUB_OUTPUT
+      - name: Print subprojects to test
+        run: |
+          echo "Notebook subprojects: ${{ steps.categorize-subprojects.outputs.notebook }}"
+
+  notebook:
+    needs: find-subprojects
+    if: ${{ needs.find-subprojects.outputs.notebook != '[]' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # onnxruntime-openvino is not available on mac and python<3.10
+        os: [ubuntu-latest, windows-latest]
+        python: [3.11, 3.12]
+        subproject: ${{ fromJson(needs.find-subprojects.outputs.notebook) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: ./.github/reusable-steps/setup-python
+        with:
+          python: ${{ matrix.python }}
+          project: ${{ matrix.subproject }}
+      - name: Use downloaded video as a stream
+        shell: bash
+        run: |
+          cd ${{ matrix.subproject }}
+          # replace video_path with sample_video.mp4
+          find . -name "*.ipynb" -exec sed -E -i "s/video_path\s*=\s*(['\"]?.*?['\"]?)/video_path=\\\\\"sample_video.mp4\\\\\"\\\n\",/g" {} +
+      - uses: ./.github/reusable-steps/timeouted-action
+        name: Run Notebook
+        with:
+          command: jupyter nbconvert --to notebook --execute *.ipynb
+          project: ${{ matrix.subproject }}
