@@ -29,50 +29,13 @@ jobs:
         with:
           fetch-depth: 0
       - name: Determine subprojects to test
-        run: |
-          # Include the workflow file as a trigger for running all subprojects
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            changed_files=$(git diff --name-only origin/master..HEAD)
-            if echo "$changed_files" | grep -q '.github/'; then
-              # Workflow file changed; run all subprojects
-              subproject_dirs=$(find demos -mindepth 1 -maxdepth 1 -type d ! -name utils | tr '\n' ' ')
-            else
-              # Only run subprojects affected by changes
-              subproject_dirs=$(echo "$changed_files" | grep -e '^demos' | grep -v 'README.md$' | xargs -I{} dirname "{}" | sort -u | tr '\n' ' ')
-            fi
-          else
-            subproject_dirs=$(find demos -mindepth 1 -maxdepth 1 -type d ! -name utils | tr '\n' ' ')
-          fi
-          echo "subproject_dirs=$subproject_dirs" >> $GITHUB_ENV
+        uses: ./.github/reusable-steps/find-updates
+        with:
+          dir: demos
       - name: Categorize subprojects
-        id: categorize-subprojects
-        run: |
-          gradio=()
-          webcam=()
-          js=()
-
-          for dir in $subproject_dirs; do
-            if [ -f "$dir/package.json" ]; then
-              js+=("$dir")
-            elif [ -f "$dir/requirements.txt" ] && grep -q "gradio" "$dir/requirements.txt"; then
-              gradio+=("$dir")
-            elif [ -f "$dir/main.py" ] && grep -q -- "--stream" "$dir/main.py"; then
-              webcam+=("$dir")
-            fi
-          done
-
-          gradio_json=$(printf '%s\n' "${gradio[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
-          webcam_json=$(printf '%s\n' "${webcam[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
-          js_json=$(printf '%s\n' "${js[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
-
-          echo "gradio=$gradio_json" >> $GITHUB_OUTPUT
-          echo "webcam=$webcam_json" >> $GITHUB_OUTPUT
-          echo "js=$js_json" >> $GITHUB_OUTPUT
-      - name: Print subprojects to test
-        run: |
-          echo "Gradio subprojects: ${{ steps.categorize-subprojects.outputs.gradio }}"
-          echo "Webcam subprojects: ${{ steps.categorize-subprojects.outputs.webcam }}"
-          echo "JS subprojects: ${{ steps.categorize-subprojects.outputs.js }}"
+        uses: ./.github/reusable-steps/categorize-projects
+        with:
+          dir: ${{ steps.find-subprojects.outputs.subproject_dirs }}
 
   gradio:
     needs: find-subprojects
@@ -82,7 +45,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python: ["3.10", 3.12]
+        python: ["3.10", "3.12"]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.gradio) }}
     steps:
       - uses: actions/checkout@v4
@@ -112,7 +75,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python: [3.9, 3.12]
+        python: ["3.9", "3.12"]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.webcam) }}
     steps:
       - uses: actions/checkout@v4
@@ -142,7 +105,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "22"
       - name: Install dependencies
         run: |
           cd ${{ matrix.subproject }}
