@@ -24,9 +24,9 @@ runs:
           if [[ -z "$changed_files" ]]; then
             # no changes in this dir
             subproject_dirs=""
-         # elif echo "$changed_files" | grep -q -e '.github/reusable-steps' -e '.github/workflows/${{ inputs.ci_config_file }}'; then
+          elif echo "$changed_files" | grep -q -e '.github/reusable-steps' -e '.github/workflows/${{ inputs.ci_config_file }}'; then
             # Workflow file changed; run all subprojects
-           # subproject_dirs=$(find ${{ inputs.dir }} -mindepth 1 -maxdepth 1 -type d ! -name utils | tr '\n' ' ')
+            subproject_dirs=$(find ${{ inputs.dir }} -mindepth 1 -maxdepth 1 -type d ! -name utils | tr '\n' ' ')
           else
             # Only run subprojects affected by changes
             subproject_dirs=$(echo "$changed_files" | grep -e '^${{ inputs.dir }}' | grep -v 'README.md$' | xargs -I{} dirname "{}" | sort -u | tr '\n' ' ')
