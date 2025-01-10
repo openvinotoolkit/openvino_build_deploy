@@ -20,7 +20,7 @@ runs:
         if [[ "${{ github.event_name }}" == "pull_request" ]]; then
           echo "1"
           changed_files=$(git diff --name-only origin/master..HEAD || true)
-          echo "2"
+          echo "dasda $changed_files fdsf"
           if [[ -z "$changed_files" ]]; then
             # no changes in this dir
              echo "13"
