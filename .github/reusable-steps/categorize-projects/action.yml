@@ -1,7 +1,7 @@
 name: Categorize projects
 
 inputs:
-  dir:
+  subprojects:
     required: true
 outputs:
   notebook:
@@ -24,9 +24,8 @@ runs:
         gradio=()
         webcam=()
         js=()
-        echo "Debug: dir=${{ inputs.dir }}"
 
-        for dir in ${{ inputs.dir }}; do
+        for dir in ${{ inputs.subprojects }}; do
           if [ -f "$dir/package.json" ]; then
             js+=("$dir")
           elif find "$dir" -maxdepth 1 -name "*.ipynb" | grep -q "."; then
