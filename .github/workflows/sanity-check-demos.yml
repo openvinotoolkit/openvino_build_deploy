@@ -38,7 +38,7 @@ jobs:
         id: categorize-subprojects
         uses: ./.github/reusable-steps/categorize-projects
         with:
-          dir: ${{ steps.find-updates.outputs.subproject_dirs }}
+          subprojects: ${{ steps.find-updates.outputs.subproject_dirs }}
 
   gradio:
     needs: find-subprojects
