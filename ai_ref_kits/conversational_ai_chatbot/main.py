@@ -20,22 +20,22 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--asr_model_type", type=str,
-                        choices=["distil-whisper-large-v3", "belle-distil-whisper-large-v3-zh"],
-                        default="distil-whisper-large-v3", help="Speech recognition model to be converted")
-    parser.add_argument("--asr_precision", type=str, default="fp16", choices=["fp16", "int8"], help="Model precision")
+                        choices=["distil-whisper-large-v3", "belle-distil-whisper-large-v3-zh"], default="distil-whisper-large-v3",
+                        help="Speech recognition model to be converted")
+    parser.add_argument("--asr_precision", type=str, default="fp16", choices=["fp16", "int8"], help="ASR model precision")
     parser.add_argument("--chat_model_type", type=str, choices=["llama3.2-3B", "llama3.1-8B", "llama3-8B", "qwen2-7B"],
                         default="llama3.1-8B", help="Chat model to be converted")
     parser.add_argument("--embedding_model_type", type=str, choices=["bge-small", "bge-large", "bge-m3"],
                         default="bge-small", help="Embedding model to be converted")
-    parser.add_argument("--reranker_model_type", type=str,
-                        choices=["bge-reranker-large", "bge-reranker-base", "bge-reranker-m3"],
+    parser.add_argument("--reranker_model_type", type=str, choices=["bge-reranker-large", "bge-reranker-base", "bge-reranker-m3"],
                         default="bge-reranker-large", help="Reranker model to be converted")
-    parser.add_argument("--chat_precision", type=str, default="int4", choices=["fp16", "int8", "int4"],
-                        help="Model precision")
+    parser.add_argument("--chat_precision", type=str, default="int4", choices=["fp16", "int8", "int4"], help="Chat model precision")
     parser.add_argument("--hf_token", type=str, help="HuggingFace access token to get Llama3")
     parser.add_argument("--model_dir", type=str, default="model", help="Directory to place the model in")
-    parser.add_argument("--personality", type=str, default="config/concierge_personality.yaml", help="Path to the YAML file with chatbot personality")
-    parser.add_argument("--example_pdf", type=str, default="data/Grand_Azure_Resort_Spa_Full_Guide.pdf", help="Path to the PDF file which is an additional context")
+    parser.add_argument("--personality", type=str, default="config/concierge_personality.yaml",
+                        help="Path to the YAML file with chatbot personality")
+    parser.add_argument("--example_pdf", type=str, default="data/Grand_Azure_Resort_Spa_Full_Guide.pdf",
+                        help="Path to the PDF file which is an additional context")
     parser.add_argument("--public", default=False, action="store_true", help="Whether interface should be available publicly")
 
     main(parser.parse_args())

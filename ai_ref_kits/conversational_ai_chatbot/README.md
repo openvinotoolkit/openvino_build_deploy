@@ -109,13 +109,13 @@ MeloTTS is a high-quality multilingual text-to-speech library by MIT and MyShell
 ```shell
 python -m pip install --upgrade pip 
 pip install git+https://github.com/myshell-ai/MeloTTS.git@5b538481e24e0d578955be32a95d88fcbde26dc8 --no-deps
-python -m unidic download
 ```
 
 To install the other packages, run the following commands:
 
 ```shell 
 pip install -r requirements.txt
+python -m unidic download
 ```
 
 ## Get Access to Llama
