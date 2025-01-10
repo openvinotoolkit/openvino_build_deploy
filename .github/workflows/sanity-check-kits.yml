@@ -1,4 +1,4 @@
-name: Sanity check (AI Ref Kits)
+name: Sanity check (AI ref kits)
 
 on:
   schedule:
@@ -48,7 +48,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python: ["3.9", "3.12"]
+        python: ["3.10", "3.12"]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.gradio) }}
     steps:
       - uses: actions/checkout@v4
