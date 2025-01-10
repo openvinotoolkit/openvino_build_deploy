@@ -303,7 +303,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--stream', type=str, required=True, help="Path to a video file or the webcam number")
     parser.add_argument('--model_path', type=str, default="model/yolov8m_openvino_int8_model/yolov8m.xml", help="Path to the model")
-    parser.add_argument('--zones_config_file', type=str, default="zones.json", help="Path to the zone config file (json)")
+    parser.add_argument('--zones_config_file', type=str, default="config/zones.json", help="Path to the zone config file (json)")
     parser.add_argument('--customers_limit', type=int, default=3, help="The maximum number of customers in the queue")
 
     args = parser.parse_args()
