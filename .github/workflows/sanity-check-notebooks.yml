@@ -27,6 +27,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Determine subprojects to test
+        id: find-updates
         uses: ./.github/reusable-steps/find-updates
         with:
           dir: notebooks
