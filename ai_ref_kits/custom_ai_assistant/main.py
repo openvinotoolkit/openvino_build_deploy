@@ -23,6 +23,6 @@ if __name__ == '__main__':
                         default="llama3.2-3B", help="Chat model to be converted")
     parser.add_argument("--chat_precision", type=str, default="int4", choices=["fp16", "int8", "int4"], help="Chat model precision")
     parser.add_argument("--model_dir", type=str, default="model", help="Directory to place the model in")
-    parser.add_argument('--public_interface', default=False, action="store_true", help="Whether interface should be available publicly")
+    parser.add_argument('--public', default=False, action="store_true", help="Whether interface should be available publicly")
 
     main(parser.parse_args())

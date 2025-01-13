@@ -178,7 +178,7 @@ Execute the `app.py` script with the following command, including all necessary 
 ```shell
 python app.py --asr_model_dir path/to/asr_model --chat_model_dir path/to/chat_model
 ```
-Replace `path/to/asr_model` and `path/to/chat_model` with actual paths to your respective models. Add `--public_interface` to make it publicly accessible.
+Replace `path/to/asr_model` and `path/to/chat_model` with actual paths to your respective models. Add `--public` to make it publicly accessible.
 
 ### Accessing the Web Interface
 After running the script, Gradio will provide a local URL, typically `http://127.0.0.1:XXXX`, which you can open in your web browser to start interacting with the assistant. If you configured the application to be accessible publicly, Gradio will also provide a public URL.
