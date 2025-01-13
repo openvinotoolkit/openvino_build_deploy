@@ -159,7 +159,7 @@ def convert_reranker_model(model_type: str, model_dir: Path) -> Path:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--chat_model_type", type=str, choices=["llama3.2-3B", "llama3.1-8B", "llama3-8B", "qwen2-7B"],
-                        default="llama3.1-8B", help="Chat model to be converted")
+                        default="llama3.2-3B", help="Chat model to be converted")
     parser.add_argument("--embedding_model_type", type=str, choices=["bge-small", "bge-large", "bge-m3"],
                         default="bge-small", help="Embedding model to be converted")
     parser.add_argument("--reranker_model_type", type=str, choices=["bge-reranker-large", "bge-reranker-base", "bge-reranker-m3"],

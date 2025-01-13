@@ -155,8 +155,7 @@ This conversion script handles the conversion and optimization of:
 Before you can run the script to convert the models, you must have a Hugging Face token (`--hf_token`) for authentication, which allows you to get access to gated models, such as Llama. After the models are converted, they’re saved to the model directory you specify when you run the script.
 
 To get access to the original Llama model weights:
-1. Go to the Llama model page on Hugging Face [meta-llama/Meta-Llama 3.2-3B](https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct).  
-_NOTE: These instructions specify Llama 3.2-3B, but the default version is Llama 3.1._
+1. Go to the Llama model page on Hugging Face [meta-llama/Meta-Llama 3.2-3B](https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct).
 2. Read and accept the license agreement.  
 _Requests can take up to one hour to process._
 
