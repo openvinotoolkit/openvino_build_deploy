@@ -323,6 +323,8 @@ def run(asr_model_dir: Path, chat_model_dir: Path, public_interface: bool = Fals
 
     # create user interface
     demo = create_UI(initial_message)
+
+    log.info("Demo is ready!")
     # launch demo
     demo.queue().launch(share=public_interface)
 
@@ -330,8 +332,8 @@ def run(asr_model_dir: Path, chat_model_dir: Path, public_interface: bool = Fals
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--asr_model_dir', type=str, default="model/distil-whisper-large-v3-FP16", help="Path to the automatic speech recognition model directory")
-    parser.add_argument('--chat_model_dir', type=str, default="model/llama3.1-8B-INT4", help="Path to the chat model directory")
-    parser.add_argument('--public_interface', default=False, action="store_true", help="Whether interface should be available publicly")
+    parser.add_argument('--chat_model_dir', type=str, default="model/llama3.2-3B-INT4", help="Path to the chat model directory")
+    parser.add_argument('--public', default=False, action="store_true", help="Whether interface should be available publicly")
 
     args = parser.parse_args()
     run(Path(args.asr_model_dir), Path(args.chat_model_dir), args.public_interface)
