@@ -21,7 +21,7 @@ def convert_chat_model(model_type: str, precision: str, model_dir: Path) -> Path
         precision: model precision
         model_dir: dir to export model
     Returns:
-       Path to exported model
+       Path to exported model dir
     """
     output_dir = model_dir / model_type
     model_name = MODEL_MAPPING[model_type]
@@ -52,7 +52,7 @@ def convert_chat_model(model_type: str, precision: str, model_dir: Path) -> Path
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     tokenizer.save_pretrained(output_dir)
 
-    return Path(output_dir) / "openvino_model.xml"
+    return Path(output_dir)
 
 
 if __name__ == "__main__":
