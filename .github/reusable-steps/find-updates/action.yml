@@ -1,0 +1,39 @@
+name: Find updated projects
+
+inputs:
+  dir:
+    required: true
+  ci_config_file:
+    required: true
+outputs:
+  subproject_dirs:
+    value: ${{ steps.find-updates.outputs.subproject_dirs }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Find updated projects
+      id: find-updates
+      shell: bash
+      run: |
+        # Include the workflow file as a trigger for running all subprojects
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          # consider only changes in workflows or a given dir
+          changed_files=$(git diff --name-only origin/master..HEAD .github ${{ inputs.dir }})
+
+          if [[ -z "$changed_files" ]]; then
+            # no changes in this dir
+            subproject_dirs=""
+          elif echo "$changed_files" | grep -q -e '.github/reusable-steps' -e '.github/workflows/${{ inputs.ci_config_file }}'; then
+            # Workflow file changed; run all subprojects
+            subproject_dirs=$(find ${{ inputs.dir }} -mindepth 1 -maxdepth 1 -type d ! -name utils | tr '\n' ' ')
+          else
+            # Only run subprojects affected by changes
+            subproject_dirs=$(echo "$changed_files" | grep -e '^${{ inputs.dir }}' | grep -v 'README.md$' | xargs -I{} dirname "{}" | sort -u | tr '\n' ' ')
+          fi
+        else
+          subproject_dirs=$(find ${{ inputs.dir }} -mindepth 1 -maxdepth 1 -type d ! -name utils | tr '\n' ' ')
+        fi
+        
+        echo "Updated subprojects: $subproject_dirs"
+        echo "subproject_dirs=$subproject_dirs" >> $GITHUB_OUTPUT

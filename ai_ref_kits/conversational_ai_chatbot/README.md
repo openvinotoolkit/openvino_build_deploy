@@ -189,10 +189,10 @@ For the python script, you must include the following model directory arguments.
 
 - `--reranker_model path/to/reranker_model`: The path to your reranker model directory (for example, `model/bge-reranker-large-FP32`). This model reranks responses to ensure relevance and accuracy.
 
-- `--personality path/to/personality.yaml`: The path to your custom personality YAML file (for example, `concierge_personality.yaml`).  
+- `--personality path/to/personality.yaml`: The path to your custom personality YAML file (for example, `config/concierge_personality.yaml`).  
 This file defines the assistant's personality, including instructions, system configuration, and greeting prompts. You can create and specify your own custom personality file.
 
-- `--example_pdf path/to/personality.yaml`: The path to your custom PDF file which is an additional context (for example, `Grand_Azure_Resort_Spa_Full_Guide.pdf`).  
+- `--example_pdf path/to/personality.yaml`: The path to your custom PDF file which is an additional context (for example, `data/Grand_Azure_Resort_Spa_Full_Guide.pdf`).  
 This file defines the knowledge of the resort in this concierge use case. You can use your own custom file to build a local knowledge base.
 
 - `--public`: Include this flag to make the Gradio interface publicly accessible over the network. Without this flag, the interface is only available on your local machine.
@@ -204,8 +204,8 @@ python app.py \
   --chat_model path/to/chat_model \
   --embedding_model path/to/embedding_model \
   --reranker_model path/to/reranker_model \
-  --personality concierge_personality.yaml \
-  --example_pdf Grand_Azure_Resort_Spa_Full_Guide.pdf \
+  --personality config/concierge_personality.yaml \
+  --example_pdf data/Grand_Azure_Resort_Spa_Full_Guide.pdf \
   --public
 ```
 

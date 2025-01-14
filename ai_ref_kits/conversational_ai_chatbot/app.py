@@ -352,8 +352,8 @@ def synthesize(conversation: List[List[str]], audio: Tuple[int, np.ndarray]) -> 
         Chatbot voice response (audio)
     """
     # if audio wasn't used in the conversation, return None
-    if not audio:
-        return None
+    # if not audio:
+    #     return None
 
     prompt = conversation[-1][1]
 
@@ -465,8 +465,8 @@ if __name__ == "__main__":
     parser.add_argument("--chat_model", type=str, default="model/llama3.1-8B-INT4", help="Path to the chat model directory")
     parser.add_argument("--embedding_model", type=str, default="model/bge-small-FP32", help="Path to the embedding model directory")
     parser.add_argument("--reranker_model", type=str, default="model/bge-reranker-large-FP32", help="Path to the reranker model directory")
-    parser.add_argument("--personality", type=str, default="concierge_personality.yaml", help="Path to the YAML file with chatbot personality")
-    parser.add_argument("--example_pdf", type=str, default="Grand_Azure_Resort_Spa_Full_Guide.pdf", help="Path to the PDF file which is an additional context")
+    parser.add_argument("--personality", type=str, default="config/concierge_personality.yaml", help="Path to the YAML file with chatbot personality")
+    parser.add_argument("--example_pdf", type=str, default="data/Grand_Azure_Resort_Spa_Full_Guide.pdf", help="Path to the PDF file which is an additional context")
     parser.add_argument("--public", default=False, action="store_true", help="Whether interface should be available publicly")
 
     args = parser.parse_args()

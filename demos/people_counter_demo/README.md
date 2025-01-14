@@ -1,6 +1,6 @@
 # People Counting with OpenVINO™
 
-The demo counts people standing in front of the webcam, presenting differences in performance between various precisions and devices on the used platform. Please press keys listed in the control panel to change a precision or device.
+The demo counts people (or any other selected object) standing in front of the webcam, presenting differences in performance between various precisions and devices on the used platform. Please press keys listed in the control panel to change a precision or device.
 
 ![image](https://github.com/openvinotoolkit/openvino_build_deploy/assets/4547501/e386c632-34f3-41c7-9713-c5aca8c1842a)
 
