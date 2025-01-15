@@ -1,5 +1,5 @@
 from utils import tlwh_to_xyxy
-from analog.base import analog_base
+from analog.base import AnalogBase
 import numpy as np
 import cv2
 import os
@@ -7,7 +7,7 @@ import sys
 sys.path.append("../")
 
 
-class analog_yolo(analog_base):
+class AnalogYolo(AnalogBase):
     def __init__(self, config, output_dir):
         super().__init__(config, output_dir)
 
