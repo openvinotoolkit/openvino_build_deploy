@@ -27,6 +27,9 @@ def load_yolo_model(model_name: str) -> YOLOWorld:
 def run(video_path: str, model_name: str, flip: bool):
     det_model = load_yolo_model(model_name)
 
+    # initialize video player to deliver frames
+    if isinstance(video_path, str) and video_path.isnumeric():
+        video_path = int(video_path)
     player = utils.VideoPlayer(video_path, size=(1920, 1080), fps=60, flip=flip)
 
     processing_times = deque(maxlen=100)
@@ -47,16 +50,20 @@ def run(video_path: str, model_name: str, flip: bool):
         f_height, f_width = frame.shape[:2]
 
         start_time = time.time()
-
+        results = det_model.predict(frame, conf=0.01)[0]
         end_time = time.time()
 
         processing_times.append(end_time - start_time)
         # mean processing time [ms]
         processing_time = np.mean(processing_times) * 1000
 
+        frame = results.plot()
         fps = 1000 / processing_time
-        utils.draw_text(frame, text=f"Inference time: {processing_time:.0f}ms ({fps:.1f} FPS)", point=(f_width * 3 // 5, 10))
+        utils.draw_text(frame, text=f"Inference time: {processing_time:.0f}ms ({fps:.1f} FPS)", point=(f_width * 7 // 10, 10))
 
+        utils.draw_ov_watermark(frame)
+        # show the output live
+        cv2.imshow(title, frame)
         key = cv2.waitKey(1)
         # escape = 27 or 'q' to close the app
         if key == 27 or key == ord('q'):
