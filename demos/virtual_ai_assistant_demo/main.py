@@ -56,7 +56,9 @@ def load_chat_model(model_name: str, token: str = None) -> OpenVINOLLM:
     # load llama model and its tokenizer
     if not model_path.exists():
         log.info(f"Downloading {model_name}... It may take up to 1h depending on your Internet connection and model size.")
-        os.environ["HUGGING_FACE_HUB_TOKEN"] = token
+        
+        if token is not None:
+            os.environ["HUGGING_FACE_HUB_TOKEN"] = token
 
         # openvino models are used as is
         is_openvino_model = model_name.split("/")[0] == "OpenVINO"
