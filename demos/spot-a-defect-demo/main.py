@@ -7,6 +7,10 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+from anomalib.data import MVTec
+from anomalib.deploy import ExportType, OpenVINOInferencer
+from anomalib.engine import Engine
+from anomalib.models import get_model
 from ultralytics import YOLOWorld
 
 SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "utils")
@@ -15,17 +19,41 @@ sys.path.append(os.path.dirname(SCRIPT_DIR))
 from utils import demo_utils as utils
 
 MODEL_DIR = Path("model")
+DATA_DIR = Path("data")
 
 
 def load_yolo_model(model_name: str) -> YOLOWorld:
     model = YOLOWorld(MODEL_DIR / f"{model_name}.pt")
     # set classes to detect
     model.set_classes(["hazelnut", "nut"])
+    # todo convert model to OV
+    # path = model.export(format="openvino", dynamic=False, half=True)
+    # model =  YOLO(path, task="detect")
     return model
 
 
-def run(video_path: str, model_name: str, flip: bool):
-    det_model = load_yolo_model(model_name)
+def train_anomalib_model(model_name: str):
+    # define the class to train on
+    datamodule = MVTec(DATA_DIR / "mvtec", category="hazelnut")
+    model = get_model(model_name)
+
+    engine = Engine(max_epochs=1)
+    engine.fit(datamodule=datamodule, model=model)
+    # export model to openvino
+    engine.export(model, ExportType.OPENVINO, MODEL_DIR / model_name)
+
+
+def load_anomalib_model(model_name: str) -> OpenVINOInferencer:
+    model_path = MODEL_DIR / model_name / "weights" / "openvino" / "model.xml"
+    if not model_path.exists():
+        train_anomalib_model(model_name)
+
+    return OpenVINOInferencer(model_path)
+
+
+def run(video_path: str, det_model_name: str, anomaly_model_name: str, flip: bool):
+    det_model = load_yolo_model(det_model_name)
+    anomaly_model = load_anomalib_model(anomaly_model_name)
 
     # initialize video player to deliver frames
     if isinstance(video_path, str) and video_path.isnumeric():
@@ -80,7 +108,8 @@ if __name__ == '__main__':
     parser.add_argument("--detection_model", type=str, default="yolov8s-worldv2", help="Model for object detection",
                         choices=["yolov8s-world", "yolov8m-world", "yolov8l-world", "yolov8x-world",
                                  "yolov8s-worldv2", "yolov8m-worldv2", "yolov8l-worldv2", "yolov8x-worldv2"])
+    parser.add_argument("--anomaly_model", type=str, default="Padim", help="Model for anomaly detection")
     parser.add_argument("--flip", type=bool, default=True, help="Mirror input video")
 
     args = parser.parse_args()
-    run(args.stream, args.detection_model, args.flip)
+    run(args.stream, args.detection_model, args.anomaly_model, args.flip)
