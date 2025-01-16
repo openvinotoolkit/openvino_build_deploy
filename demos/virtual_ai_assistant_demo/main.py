@@ -24,7 +24,7 @@ from openvino.runtime import opset10 as ops
 from openvino.runtime import passes
 from optimum.intel import OVModelForCausalLM, OVModelForFeatureExtraction, OVWeightQuantizationConfig, OVConfig, OVQuantizer, OVModelForSequenceClassification
 from transformers import AutoTokenizer
-
+import os
 # it must be imported as the last one; otherwise, it causes a crash on macOS
 import faiss
 
@@ -53,6 +53,9 @@ def load_chat_model(model_name: str, token: str = None) -> OpenVINOLLM:
     # load llama model and its tokenizer
     if not model_path.exists():
         log.info(f"Downloading {model_name}... It may take up to 1h depending on your Internet connection and model size.")
+        
+        if token is not None:
+            os.environ["HUGGING_FACE_HUB_TOKEN"] = token
 
         # openvino models are used as is
         is_openvino_model = model_name.split("/")[0] == "OpenVINO"

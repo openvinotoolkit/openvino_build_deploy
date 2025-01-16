@@ -117,13 +117,7 @@ Set Up a Hugging Face Account: If you don't have one, create a [Hugging Face acc
 
 Visit [Llama3.2](https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct) and fill in your details, including your name, email, and organization. Accept the terms and submit the form. You will receive an email granting access to download the model weights.
 
-To use the model, authenticate using the Hugging Face CLI:
-
-```
-huggingface-cli login
-```
-
-When prompted provide your [access token](https://huggingface.co/settings/tokens). This step ensures that you are logged into the Hugging Face API and ready to download the model.
+Before you can run the script to convert the models, you must have a Hugging Face token (`--hf_token`) for authentication, which allows you to get access to gated models, such as Llama. Navigate on HuggingFace website and request an Access Token with Read permissions. 
 
 Now, you're ready to download and optimize the models required to run the application.
 
