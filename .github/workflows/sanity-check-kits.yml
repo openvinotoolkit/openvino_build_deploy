@@ -96,7 +96,6 @@ jobs:
 
   simple:
     needs: find-subprojects
-    if: ${{ needs.find-subprojects.outputs.simple != '[]' }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
