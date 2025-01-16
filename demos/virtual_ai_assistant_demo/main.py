@@ -4,10 +4,7 @@ import threading
 import time
 from pathlib import Path
 from typing import List, Optional, Set
-
 import os
-import faiss
-
 import fitz
 import gradio as gr
 import numpy as np
