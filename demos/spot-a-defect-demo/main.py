@@ -7,11 +7,12 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-from anomalib.data import MVTec
+from anomalib.data import MVTec, NumpyImageBatch
 from anomalib.deploy import ExportType, OpenVINOInferencer
 from anomalib.engine import Engine
 from anomalib.models import get_model
 from ultralytics import YOLOWorld
+from ultralytics.engine.results import Results
 
 SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "utils")
 sys.path.append(os.path.dirname(SCRIPT_DIR))
@@ -51,6 +52,31 @@ def load_anomalib_model(model_name: str) -> OpenVINOInferencer:
     return OpenVINOInferencer(model_path)
 
 
+def get_patches(frame: np.ndarray, results: Results) -> np.ndarray:
+    patches = []
+    for box in results.boxes.xyxy:
+        x1, y1, x2, y2 = box.numpy()
+        # crop the object
+        patch = frame[int(y1):int(y2), int(x1):int(x2)]
+        patches.append(patch)
+
+    return np.array(patches)
+
+
+def draw_results(frame: np.ndarray, det_results: Results, anomaly_results: NumpyImageBatch) -> None:
+    for box, anomaly in zip(det_results.boxes.xyxy, anomaly_results):
+        x1, y1, x2, y2 = box.numpy()
+        anomaly_score = float(anomaly_results.pred_score)
+        if anomaly_score > 0.5:
+            color = (0, 0, 255)
+        else:
+            color = (0, 255, 0)
+        # draw a red rectangle around the object
+        cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
+        # draw anomaly score
+        utils.draw_text(frame, text=f"Anomaly: {anomaly_score:.2f}", point=(int(x1), int(y1)))
+
+
 def run(video_path: str, det_model_name: str, anomaly_model_name: str, flip: bool):
     det_model = load_yolo_model(det_model_name)
     anomaly_model = load_anomalib_model(anomaly_model_name)
@@ -78,14 +104,17 @@ def run(video_path: str, det_model_name: str, anomaly_model_name: str, flip: boo
         f_height, f_width = frame.shape[:2]
 
         start_time = time.time()
-        results = det_model.predict(frame, conf=0.01)[0]
+        det_results = det_model.predict(frame, conf=0.01)[0]
+        patches = get_patches(frame, det_results)
+        anomalies = anomaly_model.predict(patches) if len(patches) > 0 else NumpyImageBatch(frame)
         end_time = time.time()
+
+        draw_results(frame, det_results, anomalies)
 
         processing_times.append(end_time - start_time)
         # mean processing time [ms]
         processing_time = np.mean(processing_times) * 1000
 
-        frame = results.plot()
         fps = 1000 / processing_time
         utils.draw_text(frame, text=f"Inference time: {processing_time:.0f}ms ({fps:.1f} FPS)", point=(f_width * 7 // 10, 10))
 
