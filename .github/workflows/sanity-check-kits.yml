@@ -22,7 +22,7 @@ jobs:
     outputs:
       gradio: ${{ steps.categorize-subprojects.outputs.gradio }}
       webcam: ${{ steps.categorize-subprojects.outputs.webcam }}
-      simple: ${{ steps.categorize-subprojects.outputs.simple }}
+      python: ${{ steps.categorize-subprojects.outputs.python }}
       notebook: ${{ steps.categorize-subprojects.outputs.notebook }}
     steps:
       - name: Check out code
@@ -41,16 +41,69 @@ jobs:
         with:
           subprojects: ${{ steps.find-updates.outputs.subproject_dirs }}
 
-
-  simple:
+  gradio:
     needs: find-subprojects
+    if: ${{ needs.find-subprojects.outputs.gradio != '[]' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.10", "3.12"]
+        subproject: ${{ fromJson(needs.find-subprojects.outputs.gradio) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/reusable-steps/setup-os
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: ./.github/reusable-steps/setup-python
+        with:
+          python: ${{ matrix.python }}
+          project: ${{ matrix.subproject }}
+      - name: Login to HF
+        shell: bash
+        run: |
+          huggingface-cli login --token ${{ secrets.HF_TOKEN }}
+      - uses: ./.github/reusable-steps/gradio-action
+        with:
+          script: main.py
+          project: ${{ matrix.subproject }}
+
+  webcam:
+    needs: find-subprojects
+    if: ${{ needs.find-subprojects.outputs.webcam != '[]' }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python: ["3.9", "3.12"]
-        subproject: ${{ fromJson(needs.find-subprojects.outputs.simple) }}
+        subproject: ${{ fromJson(needs.find-subprojects.outputs.webcam) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/reusable-steps/setup-os
+      - uses: ./.github/reusable-steps/setup-python
+        with:
+          python: ${{ matrix.python }}
+          project: ${{ matrix.subproject }}
+      - uses: ./.github/reusable-steps/timeouted-action
+        name: Run Webcam Demo
+        with:
+          command: python main.py --stream sample_video.mp4
+          project: ${{ matrix.subproject }}
+
+  python:
+    needs: find-subprojects
+    if: ${{ needs.find-subprojects.outputs.python != '[]' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.9", "3.12"]
+        subproject: ${{ fromJson(needs.find-subprojects.outputs.python) }}
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/reusable-steps/setup-os
@@ -64,4 +117,34 @@ jobs:
           command: python main.py
           project: ${{ matrix.subproject }}
 
-
+  notebook:
+    needs: find-subprojects
+    if: ${{ needs.find-subprojects.outputs.notebook != '[]' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.9", "3.12"]
+        subproject: ${{ fromJson(needs.find-subprojects.outputs.notebook) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: ./.github/reusable-steps/setup-python
+        with:
+          python: ${{ matrix.python }}
+          project: ${{ matrix.subproject }}
+      - name: Use downloaded video as a stream
+        shell: bash
+        run: |
+          cd ${{ matrix.subproject }}
+          # replace video_path with sample_video.mp4
+          find . -name "*.ipynb" -exec sed -E -i "s/video_path\s*=\s*(['\"]?.*?['\"]?)/video_path=\\\\\"sample_video.mp4\\\\\"\\\n\",/g" {} +
+      - uses: ./.github/reusable-steps/timeouted-action
+        name: Run Notebook
+        with:
+          command: jupyter nbconvert --to notebook --execute *.ipynb
+          project: ${{ matrix.subproject }}
