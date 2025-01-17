@@ -38,7 +38,7 @@ def train_anomalib_model(model_name: str):
     datamodule = MVTec(DATA_DIR / "mvtec", category="hazelnut")
     model = get_model(model_name)
 
-    engine = Engine(max_epochs=1)
+    engine = Engine(max_epochs=1, accelerator="cpu")
     engine.fit(datamodule=datamodule, model=model)
     # export model to openvino
     engine.export(model, ExportType.OPENVINO, MODEL_DIR / model_name)
