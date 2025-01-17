@@ -23,4 +23,4 @@ transformers==4.46.3
 pymupdf==1.24.10
 pyyaml==6.0.1
 
-gradio==5.10.0
+gradio==5.12.0
