@@ -39,7 +39,7 @@ Now, let's dive into the steps starting with installing Python. We recommend usi
 
 ## Installing Prerequisites
 
-This project requires Python 3.8 or higher and a few libraries. If you don't have Python installed on your machine, go to https://www.python.org/downloads/ and download the latest version for your operating system. Follow the prompts to install Python, making sure to check the option to add Python to your PATH environment variable.
+This project requires Python 3.10 or higher and a few libraries. If you don't have Python installed on your machine, go to https://www.python.org/downloads/ and download the latest version for your operating system. Follow the prompts to install Python, making sure to check the option to add Python to your PATH environment variable.
 
 Install libraries and tools:
 
@@ -178,7 +178,7 @@ Execute the `app.py` script with the following command, including all necessary 
 ```shell
 python app.py --asr_model_dir path/to/asr_model --chat_model_dir path/to/chat_model
 ```
-Replace `path/to/asr_model` and `path/to/chat_model` with actual paths to your respective models. Add `--public_interface` to make it publicly accessible.
+Replace `path/to/asr_model` and `path/to/chat_model` with actual paths to your respective models. Add `--public` to make it publicly accessible.
 
 ### Accessing the Web Interface
 After running the script, Gradio will provide a local URL, typically `http://127.0.0.1:XXXX`, which you can open in your web browser to start interacting with the assistant. If you configured the application to be accessible publicly, Gradio will also provide a public URL.

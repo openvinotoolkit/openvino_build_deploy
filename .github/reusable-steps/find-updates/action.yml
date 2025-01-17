@@ -21,15 +21,15 @@ runs:
           # consider only changes in workflows or a given dir
           changed_files=$(git diff --name-only origin/master..HEAD .github ${{ inputs.dir }})
 
-          if [[ -z "$changed_files" ]]; then
-            # no changes in this dir
-            subproject_dirs=""
-          elif echo "$changed_files" | grep -q -e '.github/reusable-steps' -e '.github/workflows/${{ inputs.ci_config_file }}'; then
+          if echo "$changed_files" | grep -q -e '.github/reusable-steps' -e '.github/workflows/${{ inputs.ci_config_file }}'; then
             # Workflow file changed; run all subprojects
             subproject_dirs=$(find ${{ inputs.dir }} -mindepth 1 -maxdepth 1 -type d ! -name utils | tr '\n' ' ')
-          else
+          elif echo "$changed_files" | grep -e '^${{ inputs.dir }}'; then
             # Only run subprojects affected by changes
             subproject_dirs=$(echo "$changed_files" | grep -e '^${{ inputs.dir }}' | grep -v 'README.md$' | xargs -I{} dirname "{}" | sort -u | tr '\n' ' ')
+          else
+            # no changes in this dir
+            subproject_dirs=""
           fi
         else
           subproject_dirs=$(find ${{ inputs.dir }} -mindepth 1 -maxdepth 1 -type d ! -name utils | tr '\n' ' ')
