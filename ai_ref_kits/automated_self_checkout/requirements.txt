@@ -1,3 +1,5 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+
 openvino-dev==2024.6.0
 nncf==2.14.1
 ultralytics==8.3.38
