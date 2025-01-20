@@ -16,7 +16,7 @@ Welcome to the **Build and Deploy AI Solutions** repository! This repository con
   
 ## Repo Contents
 
-### [AI Reference Kits](https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/ai_ref_kits): Production-Ready OpenVINO Code
+### [AI Reference Kits](ai_ref_kits): Production-Ready OpenVINO Code
 
 Start development of your AI applications, including deep learning and Gen AI, on top of our code samples, conference demos, and [here](https://www.intel.com/content/www/us/en/developer/topic-technology/edge-5g/open-potential.html).
 
@@ -25,10 +25,13 @@ Each AI Reference Kit includes:
 - Pre-configured demos
 - Code samples to seamlessly integrate AI functionalities into your projects.
 
-### [Interactive Demos](https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/demos): End-to-end Examples w/ Simple Setup
+### [Interactive Demos](demos): End-to-end Examples with Simple Setup
 This directory contains interactive demos aimed at demonstrating how OpenVINO performs as an AI optimization and inference engine (cloud, client, and edge).
 
-### [Workshops](https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/workshops): Guided Content to Get Started Building
+### [Notebooks](notebooks): Jupyter Notebooks with OpenVINO code
+Explore Jupyter notebooks that demonstrate how to use OpenVINO to build and deploy AI solutions.
+
+### [Workshops](workshops): Guided Content to Get Started Building
 Explored guided content our team created and demonstrated at events.
 
 ### [Wiki](https://github.com/openvinotoolkit/openvino_build_deploy/wiki): Step-by-step Instructions
