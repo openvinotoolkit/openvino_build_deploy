@@ -152,12 +152,12 @@ _NOTE: This application requires more than 16GB of memory because the models are
 
 For the python script, you must include the following model directory arguments.
 
-- `--personality path/to/personality.txt`: The path to your custom personality txt file (for example, `personality.txt`).  
+- `--personality path/to/personality.yaml`: The path to your custom personality yaml file (for example, `config/personality.yaml`).  
 This file defines the assistant's personality, including instructions, system configuration, and greeting prompts. You can create and specify your own custom personality file.
 
 - `--chat_model path/to/chat_model`: The path to your chat model directory (for example, `model/llama3.1-8B-INT4`) that drives conversation flow and response generation.
 
-- `--rag_pdf`: The path to the document (for example, test_painting_llm_rag.pdf) that contains additional knowledge for Retrieval-Augmented Generation (RAG).
+- `--rag_pdf`: The path to the document (for example, `data/test_painting_llm_rag.pdf`) that contains additional knowledge for Retrieval-Augmented Generation (RAG).
 
 - `--embedding_model path/to/embedding_model`: The path to your embedding model directory (for example, `model/bge-small-FP32`) for understanding and matching text inputs.
 
@@ -166,16 +166,16 @@ This file defines the assistant's personality, including instructions, system co
 To run the application, execute the `app.py` script with the following command. Make sure to include all necessary model directory arguments.
 ```shell
 python app.py \
-  --personality personality.txt \
+  --personality path/to/personality.yaml \
   --chat_model path/to/chat_model \
   --embedding_model path/to/embedding_model \
   --rag_pdf path/to/rag_document \  
   --public
 ```
 
-### Create a Custom TXT Personality File
+### Create a Custom YAML Personality File
 
-You can create a personality file for your virtual AI assistant as a TXT file. Each personality can be customized based on the specific role of the assistant.
+You can create a personality file for your virtual AI assistant as a YAML file. Each personality can be customized based on the specific role of the assistant.
 
 #### Components of a Personality File
 
@@ -185,11 +185,11 @@ A typical personality file has the following sections:
 2. **System Configuration**: Instructions that define the assistant's behavior and limitations.
 3. **Greet the User Prompt**: The first interaction when the assistant introduces itself.
 
-#### Tips for Creating the TXT File 
+#### Tips for Creating the YAML File 
 
-The TXT file _instructions_ section should provide an introduction to the assistant, the title of the assistant, and important notes for the user. It should be clear and concise, and give users context for how to interact with the assistant.
+The YAML file _instructions_ section should provide an introduction to the assistant, the title of the assistant, and important notes for the user. It should be clear and concise, and give users context for how to interact with the assistant.
 
-```txt
+```yaml
 instructions: | 
   # [Assistant Name]: [Brief Role Description]
 

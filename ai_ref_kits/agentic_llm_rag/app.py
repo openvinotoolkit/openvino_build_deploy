@@ -24,7 +24,7 @@ from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from llama_index.embeddings.huggingface_openvino import OpenVINOEmbedding
 from llama_index.llms.openvino import OpenVINOLLM
 
-from create_tools import Math, PaintCostCalculator
+from tools import Math, PaintCostCalculator
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO)
