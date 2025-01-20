@@ -1,6 +1,6 @@
-openvino-dev==2023.0.0
-nncf==2.5.0
-ultralytics==8.0.117
+openvino-dev==2024.6.0
+nncf==2.14.1
+ultralytics==8.3.38
 # onnx>1.16.1 doesn't work on windows
 onnx==1.16.1; platform_system == "Windows"
 onnx==1.17.0; platform_system != "Windows"
