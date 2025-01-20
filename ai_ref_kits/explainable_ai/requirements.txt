@@ -1,13 +1,15 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+
 openvino==2024.4.0
 nncf==2.13.0
 ultralytics==8.3.23
-numpy<1.27
+numpy==1.26.4
 pillow==11.0.0
 opencv-python==4.10.0.84
 onnx==1.17.0
 torch==2.5.0
 torchvision==0.20.0
-supervision==0.24.0
+supervision==0.25.1
 jupyterlab==4.2.5
 tqdm==4.66.6
 pycocotools==2.0.8
