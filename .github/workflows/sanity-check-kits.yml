@@ -87,11 +87,11 @@ jobs:
         with:
           python: ${{ matrix.python }}
           project: ${{ matrix.subproject }}
-      - name: Run Webcam Demo
-        shell: bash
-        run:
-          cd ${{ matrix.subproject }}
-          python main.py --stream sample_video.mp4
+      - uses: ./.github/reusable-steps/timeouted-action
+        name: Run Webcam Demo
+        with:
+          command: python main.py --stream sample_video.mp4
+          project: ${{ matrix.subproject }}
 
   notebook:
     needs: find-subprojects
@@ -113,8 +113,8 @@ jobs:
         with:
           python: ${{ matrix.python }}
           project: ${{ matrix.subproject }}
-      - name: Run Notebook
-        shell: bash
-        run:
-          cd ${{ matrix.subproject }}
-          jupyter nbconvert --to notebook --execute *.ipynb
+      - uses: ./.github/reusable-steps/timeouted-action
+        name: Run Notebook
+        with:
+          command: jupyter nbconvert --to notebook --execute *.ipynb
+          project: ${{ matrix.subproject }}
