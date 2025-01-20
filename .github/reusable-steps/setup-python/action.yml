@@ -14,6 +14,10 @@ runs:
       run: |
         cd ${{ inputs.project }}
         curl -L -o sample_video.mp4 https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4
+    - name: Download all repo files
+      shell: bash
+      run: |
+        git lfs -X= -I=* pull
     - name: Set up Python ${{ inputs.python }}
       uses: actions/setup-python@v5
       with:
