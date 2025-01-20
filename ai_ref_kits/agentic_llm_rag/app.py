@@ -279,18 +279,9 @@ def run_app(agent):
     run()
 
 
-if __name__ == "__main__":
-    # Define the argument parser at the end
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--chat_model", type=str, default="model/llama3.1-8B-INT4", help="Path to the chat model directory")
-    parser.add_argument("--embedding_model", type=str, default="model/bge-large-FP32", help="Path to the embedding model directory")
-    parser.add_argument("--rag_pdf", type=str, default="test_painting_llm_rag.pdf", help="Path to a RAG PDF file with additional knowledge the chatbot can rely on.")
-    parser.add_argument("--personality", type=str, default="paint_concierge_personality.yaml", help="Path to the yaml file with chatbot personality")
-
-    args = parser.parse_args()
-
+def main(chat_model: str, embedding_model: str, rag_pdf: str, personality: str):
     # Load models and embedding based on parsed arguments
-    llm, embedding = setup_models(args.chat_model, args.embedding_model)
+    llm, embedding = setup_models(chat_model, embedding_model)
 
     Settings.embed_model = embedding
     Settings.llm = llm
@@ -299,7 +290,7 @@ if __name__ == "__main__":
     multiply_tool, divide_tool, add_tool, subtract_tool, paint_cost_calculator = setup_tools()
 
     # Step 4: Load documents and create the VectorStoreIndex
-    text_example_en_path = Path(args.rag_pdf)
+    text_example_en_path = Path(rag_pdf)
     index = load_documents(text_example_en_path)
     log.info(f"loading in {index}")
     vector_tool = QueryEngineTool(
@@ -314,20 +305,34 @@ if __name__ == "__main__":
     nest_asyncio.apply()
 
     # Load agent config
-    personality_file_path = Path(args.personality)
+    personality_file_path = Path(personality)
 
     with open(personality_file_path, "rb") as f:
         chatbot_config = yaml.safe_load(f)
 
     react_system_prompt = PromptTemplate(chatbot_config['system_configuration'])
     log.info(f"react_system_prompt {react_system_prompt}")
-    #Define agent and available tools
-    agent = ReActAgent.from_tools([multiply_tool, divide_tool, add_tool, subtract_tool, paint_cost_calculator, vector_tool],
-                                  llm=llm,
-                                  max_iterations=10,  # Set a max_iterations value
-                                  handle_reasoning_failure_fn=custom_handle_reasoning_failure,
-                                  verbose=True)
+    # Define agent and available tools
+    agent = ReActAgent.from_tools(
+        [multiply_tool, divide_tool, add_tool, subtract_tool, paint_cost_calculator, vector_tool],
+        llm=llm,
+        max_iterations=10,  # Set a max_iterations value
+        handle_reasoning_failure_fn=custom_handle_reasoning_failure,
+        verbose=True)
     agent.update_prompts({"agent_worker:system_prompt": react_system_prompt})
 
     # Step 6: Run the app
     run_app(agent)
+
+
+if __name__ == "__main__":
+    # Define the argument parser at the end
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--chat_model", type=str, default="model/llama3.2-3B-INT4", help="Path to the chat model directory")
+    parser.add_argument("--embedding_model", type=str, default="model/bge-large-FP32", help="Path to the embedding model directory")
+    parser.add_argument("--rag_pdf", type=str, default="test_painting_llm_rag.pdf", help="Path to a RAG PDF file with additional knowledge the chatbot can rely on.")
+    parser.add_argument("--personality", type=str, default="paint_concierge_personality.yaml", help="Path to the yaml file with chatbot personality")
+
+    args = parser.parse_args()
+
+    main(args.chat_model, args.embedding_model, args.rag_pdf, args.personality)
