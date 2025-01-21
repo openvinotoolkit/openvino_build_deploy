@@ -22,6 +22,7 @@ jobs:
     outputs:
       gradio: ${{ steps.categorize-subprojects.outputs.gradio }}
       webcam: ${{ steps.categorize-subprojects.outputs.webcam }}
+      python: ${{ steps.categorize-subprojects.outputs.python }}
       notebook: ${{ steps.categorize-subprojects.outputs.notebook }}
     steps:
       - name: Check out code
@@ -91,6 +92,29 @@ jobs:
         name: Run Webcam Demo
         with:
           command: python main.py --stream sample_video.mp4
+          project: ${{ matrix.subproject }}
+
+  python:
+    needs: find-subprojects
+    if: ${{ needs.find-subprojects.outputs.python != '[]' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.9", "3.12"]
+        subproject: ${{ fromJson(needs.find-subprojects.outputs.python) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/reusable-steps/setup-os
+      - uses: ./.github/reusable-steps/setup-python
+        with:
+          python: ${{ matrix.python }}
+          project: ${{ matrix.subproject }}
+      - uses: ./.github/reusable-steps/timeouted-action
+        name: Run Python
+        with:
+          command: python main.py
           project: ${{ matrix.subproject }}
 
   notebook:

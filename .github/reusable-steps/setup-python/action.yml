@@ -9,6 +9,10 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    - name: Download all repo files
+      shell: bash
+      run: |
+        git lfs -X= -I=* pull
     - name: Download sample video file
       shell: bash
       run: |
