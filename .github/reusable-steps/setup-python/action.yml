@@ -30,7 +30,7 @@ runs:
       if: ${{ inputs.project == 'ai_ref_kits/conversational_ai_chatbot' }}
       shell: bash
       run: |
-        pip install unidic mecab-python3
+        pip install unidic
         pip install git+https://github.com/myshell-ai/MeloTTS.git@5b538481e24e0d578955be32a95d88fcbde26dc8 --no-deps
         python -m unidic download
     - name: Install dependencies
