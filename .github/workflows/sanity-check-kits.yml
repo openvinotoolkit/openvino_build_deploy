@@ -70,6 +70,7 @@ jobs:
         with:
           script: main.py
           project: ${{ matrix.subproject }}
+          timeout: 3600
 
   webcam:
     needs: find-subprojects
