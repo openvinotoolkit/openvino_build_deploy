@@ -303,7 +303,7 @@ def update_visibility(radio):  # Accept the event argument, even if not used
             return gr.Textbox(visible=bool(0)), gr.Textbox(visible=bool(0)), gr.Image(visible=bool(1))
 
 css_code="""
-.gradio-container { background:  url('file=assets/image_opt.jpg'); background-repeat: no-repeat; background-size: cover; background-position: center;}
+.gradio-container { background:  url('file=data/image_opt.jpg'); background-repeat: no-repeat; background-size: cover; background-position: center;}
 h1 {
     text-align: center;
     font-size: 45px;
@@ -387,8 +387,8 @@ with gr.Blocks(css=css_code, js = _js, theme=theme) as demo:
     out.change(depth_map_parallax, out, depth_map)
 
 if __name__ == "__main__":
-   #demo.launch(share=True,server_port=7960, debug=True,allowed_paths=['assets/image_opt.jpg',])
+   #demo.launch(share=True,server_port=7960, debug=True,allowed_paths=['data/image_opt.jpg',])
     try:
-        demo.launch(share=True,debug=True,allowed_paths=['assets/image_opt.jpg',])
+        demo.launch(share=True,debug=True,allowed_paths=['data/image_opt.jpg',])
     except Exception:
-        demo.launch(share=True, debug=True,allowed_paths=['assets/image_opt.jpg',])
+        demo.launch(share=True, debug=True,allowed_paths=['data/image_opt.jpg',])
