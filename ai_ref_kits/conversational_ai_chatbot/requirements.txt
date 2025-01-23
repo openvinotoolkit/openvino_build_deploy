@@ -19,6 +19,7 @@ onnx==1.17.0; platform_system != "Windows"
 onnxruntime==1.17.3
 torch==2.5.1
 torchaudio==2.5.1
+numpy==1.26.4
 
 transformers==4.46.3
 librosa==0.10.2
