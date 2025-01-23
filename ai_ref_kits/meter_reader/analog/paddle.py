@@ -1,10 +1,10 @@
-from analog.base import analog_base
+from analog.base import AnalogBase
 import numpy as np
 import cv2
 import os
 
 
-class analog_paddle(analog_base):
+class AnalogPaddle(AnalogBase):
     def __init__(self, config, output_dir):
         super().__init__(config, output_dir)
 
