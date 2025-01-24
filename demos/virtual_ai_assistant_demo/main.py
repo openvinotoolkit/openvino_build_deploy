@@ -1,5 +1,6 @@
 import argparse
 import logging as log
+import os
 import threading
 import time
 from pathlib import Path
@@ -24,7 +25,6 @@ from openvino.runtime import opset10 as ops
 from openvino.runtime import passes
 from optimum.intel import OVModelForCausalLM, OVModelForFeatureExtraction, OVWeightQuantizationConfig, OVConfig, OVQuantizer, OVModelForSequenceClassification
 from transformers import AutoTokenizer
-import os
 # it must be imported as the last one; otherwise, it causes a crash on macOS
 import faiss
 

@@ -6,7 +6,6 @@ from pathlib import Path
 from threading import Thread
 from typing import Tuple, List, Optional, Set
 
-import faiss
 import fitz  # PyMuPDF
 import gradio as gr
 import librosa
@@ -28,6 +27,8 @@ from llama_index.vector_stores.faiss import FaissVectorStore
 from optimum.intel import OVModelForSpeechSeq2Seq
 from transformers import AutoProcessor, TextIteratorStreamer
 from melo.api import TTS
+# it must be imported as the last one; otherwise, it causes a crash on macOS
+import faiss
 
 # Global variables initialization
 TARGET_AUDIO_SAMPLE_RATE = 16000
