@@ -7,6 +7,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+import pandas as pd
 from anomalib.data import MVTec, NumpyImageBatch
 from anomalib.deploy import ExportType, OpenVINOInferencer
 from anomalib.engine import Engine
@@ -22,11 +23,15 @@ from utils import demo_utils as utils
 MODEL_DIR = Path("model")
 DATA_DIR = Path("data")
 
+MAIN_CLASSES = ["hazelnut", "nut"]
+# the following are "null" classes to improve detection of the main classes
+NULL_CLASSES = ["person", "fabric"]
+
 
 def load_yolo_model(model_name: str) -> YOLOWorld:
     model = YOLOWorld(MODEL_DIR / f"{model_name}.pt")
     # set classes to detect
-    model.set_classes(["hazelnut", "nut"])
+    model.set_classes(MAIN_CLASSES + NULL_CLASSES)
     # todo convert model to OV
     # path = model.export(format="openvino", dynamic=False, half=True)
     # model =  YOLO(path, task="detect")
@@ -52,21 +57,37 @@ def load_anomalib_model(model_name: str) -> OpenVINOInferencer:
     return OpenVINOInferencer(model_path)
 
 
-def get_patches(frame: np.ndarray, results: Results) -> np.ndarray:
+def filter_and_convert_results(det_results: Results) -> pd.DataFrame:
+    df_results = det_results.to_df(decimals=0)
+    df_results[["x1", "y1", "x2", "y2"]] = np.nan
+
+    if not df_results.empty:
+        # split box column into 4 columns
+        df_results[["x1", "y1", "x2", "y2"]] = pd.DataFrame(df_results["box"].tolist(), index=df_results.index)
+        df_results[["x1", "y1", "x2", "y2"]] = df_results[["x1", "y1", "x2", "y2"]].astype(int)
+        df_results.drop(columns=["box"], inplace=True)
+        # filter out the null classes
+        df_results = df_results[df_results["name"].isin(MAIN_CLASSES)]
+
+    return df_results
+
+
+def get_patches(frame: np.ndarray, results: pd.DataFrame) -> np.ndarray:
     patches = []
-    for box in results.boxes.xyxy:
-        x1, y1, x2, y2 = box.numpy()
-        # crop the object
+
+    for result in results.itertuples():
+        x1, y1, x2, y2 = result.x1, result.y1, result.x2, result.y2
         patch = frame[int(y1):int(y2), int(x1):int(x2)]
+        patch = cv2.resize(patch, (128, 128))
         patches.append(patch)
 
     return np.array(patches)
 
 
-def draw_results(frame: np.ndarray, det_results: Results, anomaly_results: NumpyImageBatch) -> None:
-    for box, anomaly in zip(det_results.boxes.xyxy, anomaly_results):
-        x1, y1, x2, y2 = box.numpy()
-        anomaly_score = float(anomaly_results.pred_score)
+def draw_results(frame: np.ndarray, det_results: pd.DataFrame, anomaly_results: NumpyImageBatch) -> None:
+    for box, anomaly in zip(det_results[["x1", "y1", "x2", "y2"]].to_numpy(), anomaly_results):
+        x1, y1, x2, y2 = box
+        anomaly_score = float(anomaly.pred_score)
         if anomaly_score > 0.5:
             color = (0, 0, 255)
         else:
@@ -105,6 +126,7 @@ def run(video_path: str, det_model_name: str, anomaly_model_name: str, flip: boo
 
         start_time = time.time()
         det_results = det_model.predict(frame, conf=0.01)[0]
+        det_results = filter_and_convert_results(det_results)
         patches = get_patches(frame, det_results)
         anomalies = anomaly_model.predict(patches) if len(patches) > 0 else NumpyImageBatch(frame)
         end_time = time.time()
