@@ -47,37 +47,38 @@ def get_available_devices() -> Set[str]:
 
 
 def load_chat_model(model_name: str, token: str = None) -> OpenVINOLLM:
-    model_path = MODEL_DIR / model_name
+    safe_model_dir = model_name.replace('/', '_').replace('-', '_')
+    model_path = MODEL_DIR / safe_model_dir
+    
+    model_path.mkdir(parents=True, exist_ok=True)
+    
+    if token is not None:
+        os.environ["HUGGING_FACE_HUB_TOKEN"] = token
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
     ov_config = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1', "CACHE_DIR": ""}
     # load llama model and its tokenizer
-    if not model_path.exists():
-        log.info(f"Downloading {model_name}... It may take up to 1h depending on your Internet connection and model size.")
+    if not (model_path / "tokenizer_config.json").exists():
+        log.info(f"Downloading {model_name}... It may take up to 1h depending on your Internet connection and model size.")     
         
-        if token is not None:
-            os.environ["HUGGING_FACE_HUB_TOKEN"] = token
+        chat_tokenizer = AutoTokenizer.from_pretrained(model_name, token=token)
+        chat_tokenizer.save_pretrained(model_path)
 
         # openvino models are used as is
         is_openvino_model = model_name.split("/")[0] == "OpenVINO"
         if is_openvino_model:
-            chat_model = OVModelForCausalLM.from_pretrained(model_name, export=False, compile=False, token=token)
+            chat_model = OVModelForCausalLM.from_pretrained(model_name, export=False, token=token, local_files_only=False)
             chat_model.save_pretrained(model_path)
         else:
-            chat_model = OVModelForCausalLM.from_pretrained(model_name, export=True, compile=False, load_in_8bit=False, token=token)
-
-            quant_config = OVWeightQuantizationConfig(bits=4, sym=False, ratio=0.8)
-            config = OVConfig(quantization_config=quant_config)
-
+            log.info(f"Loading and quantizing {model_name} to INT4...")
+            quant_config = OVWeightQuantizationConfig(bits=4, sym=False, ratio=0.8, quant_method="awq", group_size=128, dataset="wikitext2")
+            chat_model = OVModelForCausalLM.from_pretrained(model_name, export=True, quantization_config=quant_config, token=token, trust_remote_code=True, library_name="transformers")                       
             log.info(f"Quantizing {model_name} to INT4... It may take significant amount of time depending on your machine power.")
-            quantizer = OVQuantizer.from_pretrained(chat_model, task="text-generation")
-            quantizer.quantize(save_directory=model_path, weights_only=True, ov_config=config)
-
-        chat_tokenizer = AutoTokenizer.from_pretrained(model_name, token=token)
-        chat_tokenizer.save_pretrained(model_path)
+            chat_model.save_pretrained(model_path)
 
     device = "GPU" if "GPU" in get_available_devices() else "CPU"
     return OpenVINOLLM(context_window=2048, model_id_or_path=str(model_path), max_new_tokens=512, device_map=device,
-                       model_kwargs={"ov_config": ov_config}, generate_kwargs={"do_sample": True, "temperature": 0.7, "top_k": 50, "top_p": 0.95})
+                       model_kwargs={"ov_config": ov_config, "library_name": "transformers"}, generate_kwargs={"do_sample": True, "temperature": 0.7, "top_k": 50, "top_p": 0.95})
 
 
 def optimize_model_for_npu(model: OVModelForFeatureExtraction):
@@ -144,10 +145,10 @@ def load_chat_models(chat_model_name: str, embedding_model_name: str, reranker_m
     with open(personality_file_path, "rb") as f:
         chatbot_config = yaml.safe_load(f)
 
-    ov_embedding = load_embedding_model(embedding_model_name)
-    log.info(f"Running {embedding_model_name} on {ov_embedding._model.request.get_property('EXECUTION_DEVICES')}")
     ov_llm = load_chat_model(chat_model_name, auth_token)
     log.info(f"Running {chat_model_name} on {','.join(ov_llm._model.request.get_compiled_model().get_property('EXECUTION_DEVICES'))}")
+    ov_embedding = load_embedding_model(embedding_model_name)
+    log.info(f"Running {embedding_model_name} on {ov_embedding._model.request.get_property('EXECUTION_DEVICES')}")   
     ov_reranker = load_reranker_model(reranker_model_name)
     log.info(f"Running {reranker_model_name} on {','.join(ov_reranker._model.request.get_property('EXECUTION_DEVICES'))}")
 
