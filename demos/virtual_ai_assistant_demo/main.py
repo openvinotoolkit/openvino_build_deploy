@@ -47,10 +47,7 @@ def get_available_devices() -> Set[str]:
 
 
 def load_chat_model(model_name: str, token: str = None) -> OpenVINOLLM:
-    safe_model_dir = model_name.replace('/', '_').replace('-', '_')
-    model_path = MODEL_DIR / safe_model_dir
-    
-    model_path.mkdir(parents=True, exist_ok=True)
+    model_path = MODEL_DIR / model_name    
     
     if token is not None:
         os.environ["HUGGING_FACE_HUB_TOKEN"] = token
@@ -58,7 +55,7 @@ def load_chat_model(model_name: str, token: str = None) -> OpenVINOLLM:
 
     ov_config = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1', "CACHE_DIR": ""}
     # load llama model and its tokenizer
-    if not (model_path / "tokenizer_config.json").exists():
+    if not model_path.exists():
         log.info(f"Downloading {model_name}... It may take up to 1h depending on your Internet connection and model size.")     
         
         chat_tokenizer = AutoTokenizer.from_pretrained(model_name, token=token)
