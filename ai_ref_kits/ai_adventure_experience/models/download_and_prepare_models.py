@@ -8,8 +8,8 @@ model_dir = os.path.dirname(os.path.abspath(__file__))
 def prepare_llm_model():
     if not Path(model_dir+"/llama-3-8b-instruct").exists():
         print("llama Model not downloaded.")
-        cmd = "optimum-cli export openvino --model meta-llama/Meta-Llama-3-8B-Instruct --task text-generation-with-past --weight-format int4 --group-size 128 --ratio 0.8 --sym " + model_dir + "/llama-3-8b-instruct/INT4_compressed_weights"
-              #optimum-cli export openvino -m meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --sym --group-size -1 --ratio 1.0 Meta-Llama-3-8B-Instruct
+        #cmd = "optimum-cli export openvino --model meta-llama/Meta-Llama-3-8B-Instruct --task text-generation-with-past --weight-format int4 --group-size 128 --ratio 0.8 --sym " + model_dir + "/llama-3-8b-instruct/INT4_compressed_weights"
+        cmd = "optimum-cli export openvino --model meta-llama/Meta-Llama-3-8B-Instruct --task text-generation-with-past --weight-format int4 --group-size -1 --ratio 1.0 --sym "  + model_dir + "/llama-3-8b-instruct/INT4_compressed_weights"
         print("llm download command:",cmd)
         os.system(cmd)
     else:
