@@ -64,13 +64,13 @@ def load_chat_model(model_name: str, token: str = None) -> OpenVINOLLM:
         # openvino models are used as is
         is_openvino_model = model_name.split("/")[0] == "OpenVINO"
         if is_openvino_model:
-            chat_model = OVModelForCausalLM.from_pretrained(model_name, export=False, token=token, local_files_only=False)
+            chat_model = OVModelForCausalLM.from_pretrained(model_name, export=False, token=token)
             chat_model.save_pretrained(model_path)
         else:
             log.info(f"Loading and quantizing {model_name} to INT4...")
-            quant_config = OVWeightQuantizationConfig(bits=4, sym=False, ratio=0.8, quant_method="awq", group_size=128, dataset="wikitext2")
-            chat_model = OVModelForCausalLM.from_pretrained(model_name, export=True, quantization_config=quant_config, token=token, trust_remote_code=True, library_name="transformers")                       
             log.info(f"Quantizing {model_name} to INT4... It may take significant amount of time depending on your machine power.")
+            quant_config = OVWeightQuantizationConfig(bits=4, sym=False, ratio=0.8, quant_method="awq", group_size=128, dataset="wikitext2")
+            chat_model = OVModelForCausalLM.from_pretrained(model_name, export=True, quantization_config=quant_config, token=token, trust_remote_code=True, library_name="transformers")                                   
             chat_model.save_pretrained(model_path)
 
     device = "GPU" if "GPU" in get_available_devices() else "CPU"
