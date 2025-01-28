@@ -144,7 +144,8 @@ Open a terminal or you can use the existing one with `run_env` environment activ
 python ai_adventure_experience.py 
 ```
 
-TODO: Add screenshot of UI
+![UI Drawing](https://github.com/user-attachments/assets/4f37f4d1-31c1-4534-82eb-d370fe29873a)
+
 
 ### ➕ Set the theme for your story
 This theme is passed as part of the system message to the LLM, and helps the LLM make more a more educated decision about whether you are describing the scene to a story, or not.
