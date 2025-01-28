@@ -4,7 +4,7 @@ import os
 import threading
 import time
 from pathlib import Path
-from typing import List, Optional, Set
+from typing import List, Optional, Set, Tuple
 
 import fitz
 import gradio as gr
@@ -47,15 +47,20 @@ def get_available_devices() -> Set[str]:
 
 
 def load_chat_model(model_name: str, token: str = None) -> OpenVINOLLM:
-    model_path = MODEL_DIR / model_name
+    model_path = MODEL_DIR / model_name    
+
+    # tokenizers are disabled anyway, this allows to avoid warning
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+    if token is not None:
+        os.environ["HUGGING_FACE_HUB_TOKEN"] = token
 
     ov_config = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1', "CACHE_DIR": ""}
     # load llama model and its tokenizer
     if not model_path.exists():
-        log.info(f"Downloading {model_name}... It may take up to 1h depending on your Internet connection and model size.")
+        log.info(f"Downloading {model_name}... It may take up to 1h depending on your Internet connection and model size.")     
         
-        if token is not None:
-            os.environ["HUGGING_FACE_HUB_TOKEN"] = token
+        chat_tokenizer = AutoTokenizer.from_pretrained(model_name, token=token)
+        chat_tokenizer.save_pretrained(model_path)
 
         # openvino models are used as is
         is_openvino_model = model_name.split("/")[0] == "OpenVINO"
@@ -63,21 +68,16 @@ def load_chat_model(model_name: str, token: str = None) -> OpenVINOLLM:
             chat_model = OVModelForCausalLM.from_pretrained(model_name, export=False, compile=False, token=token)
             chat_model.save_pretrained(model_path)
         else:
-            chat_model = OVModelForCausalLM.from_pretrained(model_name, export=True, compile=False, load_in_8bit=False, token=token)
-
-            quant_config = OVWeightQuantizationConfig(bits=4, sym=False, ratio=0.8)
-            config = OVConfig(quantization_config=quant_config)
-
+            log.info(f"Loading and quantizing {model_name} to INT4...")
             log.info(f"Quantizing {model_name} to INT4... It may take significant amount of time depending on your machine power.")
-            quantizer = OVQuantizer.from_pretrained(chat_model, task="text-generation")
-            quantizer.quantize(save_directory=model_path, weights_only=True, ov_config=config)
-
-        chat_tokenizer = AutoTokenizer.from_pretrained(model_name, token=token)
-        chat_tokenizer.save_pretrained(model_path)
+            quant_config = OVWeightQuantizationConfig(bits=4, sym=False, ratio=0.8, quant_method="awq", group_size=128, dataset="wikitext2")
+            chat_model = OVModelForCausalLM.from_pretrained(model_name, export=True, compile=False, quantization_config=quant_config,
+                                                            token=token, trust_remote_code=True, library_name="transformers")
+            chat_model.save_pretrained(model_path)
 
     device = "GPU" if "GPU" in get_available_devices() else "CPU"
     return OpenVINOLLM(context_window=2048, model_id_or_path=str(model_path), max_new_tokens=512, device_map=device,
-                       model_kwargs={"ov_config": ov_config}, generate_kwargs={"do_sample": True, "temperature": 0.7, "top_k": 50, "top_p": 0.95})
+                       model_kwargs={"ov_config": ov_config, "library_name": "transformers"}, generate_kwargs={"do_sample": True, "temperature": 0.7, "top_k": 50, "top_p": 0.95})
 
 
 def optimize_model_for_npu(model: OVModelForFeatureExtraction):
@@ -144,10 +144,10 @@ def load_chat_models(chat_model_name: str, embedding_model_name: str, reranker_m
     with open(personality_file_path, "rb") as f:
         chatbot_config = yaml.safe_load(f)
 
-    ov_embedding = load_embedding_model(embedding_model_name)
-    log.info(f"Running {embedding_model_name} on {ov_embedding._model.request.get_property('EXECUTION_DEVICES')}")
     ov_llm = load_chat_model(chat_model_name, auth_token)
     log.info(f"Running {chat_model_name} on {','.join(ov_llm._model.request.get_compiled_model().get_property('EXECUTION_DEVICES'))}")
+    ov_embedding = load_embedding_model(embedding_model_name)
+    log.info(f"Running {embedding_model_name} on {ov_embedding._model.request.get_property('EXECUTION_DEVICES')}")   
     ov_reranker = load_reranker_model(reranker_model_name)
     log.info(f"Running {reranker_model_name} on {','.join(ov_reranker._model.request.get_property('EXECUTION_DEVICES'))}")
 
@@ -214,24 +214,32 @@ def generate_initial_greeting() -> str:
     return ov_chat_engine.chat(chatbot_config["greet_the_user_prompt"]).response
 
 
-def chat(history: List[List[str]]) -> List[List[str]]:
+def chat(history: List[List[str]]) -> Tuple[List[List[str]], float]:
     # get token by token and merge to the final response
     history[-1][1] = ""
     with inference_lock:
-        start_time = time.time()
-
         chat_streamer = ov_chat_engine.stream_chat(history[-1][0]).response_gen
+
+        # generate first token independently
+        first_token = next(chat_streamer)
+        history[-1][1] += first_token
+        yield history, 0.0
+
+        # generate next tokens
+        tokens = 1
+        start_time = time.time()
         for partial_text in chat_streamer:
             history[-1][1] += partial_text
+            processing_time = time.time() - start_time
+            tokens += 1
             # "return" partial response
-            yield history
+            yield history, round(tokens / processing_time, 2)
 
         end_time = time.time()
 
-        # 75 words ~= 100 tokens
-        tokens = len(history[-1][1].split(" ")) * 4 / 3
         processing_time = end_time - start_time
         log.info(f"Chat model response time: {processing_time:.2f} seconds ({tokens / processing_time:.2f} tokens/s)")
+        yield history, round(tokens / processing_time, 2)
 
 
 def transcribe(prompt: str, conversation: List[List[str]]) -> List[List[str]]:
@@ -239,10 +247,10 @@ def transcribe(prompt: str, conversation: List[List[str]]) -> List[List[str]]:
     return conversation
 
 
-def extra_action(conversation: List) -> str:
+def extra_action(conversation: List) -> Tuple[str, float]:
     conversation.append([chatbot_config["extra_action_prompt"], None])
-    for partial_summary in chat(conversation):
-        yield partial_summary[-1][1]
+    for partial_summary, performance in chat(conversation):
+        yield partial_summary[-1][1], performance
 
 
 def create_UI(initial_message: str, action_name: str) -> gr.Blocks:
@@ -257,8 +265,10 @@ def create_UI(initial_message: str, action_name: str) -> gr.Blocks:
                     input_text_ui = gr.Textbox(label="Your text input", scale=6)
                     submit_btn = gr.Button("Submit", variant="primary", interactive=False, scale=1)
                 with gr.Row():
-                    clear_btn = gr.Button("Start over", variant="secondary", scale=1)
-                    extra_action_button = gr.Button(action_name, variant="primary", interactive=False)
+                    tps_text_ui = gr.Text("", label="Performance (tokens/s)", type="text", scale=6)
+                    with gr.Column(scale=1):
+                        clear_btn = gr.Button("Start over", variant="secondary")
+                        extra_action_button = gr.Button(action_name, variant="primary", interactive=False)
         summary_ui = gr.Textbox(label=f"Summary (Click '{action_name}' to trigger)", interactive=False)
 
         # events
@@ -279,14 +289,14 @@ def create_UI(initial_message: str, action_name: str) -> gr.Blocks:
             .then(lambda: gr.Button(interactive=False), outputs=clear_btn) \
             .then(transcribe, inputs=[input_text_ui, chatbot_ui], outputs=chatbot_ui) \
             .then(lambda: None, outputs=input_text_ui) \
-            .then(chat, chatbot_ui, chatbot_ui) \
+            .then(chat, inputs=chatbot_ui, outputs=[chatbot_ui, tps_text_ui]) \
             .then(lambda: gr.Button(interactive=True), outputs=clear_btn) \
             .then(lambda: gr.Button(interactive=True), outputs=extra_action_button)
 
         # block button, do the action, unblock button
         extra_action_button.click(lambda: gr.Button(interactive=False), outputs=extra_action_button) \
             .then(lambda: gr.Button(interactive=False), outputs=clear_btn) \
-            .then(extra_action, inputs=chatbot_ui, outputs=summary_ui) \
+            .then(extra_action, inputs=chatbot_ui, outputs=[summary_ui, tps_text_ui]) \
             .then(lambda: gr.Button(interactive=True), outputs=clear_btn) \
             .then(lambda: gr.Button(interactive=True), outputs=extra_action_button)
 
