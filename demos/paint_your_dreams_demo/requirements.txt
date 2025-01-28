@@ -1,7 +1,10 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
+--extra-index-url https://storage.openvinotoolkit.org/simple/wheels/nightly
+--extra-index-url https://storage.openvinotoolkit.org/simple/wheels/nightly
 
-openvino==2024.6.0
-openvino-genai==2024.6.0
+openvino-tokenizers~=2025.0.0.0.dev20250108
+openvino~=2025.0.0.0.dev20250108
+openvino-genai~=2025.0.0.0.dev20250108
 optimum-intel==1.21.0
 optimum==1.23.3
 # onnx>1.16.1 doesn't work on windows
