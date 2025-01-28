@@ -48,10 +48,11 @@ def get_available_devices() -> Set[str]:
 
 def load_chat_model(model_name: str, token: str = None) -> OpenVINOLLM:
     model_path = MODEL_DIR / model_name    
-    
+
+    # tokenizers are disabled anyway, this allows to avoid warning
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
     if token is not None:
         os.environ["HUGGING_FACE_HUB_TOKEN"] = token
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
     ov_config = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1', "CACHE_DIR": ""}
     # load llama model and its tokenizer
