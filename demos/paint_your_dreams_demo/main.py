@@ -69,18 +69,18 @@ def download_models(model_name_t2i: str, model_name_i2i: str, safety_checker_mod
 
 
 async def load_pipeline(model_name: str, device: str, pipeline: str):
+    model_dir = MODEL_DIR / model_name
+    ov_config = {"CACHE_DIR": "cache"}
+
     if pipeline == "text2image":
         if device not in ov_pipelines_t2i:
-            model_dir = MODEL_DIR / model_name
-            ov_config = {"CACHE_DIR": "cache"}
             ov_pipeline = genai.Text2ImagePipeline(model_dir, device, **ov_config)
             ov_pipelines_t2i[device] = ov_pipeline
 
         return ov_pipelines_t2i[device]
+
     if pipeline == "image2image":
         if device not in ov_pipelines_i2i:
-            model_dir = MODEL_DIR / model_name
-            ov_config = {"CACHE_DIR": "cache"}
             ov_pipeline = genai.Image2ImagePipeline(model_dir, device, **ov_config)
             ov_pipelines_i2i[device] = ov_pipeline
 
@@ -95,8 +95,6 @@ async def stop():
 async def generate_images(input_image: np.ndarray, prompt: str, seed: int, size: int, guidance_scale: float, num_inference_steps: int, randomize_seed: bool, device: str, endless_generation: bool) -> tuple[np.ndarray, float]:
     global stop_generating
     stop_generating = not endless_generation
-
-    
 
     while True:
         if randomize_seed:
@@ -144,7 +142,6 @@ def build_ui():
         "Make me a super hero, 8k",
         "Make me a beautiful cyborg with golden hair, 8k",
         "Make me an astronaut, cold color palette, muted colors, 8k"
-        
     ]
 
     with gr.Blocks() as demo:
