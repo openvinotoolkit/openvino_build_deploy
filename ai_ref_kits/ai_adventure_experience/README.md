@@ -128,7 +128,6 @@ pip install -r requirements.txt
 ``` 
 
 ## Running the Application
-TODO: Put diagram picture here
 
 To interact with the animated GIF outputs, host a simple web server on your system as the final output. To do so, please install Node.js via [its Download page](https://nodejs.org/en/download/package-manager) and [http-server](https://www.npmjs.com/package/http-server).
 
