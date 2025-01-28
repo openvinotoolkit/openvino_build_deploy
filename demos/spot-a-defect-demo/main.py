@@ -12,8 +12,9 @@ from anomalib.data import MVTec, NumpyImageBatch
 from anomalib.deploy import ExportType, OpenVINOInferencer
 from anomalib.engine import Engine
 from anomalib.models import get_model
-from ultralytics import YOLOWorld
+from ultralytics import YOLOWorld, YOLO
 from ultralytics.engine.results import Results
+from ultralytics.models.yolo.detect import DetectionPredictor
 
 SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "utils")
 sys.path.append(os.path.dirname(SCRIPT_DIR))
@@ -29,12 +30,21 @@ NULL_CLASSES = ["person", "fabric"]
 
 
 def load_yolo_model(model_name: str) -> YOLOWorld:
-    model = YOLOWorld(MODEL_DIR / f"{model_name}.pt")
+    ov_model_path = MODEL_DIR / f"{model_name}_openvino_model"
+
+    if not ov_model_path.exists():
+        model = YOLO(MODEL_DIR / f"{model_name}.pt")
+        model.export(format="openvino", dynamic=False, half=True)
+
+    model = YOLOWorld(model_name)
     # set classes to detect
     model.set_classes(MAIN_CLASSES + NULL_CLASSES)
-    # todo convert model to OV
-    # path = model.export(format="openvino", dynamic=False, half=True)
-    # model =  YOLO(path, task="detect")
+
+    config = {'batch': 1, 'conf': 0.01, 'imgsz': 640, 'mode': 'predict', 'model': ov_model_path, 'save': False}
+    predictor = DetectionPredictor(overrides=config)
+    predictor.setup_model(model=ov_model_path, verbose=False)
+    model.predictor = predictor
+
     return model
 
 
