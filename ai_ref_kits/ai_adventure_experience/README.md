@@ -20,7 +20,7 @@ This kit uses the following technology stack:
 
 Check out our [AI Reference Kits repository](/) for other kits.
 
-TODO: Put GIF here.
+![ai_adventure_experience_desert](https://github.com/user-attachments/assets/2144ae33-9e41-4e48-9992-ddec17ef5579)
 
 Contributors: Ryan Metcalfe, Garth Long, Arisha Kumar, Ria Cheruvu, Paula Ramos, Dmitriy Pastushenkov, Zhuo Wu, and Raymond Lo.
 
