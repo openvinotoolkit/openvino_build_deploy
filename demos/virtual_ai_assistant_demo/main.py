@@ -4,7 +4,7 @@ import os
 import threading
 import time
 from pathlib import Path
-from typing import List, Optional, Set
+from typing import List, Optional, Set, Tuple
 
 import fitz
 import gradio as gr
@@ -214,24 +214,32 @@ def generate_initial_greeting() -> str:
     return ov_chat_engine.chat(chatbot_config["greet_the_user_prompt"]).response
 
 
-def chat(history: List[List[str]]) -> List[List[str]]:
+def chat(history: List[List[str]]) -> Tuple[List[List[str]], float]:
     # get token by token and merge to the final response
     history[-1][1] = ""
     with inference_lock:
-        start_time = time.time()
-
         chat_streamer = ov_chat_engine.stream_chat(history[-1][0]).response_gen
+
+        # generate first token independently
+        first_token = next(chat_streamer)
+        history[-1][1] += first_token
+        yield history, 0.0
+
+        # generate next tokens
+        tokens = 1
+        start_time = time.time()
         for partial_text in chat_streamer:
             history[-1][1] += partial_text
+            processing_time = time.time() - start_time
+            tokens += 1
             # "return" partial response
-            yield history
+            yield history, round(tokens / processing_time, 2)
 
         end_time = time.time()
 
-        # 75 words ~= 100 tokens
-        tokens = len(history[-1][1].split(" ")) * 4 / 3
         processing_time = end_time - start_time
         log.info(f"Chat model response time: {processing_time:.2f} seconds ({tokens / processing_time:.2f} tokens/s)")
+        yield history, round(tokens / processing_time, 2)
 
 
 def transcribe(prompt: str, conversation: List[List[str]]) -> List[List[str]]:
@@ -239,10 +247,10 @@ def transcribe(prompt: str, conversation: List[List[str]]) -> List[List[str]]:
     return conversation
 
 
-def extra_action(conversation: List) -> str:
+def extra_action(conversation: List) -> Tuple[str, float]:
     conversation.append([chatbot_config["extra_action_prompt"], None])
-    for partial_summary in chat(conversation):
-        yield partial_summary[-1][1]
+    for partial_summary, performance in chat(conversation):
+        yield partial_summary[-1][1], performance
 
 
 def create_UI(initial_message: str, action_name: str) -> gr.Blocks:
@@ -257,8 +265,10 @@ def create_UI(initial_message: str, action_name: str) -> gr.Blocks:
                     input_text_ui = gr.Textbox(label="Your text input", scale=6)
                     submit_btn = gr.Button("Submit", variant="primary", interactive=False, scale=1)
                 with gr.Row():
-                    clear_btn = gr.Button("Start over", variant="secondary", scale=1)
-                    extra_action_button = gr.Button(action_name, variant="primary", interactive=False)
+                    tps_text_ui = gr.Text("", label="Performance (tokens/s)", type="text", scale=6)
+                    with gr.Column(scale=1):
+                        clear_btn = gr.Button("Start over", variant="secondary")
+                        extra_action_button = gr.Button(action_name, variant="primary", interactive=False)
         summary_ui = gr.Textbox(label=f"Summary (Click '{action_name}' to trigger)", interactive=False)
 
         # events
@@ -279,14 +289,14 @@ def create_UI(initial_message: str, action_name: str) -> gr.Blocks:
             .then(lambda: gr.Button(interactive=False), outputs=clear_btn) \
             .then(transcribe, inputs=[input_text_ui, chatbot_ui], outputs=chatbot_ui) \
             .then(lambda: None, outputs=input_text_ui) \
-            .then(chat, chatbot_ui, chatbot_ui) \
+            .then(chat, inputs=chatbot_ui, outputs=[chatbot_ui, tps_text_ui]) \
             .then(lambda: gr.Button(interactive=True), outputs=clear_btn) \
             .then(lambda: gr.Button(interactive=True), outputs=extra_action_button)
 
         # block button, do the action, unblock button
         extra_action_button.click(lambda: gr.Button(interactive=False), outputs=extra_action_button) \
             .then(lambda: gr.Button(interactive=False), outputs=clear_btn) \
-            .then(extra_action, inputs=chatbot_ui, outputs=summary_ui) \
+            .then(extra_action, inputs=chatbot_ui, outputs=[summary_ui, tps_text_ui]) \
             .then(lambda: gr.Button(interactive=True), outputs=clear_btn) \
             .then(lambda: gr.Button(interactive=True), outputs=extra_action_button)
 
