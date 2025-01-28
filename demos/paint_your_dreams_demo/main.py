@@ -134,6 +134,7 @@ async def generate_images(input_image: np.ndarray, prompt: str, seed: int, size:
 def build_ui():
     examples_t2i = [
         "A sail boat on a grass field with mountains in the morning and sunny day",
+        "A beautiful sunset with a sail boat on the ocean, photograph, highly detailed, golden hour, Nikon D850",
         "Portrait photo of a girl, photograph, highly detailed face, depth of field, moody light, golden hour,"
         "Style by Dan Winters, Russell James, Steve McCurry, centered, extremely detailed, Nikon D850, award winning photography"
     ]
@@ -147,7 +148,6 @@ def build_ui():
     with gr.Blocks() as demo:
         with gr.Group():
             with gr.Row():
-                input_image = gr.Image(label="Input Image, leave blank for Text2Text Generation")
                 prompt_text = gr.Text(
                     label="Prompt",
                     placeholder="Enter your prompt here",
@@ -155,7 +155,9 @@ def build_ui():
                 )
             with gr.Row():
                 with gr.Column():
-                    result_img = gr.Image(label="Generated image", elem_id="output_image", format="png")
+                    with gr.Row():
+                        input_image = gr.Image(label="Input Image, leave blank for Text2Text Generation")
+                        result_img = gr.Image(label="Generated image", elem_id="output_image", format="png")
                     with gr.Row():
                         result_time_label = gr.Text("", label="Inference Time", type="text")
                     with gr.Row():
@@ -200,6 +202,7 @@ def build_ui():
                 )
 
         gr.Examples(
+            label="Examples for Text2Image",
             examples=examples_t2i,
             inputs=prompt_text,
             outputs=result_img,
@@ -207,6 +210,7 @@ def build_ui():
         )
         
         gr.Examples(
+            label="Examples for Image2Image",
             examples=examples_i2i,
             inputs=prompt_text,
             outputs=result_img,
