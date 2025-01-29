@@ -53,10 +53,11 @@ def train_anomalib_model(model_name: str):
     datamodule = MVTec(DATA_DIR / "mvtec", category="hazelnut")
     model = get_model(model_name)
 
-    engine = Engine(max_epochs=1, accelerator="cpu")
+    # validation and testing are not needed for this demo
+    engine = Engine(max_epochs=10, limit_val_batches=0, limit_test_batches=0, accelerator="cpu")
     engine.fit(datamodule=datamodule, model=model)
     # export model to openvino
-    engine.export(model, ExportType.OPENVINO, MODEL_DIR / model_name)
+    engine.export(model, ExportType.OPENVINO, MODEL_DIR / model_name, input_size=(256, 256))
 
 
 def load_anomalib_model(model_name: str) -> OpenVINOInferencer:
@@ -87,8 +88,16 @@ def get_patches(frame: np.ndarray, results: pd.DataFrame) -> np.ndarray:
 
     for result in results.itertuples():
         x1, y1, x2, y2 = result.x1, result.y1, result.x2, result.y2
+        box_w, box_h = x2 - x1, y2 - y1
+
+        # expand the bounding box by 15% to fit training data
+        x1 = max(0, x1 - 0.15 * box_w)
+        x2 = min(frame.shape[1], x2 + 0.15 * box_w)
+        y1 = max(0, y1 - 0.15 * box_h)
+        y2 = min(frame.shape[0], y2 + 0.15 * box_h)
+
         patch = frame[int(y1):int(y2), int(x1):int(x2)]
-        patch = cv2.resize(patch, (128, 128))
+        patch = cv2.resize(patch, (256, 256))
         patches.append(patch)
 
     return np.array(patches)
@@ -169,7 +178,7 @@ if __name__ == '__main__':
     parser.add_argument("--detection_model", type=str, default="yolov8s-worldv2", help="Model for object detection",
                         choices=["yolov8s-world", "yolov8m-world", "yolov8l-world", "yolov8x-world",
                                  "yolov8s-worldv2", "yolov8m-worldv2", "yolov8l-worldv2", "yolov8x-worldv2"])
-    parser.add_argument("--anomaly_model", type=str, default="Padim", help="Model for anomaly detection")
+    parser.add_argument("--anomaly_model", type=str, default="Stfpm", help="Model for anomaly detection")
     parser.add_argument("--flip", type=bool, default=True, help="Mirror input video")
 
     args = parser.parse_args()
