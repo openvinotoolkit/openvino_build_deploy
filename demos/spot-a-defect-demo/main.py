@@ -80,6 +80,22 @@ def load_anomalib_model(model_name: str) -> OpenVINOInferencer:
     return OpenVINOInferencer(model_path)
 
 
+def add_box_margin(row, frame_size, margin_ratio=0.15):
+    w, h = frame_size
+    width = row["x2"] - row["x1"]
+    height = row["y2"] - row["y1"]
+
+    border_x = width * margin_ratio
+    border_y = height * margin_ratio
+
+    new_x1 = max(0, row["x1"] - border_x)
+    new_y1 = max(0, row["y1"] - border_y)
+    new_x2 = min(w, row["x2"] + border_x)
+    new_y2 = min(h, row["y2"] + border_y)
+
+    return pd.Series([new_x1, new_y1, new_x2, new_y2], index=["x1", "y1", "x2", "y2"]).astype(int)
+
+
 def filter_and_convert_results(det_results: Results) -> pd.DataFrame:
     df_results = det_results.to_df(decimals=0)
     df_results[["x1", "y1", "x2", "y2"]] = np.nan
@@ -100,14 +116,6 @@ def get_patches(frame: np.ndarray, results: pd.DataFrame) -> np.ndarray:
 
     for result in results.itertuples():
         x1, y1, x2, y2 = result.x1, result.y1, result.x2, result.y2
-        box_w, box_h = x2 - x1, y2 - y1
-
-        # expand the bounding box by 15% to fit training data
-        x1 = max(0, x1 - 0.15 * box_w)
-        x2 = min(frame.shape[1], x2 + 0.15 * box_w)
-        y1 = max(0, y1 - 0.15 * box_h)
-        y2 = min(frame.shape[0], y2 + 0.15 * box_h)
-
         patch = frame[int(y1):int(y2), int(x1):int(x2)]
         patch = cv2.resize(patch, (256, 256))
         patches.append(patch)
@@ -119,10 +127,14 @@ def draw_results(frame: np.ndarray, det_results: pd.DataFrame, anomaly_results: 
     for box, anomaly in zip(det_results[["x1", "y1", "x2", "y2"]].to_numpy(), anomaly_results):
         x1, y1, x2, y2 = box
         anomaly_score = float(anomaly.pred_score)
-        if anomaly_score > 0.5:
-            color = (0, 0, 255)
-        else:
-            color = (0, 255, 0)
+
+        anomaly_map = cv2.normalize(anomaly.anomaly_map, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+        colormap = cv2.applyColorMap(anomaly_map.astype(np.uint8), cv2.COLORMAP_JET)
+        colormap = cv2.resize(colormap, (x2 - x1, y2 - y1))
+        # draw anomaly map
+        frame[y1:y2, x1:x2] = cv2.addWeighted(frame[y1:y2, x1:x2], 0.75, colormap, 0.25, 0)
+
+        color = (0, 0, 255) if anomaly_score > 0.5 else (0, 255, 0)
         # draw a red rectangle around the object
         cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
         # draw anomaly score
@@ -156,10 +168,16 @@ def run(video_path: str, det_model_name: str, anomaly_model_name: str, flip: boo
         f_height, f_width = frame.shape[:2]
 
         start_time = time.time()
+
         det_results = det_model.predict(frame, conf=0.01)[0]
+
         det_results = filter_and_convert_results(det_results)
+        # add border to the bounding box to fit the training data
+        det_results = det_results.apply(lambda x: add_box_margin(x, (f_width, f_height)), axis=1)
+
         patches = get_patches(frame, det_results)
         anomalies = anomaly_model.predict(patches) if len(patches) > 0 else NumpyImageBatch(frame)
+
         end_time = time.time()
 
         draw_results(frame, det_results, anomalies)
