@@ -178,17 +178,16 @@ To interact with the 3D hoverable animation created with depth maps, start an HT
     depth_anything_device = 'GPU'
   ```
 * Based on the resolution of your display, you may want to tweak the default resolution of the illustrated image, as well as caption font size.
-  You can adjust the resolution of the illustrated image on this line:
+  To adjust the resolution of the illustrated image, look for and modify this line:
   ```
   self.image_label.setFixedSize(1216, 684)
   ```
   It's recommended to choose a 16:9 ratio resolution. You can find a convenient list [here](https://pacoup.com/2011/06/12/list-of-true-169-resolutions/).
   
-  The caption font size can be adjusted on this lineL
+  The caption font size can be adjusted by modifying this line:
   ```
   fantasy_font = QFont("Papyrus", 18, QFont.Bold)
   ```
-<p align="right"><a href="#top">Back to top ⬆️</a></p>
 
 # Additional Resources
 - Learn more about [OpenVINO](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html)
