@@ -12,6 +12,7 @@ from anomalib.data import MVTec, NumpyImageBatch
 from anomalib.deploy import ExportType, OpenVINOInferencer
 from anomalib.engine import Engine
 from anomalib.models import get_model
+from torchvision.transforms import v2
 from ultralytics import YOLOWorld, YOLO
 from ultralytics.engine.results import Results
 from ultralytics.models.yolo.detect import DetectionPredictor
@@ -43,18 +44,29 @@ def load_yolo_model(model_name: str) -> YOLOWorld:
     config = {'batch': 1, 'conf': 0.01, 'imgsz': 640, 'mode': 'predict', 'model': ov_model_path, 'save': False}
     predictor = DetectionPredictor(overrides=config)
     predictor.setup_model(model=ov_model_path, verbose=False)
-    model.predictor = predictor
+    # todo: set predictor to model
+    # model.predictor = predictor
 
     return model
 
 
 def train_anomalib_model(model_name: str):
+    # augmentation are needed for mitigating domain shift
+    augmentations = v2.Compose([
+        v2.RandomHorizontalFlip(p=0.5),  # Randomly flip images horizontally with 50% probability
+        v2.RandomVerticalFlip(p=0.2),  # Randomly flip images vertically with 20% probability
+        v2.RandomRotation(degrees=30),  # Randomly rotate images within a range of ±30 degrees
+        v2.RandomResizedCrop(size=(224, 224), scale=(0.8, 1.0)),  # Randomly crop and resize images
+        v2.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4, hue=0.2),  # Randomly adjust colors
+        v2.RandomGrayscale(p=0.1),  # Convert images to grayscale with 10% probability
+    ])
+
     # define the class to train on
-    datamodule = MVTec(DATA_DIR / "mvtec", category="hazelnut")
+    datamodule = MVTec(DATA_DIR / "mvtec", category="hazelnut", augmentations=augmentations)
     model = get_model(model_name)
 
     # validation and testing are not needed for this demo
-    engine = Engine(max_epochs=10, limit_val_batches=0, limit_test_batches=0, accelerator="cpu")
+    engine = Engine(max_epochs=10, limit_test_batches=0, accelerator="cpu")
     engine.fit(datamodule=datamodule, model=model)
     # export model to openvino
     engine.export(model, ExportType.OPENVINO, MODEL_DIR / model_name, input_size=(256, 256))
