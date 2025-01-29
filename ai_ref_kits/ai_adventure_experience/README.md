@@ -177,6 +177,8 @@ To interact with the 3D hoverable animation created with depth maps, start an HT
     super_res_device = 'GPU'
     depth_anything_device = 'GPU'
   ```
+  If you're running on an Intel Core Ultra Series 2 laptop, and you want to set ```llm_device = 'NPU'```, be sure to have latest NPU driver installed, from [here](https://www.intel.com/content/www/us/en/download/794734/intel-npu-driver-windows.html)
+  
 * Based on the resolution of your display, you may want to tweak the default resolution of the illustrated image, as well as caption font size.
   To adjust the resolution of the illustrated image, look for and modify this line:
   ```
