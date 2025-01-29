@@ -47,10 +47,10 @@ Now, let's dive into the steps starting with installing Python. This project req
 
 Install libraries and tools:
 
+If you're using Ubuntu, install required dependencies like this:
 ```shell
 sudo apt install git git-lfs gcc python3-venv python3-dev portaudio19-dev
 ```
-
 _NOTE: If you are using Windows, you will probably need to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe) also._
 
 ## Setting Up Your Environment
@@ -68,7 +68,7 @@ The above will clone the repository into a directory named "openvino_build_deplo
 cd openvino_build_deploy/ai_ref_kits/ai_adventure_experience
 ```
 
-Next, you’ll download and optimize the required models. This will involve the creation of a temporary virtual environment and the running of a download script. Your requirements.txt file will depend on the Python version you're using (3.11 or 3.12).
+Next, you’ll download and optimize the required models. This will involve the creation of a temporary virtual environment and the running of a download script. 
 
 - Whisper: Speech recognition
 - Llama3-8b-instruct: Intelligent LLM helper
