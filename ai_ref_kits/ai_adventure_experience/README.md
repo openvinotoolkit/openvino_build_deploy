@@ -48,7 +48,7 @@ Now, let's dive into the steps starting with installing Python. This project req
 Install libraries and tools:
 
 ```shell
-sudo apt install git git-lfs gcc python3-venv python3-dev
+sudo apt install git git-lfs gcc python3-venv python3-dev portaudio19-dev
 ```
 
 _NOTE: If you are using Windows, you will probably need to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe) also._
