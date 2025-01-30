@@ -5,15 +5,22 @@
     <style>
       body { background-color: black;
       }
-      .center { border: 1px solid; margin: auto; left: 15%; padding: 10px; position: absolute; }
+      .center {
+        border: 1px solid;
+        margin: auto;
+        left: 5%;
+        top: 4%;
+        padding: 1px;
+        position: absolute;
+      }
     </style>
   </head>
   <body>
     <div id="test_app" style="width: 500px; height: 500px" class="center"></div>
     
     <script>
-      const IMG_WIDTH = 1536;
-      const IMG_HEIGHT = 1536;
+      const IMG_WIDTH = 2304;
+      const IMG_HEIGHT = 1296;
       const SCALE_FACTOR = 25;
       
       const app = new PIXI.Application({

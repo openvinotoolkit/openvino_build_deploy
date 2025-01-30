@@ -1,41 +1,14 @@
---extra-index-url https://download.pytorch.org/whl/cpu
+#openvino GenAI (which also installs openvino packages)
+openvino_genai==2024.6.0
 
-# openvino and its dependencies
-openvino==2024.4.0
-openvino-telemetry==2024.1.0
+# for VAD
+sherpa-onnx==1.10.41
+sounddevice==0.5.1
 
-nncf==2.13.0
-optimum==1.23.1
-optimum-intel==1.20.0
-openvino-genai==2024.4.0
-openai-whisper==20240930
+# for the UI
+PySide6==6.8.1
 
-# deep learning frameworks
-tensorflow==2.17.0
-
-# onnx>1.16.1 doesn't work on windows
-onnx==1.16.1; platform_system == "Windows"
-onnx==1.17.0; platform_system != "Windows"
-torch==2.4.1
-torchvision==0.19.1
-torchaudio==2.4.1
-transformers==4.45.2
-tf_keras==2.17.0
-
-# others
-numpy<2.1.0
+#others
 opencv-python==4.10.0.84
-Pillow==10.4.0
-
-scipy==1.14.1
-
-# The packages below are not directly required. They are dependencies of 
-# other dependencies that are pinned to a specific version to avoid
-# compatibility issues or vulnerabilities
-scikit-image==0.24.0
-setuptools==75.1.0
-
-gradio==5.12.0
-SpeechRecognition==3.10.4
-pyaudio==0.2.14
-diffusers==0.30.3
+pillow==11.1.0
+torchvision==0.20.1
