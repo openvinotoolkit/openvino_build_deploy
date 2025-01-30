@@ -1,0 +1,15 @@
+#openvino GenAI (which also installs openvino packages)
+openvino_genai==2024.6.0
+
+# for VAD
+sherpa-onnx
+sounddevice
+
+# for the UI
+PySide6==6.8.1
+
+#others
+opencv-python==4.10.0.84
+pillow
+torchvision
+
