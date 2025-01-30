@@ -12,7 +12,7 @@ h = 512
 w = 512 
 
 
-def superres_load(model_path, device):
+def superres_load(model_path, device, h_custom=None, w_custom=None):
     core = ov.Core()
     model = core.read_model(model=model_path)
     original_image_key, bicubic_image_key = model.inputs
@@ -20,6 +20,12 @@ def superres_load(model_path, device):
     input_height, inputwidth = list(original_image_key.shape)[2:]
     target_height, target_width = list(bicubic_image_key.shape)[2:]
     upsample_factor = int(target_height / input_height)
+    
+    if h_custom is not None:
+        h = h_custom
+    
+    if w_custom is not None:
+        w = w_custom
 
 
     shapes = {}
