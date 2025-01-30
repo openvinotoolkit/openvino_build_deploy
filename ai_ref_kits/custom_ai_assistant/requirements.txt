@@ -5,10 +5,8 @@ optimum-intel==1.21.0
 optimum==1.23.3
 nncf==2.14.1
 
-# onnx>1.16.1 doesn't work on windows
-onnx==1.16.1; platform_system == "Windows"
-onnx==1.17.0; platform_system != "Windows"
-onnxruntime==1.17.3
+onnx==1.17.0
+onnxruntime==1.20.1
 torch==2.5.1
 
 transformers==4.46.3
