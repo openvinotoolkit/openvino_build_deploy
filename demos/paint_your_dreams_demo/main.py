@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
+import cv2
 import gradio as gr
 import numpy as np
 import openvino as ov
@@ -87,7 +88,8 @@ async def stop():
     stop_generating = True
 
 
-async def generate_images(input_image: np.ndarray, prompt: str, seed: int, size: int, guidance_scale: float, num_inference_steps: int, randomize_seed: bool, device: str, endless_generation: bool) -> tuple[np.ndarray, float]:
+async def generate_images(input_image: np.ndarray, prompt: str, seed: int, size: int, guidance_scale: float, num_inference_steps: int,
+                          strength: float, randomize_seed: bool, device: str, endless_generation: bool) -> tuple[np.ndarray, float]:
     global stop_generating
     stop_generating = not endless_generation
 
@@ -99,12 +101,14 @@ async def generate_images(input_image: np.ndarray, prompt: str, seed: int, size:
         if input_image is None:
             ov_pipeline = await load_pipeline(hf_model_name, device, "text2image")
             result = ov_pipeline.generate(prompt=prompt, num_inference_steps=num_inference_steps, width=size, height=size,
-                             guidance_scale=guidance_scale, generator=genai.CppStdGenerator(seed)).data[0]
+                             guidance_scale=guidance_scale, rng_seed=seed).data[0]
         else:
             ov_pipeline = await load_pipeline(hf_model_name, device, "image2image")
-            height, width, channels = input_image.shape
-            result = ov_pipeline.generate(prompt=prompt, image=ov.Tensor(input_image.reshape(1, height, width, 3).astype(np.uint8)), num_inference_steps=num_inference_steps, width=size, height=size,
-                             guidance_scale=guidance_scale, generator=genai.CppStdGenerator(seed)).data[0]
+            # ensure image is square
+            input_image = utils.crop_center(input_image)
+            input_image = cv2.resize(input_image, (size, size))
+            result = ov_pipeline.generate(prompt=prompt, image=ov.Tensor(input_image[None]), num_inference_steps=num_inference_steps, width=size, height=size,
+                             guidance_scale=guidance_scale, strength=strength, rng_seed=seed).data[0]
         end_time = time.time()
 
         label = safety_checker(Image.fromarray(result), top_k=1)
@@ -151,10 +155,10 @@ def build_ui():
             with gr.Row():
                 with gr.Column():
                     with gr.Row():
-                        input_image = gr.Image(label="Input Image, leave blank for Text2Text Generation")
+                        input_image = gr.Image(label="Input image (leave blank for text2image generation)")
                         result_img = gr.Image(label="Generated image", elem_id="output_image", format="png")
                     with gr.Row():
-                        result_time_label = gr.Text("", label="Inference Time", type="text")
+                        result_time_label = gr.Text("", label="Inference time", type="text")
                     with gr.Row():
                         start_button = gr.Button("Start generation")
                         stop_button = gr.Button("Stop generation")
@@ -187,14 +191,21 @@ def build_ui():
                         step=1,
                         value=5,
                     )
-
-                size_slider = gr.Slider(
-                    label="Image size",
-                    minimum=256,
-                    maximum=1024,
-                    step=64,
-                    value=512
-                )
+                with gr.Row():
+                    strength_slider = gr.Slider(
+                        label="Input image influence strength",
+                        minimum=0.0,
+                        maximum=1.0,
+                        step=0.01,
+                        value=0.5
+                    )
+                    size_slider = gr.Slider(
+                        label="Image size",
+                        minimum=256,
+                        maximum=1024,
+                        step=64,
+                        value=512
+                    )
 
         gr.Examples(
             label="Examples for Text2Image",
@@ -215,7 +226,8 @@ def build_ui():
         # clicking run
         gr.on(triggers=[prompt_text.submit, start_button.click],
               fn=generate_images,
-              inputs=[input_image, prompt_text, seed_slider, size_slider, guidance_scale_slider, num_inference_steps_slider, randomize_seed_checkbox, device_dropdown, endless_checkbox],
+              inputs=[input_image, prompt_text, seed_slider, size_slider, guidance_scale_slider, num_inference_steps_slider,
+                      strength_slider, randomize_seed_checkbox, device_dropdown, endless_checkbox],
               outputs=[result_img, result_time_label]
               )
         # clicking stop
