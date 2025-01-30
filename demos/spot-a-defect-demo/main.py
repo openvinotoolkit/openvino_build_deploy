@@ -11,7 +11,9 @@ import pandas as pd
 from anomalib.data import MVTec, NumpyImageBatch
 from anomalib.deploy import ExportType, OpenVINOInferencer
 from anomalib.engine import Engine
+from anomalib.metrics import F1Max, Evaluator
 from anomalib.models import get_model
+from lightning.pytorch.callbacks import EarlyStopping
 from torchvision.transforms import v2
 from ultralytics import YOLOWorld, YOLO
 from ultralytics.engine.results import Results
@@ -27,7 +29,7 @@ DATA_DIR = Path("data")
 
 MAIN_CLASSES = ["hazelnut", "nut"]
 # the following are "null" classes to improve detection of the main classes
-NULL_CLASSES = ["person", "fabric"]
+NULL_CLASSES = ["person", "hand", "finger", "fabric"]
 
 
 def load_yolo_model(model_name: str) -> YOLOWorld:
@@ -61,12 +63,17 @@ def train_anomalib_model(model_name: str):
         v2.RandomGrayscale(p=0.1),  # Convert images to grayscale with 10% probability
     ])
 
+    val_metrics = [F1Max(fields=["pred_score", "gt_label"])]
+    evaluator = Evaluator(val_metrics=val_metrics, test_metrics=val_metrics)
+    early_stopping = EarlyStopping(monitor="F1Max", patience=3, mode="max")
+
     # define the class to train on
     datamodule = MVTec(DATA_DIR / "mvtec", category="hazelnut", augmentations=augmentations)
     model = get_model(model_name)
+    model.evaluator = evaluator
 
     # validation and testing are not needed for this demo
-    engine = Engine(max_epochs=10, limit_test_batches=0, accelerator="cpu")
+    engine = Engine(max_epochs=10, limit_test_batches=0, callbacks=[early_stopping], accelerator="cpu")
     engine.fit(datamodule=datamodule, model=model)
     # export model to openvino
     engine.export(model, ExportType.OPENVINO, MODEL_DIR / model_name, input_size=(256, 256))
