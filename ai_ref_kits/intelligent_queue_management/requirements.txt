@@ -1,16 +1,14 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 
 openvino-dev==2024.6
-nncf==2.14.0
+nncf==2.14.1
 ultralytics==8.3.59
 numpy==1.26.4
 pillow==10.3.0
 opencv-python==4.10.0.82
-# onnx>1.16.1 doesn't work on windows
-onnx==1.16.1; platform_system == "Windows"
-onnx==1.17.0; platform_system != "Windows"
-torch==2.5.1
-torchvision==0.20.1
+onnx==1.17.0
+torch==2.6.0
+torchvision==0.21.0
 supervision==0.11.0
 jupyterlab==4.2.5
 tqdm==4.66.3
