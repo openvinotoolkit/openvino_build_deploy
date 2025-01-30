@@ -65,7 +65,7 @@ git clone https://github.com/openvinotoolkit/openvino_build_deploy.git
 The above will clone the repository into a directory named "openvino_build_deploy" in the current directory. Then, navigate into the directory using the following command:
 
 ```shell
-cd openvino_build_deploy/ai_ref_kits/ai_adventure_experience
+cd openvino_build_deploy/ai_ref_kits/multimodal_ai_visual_generator
 ```
 
 Next, you’ll download and optimize the required models. This will involve the creation of a temporary virtual environment and the running of a download script. 
