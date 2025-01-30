@@ -31,8 +31,7 @@ ov_pipelines_t2i = {}
 ov_pipelines_i2i = {}
 
 stop_generating: bool = True
-hf_model_name_t2i: Optional[str] = None
-hf_model_name_i2i: Optional[str] = None
+hf_model_name: Optional[str] = None
 
 
 def get_available_devices() -> list[str]:
@@ -41,21 +40,17 @@ def get_available_devices() -> list[str]:
     return list({device.split(".")[0] for device in core.available_devices if device != "NPU"})
 
 
-def download_models(model_name_t2i: str, model_name_i2i: str, safety_checker_model: str) -> None:
+def download_models(model_name, safety_checker_model: str) -> None:
     global safety_checker
 
-    is_openvino_model = model_name_t2i.split("/")[0] == "OpenVINO"
+    is_openvino_model = model_name.split("/")[0] == "OpenVINO"
 
-    output_dir_t2i = MODEL_DIR / model_name_t2i
-    if not output_dir_t2i.exists():
+    output_dir = MODEL_DIR / model_name
+    if not output_dir.exists():
         if is_openvino_model:
-            snapshot_download(model_name_t2i, local_dir=output_dir_t2i, resume_download=True)
+            snapshot_download(model_name, local_dir=output_dir, resume_download=True)
         else:
-            raise ValueError(f"Model {model_name_t2i} is not from OpenVINO Hub and not supported")
-        
-    output_dir_t2i = MODEL_DIR / model_name_i2i
-    if not output_dir_t2i.exists():
-        os.system("optimum-cli export openvino --model " + str (model_name_i2i) + " --task stable-diffusion --weight-format fp16 " + str(output_dir_t2i))
+            os.system(f"optimum-cli export openvino --model {model_name} --task stable-diffusion --weight-format fp16 {output_dir}")
 
     safety_checker_dir = MODEL_DIR / safety_checker_model
     if not safety_checker_dir.exists():
@@ -102,11 +97,11 @@ async def generate_images(input_image: np.ndarray, prompt: str, seed: int, size:
 
         start_time = time.time()
         if input_image is None:
-            ov_pipeline = await load_pipeline(hf_model_name_t2i, device, "text2image")
+            ov_pipeline = await load_pipeline(hf_model_name, device, "text2image")
             result = ov_pipeline.generate(prompt=prompt, num_inference_steps=num_inference_steps, width=size, height=size,
                              guidance_scale=guidance_scale, generator=genai.CppStdGenerator(seed)).data[0]
         else:
-            ov_pipeline = await load_pipeline(hf_model_name_i2i, device, "image2image")
+            ov_pipeline = await load_pipeline(hf_model_name, device, "image2image")
             height, width, channels = input_image.shape
             result = ov_pipeline.generate(prompt=prompt, image=ov.Tensor(input_image.reshape(1, height, width, 3).astype(np.uint8)), num_inference_steps=num_inference_steps, width=size, height=size,
                              guidance_scale=guidance_scale, generator=genai.CppStdGenerator(seed)).data[0]
@@ -230,14 +225,12 @@ def build_ui():
     return demo
 
 
-def run_endless_lcm(model_name_t2i: str, model_name_i2i: str, safety_checker_model: str, local_network: bool = False, public_interface: bool = False):
-    global hf_model_name_t2i
-    global hf_model_name_i2i
-    hf_model_name_t2i = model_name_t2i
-    hf_model_name_i2i = model_name_i2i
+def run_endless_lcm(model_name: str, safety_checker_model: str, local_network: bool = False, public_interface: bool = False):
+    global hf_model_name
+    hf_model_name = model_name
     server_name = "0.0.0.0" if local_network else None
 
-    download_models(model_name_t2i, model_name_i2i, safety_checker_model)
+    download_models(model_name, safety_checker_model)
 
     demo = build_ui()
     log.info("Demo is ready!")
@@ -249,16 +242,13 @@ if __name__ == '__main__':
     log.getLogger().setLevel(log.INFO)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name_t2i", type=str, default="OpenVINO/LCM_Dreamshaper_v7-fp16-ov",
-                        choices=["OpenVINO/LCM_Dreamshaper_v7-int8-ov", "OpenVINO/LCM_Dreamshaper_v7-fp16-ov"],
-                        help="Text2Image GenAI model to be used")
-    parser.add_argument("--model_name_i2i", type=str, default="dreamlike-art/dreamlike-anime-1.0",
-                        choices=["dreamlike-art/dreamlike-anime-1.0"],
-                        help="Image2Image GenAI model to be used")
+    parser.add_argument("--model_name", type=str, default="OpenVINO/LCM_Dreamshaper_v7-fp16-ov",
+                        choices=["OpenVINO/LCM_Dreamshaper_v7-int8-ov", "OpenVINO/LCM_Dreamshaper_v7-fp16-ov", "dreamlike-art/dreamlike-anime-1.0"],
+                        help="GenAI model to be used")
     parser.add_argument("--safety_checker_model", type=str, default="Falconsai/nsfw_image_detection",
                         choices=["Falconsai/nsfw_image_detection"], help="The model to verify if the generated image is NSFW")
     parser.add_argument("--local_network", action="store_true", help="Whether demo should be available in local network")
     parser.add_argument("--public", default=False, action="store_true", help="Whether interface should be available publicly")
 
     args = parser.parse_args()
-    run_endless_lcm(args.model_name_t2i, args.model_name_i2i, args.safety_checker_model, args.local_network, args.public)
+    run_endless_lcm(args.model_name, args.safety_checker_model, args.local_network, args.public)
