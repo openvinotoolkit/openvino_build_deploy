@@ -4,7 +4,7 @@ openvino==2024.6
 nncf==2.14.1
 onnx==1.17.0
 ultralytics==8.3.67
-pandas==2.2.3
+supervision==0.25.1
 # todo change to stable when available
 git+https://github.com/openvinotoolkit/anomalib.git@b37284e489b2f4b0819de13ce1cecac0759306d5
 torch==2.5.1
