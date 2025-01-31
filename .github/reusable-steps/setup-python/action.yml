@@ -9,15 +9,30 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    - name: Download all repo files
+      shell: bash
+      run: |
+        git lfs -X= -I=* pull
     - name: Download sample video file
       shell: bash
       run: |
         cd ${{ inputs.project }}
         curl -L -o sample_video.mp4 https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4
+    - name: Download all repo files
+      shell: bash
+      run: |
+        git lfs -X= -I=* pull
     - name: Set up Python ${{ inputs.python }}
       uses: actions/setup-python@v5
       with:
         python-version: ${{ inputs.python }}
+    - name: Install MeloTTS (Conversational AI Chatbot only)
+      if: ${{ inputs.project == 'ai_ref_kits/conversational_ai_chatbot' }}
+      shell: bash
+      run: |
+        pip install unidic
+        pip install git+https://github.com/myshell-ai/MeloTTS.git@5b538481e24e0d578955be32a95d88fcbde26dc8 --no-deps
+        python -m unidic download
     - name: Install dependencies
       shell: bash
       run: |

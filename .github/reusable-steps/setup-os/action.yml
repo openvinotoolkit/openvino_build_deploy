@@ -3,11 +3,6 @@ name: OS setup
 runs:
   using: 'composite'
   steps:
-    - name: Install coreutils (macOS only)
-      if: runner.os == 'macOS'
-      shell: bash
-      run: |
-        brew install coreutils
     - name: Free space (Ubuntu only)
       if: runner.os == 'Linux'
       uses: jlumbroso/free-disk-space@v1.3.1
@@ -20,3 +15,14 @@ runs:
         dotnet: true
         haskell: true
         docker-images: true
+    - name: Install OpenCL (Ubuntu only)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ocl-icd-opencl-dev
+    - name: Install coreutils (macOS only)
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        brew install coreutils
