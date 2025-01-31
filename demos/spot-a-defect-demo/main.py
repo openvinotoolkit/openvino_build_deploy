@@ -130,16 +130,24 @@ def get_patches(frame: np.ndarray, results: pd.DataFrame) -> np.ndarray:
     return np.array(patches)
 
 
-def draw_results(frame: np.ndarray, det_results: pd.DataFrame, anomaly_results: NumpyImageBatch) -> None:
+def draw_results(frame: np.ndarray, det_results: pd.DataFrame, anomaly_results: NumpyImageBatch, visualize: str) -> None:
     for box, anomaly in zip(det_results[["x1", "y1", "x2", "y2"]].to_numpy(), anomaly_results):
         x1, y1, x2, y2 = box
         anomaly_score = float(anomaly.pred_score)
 
-        anomaly_map = cv2.normalize(anomaly.anomaly_map, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
-        colormap = cv2.applyColorMap(anomaly_map.astype(np.uint8), cv2.COLORMAP_JET)
-        colormap = cv2.resize(colormap, (x2 - x1, y2 - y1))
         # draw anomaly map
-        frame[y1:y2, x1:x2] = cv2.addWeighted(frame[y1:y2, x1:x2], 0.75, colormap, 0.25, 0)
+        if visualize == "heatmaps":
+            anomaly_map = cv2.normalize(anomaly.anomaly_map, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+            colormap = cv2.applyColorMap(anomaly_map.astype(np.uint8), cv2.COLORMAP_JET)
+            colormap = cv2.resize(colormap, (x2 - x1, y2 - y1))
+            frame[y1:y2, x1:x2] = cv2.addWeighted(frame[y1:y2, x1:x2], 0.6, colormap, 0.4, 0)
+        # draw anomaly mask
+        elif visualize == "masks":
+            pred_mask = anomaly.pred_mask.astype(np.uint8) * 255
+            mask = np.zeros_like(pred_mask)
+            mask = np.dstack((mask, mask, pred_mask))
+            mask = cv2.resize(mask, (x2 - x1, y2 - y1))
+            frame[y1:y2, x1:x2] = cv2.addWeighted(frame[y1:y2, x1:x2], 0.6, mask, 0.4, 0)
 
         color = (0, 0, 255) if anomaly_score > 0.5 else (0, 255, 0)
         # draw a red rectangle around the object
@@ -148,7 +156,7 @@ def draw_results(frame: np.ndarray, det_results: pd.DataFrame, anomaly_results: 
         utils.draw_text(frame, text=f"Anomaly: {anomaly_score:.2f}", point=(int(x1), int(y1)))
 
 
-def run(video_path: str, det_model_name: str, anomaly_model_name: str, flip: bool):
+def run(video_path: str, det_model_name: str, anomaly_model_name: str, visualize: str, flip: bool):
     det_model = load_yolo_model(det_model_name)
     anomaly_model = load_anomalib_model(anomaly_model_name)
 
@@ -176,7 +184,7 @@ def run(video_path: str, det_model_name: str, anomaly_model_name: str, flip: boo
 
         start_time = time.time()
 
-        det_results = det_model.predict(frame, conf=0.01)[0]
+        det_results = det_model.predict(frame, conf=0.01, verbose=False)[0]
 
         det_results = filter_and_convert_results(det_results)
         # add border to the bounding box to fit the training data
@@ -187,7 +195,7 @@ def run(video_path: str, det_model_name: str, anomaly_model_name: str, flip: boo
 
         end_time = time.time()
 
-        draw_results(frame, det_results, anomalies)
+        draw_results(frame, det_results, anomalies, visualize)
 
         processing_times.append(end_time - start_time)
         # mean processing time [ms]
@@ -216,7 +224,9 @@ if __name__ == '__main__':
                         choices=["yolov8s-world", "yolov8m-world", "yolov8l-world", "yolov8x-world",
                                  "yolov8s-worldv2", "yolov8m-worldv2", "yolov8l-worldv2", "yolov8x-worldv2"])
     parser.add_argument("--anomaly_model", type=str, default="Stfpm", help="Model for anomaly detection")
+    parser.add_argument("--visualize", type=str, default=None, help="Visualization type",
+                        choices=["heatmaps", "masks"])
     parser.add_argument("--flip", type=bool, default=True, help="Mirror input video")
 
     args = parser.parse_args()
-    run(args.stream, args.detection_model, args.anomaly_model, args.flip)
+    run(args.stream, args.detection_model, args.anomaly_model, args.visualize, args.flip)
