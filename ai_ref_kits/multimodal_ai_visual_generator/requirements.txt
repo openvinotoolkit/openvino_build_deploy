@@ -1,14 +1,24 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+--extra-index-url https://storage.openvinotoolkit.org/simple/wheels/pre-release
+--extra-index-url https://storage.openvinotoolkit.org/simple/wheels/nightly
+openvino-tokenizers==2024.6.0.0
+# optimum is pinned because Whisper is changed since transformers 4.47 (https://github.com/huggingface/optimum-intel/pull/1088)
+optimum-intel @ git+https://github.com/huggingface/optimum-intel.git@753f84db6e0966580eb9eaa74a808213be730631
+numpy==1.26.4; sys_platform == 'darwin'
+einops==0.8.0  # For Qwen
+transformers_stream_generator==0.0.5  # For Qwen
+diffusers==0.31.0 # For image generation pipelines
+timm==1.0.11  # For exporting InternVL2
+torchvision==0.20.1  # For visual language models
+transformers>=4.43 # For Whisper
+nncf==2.14.1
+huggingface_hub==0.28.0
+opencv-python==4.11.0.86
+pillow==11.1.0
 #openvino GenAI (which also installs openvino packages)
 openvino_genai==2024.6.0
-
 # for VAD
 sherpa-onnx==1.10.41
 sounddevice==0.5.1
-
 # for the UI
 PySide6==6.8.1
-
-#others
-opencv-python==4.10.0.84
-pillow==11.1.0
-torchvision==0.20.1

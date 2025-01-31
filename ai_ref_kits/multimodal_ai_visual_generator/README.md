@@ -54,7 +54,7 @@ sudo apt install git git-lfs gcc python3-venv python3-dev portaudio19-dev
 _NOTE: If you are using Windows, you will probably need to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe) also._
 
 ## Setting Up Your Environment
-### Cloning the Repository
+### Cloning the Repository and Installing Dependencies
 
 To clone the repository, run the following command:
 
@@ -65,10 +65,27 @@ git clone https://github.com/openvinotoolkit/openvino_build_deploy.git
 The above will clone the repository into a directory named "openvino_build_deploy" in the current directory. Then, navigate into the directory using the following command:
 
 ```shell
-cd openvino_build_deploy/ai_ref_kits/multimodal_ai_visual_generator
+cd openvino_build_deploy/ai_ref_kits/ai_adventure_experience
 ```
 
-Next, you’ll download and optimize the required models. This will involve the creation of a temporary virtual environment and the running of a download script. 
+Next the below will create a virtual environment, activate the environment, and install the required dependencies for the setup and execution of the project.
+
+Linux:
+```shell
+python3 -m venv run_env
+source run_env/bin/activate
+pip install -r requirements.txt
+```
+
+Windows:
+```shell
+python -m venv run_env
+run_env/Scripts/activate
+pip install -r requirements.txt
+``` 
+
+### Downloading and Preparing Models
+Next, you’ll download and optimize the required models via the running of a download script. 
 
 - Whisper: Speech recognition
 - Llama3-8b-instruct: Intelligent LLM helper
@@ -76,57 +93,12 @@ Next, you’ll download and optimize the required models. This will involve the 
 - Super Resolution: Increase the resolution of the generated image
 - Depth Anything v2: Create 3d parallax animations
 
-Linux:
+To run the download script:
 ```shell
 cd models
-python3 -m venv model_installation_venv
-source model_installation_venv/bin/activate
-pip install -r model_requirements.txt
 python3 download_and_prepare_models.py
 cd ..
 ```
-
-Windows:
-```shell
-cd models
-python -m venv model_installation_venv
-model_installation_venv/Scripts/activate
-pip install -r model_requirements.txt
-python3 download_and_prepare_models.py
-cd ..
-``` 
-After model installation, you can remove the `model_installation_venv` virtual environment as it is no longer needed.
-
-### Creating a Virtual Environment
-
-To create a virtual environment, open your terminal or command prompt and navigate to the directory where you want to create the environment. Then, run the following command:
-
-Linux:
-```shell
-python3 -m venv run_env
-```
-_NOTE: If you are using Windows, use the `python -m venv run_env` command instead._
-
-### Activating the Environment
-
-Activate the virtual environment using the following command:
-
-```shell
-source run_env/bin/activate   # For Unix-based operating systems such as Linux or macOS
-```
-
-_NOTE: If you are using Windows, use the `run_env\Scripts\activate` command instead._
-
-This will activate the virtual environment and change your shell's prompt to indicate that you are now working within that environment.
-
-### Installing the Packages
-
-To install the required packages, run the following commands:
-
-```shell
-pip install -r requirements.txt 
-``` 
-
 ## Running the Application
 
 To interact with the animated GIF outputs, host a simple web server on your system as the final output. To do so, please install Node.js via [its Download page](https://nodejs.org/en/download/package-manager) and [http-server](https://www.npmjs.com/package/http-server).
@@ -140,7 +112,7 @@ http-server -c10
 Open a terminal or you can use the existing one with `run_env` environment activated and start the GUI - <br>
 
 ```shell
-python ai_adventure_experience.py 
+python main.py 
 ```
 
 ![UI Drawing](https://github.com/user-attachments/assets/4f37f4d1-31c1-4534-82eb-d370fe29873a)
@@ -165,7 +137,7 @@ You can test the intelligence of the LLM helper and say something not relevant t
 To interact with the 3D hoverable animation created with depth maps, start an HTTP server as explained above, and you will be able to interact with the parallax.
 
 ## :bulb: Additional Tips
-* Feel free to modify `ai_adventure_experience.py` to select different OpenVINO devices for the llm, stable diffusion pipeline, whisper, etc.
+* Feel free to modify `main.py` to select different OpenVINO devices for the llm, stable diffusion pipeline, whisper, etc.
   Look toward the bottom of the script, for a section that looks like this:
   ```
   if __name__ == "__main__":
