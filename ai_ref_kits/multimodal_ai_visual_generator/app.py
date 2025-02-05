@@ -573,6 +573,7 @@ def main():
     app_params["depth_compiled_model"] = depth_compiled_model
     print("Initializing Depth Anything v2 done...")
 
+    print("Demo is ready!")
     window = MainWindow(app_params)
     window.show()
 
