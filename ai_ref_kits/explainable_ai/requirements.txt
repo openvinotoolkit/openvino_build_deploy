@@ -1,8 +1,8 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 
-openvino==2024.4.0
-nncf==2.13.0
-ultralytics==8.3.23
+openvino==2024.6.0
+nncf==2.14.1
+ultralytics==8.3.38
 numpy==1.26.4
 pillow==11.0.0
 opencv-python==4.10.0.84
