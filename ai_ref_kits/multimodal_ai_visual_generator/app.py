@@ -537,7 +537,7 @@ def main():
 
     print("Creating an llm pipeline to run on ", llm_device)
 
-    llm_model_path = r"./models/llama-3-8b-instruct/INT4_compressed_weights"
+    llm_model_path = r"./models/llama-3.2-3b-instruct/INT4_compressed_weights"
 
     if llm_device == 'NPU':
         pipeline_config = {"MAX_PROMPT_LEN": 1536}
