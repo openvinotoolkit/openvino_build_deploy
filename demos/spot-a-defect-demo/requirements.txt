@@ -5,17 +5,5 @@ nncf==2.14.1
 onnx==1.17.0
 ultralytics==8.3.67
 supervision==0.25.1
-# todo change to stable when available
-git+https://github.com/openvinotoolkit/anomalib.git@b37284e489b2f4b0819de13ce1cecac0759306d5
 torch==2.5.1
-torchvision==0.20.1
 opencv-python==4.10.0.84
-lightning==2.5.0
-kornia==0.8.0
-freia==0.2
-einops==0.8.0
-tifffile==2025.1.10
-timm==1.0.13
-scikit-image==0.25.0
-python-dotenv==1.0.1
-open-clip-torch==2.24.0
