@@ -1,10 +1,8 @@
 import multiprocessing
-import time
-from abc import ABC, abstractmethod
-import argparse
 import os
 import sys
-from pathlib import Path
+from abc import ABC, abstractmethod
+
 
 class AsyncWorker(ABC):
     def __init__(self):
@@ -46,7 +44,6 @@ class VADWorker(AsyncWorker):
         self.result_queue = multiprocessing.Queue()
  
     def _work_loop(self):
-        import numpy as np
         import sherpa_onnx
         import sounddevice as sd
         
@@ -211,6 +208,7 @@ def test_main():
         print("Main: Stopping workers...")
         vad_worker.stop() 
         whisper_worker.stop()        
-           
+
+
 if __name__ == "__main__":
     test_main()

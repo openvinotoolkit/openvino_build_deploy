@@ -65,7 +65,7 @@ git clone https://github.com/openvinotoolkit/openvino_build_deploy.git
 The above will clone the repository into a directory named "openvino_build_deploy" in the current directory. Then, navigate into the directory using the following command:
 
 ```shell
-cd openvino_build_deploy/ai_ref_kits/ai_adventure_experience
+cd openvino_build_deploy/ai_ref_kits/multimodal_ai_visual_generator
 ```
 
 Next the below will create a virtual environment, activate the environment, and install the required dependencies for the setup and execution of the project.
@@ -95,7 +95,6 @@ Next, you’ll download and optimize the required models via the running of a do
 
 To run the download script:
 ```shell
-cd models
 python3 download_and_prepare_models.py
 cd ..
 ```
@@ -112,7 +111,7 @@ http-server -c10
 Open a terminal or you can use the existing one with `run_env` environment activated and start the GUI - <br>
 
 ```shell
-python main.py 
+python app.py 
 ```
 
 ![UI Drawing](https://github.com/user-attachments/assets/4f37f4d1-31c1-4534-82eb-d370fe29873a)
