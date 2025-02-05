@@ -124,30 +124,27 @@ def build_ui():
 
     with gr.Blocks() as demo:
         with gr.Group():
+            prompt_text = gr.Text(
+                label="Prompt",
+                placeholder="Enter your prompt here",
+                value="A sail boat on a grass field with mountains in the morning and sunny day"
+            )
+            result_img = gr.Image(label="Generated image", elem_id="output_image", format="png")
             with gr.Row():
-                prompt_text = gr.Text(
-                    label="Prompt",
-                    placeholder="Enter your prompt here",
-                    value="A sail boat on a grass field with mountains in the morning and sunny day"
+                result_time_label = gr.Text("", label="Inference Time", type="text")
+            with gr.Row():
+                device_dropdown = gr.Dropdown(
+                    choices=get_available_devices(),
+                    value="CPU",
+                    label="Inference device",
+                    interactive=True,
+                    scale=4
                 )
-            with gr.Row():
-                with gr.Column():
-                    result_img = gr.Image(label="Generated image", elem_id="output_image", format="png")
-                    with gr.Row():
-                        result_time_label = gr.Text("", label="Inference Time", type="text")
-                    with gr.Row():
-                        start_button = gr.Button("Start generation")
-                        stop_button = gr.Button("Stop generation")
-            with gr.Accordion("Advanced options", open=True):
-                with gr.Row():
-                    device_dropdown = gr.Dropdown(
-                        choices=get_available_devices(),
-                        value="CPU",
-                        label="Inference device",
-                        interactive=True,
-                        scale=4
-                    )
-                    endless_checkbox = gr.Checkbox(label="Generate endlessly", value=False, scale=1)
+                endless_checkbox = gr.Checkbox(label="Generate endlessly", value=False, scale=1)
+                with gr.Column(scale=1):
+                    start_button = gr.Button("Start generation", variant="primary")
+                    stop_button = gr.Button("Stop generation", variant="secondary")
+            with gr.Accordion("Advanced options", open=False):
                 with gr.Row():
                     seed_slider = gr.Slider(label="Seed", minimum=0, maximum=MAX_SEED, step=1, value=0, randomize=True, scale=1)
                     randomize_seed_checkbox = gr.Checkbox(label="Randomize seed across runs", value=True, scale=0)
