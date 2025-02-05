@@ -10,7 +10,6 @@ from typing import Optional
 
 import gradio as gr
 import numpy as np
-import openvino as ov
 import openvino_genai as genai
 from PIL import Image
 from huggingface_hub import snapshot_download
@@ -34,9 +33,13 @@ hf_model_name: Optional[str] = None
 
 
 def get_available_devices() -> list[str]:
-    core = ov.Core()
+    devices = utils.available_devices()
     # NPU is not supported with this application
-    return list({device.split(".")[0] for device in core.available_devices if device != "NPU"})
+    return list({device.split(".")[0] for device in devices if device != "NPU"})
+
+
+def xeon_detected():
+    return "xeon" in " ".join(utils.available_devices().values()).lower()
 
 
 def download_models(model_name: str, safety_checker_model: str) -> None:
@@ -135,12 +138,15 @@ def build_ui():
             with gr.Row():
                 device_dropdown = gr.Dropdown(
                     choices=get_available_devices(),
-                    value="CPU",
+                    value="AUTO",
                     label="Inference device",
                     interactive=True,
                     scale=4
                 )
-                endless_checkbox = gr.Checkbox(label="Generate endlessly", value=False, scale=1)
+                with gr.Column(scale=0):
+                    endless_checkbox = gr.Checkbox(label="Generate endlessly", value=False)
+                    if xeon_detected():
+                        amx_switch = gr.Checkbox(label="Enable AMX", value=True)
                 with gr.Column(scale=1):
                     start_button = gr.Button("Start generation", variant="primary")
                     stop_button = gr.Button("Stop generation", variant="secondary")
