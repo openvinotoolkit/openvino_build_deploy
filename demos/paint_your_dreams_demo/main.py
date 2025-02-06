@@ -35,11 +35,6 @@ stop_generating: bool = True
 hf_model_name: Optional[str] = None
 
 
-def get_available_devices() -> list[str]:
-    core = ov.Core()
-    return list({device.split(".")[0] for device in core.available_devices})
-
-
 def download_models(model_name, safety_checker_model: str) -> None:
     global safety_checker
 
@@ -63,7 +58,7 @@ def download_models(model_name, safety_checker_model: str) -> None:
                               image_processor=AutoProcessor.from_pretrained(safety_checker_dir))
 
 
-async def load_npu_pipeline(model_dir: Path, size: int) -> genai.Text2ImagePipeline:
+async def load_npu_pipeline(model_dir: Path, size: int, pipeline: str) -> genai.Text2ImagePipeline | genai.Image2ImagePipeline:
     # NPU requires model static input shape for now
     ov_config = {"CACHE_DIR": "cache"}
 
@@ -82,25 +77,36 @@ async def load_npu_pipeline(model_dir: Path, size: int) -> genai.Text2ImagePipel
     vae.reshape(1, size, size)
     vae.compile("NPU", **ov_config)
 
-    ov_pipeline = genai.Text2ImagePipeline.latent_consistency_model(scheduler, text_encoder, unet, vae)
+    if pipeline == "text2image":
+        ov_pipeline = genai.Text2ImagePipeline.latent_consistency_model(scheduler, text_encoder, unet, vae)
+    elif pipeline == "image2image":
+        ov_pipeline = genai.Image2ImagePipeline.latent_consistency_model(scheduler, text_encoder, unet, vae)
+    else:
+        raise ValueError(f"Unknown pipeline: {pipeline}")
 
     return ov_pipeline
 
 
-async def load_pipeline(model_name: str, device: str, pipeline: str):
+async def load_pipeline(model_name: str, device: str, size: int, pipeline: str):
     model_dir = MODEL_DIR / model_name
     ov_config = {"CACHE_DIR": "cache"}
 
     if pipeline == "text2image":
         if device not in ov_pipelines_t2i:
-            ov_pipeline = genai.Text2ImagePipeline(model_dir, device, **ov_config)
+            if device == "NPU":
+                ov_pipeline = await load_npu_pipeline(model_dir, size, pipeline)
+            else:
+                ov_pipeline = genai.Text2ImagePipeline(model_dir, device, **ov_config)
             ov_pipelines_t2i[device] = ov_pipeline
 
         return ov_pipelines_t2i[device]
 
     if pipeline == "image2image":
         if device not in ov_pipelines_i2i:
-            ov_pipeline = genai.Image2ImagePipeline(model_dir, device, **ov_config)
+            if device == "NPU":
+                ov_pipeline = await load_npu_pipeline(model_dir, size, pipeline)
+            else:
+                ov_pipeline = genai.Image2ImagePipeline(model_dir, device, **ov_config)
             ov_pipelines_i2i[device] = ov_pipeline
 
         return ov_pipelines_i2i[device]
@@ -122,11 +128,11 @@ async def generate_images(input_image: np.ndarray, prompt: str, seed: int, size:
 
         start_time = time.time()
         if input_image is None:
-            ov_pipeline = await load_pipeline(hf_model_name, device, "text2image")
+            ov_pipeline = await load_pipeline(hf_model_name, device, size, "text2image")
             result = ov_pipeline.generate(prompt=prompt, num_inference_steps=num_inference_steps, width=size, height=size,
                              guidance_scale=guidance_scale, rng_seed=seed).data[0]
         else:
-            ov_pipeline = await load_pipeline(hf_model_name, device, "image2image")
+            ov_pipeline = await load_pipeline(hf_model_name, device, size,"image2image")
             # ensure image is square
             input_image = utils.crop_center(input_image)
             input_image = cv2.resize(input_image, (size, size))
@@ -153,7 +159,7 @@ async def generate_images(input_image: np.ndarray, prompt: str, seed: int, size:
         await asyncio.sleep(0.1)
 
 
-def build_ui():
+def build_ui() -> gr.Interface:
     examples_t2i = [
         "A sail boat on a grass field with mountains in the morning and sunny day",
         "A beautiful sunset with a sail boat on the ocean, photograph, highly detailed, golden hour, Nikon D850",
@@ -188,8 +194,8 @@ def build_ui():
             with gr.Accordion("Advanced options", open=True):
                 with gr.Row():
                     device_dropdown = gr.Dropdown(
-                        choices=get_available_devices(),
-                        value="CPU",
+                        choices=utils.available_devices(),
+                        value="AUTO",
                         label="Inference device",
                         interactive=True,
                         scale=4
