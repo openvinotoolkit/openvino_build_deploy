@@ -263,3 +263,10 @@ def draw_text(image: ndarray, text: str, point: Tuple[int, int], center: bool = 
 
     cv2.putText(image, text=text, org=(text_x, text_y), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=font_scale * f_width / 2000, color=(0, 0, 0), thickness=2, lineType=cv2.LINE_AA)
     cv2.putText(image, text=text, org=(text_x, text_y), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=font_scale * f_width / 2000, color=font_color, thickness=1, lineType=cv2.LINE_AA)
+
+
+def crop_center(image: ndarray) -> ndarray:
+    size = min(image.shape[:2])
+    start_x = (image.shape[1] - size) // 2
+    start_y = (image.shape[0] - size) // 2
+    return image[start_y:start_y + size, start_x:start_x + size]

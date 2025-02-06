@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
+import cv2
 import gradio as gr
 import numpy as np
 import openvino as ov
@@ -27,7 +28,8 @@ MODEL_DIR = Path("model")
 
 safety_checker: Optional[Pipeline] = None
 
-ov_pipelines = {}
+ov_pipelines_t2i = {}
+ov_pipelines_i2i = {}
 
 stop_generating: bool = True
 hf_model_name: Optional[str] = None
@@ -39,7 +41,7 @@ def get_available_devices() -> list[str]:
     return list({device.split(".")[0] for device in core.available_devices if device != "NPU"})
 
 
-def download_models(model_name: str, safety_checker_model: str) -> None:
+def download_models(model_name, safety_checker_model: str) -> None:
     global safety_checker
 
     is_openvino_model = model_name.split("/")[0] == "OpenVINO"
@@ -47,7 +49,7 @@ def download_models(model_name: str, safety_checker_model: str) -> None:
     output_dir = MODEL_DIR / model_name
     if not output_dir.exists():
         if is_openvino_model:
-            snapshot_download(model_name, local_dir=output_dir)
+            snapshot_download(model_name, local_dir=output_dir, resume_download=True)
         else:
             raise ValueError(f"Model {model_name} is not from OpenVINO Hub and not supported")
 
@@ -62,15 +64,23 @@ def download_models(model_name: str, safety_checker_model: str) -> None:
                               image_processor=AutoProcessor.from_pretrained(safety_checker_dir))
 
 
-async def load_pipeline(model_name: str, device: str):
-    if device not in ov_pipelines:
-        model_dir = MODEL_DIR / model_name
-        ov_config = {"CACHE_DIR": "cache"}
+async def load_pipeline(model_name: str, device: str, pipeline: str):
+    model_dir = MODEL_DIR / model_name
+    ov_config = {"CACHE_DIR": "cache"}
 
-        ov_pipeline = genai.Text2ImagePipeline(model_dir, device, **ov_config)
-        ov_pipelines[device] = ov_pipeline
+    if pipeline == "text2image":
+        if device not in ov_pipelines_t2i:
+            ov_pipeline = genai.Text2ImagePipeline(model_dir, device, **ov_config)
+            ov_pipelines_t2i[device] = ov_pipeline
 
-    return ov_pipelines[device]
+        return ov_pipelines_t2i[device]
+
+    if pipeline == "image2image":
+        if device not in ov_pipelines_i2i:
+            ov_pipeline = genai.Image2ImagePipeline(model_dir, device, **ov_config)
+            ov_pipelines_i2i[device] = ov_pipeline
+
+        return ov_pipelines_i2i[device]
 
 
 async def stop():
@@ -78,19 +88,27 @@ async def stop():
     stop_generating = True
 
 
-async def generate_images(prompt: str, seed: int, size: int, guidance_scale: float, num_inference_steps: int, randomize_seed: bool, device: str, endless_generation: bool) -> tuple[np.ndarray, float]:
+async def generate_images(input_image: np.ndarray, prompt: str, seed: int, size: int, guidance_scale: float, num_inference_steps: int,
+                          strength: float, randomize_seed: bool, device: str, endless_generation: bool) -> tuple[np.ndarray, float]:
     global stop_generating
     stop_generating = not endless_generation
-
-    ov_pipeline = await load_pipeline(hf_model_name, device)
 
     while True:
         if randomize_seed:
             seed = random.randint(0, MAX_SEED)
 
         start_time = time.time()
-        result = ov_pipeline.generate(prompt=prompt, num_inference_steps=num_inference_steps, width=size, height=size,
-                             guidance_scale=guidance_scale, generator=genai.CppStdGenerator(seed)).data[0]
+        if input_image is None:
+            ov_pipeline = await load_pipeline(hf_model_name, device, "text2image")
+            result = ov_pipeline.generate(prompt=prompt, num_inference_steps=num_inference_steps, width=size, height=size,
+                             guidance_scale=guidance_scale, rng_seed=seed).data[0]
+        else:
+            ov_pipeline = await load_pipeline(hf_model_name, device, "image2image")
+            # ensure image is square
+            input_image = utils.crop_center(input_image)
+            input_image = cv2.resize(input_image, (size, size))
+            result = ov_pipeline.generate(prompt=prompt, image=ov.Tensor(input_image[None]), num_inference_steps=num_inference_steps, width=size, height=size,
+                             guidance_scale=guidance_scale, strength=1.0 - strength, rng_seed=seed).data[0]
         end_time = time.time()
 
         label = safety_checker(Image.fromarray(result), top_k=1)
@@ -113,13 +131,17 @@ async def generate_images(prompt: str, seed: int, size: int, guidance_scale: flo
 
 
 def build_ui():
-    examples = [
+    examples_t2i = [
         "A sail boat on a grass field with mountains in the morning and sunny day",
+        "A beautiful sunset with a sail boat on the ocean, photograph, highly detailed, golden hour, Nikon D850",
         "Portrait photo of a girl, photograph, highly detailed face, depth of field, moody light, golden hour,"
-        "Style by Dan Winters, Russell James, Steve McCurry, centered, extremely detailed, Nikon D850, award winning photography",
-        "Self-portrait oil painting, a beautiful cyborg with golden hair, 8k",
-        "Astronaut in a jungle, cold color palette, muted colors, detailed, 8k",
-        "A photo of beautiful mountain with realistic sunset and blue lake, highly detailed, masterpiece",
+        "Style by Dan Winters, Russell James, Steve McCurry, centered, extremely detailed, Nikon D850, award winning photography"
+    ]
+    
+    examples_i2i = [
+        "Make me a super hero, 8k",
+        "Make me a beautiful cyborg with golden hair, 8k",
+        "Make me an astronaut, cold color palette, muted colors, 8k"
     ]
 
     with gr.Blocks() as demo:
@@ -132,9 +154,11 @@ def build_ui():
                 )
             with gr.Row():
                 with gr.Column():
-                    result_img = gr.Image(label="Generated image", elem_id="output_image", format="png")
                     with gr.Row():
-                        result_time_label = gr.Text("", label="Inference Time", type="text")
+                        input_image = gr.Image(label="Input image (leave blank for text2image generation)", sources=["webcam", "clipboard", "upload"])
+                        result_img = gr.Image(label="Generated image", elem_id="output_image", format="png")
+                    with gr.Row():
+                        result_time_label = gr.Text("", label="Inference time", type="text")
                     with gr.Row():
                         start_button = gr.Button("Start generation")
                         stop_button = gr.Button("Stop generation")
@@ -167,25 +191,43 @@ def build_ui():
                         step=1,
                         value=5,
                     )
-
-                size_slider = gr.Slider(
-                    label="Image size",
-                    minimum=256,
-                    maximum=1024,
-                    step=64,
-                    value=512
-                )
+                with gr.Row():
+                    strength_slider = gr.Slider(
+                        label="Input image influence strength",
+                        minimum=0.0,
+                        maximum=1.0,
+                        step=0.01,
+                        value=0.5
+                    )
+                    size_slider = gr.Slider(
+                        label="Image size",
+                        minimum=256,
+                        maximum=1024,
+                        step=64,
+                        value=512
+                    )
 
         gr.Examples(
-            examples=examples,
+            label="Examples for Text2Image",
+            examples=examples_t2i,
             inputs=prompt_text,
             outputs=result_img,
             cache_examples=False,
         )
+        
+        gr.Examples(
+            label="Examples for Image2Image",
+            examples=examples_i2i,
+            inputs=prompt_text,
+            outputs=result_img,
+            cache_examples=False,
+        )
+        
         # clicking run
         gr.on(triggers=[prompt_text.submit, start_button.click],
               fn=generate_images,
-              inputs=[prompt_text, seed_slider, size_slider, guidance_scale_slider, num_inference_steps_slider, randomize_seed_checkbox, device_dropdown, endless_checkbox],
+              inputs=[input_image, prompt_text, seed_slider, size_slider, guidance_scale_slider, num_inference_steps_slider,
+                      strength_slider, randomize_seed_checkbox, device_dropdown, endless_checkbox],
               outputs=[result_img, result_time_label]
               )
         # clicking stop
@@ -214,7 +256,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", type=str, default="OpenVINO/LCM_Dreamshaper_v7-fp16-ov",
                         choices=["OpenVINO/LCM_Dreamshaper_v7-int8-ov", "OpenVINO/LCM_Dreamshaper_v7-fp16-ov"],
-                        help="Visual GenAI model to be used")
+                        help="GenAI model to be used")
     parser.add_argument("--safety_checker_model", type=str, default="Falconsai/nsfw_image_detection",
                         choices=["Falconsai/nsfw_image_detection"], help="The model to verify if the generated image is NSFW")
     parser.add_argument("--local_network", action="store_true", help="Whether demo should be available in local network")
