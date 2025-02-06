@@ -1,7 +1,7 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 
-openvino==2024.6.0
-openvino-genai==2024.6.0
+openvino==2025.0
+openvino-genai==2025.0
 optimum-intel==1.21.0
 optimum==1.23.3
 onnx==1.17.0
