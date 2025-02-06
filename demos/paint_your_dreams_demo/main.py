@@ -108,7 +108,7 @@ async def generate_images(input_image: np.ndarray, prompt: str, seed: int, size:
             input_image = utils.crop_center(input_image)
             input_image = cv2.resize(input_image, (size, size))
             result = ov_pipeline.generate(prompt=prompt, image=ov.Tensor(input_image[None]), num_inference_steps=num_inference_steps, width=size, height=size,
-                             guidance_scale=guidance_scale, strength=strength, rng_seed=seed).data[0]
+                             guidance_scale=guidance_scale, strength=1.0 - strength, rng_seed=seed).data[0]
         end_time = time.time()
 
         label = safety_checker(Image.fromarray(result), top_k=1)
@@ -155,7 +155,7 @@ def build_ui():
             with gr.Row():
                 with gr.Column():
                     with gr.Row():
-                        input_image = gr.Image(label="Input image (leave blank for text2image generation)")
+                        input_image = gr.Image(label="Input image (leave blank for text2image generation)", sources=["webcam", "clipboard", "upload"])
                         result_img = gr.Image(label="Generated image", elem_id="output_image", format="png")
                     with gr.Row():
                         result_time_label = gr.Text("", label="Inference time", type="text")
