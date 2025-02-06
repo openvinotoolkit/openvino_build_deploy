@@ -76,7 +76,7 @@ def load_chat_model(model_name: str, token: str = None) -> OpenVINOLLM:
             chat_model.save_pretrained(model_path)
 
     device = "GPU" if "GPU" in get_available_devices() else "CPU"
-    return OpenVINOLLM(context_window=2048, model_id_or_path=str(model_path), max_new_tokens=512, device_map=device,
+    return OpenVINOLLM(context_window=4096, model_id_or_path=str(model_path), max_new_tokens=1024, device_map=device,
                        model_kwargs={"ov_config": ov_config, "library_name": "transformers"}, generate_kwargs={"do_sample": True, "temperature": 0.7, "top_k": 50, "top_p": 0.95})
 
 
@@ -185,7 +185,7 @@ def load_context(file_paths: List[str]) -> None:
     global ov_chat_engine
 
     # limit chat history to 1024 tokens
-    memory = ChatMemoryBuffer.from_defaults(token_limit=1024)
+    memory = ChatMemoryBuffer.from_defaults(token_limit=2048)
 
     if not file_paths:
         ov_chat_engine = SimpleChatEngine.from_defaults(llm=ov_llm, system_prompt=chatbot_config["system_configuration"], memory=memory)
@@ -210,8 +210,16 @@ def load_context(file_paths: List[str]) -> None:
                                           memory=memory, node_postprocessors=[ov_reranker])
 
 
+# this is necessary for thinking models e.g. deepseek
+def emphasize_thinking_mode(token: str) -> str:
+    return token + "<em><small>" if "<think>" in token else "</small></em>" + token if "</think>" in token else token
+
+
 def generate_initial_greeting() -> str:
-    return ov_chat_engine.chat(chatbot_config["greet_the_user_prompt"]).response
+    response = ""
+    for token in ov_chat_engine.stream_chat(chatbot_config["greet_the_user_prompt"]).response_gen:
+        response += emphasize_thinking_mode(token)
+    return response
 
 
 def chat(history: List[List[str]]) -> Tuple[List[List[str]], float]:
@@ -222,14 +230,14 @@ def chat(history: List[List[str]]) -> Tuple[List[List[str]], float]:
 
         # generate first token independently
         first_token = next(chat_streamer)
-        history[-1][1] += first_token
+        history[-1][1] += emphasize_thinking_mode(first_token)
         yield history, 0.0
 
         # generate next tokens
         tokens = 1
         start_time = time.time()
         for partial_text in chat_streamer:
-            history[-1][1] += partial_text
+            history[-1][1] += emphasize_thinking_mode(partial_text)
             processing_time = time.time() - start_time
             tokens += 1
             # "return" partial response
@@ -250,7 +258,7 @@ def transcribe(prompt: str, conversation: List[List[str]]) -> List[List[str]]:
 def extra_action(conversation: List) -> Tuple[str, float]:
     conversation.append([chatbot_config["extra_action_prompt"], None])
     for partial_summary, performance in chat(conversation):
-        yield partial_summary[-1][1], performance
+        yield f"## Summary\n\n" + partial_summary[-1][1], performance
 
 
 def create_UI(initial_message: str, action_name: str) -> gr.Blocks:
@@ -260,7 +268,7 @@ def create_UI(initial_message: str, action_name: str) -> gr.Blocks:
         with gr.Row():
             file_uploader_ui = gr.Files(label="Additional context", file_types=[".pdf", ".txt"], scale=1)
             with gr.Column(scale=4):
-                chatbot_ui = gr.Chatbot(value=[[None, initial_message]], label="Chatbot")
+                chatbot_ui = gr.Chatbot(value=[[None, initial_message]], label="Chatbot", sanitize_html=False)
                 with gr.Row():
                     input_text_ui = gr.Textbox(label="Your text input", scale=6)
                     submit_btn = gr.Button("Submit", variant="primary", interactive=False, scale=1)
@@ -269,7 +277,7 @@ def create_UI(initial_message: str, action_name: str) -> gr.Blocks:
                     with gr.Column(scale=1):
                         clear_btn = gr.Button("Start over", variant="secondary")
                         extra_action_button = gr.Button(action_name, variant="primary", interactive=False)
-        summary_ui = gr.Textbox(label=f"Summary (Click '{action_name}' to trigger)", interactive=False)
+        summary_ui = gr.Markdown(sanitize_html=False)
 
         # events
         # block submit button when no audio or text input
@@ -279,7 +287,7 @@ def create_UI(initial_message: str, action_name: str) -> gr.Blocks:
         file_uploader_ui.change(lambda: ([[None, initial_message]], None), outputs=[chatbot_ui, summary_ui]) \
             .then(load_context, inputs=file_uploader_ui)
 
-        clear_btn.click(lambda: ([[None, initial_message]], None), outputs=[chatbot_ui, summary_ui]) \
+        clear_btn.click(lambda: ([[None, initial_message]], None, None), outputs=[chatbot_ui, summary_ui, tps_text_ui]) \
             .then(load_context, inputs=file_uploader_ui) \
             .then(lambda: gr.Button(interactive=False), outputs=extra_action_button)
 
@@ -324,7 +332,7 @@ if __name__ == "__main__":
     log.getLogger().setLevel(log.INFO)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--chat_model", type=str, default="meta-llama/Llama-3.2-3B-Instruct", help="Path/name of the chat model")
+    parser.add_argument("--chat_model", type=str, default="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B", help="Path/name of the chat model")
     parser.add_argument("--embedding_model", type=str, default="BAAI/bge-small-en-v1.5", help="Path/name of the model for embeddings")
     parser.add_argument("--reranker_model", type=str, default="BAAI/bge-reranker-base", help="Path/name of the reranker model")
     parser.add_argument("--personality", type=str, default="healthcare_personality.yaml", help="Path to the YAML file with chatbot personality")
