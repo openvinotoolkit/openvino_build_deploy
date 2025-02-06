@@ -1,7 +1,9 @@
-openvino-dev==2023.0.0
-nncf==2.5.0
-ultralytics==8.0.117
-onnx==1.16.0
-supervision==0.16.0
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+openvino-dev==2024.6.0
+nncf==2.14.1
+ultralytics==8.3.38
+onnx==1.17.0
+supervision==0.17.1
 jupyterlab==4.2.5
 pycocotools==2.0.6

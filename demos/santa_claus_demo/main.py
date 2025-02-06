@@ -15,6 +15,16 @@ sys.path.append(os.path.dirname(SCRIPT_DIR))
 from utils import demo_utils as utils
 
 
+EMOTION_CLASSES = ["neutral", "happy", "sad", "surprise", "anger"]
+EMOTION_MAPPING = {"neutral": "Rudolph", "happy": "Cupid", "surprise": "Blitzen", "sad": "Prancer", "anger": "Vixen"}
+
+santa_beard_img = cv2.imread("assets/santa_beard.png", cv2.IMREAD_UNCHANGED)
+santa_cap_img = cv2.imread("assets/santa_cap.png", cv2.IMREAD_UNCHANGED)
+reindeer_nose_img = cv2.imread("assets/reindeer_nose.png", cv2.IMREAD_UNCHANGED)
+reindeer_sunglasses_img = cv2.imread("assets/reindeer_sunglasses.png", cv2.IMREAD_UNCHANGED)
+reindeer_antlers_img = cv2.imread("assets/reindeer_antlers.png", cv2.IMREAD_UNCHANGED)
+
+
 def download_model(model_name, precision):
     base_model_dir = Path("model")
 
@@ -54,20 +64,21 @@ def preprocess_images(imgs, width, height):
     return np.array(result)
 
 
-def process_detection_results(frame, results, thresh=0.8):
+def process_detection_results(frame, results, in_width, in_height, thresh=0.5):
     # The size of the original frame.
     h, w = frame.shape[:2]
-    # The 'results' variable is a [1, 1, 100, 7] tensor.
+    scale_x, scale_y = w / in_width, h / in_height
+    # The 'results' variable is a [200, 5] tensor.
     results = results.squeeze()
     boxes = []
     scores = []
-    for _, _, score, xmin, ymin, xmax, ymax in results:
-        # Create a box with pixels coordinates from the box with normalized coordinates [0,1].
+    for xmin, ymin, xmax, ymax, score in results:
+        # Create a box with pixels real coordinates from the output box.
         xmin = max(0, xmin)
         ymin = max(0, ymin)
         xmax = min(w, xmax)
         ymax = min(h, ymax)
-        boxes.append(tuple(map(int, (xmin * w, ymin * h, (xmax - xmin) * w, (ymax - ymin) * h))))
+        boxes.append(tuple(map(int, (xmin * scale_x, ymin * scale_y, (xmax - xmin) * scale_x, (ymax - ymin) * scale_y))))
         scores.append(float(score))
 
     # Apply non-maximum suppression to get rid of many overlapping entities.
@@ -87,20 +98,13 @@ def process_landmark_results(boxes, results):
     landmarks = []
 
     for box, result in zip(boxes, results):
-        # create a vector of landmarks (5x2)
+        # create a vector of landmarks (35x2)
         result = result.reshape(-1, 2)
         box = box[1]
         # move every landmark according to box origin
         landmarks.append((result * box[2:] + box[:2]).astype(np.int32))
 
     return landmarks
-
-
-santa_beard_img = cv2.imread("assets/santa_beard.png", cv2.IMREAD_UNCHANGED)
-santa_cap_img = cv2.imread("assets/santa_cap.png", cv2.IMREAD_UNCHANGED)
-reindeer_nose_img = cv2.imread("assets/reindeer_nose.png", cv2.IMREAD_UNCHANGED)
-reindeer_sunglasses_img = cv2.imread("assets/reindeer_sunglasses.png", cv2.IMREAD_UNCHANGED)
-reindeer_antlers_img = cv2.imread("assets/reindeer_antlers.png", cv2.IMREAD_UNCHANGED)
 
 
 def draw_mask(img, mask_img, center, face_size, scale=1.0, offset_coeffs=(0.5, 0.5)):
@@ -134,18 +138,18 @@ def draw_mask(img, mask_img, center, face_size, scale=1.0, offset_coeffs=(0.5, 0
 def draw_santa(img, detection):
     (score, box), landmarks, emotion = detection
     # draw beard
-    draw_mask(img, santa_beard_img, landmarks[2], box[2:], offset_coeffs=(0.5, -0.05))
+    draw_mask(img, santa_beard_img, landmarks[5], box[2:], offset_coeffs=(0.5, 0))
     # draw cap
-    draw_mask(img, santa_cap_img, np.mean(landmarks[:2], axis=0, dtype=np.int32), box[2:], scale=1.5, offset_coeffs=(0.56, 0.87))
+    draw_mask(img, santa_cap_img, np.mean(landmarks[13:17], axis=0, dtype=np.int32), box[2:], scale=1.5, offset_coeffs=(0.56, 0.78))
 
 
 def draw_reindeer(img, landmarks, box):
-    # draw nose
-    draw_mask(img, reindeer_nose_img, landmarks[2], box[2:], scale=0.25)
     # draw antlers
-    draw_mask(img, reindeer_antlers_img, np.mean(landmarks[:2], axis=0, dtype=np.int32), box[2:], scale=1.8, offset_coeffs=(0.5, 1.2))
+    draw_mask(img, reindeer_antlers_img, np.mean(landmarks[13:17], axis=0, dtype=np.int32), box[2:], scale=1.8, offset_coeffs=(0.5, 1.1))
     # draw sunglasses
-    draw_mask(img, reindeer_sunglasses_img, np.mean(landmarks[:2], axis=0, dtype=np.int32), box[2:], offset_coeffs=(0.5, 0.33))
+    draw_mask(img, reindeer_sunglasses_img, np.mean(landmarks[:4], axis=0, dtype=np.int32), box[2:], offset_coeffs=(0.5, 0.33))
+    # draw nose
+    draw_mask(img, reindeer_nose_img, landmarks[4], box[2:], scale=0.25)
 
 
 def draw_christmas_masks(frame, detections):
@@ -160,14 +164,14 @@ def draw_christmas_masks(frame, detections):
         draw_reindeer(frame, landmarks, box)
 
         (label_width, label_height), _ = cv2.getTextSize(
-            text=emotion_mapping[emotion],
+            text=EMOTION_MAPPING[emotion],
             fontFace=cv2.FONT_HERSHEY_SCRIPT_COMPLEX,
             fontScale=box[2] / 150,
             thickness=1)
-        point = np.mean(landmarks[:2], axis=0, dtype=np.int32) - [label_width // 2, 2 * label_height]
+        point = np.mean(landmarks[:4], axis=0, dtype=np.int32) - [label_width // 2, 2 * label_height]
         cv2.putText(
             img=frame,
-            text=emotion_mapping[emotion],
+            text=EMOTION_MAPPING[emotion],
             org=point,
             fontFace=cv2.FONT_HERSHEY_SCRIPT_COMPLEX,
             fontScale=box[2] / 150,
@@ -180,10 +184,6 @@ def draw_christmas_masks(frame, detections):
     draw_santa(frame, detections[-1])
 
     return frame
-
-
-emotion_classes = ["neutral", "happy", "sad", "surprise", "anger"]
-emotion_mapping = {"neutral": "Rudolph", "happy": "Cupid", "surprise": "Blitzen", "sad": "Prancer", "anger": "Vixen"}
 
 
 def run_demo(source, face_detection_model, face_landmarks_model, face_emotions_model, model_precision, device, flip):
@@ -208,7 +208,7 @@ def run_demo(source, face_detection_model, face_landmarks_model, face_emotions_m
     def detect_faces(img):
         input_img = preprocess_images([img], fd_width, fd_height)[0]
         results = fd_model([input_img])[fd_output]
-        return process_detection_results(frame=img, results=results)
+        return process_detection_results(img, results, fd_width, fd_height, thresh=0.25)
 
     def detect_landmarks(img, boxes):
         # every patch is a face image
@@ -229,7 +229,7 @@ def run_demo(source, face_detection_model, face_landmarks_model, face_emotions_m
             return []
 
         # map result to labels
-        labels = list(map(lambda i: emotion_classes[i], np.argmax(results, axis=1)))
+        labels = list(map(lambda x: EMOTION_CLASSES[x], np.argmax(results, axis=1)))
         return labels
 
     player = None
@@ -312,8 +312,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--stream', default="0", type=str, help="Path to a video file or the webcam number")
     parser.add_argument('--device', default="AUTO", type=str, help="Device to start inference on")
-    parser.add_argument("--detection_model_name", type=str, default="face-detection-adas-0001", help="Face detection model to be used")
-    parser.add_argument("--landmarks_model_name", type=str, default="landmarks-regression-retail-0009", help="Face landmarks regression model to be used")
+    parser.add_argument("--detection_model_name", type=str, default="face-detection-0205", help="Face detection model to be used")
+    parser.add_argument("--landmarks_model_name", type=str, default="facial-landmarks-35-adas-0002", help="Face landmarks regression model to be used")
     parser.add_argument("--emotions_model_name", type=str, default="emotions-recognition-retail-0003", help="Face emotions recognition model to be used")
     parser.add_argument("--model_precision", type=str, default="FP16-INT8", choices=["FP16-INT8", "FP16", "FP32"], help="All models precision")
     parser.add_argument("--flip", type=bool, default=True, help="Mirror input video")

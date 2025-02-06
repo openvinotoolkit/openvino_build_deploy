@@ -46,7 +46,7 @@ To get started with the Conversational AI Chatbot, you install Python, set up yo
 
 ## Install Prerequisites
 
-This project requires Python 3.8 or higher and a few libraries. If you don't already have Python installed on your machine, go to [https://www.python.org/downloads/](https://www.python.org/downloads/) and download the latest version for your operating system. Follow the prompts to install Python, and make  sure to select  the option to add Python to your PATH environment variable.
+This project requires Python 3.10 or higher and a few libraries. If you don't already have Python installed on your machine, go to [https://www.python.org/downloads/](https://www.python.org/downloads/) and download the latest version for your operating system. Follow the prompts to install Python, and make  sure to select  the option to add Python to your PATH environment variable.
 
 To install the Python libraries and tools, run this command:
 
@@ -109,13 +109,13 @@ MeloTTS is a high-quality multilingual text-to-speech library by MIT and MyShell
 ```shell
 python -m pip install --upgrade pip 
 pip install git+https://github.com/myshell-ai/MeloTTS.git@5b538481e24e0d578955be32a95d88fcbde26dc8 --no-deps
-python -m unidic download
 ```
 
 To install the other packages, run the following commands:
 
 ```shell 
 pip install -r requirements.txt
+python -m unidic download
 ```
 
 ## Get Access to Llama
@@ -155,8 +155,7 @@ This conversion script handles the conversion and optimization of:
 Before you can run the script to convert the models, you must have a Hugging Face token (`--hf_token`) for authentication, which allows you to get access to gated models, such as Llama. After the models are converted, they’re saved to the model directory you specify when you run the script.
 
 To get access to the original Llama model weights:
-1. Go to the Llama model page on Hugging Face [meta-llama/Meta-Llama 3.2-3B](https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct).  
-_NOTE: These instructions specify Llama 3.2-3B, but the default version is Llama 3.1._
+1. Go to the Llama model page on Hugging Face [meta-llama/Meta-Llama 3.2-3B](https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct).
 2. Read and accept the license agreement.  
 _Requests can take up to one hour to process._
 
@@ -189,10 +188,10 @@ For the python script, you must include the following model directory arguments.
 
 - `--reranker_model path/to/reranker_model`: The path to your reranker model directory (for example, `model/bge-reranker-large-FP32`). This model reranks responses to ensure relevance and accuracy.
 
-- `--personality path/to/personality.yaml`: The path to your custom personality YAML file (for example, `concierge_personality.yaml`).  
+- `--personality path/to/personality.yaml`: The path to your custom personality YAML file (for example, `config/concierge_personality.yaml`).  
 This file defines the assistant's personality, including instructions, system configuration, and greeting prompts. You can create and specify your own custom personality file.
 
-- `--example_pdf path/to/personality.yaml`: The path to your custom PDF file which is an additional context (for example, `Grand_Azure_Resort_Spa_Full_Guide.pdf`).  
+- `--example_pdf path/to/personality.yaml`: The path to your custom PDF file which is an additional context (for example, `data/Grand_Azure_Resort_Spa_Full_Guide.pdf`).  
 This file defines the knowledge of the resort in this concierge use case. You can use your own custom file to build a local knowledge base.
 
 - `--public`: Include this flag to make the Gradio interface publicly accessible over the network. Without this flag, the interface is only available on your local machine.
@@ -204,8 +203,8 @@ python app.py \
   --chat_model path/to/chat_model \
   --embedding_model path/to/embedding_model \
   --reranker_model path/to/reranker_model \
-  --personality concierge_personality.yaml \
-  --example_pdf Grand_Azure_Resort_Spa_Full_Guide.pdf \
+  --personality config/concierge_personality.yaml \
+  --example_pdf data/Grand_Azure_Resort_Spa_Full_Guide.pdf \
   --public
 ```
 

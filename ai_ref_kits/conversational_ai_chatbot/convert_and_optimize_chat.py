@@ -71,7 +71,7 @@ def convert_chat_model(model_type: str, precision: str, model_dir: Path, access_
         model_dir: dir to export model
         access_token: access token from Hugging Face to download gated models
     Returns:
-       Path to exported model
+       Path to exported model dir
     """
     output_dir = model_dir / model_type
     model_name = MODEL_MAPPING[model_type]
@@ -102,7 +102,7 @@ def convert_chat_model(model_type: str, precision: str, model_dir: Path, access_
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     tokenizer.save_pretrained(output_dir)
 
-    return Path(output_dir) / "openvino_model.xml"
+    return Path(output_dir)
 
 
 def convert_embedding_model(model_type: str, model_dir: Path) -> Path:
@@ -113,7 +113,7 @@ def convert_embedding_model(model_type: str, model_dir: Path) -> Path:
         model_type: selected mode type and size
         model_dir: dir to export model
     Returns:
-       Path to exported model
+       Path to exported model dir
     """
     output_dir = model_dir / model_type
     output_dir = output_dir.with_name(output_dir.name + "-FP32")
@@ -128,7 +128,7 @@ def convert_embedding_model(model_type: str, model_dir: Path) -> Path:
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     tokenizer.save_pretrained(output_dir)
 
-    return Path(output_dir) / "openvino_model.xml"
+    return Path(output_dir)
 
 
 def convert_reranker_model(model_type: str, model_dir: Path) -> Path:
@@ -139,7 +139,7 @@ def convert_reranker_model(model_type: str, model_dir: Path) -> Path:
         model_type: selected mode type and size
         model_dir: dir to export model
     Returns:
-       Path to exported model
+       Path to exported model dir
     """
     output_dir = model_dir / model_type
     output_dir = output_dir.with_name(output_dir.name + "-FP32")
@@ -153,13 +153,13 @@ def convert_reranker_model(model_type: str, model_dir: Path) -> Path:
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     tokenizer.save_pretrained(output_dir)
 
-    return Path(output_dir) / "openvino_model.xml"
+    return Path(output_dir)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--chat_model_type", type=str, choices=["llama3.2-3B", "llama3.1-8B", "llama3-8B", "qwen2-7B"],
-                        default="llama3.1-8B", help="Chat model to be converted")
+                        default="llama3.2-3B", help="Chat model to be converted")
     parser.add_argument("--embedding_model_type", type=str, choices=["bge-small", "bge-large", "bge-m3"],
                         default="bge-small", help="Embedding model to be converted")
     parser.add_argument("--reranker_model_type", type=str, choices=["bge-reranker-large", "bge-reranker-base", "bge-reranker-m3"],

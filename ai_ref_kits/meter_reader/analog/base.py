@@ -5,7 +5,7 @@ import math
 import openvino.runtime as ov
 
 
-class analog_base(object):
+class AnalogBase(object):
     def __init__(self, config, output_dir):
         self.METER_SHAPE = [512, 512]
         self.CIRCLE_CENTER = [256, 256]

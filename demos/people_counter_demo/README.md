@@ -1,6 +1,6 @@
 # People Counting with OpenVINO™
 
-The demo counts people standing in front of the webcam, presenting differences in performance between various precisions and devices on the used platform. Please press keys listed in the control panel to change a precision or device.
+The demo counts people (or any other selected object) standing in front of the webcam, presenting differences in performance between various precisions and devices on the used platform. Please press keys listed in the control panel to change a precision or device.
 
 ![image](https://github.com/openvinotoolkit/openvino_build_deploy/assets/4547501/e386c632-34f3-41c7-9713-c5aca8c1842a)
 
@@ -16,7 +16,7 @@ Now, let's dive into the steps starting with installing Python.
 
 ## Step 0
 
-This project requires Python 3.9-3.12 and a few libraries. If you don't have Python installed on your machine, go to https://www.python.org/downloads/ and download the latest version for your operating system. Follow the prompts to install Python, making sure to check the option to add Python to your PATH environment variable.
+This project requires Python 3.10-3.12 and a few libraries. If you don't have Python installed on your machine, go to https://www.python.org/downloads/ and download the latest version for your operating system. Follow the prompts to install Python, making sure to check the option to add Python to your PATH environment variable.
 
 Install libraries and tools:
 
