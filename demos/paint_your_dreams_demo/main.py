@@ -17,6 +17,7 @@ from PIL import Image
 from huggingface_hub import snapshot_download
 from optimum.intel.openvino import OVModelForImageClassification
 from transformers import Pipeline, pipeline, AutoProcessor
+from importlib import reload
 
 SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "utils")
 sys.path.append(os.path.dirname(SCRIPT_DIR))
@@ -46,8 +47,9 @@ def xeon_detected():
 
 
 def reset_openvino(amx_switch: bool):
-    print(amx_switch)
-
+    os.environ["ONEDNN_MAX_CPU_ISA"] = "AVX512_CORE_AMX" if amx_switch else "AVX512_CORE_BF16"
+    # reload openvino module to apply changes
+    reload(ov)
 
 
 def download_models(model_name, safety_checker_model: str) -> None:
@@ -153,7 +155,7 @@ def build_ui():
         "Make me an astronaut, cold color palette, muted colors, 8k"
     ]
 
-    xeon_cpu = not xeon_detected()
+    xeon_cpu = xeon_detected()
     with gr.Blocks() as demo:
         with gr.Group():
             with gr.Row():
