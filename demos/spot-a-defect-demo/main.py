@@ -171,7 +171,6 @@ def run(video_path: str, det_model_name: str, device: str, flip: bool):
     cv2.destroyAllWindows()
 
 
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--stream', default="0", type=str, help="Path to a video file or the webcam number")
