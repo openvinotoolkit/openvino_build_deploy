@@ -73,7 +73,7 @@ async def load_npu_pipeline(model_dir: Path, size: int, pipeline: str) -> genai.
     unet.reshape(1, size, size, max_position_embeddings)
     unet.compile("NPU", **ov_config)
 
-    vae = genai.AutoencoderKL(model_dir / "vae_decoder")
+    vae = genai.AutoencoderKL(model_dir / "vae_encoder", model_dir / "vae_decoder")
     vae.reshape(1, size, size)
     vae.compile("NPU", **ov_config)
 
