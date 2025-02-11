@@ -519,12 +519,13 @@ class MainWindow(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
+    core = ov.Core()
 
-    llm_device = 'GPU'
-    sd_device = 'GPU'
+    llm_device = "GPU" if "GPU" in core.available_devices else "CPU"
+    sd_device = "GPU" if "GPU" in core.available_devices else "CPU"
     whisper_device = 'CPU'
-    super_res_device = 'GPU'
-    depth_anything_device = 'GPU'
+    super_res_device = "GPU" if "GPU" in core.available_devices else "CPU"
+    depth_anything_device = "GPU" if "GPU" in core.available_devices else "CPU"
 
     print("Just a minute... doing some application setup...")
 
@@ -567,7 +568,6 @@ def main():
     print("Initializing Super Res Model done...")
 
     print("Initializing Depth Anything v2 model to run on ", depth_anything_device)
-    core = ov.Core()
     OV_DEPTH_ANYTHING_PATH = Path(f"models/depth_anything_v2_vits.xml")
     depth_compiled_model = core.compile_model(OV_DEPTH_ANYTHING_PATH, device_name=depth_anything_device)
     app_params["depth_compiled_model"] = depth_compiled_model
