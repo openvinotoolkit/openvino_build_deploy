@@ -17,7 +17,6 @@ from PIL import Image
 from huggingface_hub import snapshot_download
 from optimum.intel.openvino import OVModelForImageClassification
 from transformers import Pipeline, pipeline, AutoProcessor
-from importlib import reload
 
 SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "utils")
 sys.path.append(os.path.dirname(SCRIPT_DIR))
@@ -34,22 +33,6 @@ ov_pipelines_i2i = {}
 
 stop_generating: bool = True
 hf_model_name: Optional[str] = None
-
-
-def get_available_devices() -> list[str]:
-    devices = utils.available_devices()
-    # NPU is not supported with this application
-    return list({device.split(".")[0] for device in devices if device != "NPU"})
-
-
-def xeon_detected():
-    return "xeon" in " ".join(utils.available_devices().values()).lower()
-
-
-def reset_openvino(amx_switch: bool):
-    os.environ["ONEDNN_MAX_CPU_ISA"] = "AVX512_CORE_AMX" if amx_switch else "AVX512_CORE_BF16"
-    # reload openvino module to apply changes
-    reload(ov)
 
 
 def download_models(model_name, safety_checker_model: str) -> None:
@@ -75,20 +58,55 @@ def download_models(model_name, safety_checker_model: str) -> None:
                               image_processor=AutoProcessor.from_pretrained(safety_checker_dir))
 
 
-async def load_pipeline(model_name: str, device: str, pipeline: str):
+async def load_npu_pipeline(model_dir: Path, size: int, pipeline: str) -> genai.Text2ImagePipeline | genai.Image2ImagePipeline:
+    # NPU requires model static input shape for now
+    ov_config = {"CACHE_DIR": "cache"}
+
+    scheduler = genai.Scheduler.from_config(model_dir / "scheduler" / "scheduler_config.json")
+
+    text_encoder = genai.CLIPTextModel(model_dir / "text_encoder")
+    text_encoder.reshape(1)
+    text_encoder.compile("NPU", **ov_config)
+
+    unet = genai.UNet2DConditionModel(model_dir / "unet")
+    max_position_embeddings = text_encoder.get_config().max_position_embeddings
+    unet.reshape(1, size, size, max_position_embeddings)
+    unet.compile("NPU", **ov_config)
+
+    vae = genai.AutoencoderKL(model_dir / "vae_encoder", model_dir / "vae_decoder")
+    vae.reshape(1, size, size)
+    vae.compile("NPU", **ov_config)
+
+    if pipeline == "text2image":
+        ov_pipeline = genai.Text2ImagePipeline.latent_consistency_model(scheduler, text_encoder, unet, vae)
+    elif pipeline == "image2image":
+        ov_pipeline = genai.Image2ImagePipeline.latent_consistency_model(scheduler, text_encoder, unet, vae)
+    else:
+        raise ValueError(f"Unknown pipeline: {pipeline}")
+
+    return ov_pipeline
+
+
+async def load_pipeline(model_name: str, device: str, size: int, pipeline: str):
     model_dir = MODEL_DIR / model_name
     ov_config = {"CACHE_DIR": "cache"}
 
     if pipeline == "text2image":
         if device not in ov_pipelines_t2i:
-            ov_pipeline = genai.Text2ImagePipeline(model_dir, device, **ov_config)
+            if device == "NPU":
+                ov_pipeline = await load_npu_pipeline(model_dir, size, pipeline)
+            else:
+                ov_pipeline = genai.Text2ImagePipeline(model_dir, device, **ov_config)
             ov_pipelines_t2i[device] = ov_pipeline
 
         return ov_pipelines_t2i[device]
 
     if pipeline == "image2image":
         if device not in ov_pipelines_i2i:
-            ov_pipeline = genai.Image2ImagePipeline(model_dir, device, **ov_config)
+            if device == "NPU":
+                ov_pipeline = await load_npu_pipeline(model_dir, size, pipeline)
+            else:
+                ov_pipeline = genai.Image2ImagePipeline(model_dir, device, **ov_config)
             ov_pipelines_i2i[device] = ov_pipeline
 
         return ov_pipelines_i2i[device]
@@ -110,11 +128,11 @@ async def generate_images(input_image: np.ndarray, prompt: str, seed: int, size:
 
         start_time = time.time()
         if input_image is None:
-            ov_pipeline = await load_pipeline(hf_model_name, device, "text2image")
+            ov_pipeline = await load_pipeline(hf_model_name, device, size, "text2image")
             result = ov_pipeline.generate(prompt=prompt, num_inference_steps=num_inference_steps, width=size, height=size,
                              guidance_scale=guidance_scale, rng_seed=seed).data[0]
         else:
-            ov_pipeline = await load_pipeline(hf_model_name, device, "image2image")
+            ov_pipeline = await load_pipeline(hf_model_name, device, size,"image2image")
             # ensure image is square
             input_image = utils.crop_center(input_image)
             input_image = cv2.resize(input_image, (size, size))
@@ -141,7 +159,7 @@ async def generate_images(input_image: np.ndarray, prompt: str, seed: int, size:
         await asyncio.sleep(0.1)
 
 
-def build_ui():
+def build_ui() -> gr.Interface:
     examples_t2i = [
         "A sail boat on a grass field with mountains in the morning and sunny day",
         "A beautiful sunset with a sail boat on the ocean, photograph, highly detailed, golden hour, Nikon D850",
@@ -155,7 +173,6 @@ def build_ui():
         "Make me an astronaut, cold color palette, muted colors, 8k"
     ]
 
-    xeon_cpu = xeon_detected()
     with gr.Blocks() as demo:
         with gr.Group():
             with gr.Row():
@@ -172,11 +189,8 @@ def build_ui():
                     with gr.Row():
                         result_time_label = gr.Text("", label="Inference time", type="text")
                     with gr.Row(equal_height=True):
-                        device_dropdown = gr.Dropdown(choices=get_available_devices(), value="AUTO", label="Inference device", scale=4)
-                        with gr.Column(scale=0):
-                            endless_checkbox = gr.Checkbox(label="Generate endlessly", value=False)
-                            if xeon_cpu:
-                                amx_switch = gr.Checkbox(label="Enable AMX", value=True)
+                        device_dropdown = gr.Dropdown(choices=utils.available_devices(), value="AUTO", label="Inference device", scale=4)
+                        endless_checkbox = gr.Checkbox(label="Generate endlessly", value=False)
                         with gr.Column(scale=1):
                             start_button = gr.Button("Start generation", variant="primary")
                             stop_button = gr.Button("Stop generation", variant="secondary")
@@ -212,13 +226,11 @@ def build_ui():
         # clicking stop
         stop_button.click(stop)
         randomize_seed_button.click(lambda _: random.randint(0, MAX_SEED), inputs=seed_slider, outputs=seed_slider)
-        if xeon_cpu:
-            amx_switch.change(reset_openvino, inputs=amx_switch)
 
     return demo
 
 
-def run_endless_lcm(model_name: str, safety_checker_model: str, local_network: bool = False, public_interface: bool = False):
+def run_endless_lcm(model_name: str, safety_checker_model: str, local_network: bool = False, public_interface: bool = False) -> None:
     global hf_model_name
     hf_model_name = model_name
     server_name = "0.0.0.0" if local_network else None

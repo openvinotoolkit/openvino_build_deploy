@@ -7,3 +7,4 @@ onnx==1.17.0
 supervision==0.17.1
 jupyterlab==4.2.5
 pycocotools==2.0.6
+lapx==0.5.11
