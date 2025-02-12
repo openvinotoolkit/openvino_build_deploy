@@ -54,7 +54,7 @@ def load_chat_model(model_name: str, token: str = None) -> OpenVINOLLM:
     if token is not None:
         os.environ["HUGGING_FACE_HUB_TOKEN"] = token
 
-    ov_config = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1', "CACHE_DIR": ""}
+    ov_config = {"PERFORMANCE_HINT": "LATENCY", "CACHE_DIR": ""}
     # load llama model and its tokenizer
     if not model_path.exists():
         log.info(f"Downloading {model_name}... It may take up to 1h depending on your Internet connection and model size.")     
