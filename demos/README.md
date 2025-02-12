@@ -22,6 +22,18 @@ The demo generates images in a reasonable time (seconds) on Intel hardware.
 | Platforms                                     | Client (CPU, GPU), Cloud (CPU, GPU)                        |
 | Owner                                         | [@adrianboguszewski](https://github.com/adrianboguszewski) |
 
+### 🏥 Virtual Assistant
+
+The demo works as a virtual AI assistant. The default personality is a healthcare assistant, whose task is to greet the patient and summarize the patient's condition based on the conversation and uploaded examination report.
+
+[![image](https://github.com/user-attachments/assets/f1ca6a23-0a5d-4a7d-94d4-89d0ef2b68ea)](virtual_ai_assistant_demo)
+
+| [Virtual AI Assistant](virtual_ai_assistant_demo) |                                                            |
+|---------------------------------------------------|------------------------------------------------------------|
+| Related AI concepts                               | LLM, RAG, GenAI, Llama3, LLamaIndex                        |
+| Platforms                                         | Client (CPU, GPU, NPU), Cloud (CPU, GPU)                   |
+| Owner                                             | [@adrianboguszewski](https://github.com/adrianboguszewski) |
+
 ### 🚶 People Counter
 
 The demo counts people (or any other selected object) standing in front of the webcam, presenting differences in performance between various precisions and devices on the used platform.
@@ -34,17 +46,17 @@ The demo counts people (or any other selected object) standing in front of the w
 | Platforms                             | Client (CPU, GPU, NPU), Edge (CPU)                        |
 | Owner                                 | [@adrianboguszewski](https://github.com/adrianboguszewski) |
 
-### 🏥 Virtual Assistant
+### 🏭 Spot a Defect
 
-The demo works as a virtual AI assistant. The default personality is a healthcare assistant, whose task is to greet the patient and summarize the patient's condition based on the conversation and uploaded examination report.
+The demo detects, tracks and counts defined objects in front of the webcam. The default object is a hazelnut, but it can be changed to any other object. It works especially good with a conveyor belt.
 
-[![image](https://github.com/user-attachments/assets/f1ca6a23-0a5d-4a7d-94d4-89d0ef2b68ea)](virtual_ai_assistant_demo)
+[![image](https://github.com/user-attachments/assets/103617f8-e895-4cc0-9ed9-60a1e87b8706)](spot-a-defect-demo)
 
-| [Virtual AI Assistant](virtual_ai_assistant_demo) |                                                            |
-|---------------------------------------------------|------------------------------------------------------------|
-| Related AI concepts                               | LLM, RAG, GenAI, Llama3, LLamaIndex                        |
-| Platforms                                         | Client (CPU, GPU, NPU), Cloud (CPU, GPU)                   |
-| Owner                                             | [@adrianboguszewski](https://github.com/adrianboguszewski) |
+| [Spot a Defect](spot-a-defect-demo)  |                                                               |
+|---------------------|---------------------------------------------------------------|
+| Related AI concepts | object detection, object tracking, object counting, YOLOWorld |
+| Platforms           | Client (CPU, GPU, NPU), Edge (CPU)                            |
+| Owner               | [@adrianboguszewski](https://github.com/adrianboguszewski)    |
 
 ### 🔮 Hide Your Mess Behind
 
