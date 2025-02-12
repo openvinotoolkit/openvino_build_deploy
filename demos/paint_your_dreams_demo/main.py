@@ -188,77 +188,41 @@ def build_ui() -> gr.Interface:
                         result_img = gr.Image(label="Generated image", elem_id="output_image", format="png")
                     with gr.Row():
                         result_time_label = gr.Text("", label="Inference time", type="text")
-                    with gr.Row():
-                        start_button = gr.Button("Start generation")
-                        stop_button = gr.Button("Stop generation")
-            with gr.Accordion("Advanced options", open=True):
-                with gr.Row():
-                    device_dropdown = gr.Dropdown(
-                        choices=utils.available_devices(),
-                        value="AUTO",
-                        label="Inference device",
-                        interactive=True,
-                        scale=4
-                    )
-                    endless_checkbox = gr.Checkbox(label="Generate endlessly", value=False, scale=1)
+                    with gr.Row(equal_height=True):
+                        device_dropdown = gr.Dropdown(choices=utils.available_devices(), value="AUTO", label="Inference device", scale=4)
+                        endless_checkbox = gr.Checkbox(label="Generate endlessly", value=False)
+                        with gr.Column(scale=1):
+                            start_button = gr.Button("Start generation", variant="primary")
+                            stop_button = gr.Button("Stop generation", variant="secondary")
+
+            with gr.Accordion("Advanced options", open=False):
                 with gr.Row():
                     seed_slider = gr.Slider(label="Seed", minimum=0, maximum=MAX_SEED, step=1, value=0, randomize=True, scale=1)
                     randomize_seed_checkbox = gr.Checkbox(label="Randomize seed across runs", value=True, scale=0)
                     randomize_seed_button = gr.Button("Randomize seed", scale=0)
                 with gr.Row():
-                    guidance_scale_slider = gr.Slider(
-                        label="Guidance scale for base",
-                        minimum=2,
-                        maximum=14,
-                        step=0.1,
-                        value=8.0,
-                    )
-                    num_inference_steps_slider = gr.Slider(
-                        label="Number of inference steps for base",
-                        minimum=1,
-                        maximum=32,
-                        step=1,
-                        value=5,
-                    )
+                    guidance_scale_slider = gr.Slider(label="Guidance scale for base", minimum=2, maximum=14, step=0.1, value=8.0)
+                    num_inference_steps_slider = gr.Slider(label="Number of inference steps for base", minimum=1, maximum=32, step=1, value=5,)
                 with gr.Row():
-                    strength_slider = gr.Slider(
-                        label="Input image influence strength",
-                        minimum=0.0,
-                        maximum=1.0,
-                        step=0.01,
-                        value=0.5
-                    )
-                    size_slider = gr.Slider(
-                        label="Image size",
-                        minimum=256,
-                        maximum=1024,
-                        step=64,
-                        value=512
-                    )
+                    strength_slider = gr.Slider(label="Input image influence strength", minimum=0.0, maximum=1.0, step=0.01, value=0.5)
+                    size_slider = gr.Slider(label="Image size", minimum=256, maximum=1024, step=64, value=512)
 
-        gr.Examples(
-            label="Examples for Text2Image",
-            examples=examples_t2i,
-            inputs=prompt_text,
-            outputs=result_img,
-            cache_examples=False,
-        )
-
-        gr.Examples(
-            label="Examples for Image2Image",
-            examples=examples_i2i,
-            inputs=prompt_text,
-            outputs=result_img,
-            cache_examples=False,
-        )
+        gr.Examples(label="Examples for Text2Image", examples=examples_t2i, inputs=prompt_text, outputs=result_img, cache_examples=False)
+        gr.Examples(label="Examples for Image2Image", examples=examples_i2i, inputs=prompt_text, outputs=result_img, cache_examples=False)
 
         # clicking run
-        gr.on(triggers=[prompt_text.submit, start_button.click],
-              fn=generate_images,
-              inputs=[input_image, prompt_text, seed_slider, size_slider, guidance_scale_slider, num_inference_steps_slider,
-                      strength_slider, randomize_seed_checkbox, device_dropdown, endless_checkbox],
-              outputs=[result_img, result_time_label]
-              )
+        gr.on(
+            triggers=[prompt_text.submit, start_button.click],
+            fn=lambda: (gr.Button(variant="secondary"), gr.Button(variant="primary")),
+            outputs=[start_button, stop_button]
+        ).then(
+            generate_images,
+            inputs=[input_image, prompt_text, seed_slider, size_slider, guidance_scale_slider, num_inference_steps_slider,
+                    strength_slider, randomize_seed_checkbox, device_dropdown, endless_checkbox],
+            outputs=[result_img, result_time_label]
+        ).then(
+            lambda: (gr.Button(variant="primary"), gr.Button(variant="secondary")), outputs=[start_button, stop_button]
+        )
         # clicking stop
         stop_button.click(stop)
         randomize_seed_button.click(lambda _: random.randint(0, MAX_SEED), inputs=seed_slider, outputs=seed_slider)
@@ -285,7 +249,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", type=str, default="OpenVINO/LCM_Dreamshaper_v7-fp16-ov",
                         choices=["OpenVINO/LCM_Dreamshaper_v7-int8-ov", "OpenVINO/LCM_Dreamshaper_v7-fp16-ov"],
-                        help="GenAI model to be used")
+                        help="Visual GenAI model to be used")
     parser.add_argument("--safety_checker_model", type=str, default="Falconsai/nsfw_image_detection",
                         choices=["Falconsai/nsfw_image_detection"], help="The model to verify if the generated image is NSFW")
     parser.add_argument("--local_network", action="store_true", help="Whether demo should be available in local network")
