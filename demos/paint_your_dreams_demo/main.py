@@ -45,7 +45,16 @@ def download_models(model_name, safety_checker_model: str) -> None:
         if is_openvino_model:
             snapshot_download(model_name, local_dir=output_dir, resume_download=True)
         else:
-            raise ValueError(f"Model {model_name} is not from OpenVINO Hub and not supported")
+            if model_name == "dreamlike-art/dreamlike-anime-1.0":
+                output_dir2 = MODEL_DIR / "dreamlike_anime_1_0_fp16_ov"
+                global hf_model_name
+                hf_model_name = "dreamlike_anime_1_0_fp16_ov"
+                if not output_dir2.exists():
+                    os.system('optimum-cli export openvino --model dreamlike-art/dreamlike-anime-1.0 --task stable-diffusion --weight-format fp16  '+ str(MODEL_DIR) +'/dreamlike_anime_1_0_fp16_ov')
+            else:
+                raise ValueError(f"Model {model_name} is not supported")
+    
+    
 
     safety_checker_dir = MODEL_DIR / safety_checker_model
     if not safety_checker_dir.exists():
@@ -133,11 +142,20 @@ async def generate_images(input_image: np.ndarray, prompt: str, seed: int, size:
                              guidance_scale=guidance_scale, rng_seed=seed).data[0]
         else:
             ov_pipeline = await load_pipeline(hf_model_name, device, size,"image2image")
-            # ensure image is square
-            input_image = utils.crop_center(input_image)
-            input_image = cv2.resize(input_image, (size, size))
-            result = ov_pipeline.generate(prompt=prompt, image=ov.Tensor(input_image[None]), num_inference_steps=num_inference_steps, width=size, height=size,
-                             guidance_scale=guidance_scale, strength=1.0 - strength, rng_seed=seed).data[0]
+            if hf_model_name == "dreamlike_anime_1_0_fp16_ov":
+                height, width, c = input_image.shape
+                input_image = input_image.reshape(1, height, width, 3)
+
+                result = ov_pipeline.generate(prompt=prompt, image=ov.Tensor(input_image), num_inference_steps=num_inference_steps, width=size, height=size, 
+                             guidance_scale=guidance_scale, strength=strength, rng_seed=seed).data[0]
+            else:
+                # ensure image is square
+                input_image = utils.crop_center(input_image)
+                input_image = cv2.resize(input_image, (size, size))
+
+                result = ov_pipeline.generate(prompt=prompt, image=ov.Tensor(input_image[None]), num_inference_steps=num_inference_steps, width=size, height=size, 
+                             guidance_scale=guidance_scale, strength=strength, rng_seed=seed).data[0]
+            
         end_time = time.time()
 
         label = safety_checker(Image.fromarray(result), top_k=1)
@@ -168,7 +186,7 @@ def build_ui() -> gr.Interface:
     ]
 
     examples_i2i = [
-        "Make me a super hero, 8k",
+        "Make me a superhero, 8k",
         "Make me a beautiful cyborg with golden hair, 8k",
         "Make me an astronaut, cold color palette, muted colors, 8k"
     ]
@@ -196,15 +214,22 @@ def build_ui() -> gr.Interface:
                             stop_button = gr.Button("Stop generation", variant="secondary")
 
             with gr.Accordion("Advanced options", open=False):
+                #global hf_model_name
+                if hf_model_name == "dreamlike_anime_1_0_fp16_ov":
+                    guidance_scale_value = 7.5
+                    num_inference_steps = 50
+                else:
+                   guidance_scale_value = 8.5
+                   num_inference_steps = 4
                 with gr.Row():
                     seed_slider = gr.Slider(label="Seed", minimum=0, maximum=MAX_SEED, step=1, value=0, randomize=True, scale=1)
                     randomize_seed_checkbox = gr.Checkbox(label="Randomize seed across runs", value=True, scale=0)
                     randomize_seed_button = gr.Button("Randomize seed", scale=0)
                 with gr.Row():
-                    guidance_scale_slider = gr.Slider(label="Guidance scale for base", minimum=2, maximum=14, step=0.1, value=8.0)
-                    num_inference_steps_slider = gr.Slider(label="Number of inference steps for base", minimum=1, maximum=32, step=1, value=5,)
+                    guidance_scale_slider = gr.Slider(label="Guidance scale for base", minimum=2, maximum=14, step=0.1, value=guidance_scale_value)
+                    num_inference_steps_slider = gr.Slider(label="Number of inference steps for base", minimum=1, maximum=32, step=1, value=num_inference_steps,)
                 with gr.Row():
-                    strength_slider = gr.Slider(label="Input image influence strength", minimum=0.0, maximum=1.0, step=0.01, value=0.5)
+                    strength_slider = gr.Slider(label="Input image influence strength", minimum=0.0, maximum=1.0, step=0.01, value=0.8)
                     size_slider = gr.Slider(label="Image size", minimum=256, maximum=1024, step=64, value=512)
 
         gr.Examples(label="Examples for Text2Image", examples=examples_t2i, inputs=prompt_text, outputs=result_img, cache_examples=False)
@@ -248,7 +273,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", type=str, default="OpenVINO/LCM_Dreamshaper_v7-fp16-ov",
-                        choices=["OpenVINO/LCM_Dreamshaper_v7-int8-ov", "OpenVINO/LCM_Dreamshaper_v7-fp16-ov"],
+                        choices=["OpenVINO/LCM_Dreamshaper_v7-int8-ov", "OpenVINO/LCM_Dreamshaper_v7-fp16-ov", "OpenVINO/FLUX.1-schnell-int4-ov", "dreamlike-art/dreamlike-anime-1.0"],
                         help="Visual GenAI model to be used")
     parser.add_argument("--safety_checker_model", type=str, default="Falconsai/nsfw_image_detection",
                         choices=["Falconsai/nsfw_image_detection"], help="The model to verify if the generated image is NSFW")
