@@ -9,7 +9,7 @@ The demo generates images in seconds on Intel hardware. There are many options t
 
 Check "Generate endlessly" to generate a new image just after the previous has appeared (a very attention-bringing thing).
 
-![image](https://github.com/openvinotoolkit/openvino_build_deploy/assets/4547501/a7f53cf2-a40b-4eb2-bb9a-72969ce8ad04)
+![image](https://github.com/user-attachments/assets/d4d298e6-1df2-44bf-ae88-ba9771efeb2c)
 
 Here are the steps involved in this demo:
 
