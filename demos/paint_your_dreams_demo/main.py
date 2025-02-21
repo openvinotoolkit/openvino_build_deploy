@@ -272,9 +272,9 @@ if __name__ == '__main__':
     log.getLogger().setLevel(log.INFO)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name", type=str, default="OpenVINO/LCM_Dreamshaper_v7-fp16-ov",
-                        choices=["OpenVINO/LCM_Dreamshaper_v7-int8-ov", "OpenVINO/LCM_Dreamshaper_v7-fp16-ov", "OpenVINO/FLUX.1-schnell-int4-ov", "dreamlike-art/dreamlike-anime-1.0"],
-                        help="Visual GenAI model to be used")
+    parser.add_argument("--model_name", type=str, default="OpenVINO/LCM_Dreamshaper_v7-fp16-ov", help="Visual GenAI model to be used",
+                        choices=["OpenVINO/LCM_Dreamshaper_v7-int8-ov", "OpenVINO/LCM_Dreamshaper_v7-fp16-ov", "OpenVINO/FLUX.1-schnell-int4-ov", 
+                                 "OpenVINO/FLUX.1-schnell-int8-ov", "OpenVINO/FLUX.1-schnell-fp16-ov", "dreamlike-art/dreamlike-anime-1.0"])                        
     parser.add_argument("--safety_checker_model", type=str, default="Falconsai/nsfw_image_detection",
                         choices=["Falconsai/nsfw_image_detection"], help="The model to verify if the generated image is NSFW")
     parser.add_argument("--local_network", action="store_true", help="Whether demo should be available in local network")
