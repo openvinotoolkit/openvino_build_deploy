@@ -39,7 +39,12 @@ New updates will be added here.
 </details>
 
 # Getting Started
+
 Now, let's dive into the steps starting with installing Python. 
+
+## Star the Repository
+
+Star the [repository](https://github.com/openvinotoolkit/openvino_build_deploy) (optional, but recommended :))
 
 ## Installing Prerequisites
 

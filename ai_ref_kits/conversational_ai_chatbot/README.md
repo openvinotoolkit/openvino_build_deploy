@@ -44,6 +44,10 @@ New updates will be added to this contents list.
 
 To get started with the Conversational AI Chatbot, you install Python, set up your environment, and then you can run the application.
 
+## Star the Repository
+
+Star the [repository](https://github.com/openvinotoolkit/openvino_build_deploy) (optional, but recommended :))
+
 ## Install Prerequisites
 
 This project requires Python 3.10 or higher and a few libraries. If you don't already have Python installed on your machine, go to [https://www.python.org/downloads/](https://www.python.org/downloads/) and download the latest version for your operating system. Follow the prompts to install Python, and make  sure to select  the option to add Python to your PATH environment variable.

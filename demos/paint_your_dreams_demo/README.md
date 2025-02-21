@@ -13,11 +13,11 @@ Check "Generate endlessly" to generate a new image just after the previous has a
 
 Here are the steps involved in this demo:
 
-Step 0: Install Python and prerequisites
+Step 1: Install Python and prerequisites
 
-Step 1: Set up the environment
+Step 2: Set up the environment
 
-Step 2: Run the Application
+Step 3: Run the Application
 
 Now, let's dive into the steps starting with installing Python.
 
@@ -26,6 +26,10 @@ Now, let's dive into the steps starting with installing Python.
 ![unicorn](https://user-images.githubusercontent.com/29454499/277367065-13a8f622-8ea7-4d12-b3f8-241d4499305e.png)
 
 ## Step 0
+
+Star the [repository](https://github.com/openvinotoolkit/openvino_build_deploy) (optional, but recommended :))
+
+## Step 1
 
 This project requires Python 3.10-3.12 and a few libraries. If you don't have Python installed on your machine, go to https://www.python.org/downloads/ and download the latest version for your operating system. Follow the prompts to install Python, making sure to check the option to add Python to your PATH environment variable.
 
@@ -37,7 +41,7 @@ sudo apt install git python3-venv python3-dev
 
 _NOTE: If you are using Windows, you may need to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe) also._
 
-## Step 1
+## Step 2
 
 1. Clone the Repository
 
@@ -83,7 +87,7 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-## Step 2
+## Step 3
 
 To run the application, use the following command:
 
