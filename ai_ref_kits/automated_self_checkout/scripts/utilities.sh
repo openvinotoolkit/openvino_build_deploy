@@ -27,11 +27,10 @@ mess_inf() {
 	printf "${CYAN}\u24d8  ${NOCOLOR} $1\n"
 }
 
-isInstalled () {
+isInstalled() {
 	mess_inf "Verifying $1 package"
-	return dpkg-query -Wf'${Status}' $1 2>/dev/null | grep 'ok installed' | wc -l		
+	return dpkg-query -Wf'${Status}' $1 2>/dev/null | grep 'ok installed' | wc -l
 }
 
 declare -a packages=("git" "git-lfs" "gcc" "python3-venv" "python3-dev" "ffmpeg")
 declare -a ovscripts=("utilities.sh" "installEnv.sh" "runEnv.sh" "runDemo.sh" "cleanEnv.sh")
-./
