@@ -103,7 +103,7 @@ Run the following to see all available options.
 python main.py --help
 ```
 
-## Step 4: Quick Launch using Installer Scripts (Recommended)
+## Step 4: Quick Launch using Installer Scripts
 
 If you want a **quick setup** without manually installing dependencies, use the provided installer scripts. These scripts will **automatically configure** everything needed to run the People Counter Demo.
 
