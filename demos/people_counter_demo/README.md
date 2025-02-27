@@ -116,7 +116,7 @@ If you want a **quick setup** without manually installing dependencies, use the 
 1. Download the `install.sh` and `run.sh` files to your local directory.
 2. First, ensure the installer scripts have execute permissions:
 ```shell
-First, ensure the installer scripts have execute permissions:
+chmod +x install.sh run.sh
 ```
 3. Run the installer to set up everything:
 ```shell
