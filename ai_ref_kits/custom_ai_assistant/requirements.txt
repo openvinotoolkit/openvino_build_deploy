@@ -1,17 +1,15 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 
 openvino==2024.6.0
-optimum-intel==1.21.0
-optimum==1.23.3
-nncf==2.14.1
+optimum-intel==1.22.0
+optimum==1.24.0
+nncf==2.15.0
 
-# onnx>1.16.1 doesn't work on windows
-onnx==1.16.1; platform_system == "Windows"
-onnx==1.17.0; platform_system != "Windows"
-onnxruntime==1.17.3
+onnx==1.17.0
+onnxruntime==1.20.1
 torch==2.5.1
 
-transformers==4.46.3
+transformers==4.48.3
 librosa==0.10.2
 
 gradio==5.12.0

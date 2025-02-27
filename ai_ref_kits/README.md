@@ -15,8 +15,6 @@
 	- [🔦 Explainable AI](#-explainable-ai)
 	- [🖼️ Multimodal AI Visual Generator](#%EF%B8%8F-multimodal-ai-visual-generator)
 	- [💬 Conversational AI Chatbot](#-conversational-ai-chatbot)
-	- [🛒 AI Insight Agent with RAG](#ai-insight-agent-with-rag)
-- [Future Kits](#future-kits)
 
 - [Troubleshooting and Resources](#troubleshooting-and-resources)
 
@@ -98,7 +96,7 @@ The Custom AI Assistant, powered by the OpenVINO™ toolkit, integrates voice-ac
 Understanding why computer vision models make certain predictions using data and model explainability can help us refine our models to be more efficient and performant. This solution demonstrates how to leverage the OpenVINO™ toolkit, Datumaro, and Ultralytics to generate data quality measurements and saliency maps to understand the predictions and performance of computer vision models during inference.
 
 ### 🖼️ Multimodal AI Visual Generator
-![multimodal-ai-visual-generator](https://github.com/user-attachments/assets/f113a126-4b44-4488-be4e-e4bf52a6cebc)
+![multimodal-ai-visual-generator](https://github.com/user-attachments/assets/2144ae33-9e41-4e48-9992-ddec17ef5579)
 
 | [Multimodal AI Visual Generator](multimodal_ai_visual_generator) |  |
 | - | - |
@@ -118,25 +116,6 @@ An in-depth demo of how the Multimodal AI Visual Generator Kit creates a real-ti
 | Demo                                                   |                                                                                                                                                         |
 
 The Conversational AI Chatbot is an open-source, voice-driven chat agent that answers spoken questions with meaningful, spoken responses.  It can be configured to respond in any type of scenario or context. This kit demonstrates the AI Chatbot’s capabilities by simulating the experience of talking to a hotel concierge.
-
-### 🛒 AI Insight Agent with RAG
-![ai-insight-agent-with-rag](https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/ai_ref_kits#-ai-insight-agent-with-rag)
-
-
-| [AI Insight Agent with RAG](ai-insight-agent-with-rag) |                                                                                                                                                         |
-|--------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Related AI concepts                                    | Speech Recognition, Natural Language Understanding, Large Language Models (LLMs), Retrieval Augmented Generation (RAG), Speech Synthesis, Agentic AI, Generative AI |
-| Example industries                                     | Retail                                                                                                                                                 |
-| Demo                                                   |                                                                                                                                                         |
-
-The AI Insight Agent with RAG uses the OpenVINO™ toolkit to create a streamlined, voice-activated interface that consumers and retail employees can use as a smart, personalized retail assistant. The AI Insight Agent with RAG can perform math, understand instructional documents, and engage in conversations.
-
-## Future Kits
-This is a list of Edge AI Reference kits that are planned or are in development.
-
-### 🤖 Generative AI
-
-Kit that explores the potential of generative AI with OpenVINO.
 
 ## Troubleshooting and Resources
 - Open a [discussion topic](https://github.com/openvinotoolkit/openvino_build_deploy/discussions)

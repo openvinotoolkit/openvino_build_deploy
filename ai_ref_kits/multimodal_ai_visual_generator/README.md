@@ -1,18 +1,17 @@
 <div id="top" align="center">
-  <h1>Multimodal AI Visual Generator with OpenVINO™ Toolkit</h1>
+  <h1>AI Adventure Experience with OpenVINO™ GenAI</h1>
   <h4>
     <a href="https://www.intel.com/content/www/us/en/developer/topic-technology/edge-5g/open-potential.html">🏠&nbsp;About&nbsp;the&nbsp;Kits&nbsp;·</a>
-    <a href="https://www.youtube.com/watch?v=kn1jZ2nLFMY">👨‍💻&nbsp;Code&nbsp;Demo&nbsp;Video&nbsp;·</a>
   </h4>
 </div>
 
 [![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/LICENSE.txt)
 
-The Multimodal AI Visual Generator is designed for rapid prototyping, instant iteration, and seamless visualization of complex concepts. The kit integrates image creation with generative AI, automatic speech recognition (ASR), speech synthesis, large language models (LLMs), and natural language processing (NLP). It processes multimodal inputs from sources such as cameras, voice commands, or typed text to generate AI-driven visual outputs. Utilizing the Intel OpenVINO™ toolkit, the system enables seamless deployment of deep learning models across hardware platforms. Explore the demo to see its real-time visual generative AI workflow in action.
+The kit integrates image creation with generative AI, voice activity detection (VAD), automatic speech recognition (ASR), large language models (LLMs), and natural language processing (NLP). A live voice transcription pipeline is connected to an LLM, which makes intelligent decisions about whether the user is describing the scene to an adventure game. When the LLM detects a new scene, the LLM will produce a detailed text prompt suitable for stable diffusion, which the application uses to illustrate the image. Utilizing the OpenVINO™ GenAI framework, this kit demonstrates the use of text2image, LLM pipeline, and whisper speech2text APIs.
 
 This kit uses the following technology stack:
 - [OpenVINO Toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([docs](https://docs.openvino.ai/))
-- [nanoLLaVA (multimodal)](https://huggingface.co/qnguyen3/nanoLLaVA)
+- [OpenVINO GenAI](https://github.com/openvinotoolkit/openvino.genai)
 - [Whisper](https://github.com/openai/whisper)
 - [Llama3-8b-Instruct](https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct)
 - [Single Image Super Resolution](https://arxiv.org/abs/1807.06779)
@@ -21,9 +20,9 @@ This kit uses the following technology stack:
 
 Check out our [AI Reference Kits repository](/) for other kits.
 
-![kit-gif](https://github.com/user-attachments/assets/f113a126-4b44-4488-be4e-e4bf52a6cebc)
+![ai_adventure_experience_desert](https://github.com/user-attachments/assets/2144ae33-9e41-4e48-9992-ddec17ef5579)
 
-Contributors: Ria Cheruvu, Garth Long, Arisha Kumar, Paula Ramos, Dmitriy Pastushenkov, Zhuo Wu, and Raymond Lo.
+Contributors: Ryan Metcalfe, Garth Long, Arisha Kumar, Ria Cheruvu, Paula Ramos, Dmitriy Pastushenkov, Zhuo Wu, and Raymond Lo.
 
 ### What's New
 
@@ -40,22 +39,27 @@ New updates will be added here.
 </details>
 
 # Getting Started
+
 Now, let's dive into the steps starting with installing Python. 
+
+## Star the Repository
+
+Star the [repository](https://github.com/openvinotoolkit/openvino_build_deploy) (optional, but recommended :))
 
 ## Installing Prerequisites
 
-Now, let's dive into the steps starting with installing Python. We recommend using Ubuntu to set up and run this project. This project requires Python 3.8 or higher and a few libraries. If you don't have Python installed on your machine, go to https://www.python.org/downloads/ and download the latest version for your operating system. Follow the prompts to install Python, making sure to check the option to add Python to your PATH environment variable.
+Now, let's dive into the steps starting with installing Python. This project requires Python 3.10 or higher and a few libraries. If you don't have Python installed on your machine, go to https://www.python.org/downloads/ and download the latest version for your operating system. Follow the prompts to install Python, making sure to check the option to add Python to your PATH environment variable.
 
 Install libraries and tools:
 
+If you're using Ubuntu, install required dependencies like this:
 ```shell
-sudo apt install git git-lfs gcc python3-venv python3-dev
+sudo apt install git git-lfs gcc python3-venv python3-dev portaudio19-dev
 ```
-
 _NOTE: If you are using Windows, you will probably need to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe) also._
 
 ## Setting Up Your Environment
-### Cloning the Repository
+### Cloning the Repository and Installing Dependencies
 
 To clone the repository, run the following command:
 
@@ -69,58 +73,37 @@ The above will clone the repository into a directory named "openvino_build_deplo
 cd openvino_build_deploy/ai_ref_kits/multimodal_ai_visual_generator
 ```
 
-Next, you’ll download and optimize the required models. This will involve the creation of a temporary virtual environment and the running of a download script. Your requirements.txt file will depend on the Python version you're using (3.11 or 3.12).
+Next the below will create a virtual environment, activate the environment, and install the required dependencies for the setup and execution of the project.
 
-- nanoLLaVA (multimodal): Image recognition/captioning from webcam 
-- Whisper: Speech recognition
-- Llama3-8b-instruct: Prompt refinement
-- Latent Consistency Models: Image generation
-  
-**Note:** If you would like to run Latent Consistency Models on the NPU, as shown in the demo above, please follow the following steps: Download the model from this location "https://huggingface.co/Intel/sd-1.5-lcm-openvino" and compile it via the steps located at https://github.com/intel/openvino-ai-plugins-gimp/blob/v2.99-R3-staging/model_setup.py. 
-
-- AI Super Resolution: Increase the resolution of the generated image
-- Depth Anything v2: Create 3d parallax animations
-    
+Linux:
 ```shell
-python3 -m venv model_installation_venv
-source model_installation_venv/bin/activate
+python3 -m venv run_env
+source run_env/bin/activate
 pip install -r requirements.txt
+```
+
+Windows:
+```shell
+python -m venv run_env
+run_env/Scripts/activate
+pip install -r requirements.txt
+``` 
+
+### Downloading and Preparing Models
+Next, you’ll download and optimize the required models via the running of a download script. 
+
+- Whisper: Speech recognition
+- Llama3-8b-instruct: Intelligent LLM helper
+- Latent Consistency Models: Image generation
+- Super Resolution: Increase the resolution of the generated image
+- Depth Anything v2: Create 3d parallax animations
+
+To run the download script:
+```shell
 python3 download_and_prepare_models.py
-``` 
-After model installation, you can remove the `model_installation_venv` virtual environment as it is no longer needed.
-
-### Creating a Virtual Environment
-
-To create a virtual environment, open your terminal or command prompt and navigate to the directory where you want to create the environment. Then, run the following command:
-
-```shell
-python3 -m dnd_env
+cd ..
 ```
-This will create a new virtual environment named "dnd_env" in the current directory.
-
-### Activating the Environment
-
-Activate the virtual environment using the following command:
-
-```shell
-source dnd_env/bin/activate   # For Unix-based operating systems such as Linux or macOS
-```
-
-_NOTE: If you are using Windows, use the `dnd_env\Scripts\activate` command instead._
-
-This will activate the virtual environment and change your shell's prompt to indicate that you are now working within that environment.
-
-### Installing the Packages
-
-To install the required packages, run the following commands:
-
-```shell
-pip install -r requirements.txt 
-pip install "openai-whisper==20231117" --extra-index-url https://download.pytorch.org/whl/cpu
-``` 
-
 ## Running the Application
-![SIGGRAPH Drawing](https://github.com/user-attachments/assets/3ce58b50-4ee9-4dae-aeb6-0af5368a3ddd)
 
 To interact with the animated GIF outputs, host a simple web server on your system as the final output. To do so, please install Node.js via [its Download page](https://nodejs.org/en/download/package-manager) and [http-server](https://www.npmjs.com/package/http-server).
 
@@ -130,35 +113,59 @@ Run the following command to start an HTTP server within the repository. You can
 http-server -c10
 ``` 
 
-Open a terminal or you can use the existing one with `dnd_env` environment activated and start the Gradio GUI - <br>
+Open a terminal or you can use the existing one with `run_env` environment activated and start the GUI - <br>
 
 ```shell
-python3 gradio_ui.py 
+python app.py 
 ```
 
-Click on the web link to open the GUI in the web browser.
+![UI Drawing](https://github.com/user-attachments/assets/4f37f4d1-31c1-4534-82eb-d370fe29873a)
 
-![demo screenshot](https://github.com/user-attachments/assets/ddfea7f0-3f1d-4d1c-b356-3bc959a23837)
 
-### 📷 Submit a picture
-Take or upload a picture of any object via the Gradio image interface. Your "theme" will become the image description, if the object in the image is clearly captured.
+### ➕ Set the theme for your story
+This theme is passed as part of the system message to the LLM, and helps the LLM make more a more educated decision about whether you are describing the scene to a story, or not.
 
-### 🗣 Speak your prompt
-Start or upload a recording, wait for the server to listen, and speak your prompt to life. Click the “Stop” button to stop the generation.
+### ➕ Click the Start Button
+The start button will activate the listening state (Voice Activity Detection & Whisper Transcription pipelines) on the system's default input device (microphone).
 
-### ➕ Add a theme to prompt
-Now, your prompt is transcribed! Click the "Add Theme to Prompt" button to combine your prompt and theme.
+### 🗣 Describe a scene to your story
+Go ahead and describe a scene your story. For example, "You find yourself at the gates of a large, abandoned castle."
 
-### ⚙️ Refine it with an LLM
-You can optionally ask an LLM model to refine your model by clicking the LLM button. It will try its best to generate a prompt infusing the elements.
+### 🖼️ Wait for your illustration
+The scene that you just described will be passed to the LLM, which should detect it as a new scene to your story. The detailed prompt that is generated by the LLM will show up in real-time in the UI caption box, followed soon after by the illustration generated from the stable diffusion pipeline.
 
-### 🖼️ Generate your image and depth map
-Click "Generate Image" to see your image come to life. A depth map will automatically be generated for the image as well. Feel free to adjust the advanced parameters to control the image generation model.
+### 🗣 Talk about something not relevant to your story
+You can test the intelligence of the LLM helper and say something not relevant to the story. For example, "Hey guys, do you think we should order a pizza?". You should find that the LLM will make the decision to disregard this, and not try to illustrate anything.
 
 ### 🪄🖼️ Interact with the animated GIF
 To interact with the 3D hoverable animation created with depth maps, start an HTTP server as explained above, and you will be able to interact with the parallax.
 
-<p align="right"><a href="#top">Back to top ⬆️</a></p>
+## :bulb: Additional Tips
+* Feel free to modify `main.py` to select different OpenVINO devices for the llm, stable diffusion pipeline, whisper, etc.
+  Look toward the bottom of the script, for a section that looks like this:
+  ```
+  if __name__ == "__main__":
+    app = QApplication(sys.argv)
+
+    llm_device = 'GPU'
+    sd_device = 'GPU'
+    whisper_device = 'CPU'
+    super_res_device = 'GPU'
+    depth_anything_device = 'GPU'
+  ```
+  If you're running on an Intel Core Ultra Series 2 laptop, and you want to set ```llm_device = 'NPU'```, be sure to have latest NPU driver installed, from [here](https://www.intel.com/content/www/us/en/download/794734/intel-npu-driver-windows.html)
+  
+* Based on the resolution of your display, you may want to tweak the default resolution of the illustrated image, as well as caption font size.
+  To adjust the resolution of the illustrated image, look for and modify this line:
+  ```
+  self.image_label.setFixedSize(1216, 684)
+  ```
+  It's recommended to choose a 16:9 ratio resolution. You can find a convenient list [here](https://pacoup.com/2011/06/12/list-of-true-169-resolutions/).
+  
+  The caption font size can be adjusted by modifying this line:
+  ```
+  fantasy_font = QFont("Papyrus", 18, QFont.Bold)
+  ```
 
 # Additional Resources
 - Learn more about [OpenVINO](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html)

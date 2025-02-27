@@ -7,7 +7,7 @@ inputs:
     required: true
   timeout:
     required: false
-    default: 1800
+    default: 3600
 
 runs:
   using: 'composite'
@@ -18,9 +18,13 @@ runs:
       run: |
         cd ${{ inputs.project }}
 
-        # Start the Gradio app in the background
-        python ${{ inputs.script }} 2>&1 | tee gradio_log.txt &
-
+        if [ "${{ runner.os }}" == "Linux" ]; then
+          # Start the Gradio app in the background
+          xvfb-run python ${{ inputs.script }} 2>&1 | tee gradio_log.txt &
+        else
+          python ${{ inputs.script }} 2>&1 | tee gradio_log.txt &
+        fi
+        
         # Assign process ID
         app_pid=$(ps aux | grep -i '[p]ython main.py' | awk '{print $2}')
 

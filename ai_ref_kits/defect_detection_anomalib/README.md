@@ -38,6 +38,10 @@ New updates will be added here.
 
 </details>
 
+## Star the Repository
+
+Star the [repository](https://github.com/openvinotoolkit/openvino_build_deploy) (optional, but recommended :))
+
 # Installing Anomalib
 
 If you have not installed all required dependencies, just run `pip install anomalib` in the same OpenVINO Notebooks environment.

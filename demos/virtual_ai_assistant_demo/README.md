@@ -8,17 +8,21 @@ The personality and behaviour can be easily changed with the config file (see St
 
 Here are the steps involved in this demo:
 
-Step 0: Install Python and prerequisites
+Step 1: Install Python and prerequisites
 
-Step 1: Set up the environment
+Step 2: Set up the environment
 
-Step 2: Create a YAML Personality File
+Step 3: Create a YAML Personality File
 
-Step 3: Run the Application
+Step 4: Run the Application
 
 Now, let's dive into the steps starting with installing Python.
 
-## Step 0: Install Python and prerequisites 
+## Step 0
+
+Star the [repository](https://github.com/openvinotoolkit/openvino_build_deploy) (optional, but recommended :))
+
+## Step 1: Install Python and prerequisites 
 
 This project requires Python 3.10-3.12 and a few libraries. If you don't have Python installed on your machine, go to https://www.python.org/downloads/ and download the latest version for your operating system. Follow the prompts to install Python, making sure to check the option to add Python to your PATH environment variable.
 
@@ -30,7 +34,7 @@ sudo apt install git python3-venv python3-dev
 
 _NOTE: If you are using Windows, you may need to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe) also._
 
-## Step 1: Set up the environment
+## Step 2: Set up the environment
 
 1. Clone the Repository
 
@@ -76,7 +80,7 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-## Step 2: Create a YAML Personality File
+## Step 3: Create a YAML Personality File
 
 You can create a personality file for your virtual AI assistant using YAML. Each personality can be customized based on the specific role of the assistant, such as a health assistant, bartender, or legal assistant. 
 
@@ -106,7 +110,7 @@ instructions: |
         **Note: [Add a disclaimer or key note about what the assistant can and cannot do].**
 ```
 
-## Step 3: Run the Application
+## Step 4: Run the Application
 
 ### Access LlaMA
 NOTE: If you already have access to the LlaMA model weights, skip to the authentication step, which is mandatory for converting the LlaMA model.

@@ -8,10 +8,12 @@ import time
 from pathlib import Path
 from typing import Optional
 
+import cv2
 import gradio as gr
 import numpy as np
 import openvino as ov
 import openvino_genai as genai
+import tqdm
 from PIL import Image
 from huggingface_hub import snapshot_download
 from optimum.intel.openvino import OVModelForImageClassification
@@ -27,19 +29,14 @@ MODEL_DIR = Path("model")
 
 safety_checker: Optional[Pipeline] = None
 
-ov_pipelines = {}
+ov_pipelines_t2i = {}
+ov_pipelines_i2i = {}
 
 stop_generating: bool = True
 hf_model_name: Optional[str] = None
 
 
-def get_available_devices() -> list[str]:
-    core = ov.Core()
-    # NPU is not supported with this application
-    return list({device.split(".")[0] for device in core.available_devices if device != "NPU"})
-
-
-def download_models(model_name: str, safety_checker_model: str) -> None:
+def download_models(model_name, safety_checker_model: str) -> None:
     global safety_checker
 
     is_openvino_model = model_name.split("/")[0] == "OpenVINO"
@@ -47,7 +44,7 @@ def download_models(model_name: str, safety_checker_model: str) -> None:
     output_dir = MODEL_DIR / model_name
     if not output_dir.exists():
         if is_openvino_model:
-            snapshot_download(model_name, local_dir=output_dir)
+            snapshot_download(model_name, local_dir=output_dir, resume_download=True)
         else:
             raise ValueError(f"Model {model_name} is not from OpenVINO Hub and not supported")
 
@@ -62,15 +59,58 @@ def download_models(model_name: str, safety_checker_model: str) -> None:
                               image_processor=AutoProcessor.from_pretrained(safety_checker_dir))
 
 
-async def load_pipeline(model_name: str, device: str):
-    if device not in ov_pipelines:
-        model_dir = MODEL_DIR / model_name
-        ov_config = {"CACHE_DIR": "cache"}
+async def load_npu_pipeline(model_dir: Path, size: int, pipeline: str) -> genai.Text2ImagePipeline | genai.Image2ImagePipeline:
+    # NPU requires model static input shape for now
+    ov_config = {"CACHE_DIR": "cache"}
 
-        ov_pipeline = genai.Text2ImagePipeline(model_dir, device, **ov_config)
-        ov_pipelines[device] = ov_pipeline
+    scheduler = genai.Scheduler.from_config(model_dir / "scheduler" / "scheduler_config.json")
 
-    return ov_pipelines[device]
+    text_encoder = genai.CLIPTextModel(model_dir / "text_encoder")
+    text_encoder.reshape(1)
+    text_encoder.compile("NPU", **ov_config)
+
+    unet = genai.UNet2DConditionModel(model_dir / "unet")
+    max_position_embeddings = text_encoder.get_config().max_position_embeddings
+    unet.reshape(1, size, size, max_position_embeddings)
+    unet.compile("NPU", **ov_config)
+
+    vae = genai.AutoencoderKL(model_dir / "vae_encoder", model_dir / "vae_decoder")
+    vae.reshape(1, size, size)
+    vae.compile("NPU", **ov_config)
+
+    if pipeline == "text2image":
+        ov_pipeline = genai.Text2ImagePipeline.latent_consistency_model(scheduler, text_encoder, unet, vae)
+    elif pipeline == "image2image":
+        ov_pipeline = genai.Image2ImagePipeline.latent_consistency_model(scheduler, text_encoder, unet, vae)
+    else:
+        raise ValueError(f"Unknown pipeline: {pipeline}")
+
+    return ov_pipeline
+
+
+async def load_pipeline(model_name: str, device: str, size: int, pipeline: str):
+    model_dir = MODEL_DIR / model_name
+    ov_config = {"CACHE_DIR": "cache"}
+
+    if pipeline == "text2image":
+        if device not in ov_pipelines_t2i:
+            if device == "NPU":
+                ov_pipeline = await load_npu_pipeline(model_dir, size, pipeline)
+            else:
+                ov_pipeline = genai.Text2ImagePipeline(model_dir, device, **ov_config)
+            ov_pipelines_t2i[device] = ov_pipeline
+
+        return ov_pipelines_t2i[device]
+
+    if pipeline == "image2image":
+        if device not in ov_pipelines_i2i:
+            if device == "NPU":
+                ov_pipeline = await load_npu_pipeline(model_dir, size, pipeline)
+            else:
+                ov_pipeline = genai.Image2ImagePipeline(model_dir, device, **ov_config)
+            ov_pipelines_i2i[device] = ov_pipeline
+
+        return ov_pipelines_i2i[device]
 
 
 async def stop():
@@ -78,19 +118,41 @@ async def stop():
     stop_generating = True
 
 
-async def generate_images(prompt: str, seed: int, size: int, guidance_scale: float, num_inference_steps: int, randomize_seed: bool, device: str, endless_generation: bool) -> tuple[np.ndarray, float]:
+progress_bar = None
+def progress(step, num_steps, latent):
+    global progress_bar
+    if progress_bar is None:
+        progress_bar = tqdm.tqdm(total=num_steps)
+
+    progress_bar.update()
+
+    if step == num_steps - 1:
+        progress_bar = None
+
+    return False
+
+
+async def generate_images(input_image: np.ndarray, prompt: str, seed: int, size: int, guidance_scale: float, num_inference_steps: int,
+                          strength: float, randomize_seed: bool, device: str, endless_generation: bool) -> tuple[np.ndarray, float]:
     global stop_generating
     stop_generating = not endless_generation
-
-    ov_pipeline = await load_pipeline(hf_model_name, device)
 
     while True:
         if randomize_seed:
             seed = random.randint(0, MAX_SEED)
 
         start_time = time.time()
-        result = ov_pipeline.generate(prompt=prompt, num_inference_steps=num_inference_steps, width=size, height=size,
-                             guidance_scale=guidance_scale, generator=genai.CppStdGenerator(seed)).data[0]
+        if input_image is None:
+            ov_pipeline = await load_pipeline(hf_model_name, device, size, "text2image")
+            result = ov_pipeline.generate(prompt=prompt, num_inference_steps=num_inference_steps, width=size, height=size,
+                             guidance_scale=guidance_scale, rng_seed=seed, callback=progress).data[0]
+        else:
+            ov_pipeline = await load_pipeline(hf_model_name, device, size,"image2image")
+            # ensure image is square
+            input_image = utils.crop_center(input_image)
+            input_image = cv2.resize(input_image, (size, size))
+            result = ov_pipeline.generate(prompt=prompt, image=ov.Tensor(input_image[None]), num_inference_steps=num_inference_steps, width=size, height=size,
+                             guidance_scale=guidance_scale, strength=1.0 - strength, rng_seed=seed, callback=progress).data[0]
         end_time = time.time()
 
         label = safety_checker(Image.fromarray(result), top_k=1)
@@ -112,14 +174,18 @@ async def generate_images(prompt: str, seed: int, size: int, guidance_scale: flo
         await asyncio.sleep(0.1)
 
 
-def build_ui():
-    examples = [
+def build_ui() -> gr.Interface:
+    examples_t2i = [
         "A sail boat on a grass field with mountains in the morning and sunny day",
+        "A beautiful sunset with a sail boat on the ocean, photograph, highly detailed, golden hour, Nikon D850",
         "Portrait photo of a girl, photograph, highly detailed face, depth of field, moody light, golden hour,"
-        "Style by Dan Winters, Russell James, Steve McCurry, centered, extremely detailed, Nikon D850, award winning photography",
-        "Self-portrait oil painting, a beautiful cyborg with golden hair, 8k",
-        "Astronaut in a jungle, cold color palette, muted colors, detailed, 8k",
-        "A photo of beautiful mountain with realistic sunset and blue lake, highly detailed, masterpiece",
+        "Style by Dan Winters, Russell James, Steve McCurry, centered, extremely detailed, Nikon D850, award winning photography"
+    ]
+
+    examples_i2i = [
+        "Make me a super hero, 8k",
+        "Make me a beautiful cyborg with golden hair, 8k",
+        "Make me an astronaut, cold color palette, muted colors, 8k"
     ]
 
     with gr.Blocks() as demo:
@@ -132,62 +198,46 @@ def build_ui():
                 )
             with gr.Row():
                 with gr.Column():
-                    result_img = gr.Image(label="Generated image", elem_id="output_image", format="png")
                     with gr.Row():
-                        result_time_label = gr.Text("", label="Inference Time", type="text")
+                        input_image = gr.Image(label="Input image (leave blank for text2image generation)", sources=["webcam", "clipboard", "upload"])
+                        result_img = gr.Image(label="Generated image", elem_id="output_image", format="png")
                     with gr.Row():
-                        start_button = gr.Button("Start generation")
-                        stop_button = gr.Button("Stop generation")
-            with gr.Accordion("Advanced options", open=True):
-                with gr.Row():
-                    device_dropdown = gr.Dropdown(
-                        choices=get_available_devices(),
-                        value="CPU",
-                        label="Inference device",
-                        interactive=True,
-                        scale=4
-                    )
-                    endless_checkbox = gr.Checkbox(label="Generate endlessly", value=False, scale=1)
+                        result_time_label = gr.Text("", label="Inference time", type="text")
+                    with gr.Row(equal_height=True):
+                        device_dropdown = gr.Dropdown(choices=utils.available_devices(), value="AUTO", label="Inference device", scale=4)
+                        endless_checkbox = gr.Checkbox(label="Generate endlessly", value=False)
+                        with gr.Column(scale=1):
+                            start_button = gr.Button("Start generation", variant="primary")
+                            stop_button = gr.Button("Stop generation", variant="secondary")
+
+            with gr.Accordion("Advanced options", open=False):
                 with gr.Row():
                     seed_slider = gr.Slider(label="Seed", minimum=0, maximum=MAX_SEED, step=1, value=0, randomize=True, scale=1)
                     randomize_seed_checkbox = gr.Checkbox(label="Randomize seed across runs", value=True, scale=0)
                     randomize_seed_button = gr.Button("Randomize seed", scale=0)
                 with gr.Row():
-                    guidance_scale_slider = gr.Slider(
-                        label="Guidance scale for base",
-                        minimum=2,
-                        maximum=14,
-                        step=0.1,
-                        value=8.0,
-                    )
-                    num_inference_steps_slider = gr.Slider(
-                        label="Number of inference steps for base",
-                        minimum=1,
-                        maximum=32,
-                        step=1,
-                        value=5,
-                    )
+                    guidance_scale_slider = gr.Slider(label="Guidance scale for base", minimum=2, maximum=14, step=0.1, value=8.0)
+                    num_inference_steps_slider = gr.Slider(label="Number of inference steps for base", minimum=1, maximum=32, step=1, value=5,)
+                with gr.Row():
+                    strength_slider = gr.Slider(label="Input image influence strength", minimum=0.0, maximum=1.0, step=0.01, value=0.5)
+                    size_slider = gr.Slider(label="Image size", minimum=256, maximum=1024, step=64, value=512)
 
-                size_slider = gr.Slider(
-                    label="Image size",
-                    minimum=256,
-                    maximum=1024,
-                    step=64,
-                    value=512
-                )
+        gr.Examples(label="Examples for Text2Image", examples=examples_t2i, inputs=prompt_text, outputs=result_img, cache_examples=False)
+        gr.Examples(label="Examples for Image2Image", examples=examples_i2i, inputs=prompt_text, outputs=result_img, cache_examples=False)
 
-        gr.Examples(
-            examples=examples,
-            inputs=prompt_text,
-            outputs=result_img,
-            cache_examples=False,
-        )
         # clicking run
-        gr.on(triggers=[prompt_text.submit, start_button.click],
-              fn=generate_images,
-              inputs=[prompt_text, seed_slider, size_slider, guidance_scale_slider, num_inference_steps_slider, randomize_seed_checkbox, device_dropdown, endless_checkbox],
-              outputs=[result_img, result_time_label]
-              )
+        gr.on(
+            triggers=[prompt_text.submit, start_button.click],
+            fn=lambda: (gr.Button(variant="secondary"), gr.Button(variant="primary")),
+            outputs=[start_button, stop_button]
+        ).then(
+            generate_images,
+            inputs=[input_image, prompt_text, seed_slider, size_slider, guidance_scale_slider, num_inference_steps_slider,
+                    strength_slider, randomize_seed_checkbox, device_dropdown, endless_checkbox],
+            outputs=[result_img, result_time_label]
+        ).then(
+            lambda: (gr.Button(variant="primary"), gr.Button(variant="secondary")), outputs=[start_button, stop_button]
+        )
         # clicking stop
         stop_button.click(stop)
         randomize_seed_button.click(lambda _: random.randint(0, MAX_SEED), inputs=seed_slider, outputs=seed_slider)
@@ -195,7 +245,7 @@ def build_ui():
     return demo
 
 
-def run_endless_lcm(model_name: str, safety_checker_model: str, local_network: bool = False, public_interface: bool = False):
+def run_endless_lcm(model_name: str, safety_checker_model: str, local_network: bool = False, public_interface: bool = False) -> None:
     global hf_model_name
     hf_model_name = model_name
     server_name = "0.0.0.0" if local_network else None

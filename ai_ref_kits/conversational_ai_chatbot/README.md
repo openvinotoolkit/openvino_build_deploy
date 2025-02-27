@@ -44,9 +44,13 @@ New updates will be added to this contents list.
 
 To get started with the Conversational AI Chatbot, you install Python, set up your environment, and then you can run the application.
 
+## Star the Repository
+
+Star the [repository](https://github.com/openvinotoolkit/openvino_build_deploy) (optional, but recommended :))
+
 ## Install Prerequisites
 
-This project requires Python 3.8 or higher and a few libraries. If you don't already have Python installed on your machine, go to [https://www.python.org/downloads/](https://www.python.org/downloads/) and download the latest version for your operating system. Follow the prompts to install Python, and make  sure to select  the option to add Python to your PATH environment variable.
+This project requires Python 3.10 or higher and a few libraries. If you don't already have Python installed on your machine, go to [https://www.python.org/downloads/](https://www.python.org/downloads/) and download the latest version for your operating system. Follow the prompts to install Python, and make  sure to select  the option to add Python to your PATH environment variable.
 
 To install the Python libraries and tools, run this command:
 
@@ -109,13 +113,13 @@ MeloTTS is a high-quality multilingual text-to-speech library by MIT and MyShell
 ```shell
 python -m pip install --upgrade pip 
 pip install git+https://github.com/myshell-ai/MeloTTS.git@5b538481e24e0d578955be32a95d88fcbde26dc8 --no-deps
-python -m unidic download
 ```
 
 To install the other packages, run the following commands:
 
 ```shell 
 pip install -r requirements.txt
+python -m unidic download
 ```
 
 ## Get Access to Llama
@@ -155,8 +159,7 @@ This conversion script handles the conversion and optimization of:
 Before you can run the script to convert the models, you must have a Hugging Face token (`--hf_token`) for authentication, which allows you to get access to gated models, such as Llama. After the models are converted, they’re saved to the model directory you specify when you run the script.
 
 To get access to the original Llama model weights:
-1. Go to the Llama model page on Hugging Face [meta-llama/Meta-Llama 3.2-3B](https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct).  
-_NOTE: These instructions specify Llama 3.2-3B, but the default version is Llama 3.1._
+1. Go to the Llama model page on Hugging Face [meta-llama/Meta-Llama 3.2-3B](https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct).
 2. Read and accept the license agreement.  
 _Requests can take up to one hour to process._
 

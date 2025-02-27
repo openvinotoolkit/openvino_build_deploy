@@ -6,7 +6,6 @@ from pathlib import Path
 from threading import Thread
 from typing import Tuple, List, Optional, Set
 
-import faiss
 import fitz  # PyMuPDF
 import gradio as gr
 import librosa
@@ -28,6 +27,8 @@ from llama_index.vector_stores.faiss import FaissVectorStore
 from optimum.intel import OVModelForSpeechSeq2Seq
 from transformers import AutoProcessor, TextIteratorStreamer
 from melo.api import TTS
+# it must be imported as the last one; otherwise, it causes a crash on macOS
+import faiss
 
 # Global variables initialization
 TARGET_AUDIO_SAMPLE_RATE = 16000
@@ -455,6 +456,8 @@ def run(asr_model_dir: Path, chat_model_dir: Path, embedding_model_dir: Path, re
 
     # create user interface
     demo = create_UI(initial_message, example_pdf_path)
+
+    log.info("Demo is ready!")
     # launch demo
     demo.queue().launch(share=public_interface)
 
@@ -462,7 +465,7 @@ def run(asr_model_dir: Path, chat_model_dir: Path, embedding_model_dir: Path, re
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--asr_model", type=str, default="model/distil-whisper-large-v3-FP16", help="Path of the automatic speech recognition model directory")
-    parser.add_argument("--chat_model", type=str, default="model/llama3.1-8B-INT4", help="Path to the chat model directory")
+    parser.add_argument("--chat_model", type=str, default="model/llama3.2-8B-INT4", help="Path to the chat model directory")
     parser.add_argument("--embedding_model", type=str, default="model/bge-small-FP32", help="Path to the embedding model directory")
     parser.add_argument("--reranker_model", type=str, default="model/bge-reranker-large-FP32", help="Path to the reranker model directory")
     parser.add_argument("--personality", type=str, default="config/concierge_personality.yaml", help="Path to the YAML file with chatbot personality")
