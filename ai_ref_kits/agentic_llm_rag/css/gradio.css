@@ -1,0 +1,153 @@
+#agent-steps {
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    padding: 12px;
+    background-color: #f9f9f9;
+    margin-top: 0; /* Remove top margin to align with other components */
+    height: 100%; /* Ensure the same height as other components */
+    box-sizing: border-box; /* Include padding in height calculation */
+}
+
+#shopping-cart {
+    border: 2px solid #4CAF50;
+    border-radius: 8px;
+    padding: 12px;
+    background-color: #f0f8f0;
+    margin-top: 0; /* Remove top margin to align with other components */
+    height: 100%; /* Ensure the same height as other components */
+    box-sizing: border-box; /* Include padding in height calculation */
+}
+
+/* Fix row alignment issues */
+.gradio-row {
+    align-items: flex-start !important; /* Align all items to the top of the row */
+}
+
+/* Make all components in the main row the same height */
+.gradio-row > .gradio-column {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Ensure the chatbot and other components align properly */
+.gradio-chatbot {
+    margin-top: 0 !important;
+}
+
+/* Improve shopping cart table styling */
+#shopping-cart table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: auto; /* Let the browser calculate column widths based on content */
+}
+
+#shopping-cart th,
+#shopping-cart td {
+    padding: 8px;
+    text-align: left;
+    min-width: 50px; /* Ensure minimum width for all columns */
+}
+
+#shopping-cart th:nth-child(2), /* Qty column */
+#shopping-cart td:nth-child(2) {
+    text-align: center;
+    width: 50px;
+}
+
+#shopping-cart th:nth-child(3), /* Price column */
+#shopping-cart td:nth-child(3),
+#shopping-cart th:nth-child(4), /* Total column */
+#shopping-cart td:nth-child(4) {
+    text-align: right;
+    min-width: 80px;
+}
+
+#shopping-cart th:first-child, /* Product column */
+#shopping-cart td:first-child {
+    width: auto; /* Let product name take remaining space */
+}
+
+.sample-prompt-btn {
+    min-height: 35px !important;
+    font-size: 0.85em !important;
+    margin: 2px !important;
+    padding: 4px 8px !important;
+}
+
+.intel-header {
+    margin: 0px;
+    padding: 0px;
+    background: #0054ae;
+    height: 60px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    position: relative;
+    box-sizing: border-box;
+    margin-bottom: 15px;
+}
+
+.intel-logo {
+    margin-left: 20px;
+    margin-right: 20px;
+    width: 60px;
+    height: 60px;
+}
+  
+.intel-title {
+    height: 60px;
+    line-height: 60px;
+    color: white;
+    font-size: 24px;    
+}
+
+.gradio-container {
+    max-width: 100% !important;
+    padding: 0 !important; 
+}
+
+.intel-header-wrapper {
+    width: 100vw;
+    margin-left: calc(-50vw + 50%);
+    position: relative;
+}
+
+.gradio-container > .main {
+    padding: 0 !important;
+}
+
+/* Fix label alignment issues */
+.gradio-column > .label-wrap {
+    margin-top: 0;
+}
+
+/* Ensure consistent spacing for all components */
+.gradio-box, .gradio-chatbot, .gradio-markdown {
+    margin-top: 0 !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    #agent-steps, #shopping-cart {
+        padding: 8px;
+    }
+    
+    .intel-logo {
+        margin-left: 10px;
+        margin-right: 10px;
+        width: 50px;
+        height: 50px;
+    }
+    
+    .intel-title {
+        font-size: 20px;
+    }
+    
+    /* Adjust table for mobile */
+    #shopping-cart th,
+    #shopping-cart td {
+        padding: 4px;
+        font-size: 0.9em;
+    }
+}

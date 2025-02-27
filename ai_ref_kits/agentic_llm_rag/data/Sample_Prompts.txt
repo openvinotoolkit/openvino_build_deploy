@@ -1,18 +1,25 @@
-• Supply Calculations
-◦ How many gallons of paint do I need to paint a room that's 10 ft by 12 ft with 8 ft high ceilings?
-◦ I want to paint my living room of 10 feet by 12 feet. How much paint do I need for one coat?
-◦ I want to buy paint to paint my living room of 4 feet by 7 feet size. What is the quantity of paint required?
-• Decisions on the correct product
-◦ What type of paint do you recommend for covering stains on old drywall? For painting over brick? For use in an attic in a cold climate?
-◦ What are the correct types of paintbrush for this project?
-• Estimating costs
-◦ How much will the paint cost?
-◦ How much should I budget in total for this project, including paint and supplies?
-◦ What are some ways I can cut some costs on this project?
-• Comparing Products
-◦ What is the best rated paint for this project?
-◦ Which paint is the best value, in terms of customer satisfaction AND affordability?
-◦ What is the difference between latex paint and acrylic paint?
-• DIY Guides
-◦ What do I need to know before I start my paint project?
-◦ What are safety and best practices for making my project a success?
+*Sample prompts*
+
+These are sample prompts that would work depends on the context.
+
+RAG:
+- what paint is the best for kitchens?
+- what is the price of it?
+- what else do I need to complete my project?
+- I want to paint my room. The size is 500 sqft. which products do you recommend?
+- create a table with paint products sorted by price
+- I have a room 1000 sqft, I'm looking for supplies to paint the room
+
+Paint Calculations tools:
+- how many gallons of paint do I need to cover 600 sq ft ?
+- Calculate the paint cost for a 600 sqft room using Sherwin-Williams Emerald
+
+Shopping Cart tools:
+- add them to my cart
+- add brushes to my cart
+- add rollers to my shopping cart
+- add 3 gallons of Benjamin Moore Aura Revere Pewter to my cart
+- add 3 gallons of that paint to my cart
+- add gloves to my cart
+- clear shopping cart
+- I want to see my current cart
