@@ -132,7 +132,7 @@ To convert the chat and embedding models, run:
 python convert_and_optimize_llm.py --chat_model_type qwen2-7B --embedding_model_type bge-large --precision int4 --model_dir model
 ```
 
-After you run the conversion scripts, you can run `app.py` to launch the application.
+After you run the conversion scripts, you can run `main.py` to launch the application.
 
 ## Running the Application (Gradio Interface)
 
@@ -143,7 +143,7 @@ _NOTE: This application requires more than 16GB of memory because the models are
 After that, you should be able to run the application with default values:
 
 ```shell
-python app.py
+python main.py
 ```
 
 For more settings, you can change the argument values:
@@ -158,9 +158,9 @@ For more settings, you can change the argument values:
 
 - `--public`: Include this flag to make the Gradio interface publicly accessible over the network. Without this flag, the interface will only be available on your local machine.
 
-To run the application, execute the `app.py` script with the following command. Make sure to include all necessary model directory arguments.
+To run the application, execute the `main.py` script with the following command. Make sure to include all necessary model directory arguments.
 ```shell
-python app.py \ 
+python main.py \ 
   --chat_model model/qwen2-7B-INT4 \
   --embedding_model data/test_painting_llm_rag.pdf \
   --rag_pdf model/bge-small-FP32 \  
