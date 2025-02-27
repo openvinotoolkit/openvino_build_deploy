@@ -19,9 +19,9 @@ mess_inf "Total Required Packages to Verify: ${total}"
 
 for idx in "${packages[@]}"; do
 	sudo apt install "$idx" -y
-	
-	if isInstalled "$idx"&>/dev/null -ge 1; then
-		counter=$((counter+1))
+
+	if isInstalled "$idx" -ge 1 &>/dev/null; then
+		counter=$((counter + 1))
 	else
 		mess_err "$idx could not be installed"
 		exit 99
@@ -46,7 +46,7 @@ fi
 # Move the remaining scripts to the current installEnv.sh location
 if [[ -d "openvino_build_deploy/ai_ref_kits/automated_self_checkout/scripts" ]]; then
 	for ovscript in "${ovscripts[@]}"; do
-		
+
 		cp openvino_build_deploy/ai_ref_kits/automated_self_checkout/scripts/$ovscript .
 		if [[ $? -eq 0 ]]; then
 			mess_oki "The $ovscript script has been copied"
@@ -99,9 +99,6 @@ fi
 
 python -m pip install --upgrade pip
 
-echo "lapx>=0.5.2" >>requirements.txt #Adding lapx library to the requirements.txt file (It was missing but required)
-echo "spaces>=0.3.2" >>requirements.txt #Adding spaces library to the requirements.txt file (It was missing but required Gradio)
-echo "gradio>=5.16.0" >>requirements.txt #Adding spaces library to the requirements.txt file (It was missing but required Gradio)
 pip install -r requirements.txt
 
 if [[ $? -eq 0 ]]; then
