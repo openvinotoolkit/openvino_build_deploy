@@ -13,6 +13,7 @@ import gradio as gr
 import numpy as np
 import openvino as ov
 import openvino_genai as genai
+import tqdm
 from PIL import Image
 from huggingface_hub import snapshot_download
 from optimum.intel.openvino import OVModelForImageClassification
@@ -117,6 +118,20 @@ async def stop():
     stop_generating = True
 
 
+progress_bar = None
+def progress(step, num_steps, latent):
+    global progress_bar
+    if progress_bar is None:
+        progress_bar = tqdm.tqdm(total=num_steps)
+
+    progress_bar.update()
+
+    if step == num_steps - 1:
+        progress_bar = None
+
+    return False
+
+
 async def generate_images(input_image: np.ndarray, prompt: str, seed: int, size: int, guidance_scale: float, num_inference_steps: int,
                           strength: float, randomize_seed: bool, device: str, endless_generation: bool) -> tuple[np.ndarray, float]:
     global stop_generating
@@ -130,14 +145,14 @@ async def generate_images(input_image: np.ndarray, prompt: str, seed: int, size:
         if input_image is None:
             ov_pipeline = await load_pipeline(hf_model_name, device, size, "text2image")
             result = ov_pipeline.generate(prompt=prompt, num_inference_steps=num_inference_steps, width=size, height=size,
-                             guidance_scale=guidance_scale, rng_seed=seed).data[0]
+                             guidance_scale=guidance_scale, rng_seed=seed, callback=progress).data[0]
         else:
             ov_pipeline = await load_pipeline(hf_model_name, device, size,"image2image")
             # ensure image is square
             input_image = utils.crop_center(input_image)
             input_image = cv2.resize(input_image, (size, size))
             result = ov_pipeline.generate(prompt=prompt, image=ov.Tensor(input_image[None]), num_inference_steps=num_inference_steps, width=size, height=size,
-                             guidance_scale=guidance_scale, strength=1.0 - strength, rng_seed=seed).data[0]
+                             guidance_scale=guidance_scale, strength=1.0 - strength, rng_seed=seed, callback=progress).data[0]
         end_time = time.time()
 
         label = safety_checker(Image.fromarray(result), top_k=1)
