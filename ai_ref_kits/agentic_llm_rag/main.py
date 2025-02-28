@@ -363,7 +363,7 @@ def run_app(agent):
     run()
 
 
-def main(chat_model: str, embedding_model: str, rag_pdf: str, personality: str, device: str):
+def main(chat_model: str, embedding_model: str, rag_pdf: str, device: str):
     # Load models and embedding based on parsed arguments
     llm, embedding = setup_models(chat_model, embedding_model, device)
 
@@ -421,10 +421,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--chat_model", type=str, default="model/qwen2-7B-INT4", help="Path to the chat model directory")
     parser.add_argument("--embedding_model", type=str, default="model/bge-large-FP32", help="Path to the embedding model directory")
-    parser.add_argument("--rag_pdf", type=str, default="data/test_painting_llm_rag.pdf", help="Path to a RAG PDF file with additional knowledge the chatbot can rely on.")
-    parser.add_argument("--personality", type=str, default="config/paint_concierge_personality.yaml", help="Path to the yaml file with chatbot personality")
+    parser.add_argument("--rag_pdf", type=str, default="data/test_painting_llm_rag.pdf", help="Path to a RAG PDF file with additional knowledge the chatbot can rely on.")    
     parser.add_argument("--device", type=str, default="GPU", help="Device for inferencing (CPU,GPU,GPU.1,NPU)")
 
     args = parser.parse_args()
 
-    main(args.chat_model, args.embedding_model, args.rag_pdf, args.personality, args.device)
+    main(args.chat_model, args.embedding_model, args.rag_pdf, args.device)
