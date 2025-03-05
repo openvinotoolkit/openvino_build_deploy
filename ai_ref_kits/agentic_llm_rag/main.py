@@ -144,7 +144,7 @@ def custom_handle_reasoning_failure(callback_manager, exception):
     return "Hmm...I didn't quite that. Could you please rephrase your question to be simpler?"
 
 
-def run_app(agent):
+def run_app(agent, public_interface):
     class Capturing(list):
         def __enter__(self):
             self._stdout = sys.stdout
@@ -358,12 +358,12 @@ def run_app(agent):
 
             gr.Markdown("------------------------------")            
 
-        demo.launch()
+        demo.launch(share=public_interface)
 
     run()
 
 
-def main(chat_model: str, embedding_model: str, rag_pdf: str, device: str):
+def main(chat_model: str, embedding_model: str, rag_pdf: str, device: str, public_interface: bool = False):
     # Load models and embedding based on parsed arguments
     llm, embedding = setup_models(chat_model, embedding_model, device)
 
@@ -414,7 +414,7 @@ def main(chat_model: str, embedding_model: str, rag_pdf: str, device: str):
     react_system_prompt = PromptTemplate(react_system_header_str)
     agent.update_prompts({"agent_worker:system_prompt": react_system_prompt})  
     agent.reset()                     
-    run_app(agent)
+    run_app(agent, public_interface)
 
 if __name__ == "__main__":
     # Define the argument parser at the end
@@ -423,7 +423,8 @@ if __name__ == "__main__":
     parser.add_argument("--embedding_model", type=str, default="model/bge-large-FP32", help="Path to the embedding model directory")
     parser.add_argument("--rag_pdf", type=str, default="data/test_painting_llm_rag.pdf", help="Path to a RAG PDF file with additional knowledge the chatbot can rely on.")    
     parser.add_argument("--device", type=str, default="GPU", help="Device for inferencing (CPU,GPU,GPU.1,NPU)")
+    parser.add_argument("--public", default=False, action="store_true", help="Whether interface should be available publicly")
 
     args = parser.parse_args()
 
-    main(args.chat_model, args.embedding_model, args.rag_pdf, args.device)
+    main(args.chat_model, args.embedding_model, args.rag_pdf, args.device, args.public)

@@ -9,14 +9,14 @@
 [![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/LICENSE.txt)
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/dd626685-7aa6-4e67-a929-5e9be2982800" width="500">
+  <img src="https://github.com/user-attachments/assets/3dedf848-cc4a-4b1c-b83e-dad29e3e1657" width="500">
 </p>
 
 The AI Insight Agent with RAG uses Large Language Models (LLMs) and Retrieval-Augmented Generation (RAG) to interpret user prompts, engage in meaningful dialogue, perform calculations, use RAG techniques to improve its knowledge and interact with the user to add items to a virtual shopping cart. This solution uses the OpenVINO™ toolkit to power the AI models at the edge. Designed for both consumers and employees, it functions as a smart, personalized retail assistant, offering an interactive and user-friendly experience similar to an advanced digital kiosk.
 
 This kit uses the following technology stack:
 - [OpenVINO Toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([docs](https://docs.openvino.ai/))
-- [Qwen2-7B-Instruct](https://huggingface.co/Qwen)
+- [Qwen2-7B-Instruct](https://huggingface.co/Qwen/Qwen2-7B-Instruct)
 - [bge-large-en-v1.5](https://huggingface.co/BAAI/bge-large-en-v1.5)
 - [Gradio interface](https://www.gradio.app/docs/gradio/chatinterface)
 
@@ -162,8 +162,8 @@ To run the application, execute the `main.py` script with the following command.
 ```shell
 python main.py \ 
   --chat_model model/qwen2-7B-INT4 \
-  --embedding_model data/test_painting_llm_rag.pdf \
-  --rag_pdf model/bge-small-FP32 \  
+  --embedding_model model/bge-small-FP32 \
+  --rag_pdf data/test_painting_llm_rag.pdf \  
   --device GPU.1 \
   --public
 ```
