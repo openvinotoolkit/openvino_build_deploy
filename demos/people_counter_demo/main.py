@@ -21,6 +21,7 @@ SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "uti
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 from utils import demo_utils as utils
+from deep_sort_realtime.deepsort_tracker import DeepSort
 
 CATEGORIES = [
     "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
@@ -109,7 +110,11 @@ def postprocess(pred_boxes: np.ndarray, pred_masks: np.ndarray, input_size: Tupl
     # create detections in supervision format
     det = sv.Detections(xyxy=pred[:, :4], mask=masks, confidence=pred[:, 4], class_id=pred[:, 5])
     # filter out other predictions than selected category
-    return det[det.class_id == category_id]
+    det = det[det.class_id == category_id]
+
+    # Convert detections to list of dictionaries
+    detection_list = [{"bbox": d[0].tolist(), "confidence": d[1]} for d in zip(det.xyxy, det.confidence)]
+    return detection_list
 
 
 def get_model(model_path: Path, device: str = "AUTO") -> ov.CompiledModel:
@@ -195,6 +200,9 @@ def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", c
     # keep at most 100 last times
     processing_times = deque(maxlen=100)
 
+    # Initialize the tracker with a higher max_age
+    tracker = DeepSort(max_age=1000, n_init=3)
+
     title = "Press ESC to Exit"
     cv2.namedWindow(title, cv2.WINDOW_GUI_NORMAL)
     cv2.setWindowProperty(title, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
@@ -222,33 +230,59 @@ def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", c
         # postprocessing
         detections = postprocess(pred_boxes=boxes, pred_masks=masks, input_size=input_shape[:2], orig_img=frame, padding=padding, category_id=category_id)
 
-        # annotate the frame with the detected persons within each zone
-        for zone_id, (zone, zone_annotator, box_annotator, masks_annotator) in enumerate(
-                zip(zones, zone_annotators, box_annotators, masks_annotators), start=1):
-            # visualize polygon for the zone
-            frame = zone_annotator.annotate(scene=frame)
+        if detections:
+            # Convert detections to the format required by the tracker
+            detection_list = []
+            for det in detections:
+                bbox = det["bbox"]
+                confidence = det["confidence"]
+                detection_list.append((bbox, confidence))
 
-            # get detections relevant only for the zone
-            mask = zone.trigger(detections=detections)
-            detections_filtered = detections[mask]
-            # visualize boxes around objects in the zone
-            frame = masks_annotator.annotate(scene=frame, detections=detections_filtered)
-            frame = box_annotator.annotate(scene=frame, detections=detections_filtered)
-            # count how many objects detected
-            det_count = len(detections_filtered)
+            # Update the tracker with the new detections
+            tracks = tracker.update_tracks(detection_list, frame=frame)
 
-            # add the count to the list
-            queue_count[zone_id].append(det_count)
-            # calculate the mean number of customers in the queue
-            mean_customer_count = np.mean(queue_count[zone_id], dtype=np.int32)
+            # Annotate the frame with the tracked objects
+            for track in tracks:
+                if not track.is_confirmed():
+                    continue
+                track_id = track.track_id
+                bbox = track.to_tlbr()
+                if track.time_since_update == 0:  # Only display ID if the track was updated in the current frame
+                    cv2.putText(frame, f"ID: {track_id}", (int(bbox[0]), int(bbox[1]) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-            # add alert text to the frame if necessary, flash every second
-            if mean_customer_count > object_limit and time.time() % 2 > 1:
-                utils.draw_text(frame, text=f"Intel employee required in zone {zone_id}!", point=(20, 20), font_color=(0, 0, 255))
+            # Convert detection list back to sv.Detections object
+            det_xyxy = np.array([d["bbox"] for d in detections])
+            det_confidence = np.array([d["confidence"] for d in detections])
+            det_class_id = np.array([category_id] * len(detections))  # Add class_id
+            det = sv.Detections(xyxy=det_xyxy, confidence=det_confidence, class_id=det_class_id)
 
-            # print an info about number of customers in the queue, ask for the more assistants if required
-            log.info(
-                f"Zone {zone_id}, avg {category} count: {mean_customer_count} {'Intel employee required!' if mean_customer_count > object_limit else ''}")
+            # annotate the frame with the detected persons within each zone
+            for zone_id, (zone, zone_annotator, box_annotator, masks_annotator) in enumerate(
+                    zip(zones, zone_annotators, box_annotators, masks_annotators), start=1):
+                # visualize polygon for the zone
+                frame = zone_annotator.annotate(scene=frame)
+
+                # get detections relevant only for the zone
+                mask = zone.trigger(detections=det)
+                detections_filtered = det[mask]
+                # visualize boxes around objects in the zone
+                frame = masks_annotator.annotate(scene=frame, detections=detections_filtered)
+                frame = box_annotator.annotate(scene=frame, detections=detections_filtered)
+                # count how many objects detected
+                det_count = len(detections_filtered)
+
+                # add the count to the list
+                queue_count[zone_id].append(det_count)
+                # calculate the mean number of customers in the queue
+                mean_customer_count = np.mean(queue_count[zone_id], dtype=np.int32)
+
+                # add alert text to the frame if necessary, flash every second
+                if mean_customer_count > object_limit and time.time() % 2 > 1:
+                    utils.draw_text(frame, text=f"Intel employee required in zone {zone_id}!", point=(20, 20), font_color=(0, 0, 255))
+
+                # print an info about number of customers in the queue, ask for the more assistants if required
+                log.info(
+                    f"Zone {zone_id}, avg {category} count: {mean_customer_count} {'Intel employee required!' if mean_customer_count > object_limit else ''}")
 
         # Mean processing time [ms].
         processing_time = np.mean(processing_times) * 1000
