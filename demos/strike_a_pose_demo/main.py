@@ -16,6 +16,7 @@ SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "uti
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 from utils import demo_utils as utils
+from pose_classifier import PoseClassifier
 
 
 def export_model(model_name: str) -> Path:
@@ -84,6 +85,9 @@ def run_pose_estimation(source: str, model_name: str, device: str, flip: bool = 
     model_path = export_model(model_name)
     pose_model = load_and_compile_model(model_path, device)
 
+    # Initialize pose classifier
+    classifier = PoseClassifier()
+
     player = None
     try:
         if isinstance(source, str) and source.isnumeric():
@@ -116,6 +120,13 @@ def run_pose_estimation(source: str, model_name: str, device: str, flip: bool = 
 
             # Draw poses on a frame.
             frame = draw_poses(frame, results)
+
+            # Classify poses
+            pose_labels = [classifier.classify(pose) for pose in results.keypoints.xy.numpy()]
+
+            # Display classified poses
+            for label, pose in zip(pose_labels, results.keypoints.xy.numpy()):
+                cv2.putText(frame, label, tuple(pose[0].astype(int)), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
 
             processing_times.append(stop_time - start_time)
             # Use processing times from last 200 frames.
