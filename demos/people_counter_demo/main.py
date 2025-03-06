@@ -163,6 +163,31 @@ def get_annotators(json_path: str, resolution_wh: Tuple[int, int], colorful: boo
 
     return zones, zone_annotators, box_annotators, masks_annotators
 
+def unique_identifier(frame: np.array, detections: List[dict], tracker: DeepSort, category_id: int) -> sv.Detections:
+    # Convert detections to the format required by the tracker
+    detection_list = []
+    for det in detections:
+        bbox = det["bbox"]
+        confidence = det["confidence"]
+        detection_list.append((bbox, confidence))
+
+    # Update the tracker with the new detections
+    tracks = tracker.update_tracks(detection_list, frame=frame)
+
+    # Annotate the frame with the tracked objects
+    for track in tracks:
+        if not track.is_confirmed():
+            continue
+        track_id = track.track_id
+        bbox = track.to_tlbr()
+        if track.time_since_update == 0:  # Only display ID if the track was updated in the current frame
+            cv2.putText(frame, f"ID: {track_id}", (int(bbox[0]), int(bbox[1]) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
+    # Convert detection list back to sv.Detections object
+    det_xyxy = np.array([d["bbox"] for d in detections])
+    det_confidence = np.array([d["confidence"] for d in detections])
+    det_class_id = np.array([category_id] * len(detections))  # Add class_id
+    det = sv.Detections(xyxy=det_xyxy, confidence=det_confidence, class_id=det_class_id)
 
 def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", category: str = "person", zones_config_file: str = "",
         object_limit: int = 3, flip: bool = True, colorful: bool = False, last_frames: int = 50) -> None:
@@ -231,30 +256,8 @@ def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", c
         detections = postprocess(pred_boxes=boxes, pred_masks=masks, input_size=input_shape[:2], orig_img=frame, padding=padding, category_id=category_id)
 
         if detections:
-            # Convert detections to the format required by the tracker
-            detection_list = []
-            for det in detections:
-                bbox = det["bbox"]
-                confidence = det["confidence"]
-                detection_list.append((bbox, confidence))
-
-            # Update the tracker with the new detections
-            tracks = tracker.update_tracks(detection_list, frame=frame)
-
-            # Annotate the frame with the tracked objects
-            for track in tracks:
-                if not track.is_confirmed():
-                    continue
-                track_id = track.track_id
-                bbox = track.to_tlbr()
-                if track.time_since_update == 0:  # Only display ID if the track was updated in the current frame
-                    cv2.putText(frame, f"ID: {track_id}", (int(bbox[0]), int(bbox[1]) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
-            # Convert detection list back to sv.Detections object
-            det_xyxy = np.array([d["bbox"] for d in detections])
-            det_confidence = np.array([d["confidence"] for d in detections])
-            det_class_id = np.array([category_id] * len(detections))  # Add class_id
-            det = sv.Detections(xyxy=det_xyxy, confidence=det_confidence, class_id=det_class_id)
+            # uniquely track the objects
+            det = unique_identifier(frame, detections, tracker, category_id)
 
             # annotate the frame with the detected persons within each zone
             for zone_id, (zone, zone_annotator, box_annotator, masks_annotator) in enumerate(
