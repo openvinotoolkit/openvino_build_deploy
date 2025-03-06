@@ -135,4 +135,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     convert_embedding_model(args.embedding_model_type, Path(args.model_dir))
-    convert_chat_model(args.chat_model_type, args.precision, Path(args.model_dir))
+    convert_chat_model(args.chat_model_type, args.precision, Path(args.model_dir), args.hf_token)
