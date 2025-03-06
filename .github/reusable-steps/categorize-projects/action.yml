@@ -42,7 +42,7 @@ runs:
             qt+=("$dir")
           elif [ -f "$dir/main.py" ] && grep -q -- "--stream" "$dir/main.py"; then
             webcam+=("$dir")
-          else
+          elif [ -f "$dir/main.py" ]; then
             python+=("$dir")
           fi
         done
