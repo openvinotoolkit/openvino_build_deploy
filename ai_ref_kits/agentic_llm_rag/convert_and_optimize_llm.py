@@ -1,6 +1,6 @@
 import argparse
 from pathlib import Path
-
+import os
 import numpy as np
 import openvino as ov
 from openvino.runtime import opset10 as ops
@@ -51,7 +51,7 @@ def optimize_model_for_npu(model: OVModelForFeatureExtraction):
     model.reshape(1, 512)
 
 
-def convert_chat_model(model_type: str, precision: str, model_dir: Path) -> Path:
+def convert_chat_model(model_type: str, precision: str, model_dir: Path, access_token: str) -> Path:
     """
     Convert chat model
 
@@ -65,11 +65,11 @@ def convert_chat_model(model_type: str, precision: str, model_dir: Path) -> Path
     output_dir = model_dir / model_type
     model_name = MODEL_MAPPING[model_type]
 
-    # if access_token is not None:
-    #     os.environ["HUGGING_FACE_HUB_TOKEN"] = access_token
+    if access_token is not None:
+        os.environ["HUGGING_FACE_HUB_TOKEN"] = access_token
 
     # load model and convert it to OpenVINO
-    model = OVModelForCausalLM.from_pretrained(model_name, export=True, compile=False, load_in_8bit=False)
+    model = OVModelForCausalLM.from_pretrained(model_name, export=True, compile=False, load_in_8bit=False, token=access_token)
     # change precision to FP16
     model.half()
 
@@ -130,7 +130,7 @@ if __name__ == "__main__":
     parser.add_argument("--embedding_model_type", type=str, choices=["bge-large"],
                         default="bge-large", help="Embedding model to be converted")
     parser.add_argument("--precision", type=str, default="int4", choices=["fp16", "int8", "int4"], help="Model precision")
-    # parser.add_argument("--hf_token", type=str, help="HuggingFace access token")
+    parser.add_argument("--hf_token", type=str, help="HuggingFace access token")
     parser.add_argument("--model_dir", type=str, default="model", help="Directory to place the model in")
 
     args = parser.parse_args()

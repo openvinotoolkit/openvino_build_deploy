@@ -7,6 +7,7 @@ import time
 import warnings
 from io import StringIO
 from pathlib import Path
+from typing import Tuple, Callable
 
 import gradio as gr
 import nest_asyncio
@@ -25,6 +26,7 @@ from llama_index.embeddings.huggingface_openvino import OpenVINOEmbedding
 from llama_index.llms.openvino import OpenVINOLLM
 from llama_index.core.agent import ReActChatFormatter
 from llama_index.core.llms import MessageRole
+from llama_index.core.callbacks import CallbackManager
 # Agent tools
 from tools import PaintCalculator, ShoppingCart
 from system_prompt import react_system_header_str
@@ -42,7 +44,22 @@ ov_config = {
     props.cache_dir(): ""
 }
 
-def setup_models(llm_model_path, embedding_model_path, device):
+def setup_models(
+    llm_model_path: str,
+    embedding_model_path: str,
+    device: str) -> Tuple[OpenVINOLLM, OpenVINOEmbedding]:
+    """
+    Sets up LLM and embedding models using OpenVINO.
+    
+    Args:
+        llm_model_path: Path to the LLM model
+        embedding_model_path: Path to the embedding model
+        device: Target device for inference ("CPU", "GPU", etc.)
+        
+    Returns:
+        Tuple of (llm, embedding) models
+    """
+
     # Load LLM model locally    
     llm = OpenVINOLLM(
         model_id_or_path=str(llm_model_path),
@@ -59,7 +76,15 @@ def setup_models(llm_model_path, embedding_model_path, device):
     return llm, embedding
 
 
-def setup_tools():
+def setup_tools()-> Tuple[FunctionTool, FunctionTool, FunctionTool, FunctionTool, FunctionTool]:
+
+    """
+    Sets up and returns a collection of tools for paint calculations and shopping cart management.
+    
+    Returns:
+        Tuple containing tools for paint cost calculation, paint gallons calculation, 
+        adding items to cart, viewing cart, and clearing cart
+    """
 
     paint_cost_calculator = FunctionTool.from_defaults(
         fn=PaintCalculator.calculate_paint_cost,
@@ -124,7 +149,16 @@ def setup_tools():
     return paint_cost_calculator, add_to_cart_tool, get_cart_items_tool, clear_cart_tool, paint_gallons_calculator
 
 
-def load_documents(text_example_en_path):
+def load_documents(text_example_en_path: str) -> VectorStoreIndex:
+    """
+    Loads documents from the given path
+    
+    Args:
+        text_example_en_path: Path to the document to load
+        
+    Returns:
+        VectorStoreIndex for the loaded documents
+    """
     
     if not text_example_en_path.exists():
         text_example_en = "test_painting_llm_rag.pdf"
@@ -139,18 +173,40 @@ def load_documents(text_example_en_path):
 
     return index
 
-# Custom function to handle reasoning failures
-def custom_handle_reasoning_failure(callback_manager, exception):
+def custom_handle_reasoning_failure(callback_manager: CallbackManager, exception: Exception):
+    """
+    Provides custom error handling for agent reasoning failures.
+    
+    Args:
+        callback_manager: The callback manager instance for event handling
+        exception: The exception that was raised during reasoning
+    """
     return "Hmm...I didn't quite that. Could you please rephrase your question to be simpler?"
 
 
-def run_app(agent, public_interface):
+def run_app(agent: ReActAgent, public_interface: bool = False) -> None:
+    """
+    Launches the application with the specified agent and interface settings.
+    
+    Args:
+        agent: The ReActAgent instance configured with tools
+        public_interface: Whether to launch with a public-facing Gradio interface
+    """
     class Capturing(list):
+        """A context manager that captures stdout output into a list."""
         def __enter__(self):
+            """
+            Redirects stdout to a StringIO buffer and returns self.
+            Called when entering the 'with' block.
+            """
             self._stdout = sys.stdout
             sys.stdout = self._stringio = StringIO()
             return self
         def __exit__(self, *args):
+            """
+            Stores captured output in this list and restores stdout.
+            Called when exiting the 'with' block.
+            """
             self.extend(self._stringio.getvalue().splitlines())
             del self._stringio
             sys.stdout = self._stdout        
@@ -158,7 +214,18 @@ def run_app(agent, public_interface):
     def _handle_user_message(user_message, history):
         return "", [*history, (user_message, "")]
 
-    def update_cart_display():
+    def update_cart_display()-> str:
+        """
+        Generates an HTML representation of the shopping cart contents.
+        
+        Retrieves current cart items and creates a formatted HTML table
+        showing product details, quantities, prices, and totals.
+        If the cart is empty, returns a message indicating this.
+        
+        Returns:
+            str: Markdown-formatted HTML table of cart contents
+                or message indicating empty cart
+        """
         cart_items = ShoppingCart.get_cart_items()
         if not cart_items:
             return "### 🛒 Your Shopping Cart is Empty"
@@ -190,7 +257,27 @@ def run_app(agent, public_interface):
         table += f"\n**Total: ${total:.2f}**"
         return table
 
-    def _generate_response(chat_history, log_history):
+    def _generate_response(chat_history: list, log_history: list | None = None)->Tuple[str,str,str]:
+        """
+        Generate a streaming response from the agent with formatted thought process logs.
+        
+        This function:
+        1. Captures the agent's thought process
+        2. Formats the thought process into readable logs
+        3. Streams the agent's response token by token
+        4. Tracks performance metrics for thought process and response generation
+        5. Updates the shopping cart display
+        
+        Args:
+            chat_history: List of conversation messages
+            log_history: List to store logs, will be initialized if None
+            
+        Yields:
+            tuple: (chat_history, formatted_log_history, cart_content)
+                - chat_history: Updated with agent's response
+                - formatted_log_history: String of joined logs
+                - cart_content: HTML representation of the shopping cart
+        """
         log.info(f"log_history {log_history}")           
         
         if not isinstance(log_history, list):
@@ -258,12 +345,46 @@ def run_app(agent, public_interface):
         log_history.append(response_log)
         yield chat_history, "\n".join(log_history), cart_content  # Join logs into a string for display
 
-    def _reset_chat():
+    def _reset_chat()-> tuple[str, list, str, str]:
+        """
+        Resets the chat interface and agent state to initial conditions.
+        
+        This function:
+        1. Resets the agent's internal state
+        2. Clears all items from the shopping cart
+        3. Returns values needed to reset the UI components
+        
+        Returns:
+            tuple: Values to reset UI components
+                - Empty string: Clears the message input
+                - Empty list: Resets chat history
+                - Default log heading: Sets initial log area text
+                - Empty cart display: Shows empty shopping cart
+        """
         agent.reset()
         ShoppingCart._cart_items = []
         return "", [], "🤔 Agent's Thought Process", update_cart_display()
 
-    def run():
+    def run()-> None:
+        """
+        Sets up and launches the Gradio web interface for the Smart Retail Assistant.
+        
+        This function:
+        1. Loads custom CSS styling if available
+        2. Configures the Gradio theme and UI components
+        3. Sets up the chat interface with agent interaction
+        4. Configures event handlers for user inputs
+        5. Adds example prompts for users
+        6. Launches the web interface
+        
+        The interface includes:
+        - Chat window for user-agent conversation
+        - Log window to display agent's thought process
+        - Shopping cart display
+        - Text input for user messages
+        - Submit and Clear buttons
+        - Sample questions for easy access
+        """
         custom_css = ""
         try:
             with open("css/gradio.css", "r") as css_file:
@@ -364,6 +485,16 @@ def run_app(agent, public_interface):
 
 
 def main(chat_model: str, embedding_model: str, rag_pdf: str, device: str, public_interface: bool = False):
+    """
+    Initializes and runs the agentic rag solution
+    
+    Args:
+        chat_model: Path to the LLM chat model
+        embedding_model: Path to the embedding model
+        rag_pdf: Path to the PDF file for RAG functionality
+        device: Target device for model inference ("CPU", "GPU", "GPU.1")
+        public_interface: Whether to expose a public-facing interface
+    """
     # Load models and embedding based on parsed arguments
     llm, embedding = setup_models(chat_model, embedding_model, device)
 

@@ -132,6 +132,8 @@ To convert the chat and embedding models, run:
 python convert_and_optimize_llm.py --chat_model_type qwen2-7B --embedding_model_type bge-large --precision int4 --model_dir model
 ```
 
+If using gated models from HuggingFace pass the `--hf_token` argument  with your HuggingFace token. Remember to request access to gated models if needed.
+
 After you run the conversion scripts, you can run `main.py` to launch the application.
 
 ## Running the Application (Gradio Interface)
