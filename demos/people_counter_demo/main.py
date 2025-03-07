@@ -110,12 +110,7 @@ def postprocess(pred_boxes: np.ndarray, pred_masks: np.ndarray, input_size: Tupl
     # create detections in supervision format
     det = sv.Detections(xyxy=pred[:, :4], mask=masks, confidence=pred[:, 4], class_id=pred[:, 5])
     # filter out other predictions than selected category
-    det = det[det.class_id == category_id]
-
-    # Convert detections to list of dictionaries
-    detection_list = [{"bbox": d[0].tolist(), "confidence": d[1]} for d in zip(det.xyxy, det.confidence)]
-    return detection_list
-
+    return det[det.class_id == category_id]
 
 def get_model(model_path: Path, device: str = "AUTO") -> ov.CompiledModel:
     # initialize OpenVINO
@@ -163,35 +158,20 @@ def get_annotators(json_path: str, resolution_wh: Tuple[int, int], colorful: boo
 
     return zones, zone_annotators, box_annotators, masks_annotators
 
-def unique_identifier(frame: np.array, detections: List[dict], tracker: DeepSort, category_id: int) -> sv.Detections:
+def track_objects(frame: np.array, detections: sv.Detections, tracker: DeepSort) -> List:
     # Convert detections to the format required by the tracker
     detection_list = []
-    for det in detections:
-        bbox = det["bbox"]
-        confidence = det["confidence"]
+    for det in zip(detections.xyxy, detections.confidence):
+        bbox = det[0].tolist()
+        confidence = det[1]
         detection_list.append((bbox, confidence))
-
+ 
     # Update the tracker with the new detections
     tracks = tracker.update_tracks(detection_list, frame=frame)
-
-    # Annotate the frame with the tracked objects
-    for track in tracks:
-        if not track.is_confirmed():
-            continue
-        track_id = track.track_id
-        bbox = track.to_tlbr()
-        if track.time_since_update == 0:  # Only display ID if the track was updated in the current frame
-            cv2.putText(frame, f"ID: {track_id}", (int(bbox[0]), int(bbox[1]) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
-    # Convert detection list back to sv.Detections object
-    det_xyxy = np.array([d["bbox"] for d in detections])
-    det_confidence = np.array([d["confidence"] for d in detections])
-    det_class_id = np.array([category_id] * len(detections))  # Add class_id
-    det = sv.Detections(xyxy=det_xyxy, confidence=det_confidence, class_id=det_class_id)
-    return det
-
+    return tracks
+    
 def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", category: str = "person", zones_config_file: str = "",
-        object_limit: int = 3, flip: bool = True, colorful: bool = False, last_frames: int = 50) -> None:
+        object_limit: int = 3, flip: bool = True, colorful: bool = False, last_frames: int = 50, max_age: int = 1800) -> None:
     # set up logging
     log.getLogger().setLevel(log.INFO)
 
@@ -227,7 +207,7 @@ def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", c
     processing_times = deque(maxlen=100)
 
     # Initialize the tracker with a higher max_age
-    tracker = DeepSort(max_age=1000, n_init=3)
+    tracker = DeepSort(max_age=max_age, n_init=3)
 
     title = "Press ESC to Exit"
     cv2.namedWindow(title, cv2.WINDOW_GUI_NORMAL)
@@ -258,7 +238,7 @@ def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", c
 
         if detections:
             # uniquely track the objects
-            det = unique_identifier(frame, detections, tracker, category_id)
+            tracks = track_objects(frame, detections, tracker)
 
             # annotate the frame with the detected persons within each zone
             for zone_id, (zone, zone_annotator, box_annotator, masks_annotator) in enumerate(
@@ -274,7 +254,14 @@ def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", c
                 frame = box_annotator.annotate(scene=frame, detections=detections_filtered)
                 # count how many objects detected
                 det_count = len(detections_filtered)
-
+                # Add track ID annotations
+                for track in tracks:
+                    if not track.is_confirmed():
+                        continue
+                    track_id = track.track_id
+                    bbox = track.to_tlbr()
+                    if track.time_since_update == 0:  # Only display ID if the track was updated in the current frame
+                        cv2.putText(frame, f"ID: {track_id}", (int(bbox[0]), int(bbox[1]) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                 # add the count to the list
                 queue_count[zone_id].append(det_count)
                 # calculate the mean number of customers in the queue
@@ -339,7 +326,8 @@ if __name__ == '__main__':
     parser.add_argument('--object_limit', type=int, default=3, help="The maximum number of objects in the area")
     parser.add_argument("--flip", type=bool, default=True, help="Mirror input video")
     parser.add_argument('--colorful', action="store_true", help="If objects should be annotated with random colors")
+    parser.add_argument('--max_age', type=int, default=1800, help="Maximum age for the tracker")
 
     args = parser.parse_args()
     model_paths = convert(args.model_name, Path(args.model_dir))
-    run(args.stream, model_paths, args.model_name, args.category, args.zones_config_file, args.object_limit, args.flip, args.colorful)
+    run(args.stream, model_paths, args.model_name, args.category, args.zones_config_file, args.object_limit, args.flip, args.colorful, args.max_age)
