@@ -5,6 +5,7 @@ import os
 import random
 import sys
 import time
+from functools import partial
 from pathlib import Path
 from typing import Optional
 
@@ -59,7 +60,7 @@ def download_models(model_name, safety_checker_model: str) -> None:
                               image_processor=AutoProcessor.from_pretrained(safety_checker_dir))
 
 
-async def load_npu_pipeline(model_dir: Path, size: int, pipeline: str) -> genai.Text2ImagePipeline | genai.Image2ImagePipeline:
+async def load_static_pipeline(model_dir: Path,  device: str, size: int, pipeline: str) -> genai.Text2ImagePipeline | genai.Image2ImagePipeline:
     # NPU requires model static input shape for now
     ov_config = {"CACHE_DIR": "cache"}
 
@@ -67,16 +68,16 @@ async def load_npu_pipeline(model_dir: Path, size: int, pipeline: str) -> genai.
 
     text_encoder = genai.CLIPTextModel(model_dir / "text_encoder")
     text_encoder.reshape(1)
-    text_encoder.compile("NPU", **ov_config)
+    text_encoder.compile(device, **ov_config)
 
     unet = genai.UNet2DConditionModel(model_dir / "unet")
     max_position_embeddings = text_encoder.get_config().max_position_embeddings
     unet.reshape(1, size, size, max_position_embeddings)
-    unet.compile("NPU", **ov_config)
+    unet.compile(device, **ov_config)
 
     vae = genai.AutoencoderKL(model_dir / "vae_encoder", model_dir / "vae_decoder")
     vae.reshape(1, size, size)
-    vae.compile("NPU", **ov_config)
+    vae.compile(device, **ov_config)
 
     if pipeline == "text2image":
         ov_pipeline = genai.Text2ImagePipeline.latent_consistency_model(scheduler, text_encoder, unet, vae)
@@ -90,25 +91,16 @@ async def load_npu_pipeline(model_dir: Path, size: int, pipeline: str) -> genai.
 
 async def load_pipeline(model_name: str, device: str, size: int, pipeline: str):
     model_dir = MODEL_DIR / model_name
-    ov_config = {"CACHE_DIR": "cache"}
 
     if pipeline == "text2image":
         if device not in ov_pipelines_t2i:
-            if device == "NPU":
-                ov_pipeline = await load_npu_pipeline(model_dir, size, pipeline)
-            else:
-                ov_pipeline = genai.Text2ImagePipeline(model_dir, device, **ov_config)
-            ov_pipelines_t2i[device] = ov_pipeline
+            ov_pipelines_t2i[device] = await load_static_pipeline(model_dir, device, size, pipeline)
 
         return ov_pipelines_t2i[device]
 
     if pipeline == "image2image":
         if device not in ov_pipelines_i2i:
-            if device == "NPU":
-                ov_pipeline = await load_npu_pipeline(model_dir, size, pipeline)
-            else:
-                ov_pipeline = genai.Image2ImagePipeline(model_dir, device, **ov_config)
-            ov_pipelines_i2i[device] = ov_pipeline
+            ov_pipelines_i2i[device] = await load_static_pipeline(model_dir, device, size, pipeline)
 
         return ov_pipelines_i2i[device]
 
@@ -132,8 +124,8 @@ def progress(step, num_steps, latent):
     return False
 
 
-async def generate_images(input_image: np.ndarray, prompt: str, seed: int, size: int, guidance_scale: float, num_inference_steps: int,
-                          strength: float, randomize_seed: bool, device: str, endless_generation: bool) -> tuple[np.ndarray, float]:
+async def generate_images(input_image: np.ndarray, prompt: str, seed: int, guidance_scale: float, num_inference_steps: int,
+                          strength: float, randomize_seed: bool, device: str, endless_generation: bool, size: int) -> tuple[np.ndarray, float]:
     global stop_generating
     stop_generating = not endless_generation
 
@@ -145,7 +137,7 @@ async def generate_images(input_image: np.ndarray, prompt: str, seed: int, size:
         if input_image is None:
             ov_pipeline = await load_pipeline(hf_model_name, device, size, "text2image")
             result = ov_pipeline.generate(prompt=prompt, num_inference_steps=num_inference_steps, width=size, height=size,
-                             guidance_scale=guidance_scale, rng_seed=seed, callback=progress).data[0]
+                                          guidance_scale=guidance_scale, rng_seed=seed, callback=progress).data[0]
         else:
             ov_pipeline = await load_pipeline(hf_model_name, device, size,"image2image")
             # ensure image is square
@@ -174,7 +166,7 @@ async def generate_images(input_image: np.ndarray, prompt: str, seed: int, size:
         await asyncio.sleep(0.1)
 
 
-def build_ui() -> gr.Interface:
+def build_ui(image_size: int) -> gr.Interface:
     examples_t2i = [
         "A sail boat on a grass field with mountains in the morning and sunny day",
         "A beautiful sunset with a sail boat on the ocean, photograph, highly detailed, golden hour, Nikon D850",
@@ -216,11 +208,9 @@ def build_ui() -> gr.Interface:
                     randomize_seed_checkbox = gr.Checkbox(label="Randomize seed across runs", value=True, scale=0)
                     randomize_seed_button = gr.Button("Randomize seed", scale=0)
                 with gr.Row():
+                    strength_slider = gr.Slider(label="Input image influence strength", minimum=0.0, maximum=1.0, step=0.01, value=0.5)
                     guidance_scale_slider = gr.Slider(label="Guidance scale for base", minimum=2, maximum=14, step=0.1, value=8.0)
                     num_inference_steps_slider = gr.Slider(label="Number of inference steps for base", minimum=1, maximum=32, step=1, value=5,)
-                with gr.Row():
-                    strength_slider = gr.Slider(label="Input image influence strength", minimum=0.0, maximum=1.0, step=0.01, value=0.5)
-                    size_slider = gr.Slider(label="Image size", minimum=256, maximum=1024, step=64, value=512)
 
         gr.Examples(label="Examples for Text2Image", examples=examples_t2i, inputs=prompt_text, outputs=result_img, cache_examples=False)
         gr.Examples(label="Examples for Image2Image", examples=examples_i2i, inputs=prompt_text, outputs=result_img, cache_examples=False)
@@ -231,8 +221,8 @@ def build_ui() -> gr.Interface:
             fn=lambda: (gr.Button(variant="secondary"), gr.Button(variant="primary")),
             outputs=[start_button, stop_button]
         ).then(
-            generate_images,
-            inputs=[input_image, prompt_text, seed_slider, size_slider, guidance_scale_slider, num_inference_steps_slider,
+            partial(generate_images, size=image_size),
+            inputs=[input_image, prompt_text, seed_slider, guidance_scale_slider, num_inference_steps_slider,
                     strength_slider, randomize_seed_checkbox, device_dropdown, endless_checkbox],
             outputs=[result_img, result_time_label]
         ).then(
@@ -245,14 +235,14 @@ def build_ui() -> gr.Interface:
     return demo
 
 
-def run_endless_lcm(model_name: str, safety_checker_model: str, local_network: bool = False, public_interface: bool = False) -> None:
+def run_endless_lcm(model_name: str, safety_checker_model: str, image_size: int, local_network: bool = False, public_interface: bool = False) -> None:
     global hf_model_name
     hf_model_name = model_name
     server_name = "0.0.0.0" if local_network else None
 
     download_models(model_name, safety_checker_model)
 
-    demo = build_ui()
+    demo = build_ui(image_size)
     log.info("Demo is ready!")
     demo.launch(server_name=server_name, share=public_interface)
 
@@ -267,8 +257,9 @@ if __name__ == '__main__':
                         help="Visual GenAI model to be used")
     parser.add_argument("--safety_checker_model", type=str, default="Falconsai/nsfw_image_detection",
                         choices=["Falconsai/nsfw_image_detection"], help="The model to verify if the generated image is NSFW")
+    parser.add_argument("--image_size", type=int, default=512, help="The image size to generate")
     parser.add_argument("--local_network", action="store_true", help="Whether demo should be available in local network")
     parser.add_argument("--public", default=False, action="store_true", help="Whether interface should be available publicly")
 
     args = parser.parse_args()
-    run_endless_lcm(args.model_name, args.safety_checker_model, args.local_network, args.public)
+    run_endless_lcm(args.model_name, args.safety_checker_model, args.image_size, args.local_network, args.public)
