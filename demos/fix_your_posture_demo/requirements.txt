@@ -6,4 +6,4 @@ tqdm==4.67.1
 logging==0.4.9.6
 pathlib==1.0.1
 win10toast==0.9
-pywin32
+pywin32==308
