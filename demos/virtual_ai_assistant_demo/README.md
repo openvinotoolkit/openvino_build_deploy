@@ -157,3 +157,31 @@ Run the following to see all available options.
 ```shell
 python main.py --help
 ```
+
+## Step 5 (Optional): Run the Application in a Docker container
+
+To run the demo as a container, use the following commands. 
+
+Set the required environment variables
+```shell
+export $PERSONALITY ="agribot_personality"
+export $HF_TOKEN =<Your hugging face token generated in Step 4>
+export $MODELS_PATH =<directory where to export the OpenVINO models>
+```
+
+Build the container image
+```shell
+docker build \
+  --build-arg hf_token=$HF_TOKEN \
+  --build-arg personality=$PERSONALITY.yaml \
+  -t virtual_ai_assistant_demo:$PERSONALITY .
+```
+
+Run the containerized demo
+```shell
+docker run \
+    --name ai-assistant-$PERSONALITY \
+    -v $MODELS_PATH:/app/model \
+    -p 5001:7860 --detach \
+    virtual_ai_assistant_demo:$PERSONALITY
+```
