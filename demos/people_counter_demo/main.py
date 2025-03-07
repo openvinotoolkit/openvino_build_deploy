@@ -188,6 +188,7 @@ def unique_identifier(frame: np.array, detections: List[dict], tracker: DeepSort
     det_confidence = np.array([d["confidence"] for d in detections])
     det_class_id = np.array([category_id] * len(detections))  # Add class_id
     det = sv.Detections(xyxy=det_xyxy, confidence=det_confidence, class_id=det_class_id)
+    return det
 
 def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", category: str = "person", zones_config_file: str = "",
         object_limit: int = 3, flip: bool = True, colorful: bool = False, last_frames: int = 50) -> None:
