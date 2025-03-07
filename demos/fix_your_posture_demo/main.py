@@ -10,7 +10,8 @@ import traceback
 import collections
 import os
 import sys
-from win10toast import ToastNotifier
+from plyer import notification  # Import plyer for notifications
+
 # Initialize logging
 logging.basicConfig(level=logging.DEBUG)
 SCRIPT_DIR = os.path.join(
@@ -251,7 +252,7 @@ def run_demo(
     cap = None
     feedback_buffer = collections.deque()  # Initialize feedback buffer
     processing_times = collections.deque()  # Initialize processing times deque
-    toaster = ToastNotifier()  # Initialize the toaster for notifications
+
     try:
         # Load models
         face_detection_model_path = download_model(
@@ -350,8 +351,11 @@ def run_demo(
                         2)  # Reduced font size, not bold
                     # Show notification if posture is not good
                     if feedback != "Good posture maintained.":
-                        toaster.show_toast(
-                            "Posture Alert", feedback, duration=5, threaded=True)
+                        notification.notify(
+                            title="Posture Alert",
+                            message=feedback,
+                            timeout=5
+                        )
 
                 # Draw pose lines
                 face_frame = draw_pose_lines(
@@ -380,9 +384,7 @@ def run_demo(
                     10,
                     10))
             utils.draw_text(
-                frame, f"Inference time: {
-                    processing_time:.1f}ms ({
-                    fps:.1f} FPS)", (10, 50))
+                frame, f"Inference time: {processing_time:.1f}ms ({fps:.1f} FPS)", (10, 50))
 
             # Display result
             cv2.imshow("Head Pose Estimation", frame)
