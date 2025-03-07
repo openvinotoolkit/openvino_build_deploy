@@ -105,11 +105,11 @@ CI Pipelines are defined in the `.github/workflows` directory and the workflows 
 - **Triggers:** 
   - Scheduled: Daily at 2 AM
 - **Jobs:**
-  - `stale`: Marks issues and pull requests as stale after a period of inactivity and closes them if no further activity occurs.
+  - `close-issues`: Marks issues and pull requests as stale after a period of inactivity and closes them if no further activity occurs.
 
 #### Flow:
 1. **Trigger:** The workflow is triggered by a schedule.
-2. **stale Job:**
+2. **close-issues Job:**
    - Identifies issues and pull requests that have been inactive.
    - Marks them as stale.
    - Closes them if no further activity occurs.
