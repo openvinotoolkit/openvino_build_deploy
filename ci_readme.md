@@ -246,6 +246,6 @@ Reusable steps are defined in the `.github/reusable-steps` directory and are use
 ## Diagrams
 
 ### CI Pipeline Flow
-
+![CI-Flow](https://github.com/user-attachments/assets/e031fda7-a2e4-4a06-96f6-47b3f7289844)
 
 For further assistance, please contact the project maintainers.
