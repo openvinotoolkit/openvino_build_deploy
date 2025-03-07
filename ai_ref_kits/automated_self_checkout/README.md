@@ -6,6 +6,7 @@
     <a href="https://www.youtube.com/watch?v=VrJRr_thxcs">📺&nbsp;Overview&nbsp;Video&nbsp;·</a>
     <a href="https://www.youtube.com/watch?v=rw8cTr-hD-g">👨‍💻&nbsp;Code&nbsp;Demo&nbsp;Video&nbsp;·</a>
     <a href="https://www.intel.com/content/www/us/en/developer/articles/training/detect-objects-openvino-automated-self-checkout.html">📚&nbsp;Step&#8209;by&#8209;step&nbsp;Tutorial</a>
+    <a href="envscripts.md">🔧&nbsp;Scripts&nbsp;</a>
   </h4>
 </div>
 
@@ -17,6 +18,7 @@ This kit uses the following technology stack:
 - [OpenVINO Toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([docs](https://docs.openvino.ai/))
 - [Ultralytic YOLOv8](https://github.com/ultralytics/ultralytics)
 - [Roboflow Supervision](https://supervision.roboflow.com/latest/)
+- [Gradio](https://www.gradio.app/)
 
 Check out our [AI Reference Kits repository](/) for other kits.
 
@@ -24,11 +26,15 @@ Check out our [AI Reference Kits repository](/) for other kits.
 
 ### What's New
 
-New updates will be added here.
+[2025-02-26] Gradio-based Demo UI and Scripts.
+
+- It incorporates a new Gradio-based UI that provides interactivity and additional options to view, process, and review the video ([See the Jupyter Notebook](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/ai_ref_kits/automated_self_checkout/self-checkout-recipe.ipynb)), detections/tracking, and log messages.
+- It adds a set of scripts to make it easier to test the demo. For example, you can install, run, or clean the environment and run the demo visually directly (See the ['Scripts'](#scripts-automating-the-installation-running-and-cleaning-demo-tasks) section).
 
 <details open><summary><b>Table of Contents</b></summary>
-  
+
 - [Getting Started](#getting-started)
+  - [Scripts automating the Installation, Running, and Cleaning Demo Tasks](#scripts-automating-the-installation-running-and-cleaning-demo-tasks)
   - [Installing Prerequisites](#installing-prerequisites)
   - [Setting Up Your Environment](#setting-up-your-environment)
   - [Running the Application](#running-the-application)
@@ -40,6 +46,19 @@ New updates will be added here.
 # Getting Started
 
 Now, let's dive into the steps starting with installing Python. We recommend using Ubuntu to set up and run this project.
+
+## Scripts automating the Installation, Running, and Cleaning Demo Tasks
+
+A set of scripts provides a quick run to install, run, and clean the environment and run the demo visually in a direct way. It targets Ubuntu Linux 22.04+, and an explanation of how to use it is available [here](envscripts.md). On the other hand, you could follow the next steps for a manual and step-by-step installation in case of a different platform.
+
+| Script | Objective |
+|:---|:---|
+|**setup.sh**|It prepares and installs all required components and a virtual environment to run the JupyterLab server, opening the Automated Self-checkout notebook.|
+|**runEnv.sh**|Once installed, it starts the JupyterLab server to continue working in the Tutorial. It starts from the same point where the server was before shut down.|
+|**runDemo.sh**|It shows a Gradio-based UI (It executes the tutorial steps in the background) that provides interaction and additional features to explore object detection, tracking algorithm, and UC capacities.|
+|**cleanEnv.sh**|It recursively cleans the virtual environment, downloaded model, and the rest of the information under the folder of this reference implementation. It keeps the scripts only in case users wish to reinstall and run the demo again.|
+
+[An explanation of scripts, how to use them, and expected outcomes are available here.](./envscripts.md)
 
 ## Star the Repository
 
