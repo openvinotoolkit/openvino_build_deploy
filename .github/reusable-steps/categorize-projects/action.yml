@@ -16,6 +16,8 @@ outputs:
     value: ${{ steps.group-subprojects.outputs.qt }}
   js:
     value: ${{ steps.group-subprojects.outputs.js }}
+  unittest:
+    value: ${{ steps.group-subprojects.outputs.unittest }}
 
 runs:
   using: 'composite'
@@ -42,6 +44,8 @@ runs:
             qt+=("$dir")
           elif [ -f "$dir/main.py" ] && grep -q -- "--stream" "$dir/main.py"; then
             webcam+=("$dir")
+          elif [ -d "$dir/test" ]; then
+            unittest+=("$dir/test")
           else
             python+=("$dir")
           fi
@@ -53,6 +57,7 @@ runs:
         webcam_json=$(printf '%s\n' "${webcam[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
         qt_json=$(printf '%s\n' "${qt[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
         js_json=$(printf '%s\n' "${js[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+        unittest_json=$(printf '%s\n' "${unittest_json[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
 
         echo "notebook=$notebook_json" >> $GITHUB_OUTPUT
         echo "python=$python_json" >> $GITHUB_OUTPUT
@@ -60,6 +65,7 @@ runs:
         echo "webcam=$webcam_json" >> $GITHUB_OUTPUT
         echo "qt=$qt_json" >> $GITHUB_OUTPUT
         echo "js=$js_json" >> $GITHUB_OUTPUT
+        echo "unittest_json=$unittest_json" >> $GITHUB_OUTPUT
     - name: Print subprojects to test
       shell: bash
       run: |
@@ -69,3 +75,4 @@ runs:
         echo "Webcam subprojects: ${{ steps.group-subprojects.outputs.webcam }}"
         echo "Qt subprojects: ${{ steps.group-subprojects.outputs.qt }}"
         echo "JS subprojects: ${{ steps.group-subprojects.outputs.js }}"
+        echo "Unit test subprojects: ${{ steps.group-subprojects.outputs.unittest }}"

@@ -119,3 +119,44 @@ jobs:
           command: npm start
           project: ${{ matrix.subproject }}
           timeout: 1m
+
+  unittest:
+    needs: find-subprojects
+    if: ${{ needs.find-subprojects.outputs.unittest != '[]' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.10", "3.12"]
+        subproject: ${{ fromJson(needs.find-subprojects.outputs.unittest) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/reusable-steps/setup-os
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: ./.github/reusable-steps/setup-python
+        with:
+          python: ${{ matrix.python }}
+          project: ${{ matrix.subproject }}
+      - name: Login to HF
+        shell: bash
+        run: |
+          huggingface-cli login --token ${{ secrets.HF_TOKEN }}
+      - name: Install ollama
+        shell: bash
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+      - name: Start ollama and setup deepeval to use ollama
+        shell: bash
+        run: |
+          ollama serve &
+          ollama pull deepseek-r1 &
+          deepeval set-ollama deepseek-r1
+      - uses: ./.github/reusable-steps/timeouted-action
+        with:
+          script: python test.py
+          project: ${{ matrix.subproject }}
+          timeout: 5h
