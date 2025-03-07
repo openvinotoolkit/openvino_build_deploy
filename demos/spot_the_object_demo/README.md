@@ -1,4 +1,4 @@
-# Spot a Defect with OpenVINO™
+# Spot the Object with OpenVINO™
 
 The demo detects, tracks and counts defined objects in front of the webcam. The default object is a hazelnut, but it can be changed to any other object. It works especially good with a conveyor belt.
 
@@ -43,7 +43,7 @@ git clone https://github.com/openvinotoolkit/openvino_build_deploy.git
 The above will clone the repository into a directory named "openvino_build_deploy" in the current directory. Then, navigate into the directory using the following command:
 
 ```shell
-cd openvino_build_deploy/demos/spot_a_defect_demo
+cd openvino_build_deploy/demos/spot_the_object_demo
 ```
 
 2. Create a virtual environment
