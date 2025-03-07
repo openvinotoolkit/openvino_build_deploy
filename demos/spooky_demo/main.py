@@ -274,10 +274,6 @@ def run_demo(source, model_name, model_precision, device, flip):
             if key == 27 or key == ord('q'):
                 break
 
-            # Check if the window is closed
-            if cv2.getWindowProperty(title, cv2.WND_PROP_VISIBLE) < 1:
-                break
-
             for i, dev in enumerate(device_mapping.keys()):
                 if key == ord('1') + i:
                     del compiled_model
