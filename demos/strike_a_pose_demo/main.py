@@ -126,8 +126,9 @@ def run_pose_estimation(source: str, model_name: str, device: str, flip: bool = 
 
             # Display classified poses
             for label, pose in zip(pose_labels, results.keypoints.xy.numpy()):
-                cv2.putText(frame, label, tuple(pose[0].astype(int)), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-
+                if pose.size > 0:  # Ensure pose is not empty
+                    cv2.putText(frame, label, tuple(pose[0].astype(int)), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+            
             processing_times.append(stop_time - start_time)
             # Use processing times from last 200 frames.
             if len(processing_times) > 200:
