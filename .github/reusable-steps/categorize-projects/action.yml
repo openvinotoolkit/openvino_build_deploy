@@ -32,6 +32,7 @@ runs:
         webcam=()
         qt=()
         js=()
+        unittest=()
 
         for dir in ${{ inputs.subprojects }}; do
           if [ -f "$dir/package.json" ]; then
@@ -46,7 +47,7 @@ runs:
             webcam+=("$dir")
           elif [ -d "$dir/test" ]; then
             unittest+=("$dir/test")
-          else
+          elif [ -f "$dir/main.py" ]; then
             python+=("$dir")
           fi
         done
@@ -57,7 +58,7 @@ runs:
         webcam_json=$(printf '%s\n' "${webcam[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
         qt_json=$(printf '%s\n' "${qt[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
         js_json=$(printf '%s\n' "${js[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
-        unittest_json=$(printf '%s\n' "${unittest_json[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+        unittest_json=$(printf '%s\n' "${unittest[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
 
         echo "notebook=$notebook_json" >> $GITHUB_OUTPUT
         echo "python=$python_json" >> $GITHUB_OUTPUT
@@ -65,7 +66,7 @@ runs:
         echo "webcam=$webcam_json" >> $GITHUB_OUTPUT
         echo "qt=$qt_json" >> $GITHUB_OUTPUT
         echo "js=$js_json" >> $GITHUB_OUTPUT
-        echo "unittest_json=$unittest_json" >> $GITHUB_OUTPUT
+        echo "unittest=$unittest_json" >> $GITHUB_OUTPUT
     - name: Print subprojects to test
       shell: bash
       run: |
