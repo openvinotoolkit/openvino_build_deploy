@@ -20,6 +20,10 @@ from llama_index.llms.openvino import OpenVINOLLM
 from selfcheckgpt.modeling_selfcheck import SelfCheckLLMPrompt
 from transformers import AutoTokenizer
 
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from main import load_chat_model
+
 proxies = getproxies()
 os.environ["http_proxy"]  = proxies["http"]
 os.environ["https_proxy"] = proxies["https"]
@@ -75,40 +79,6 @@ def prepare_dataset_and_model(chat_model_name: str, personality_file_path: Path,
     ov_chat_engine = SimpleChatEngine.from_defaults(llm=ov_llm, system_prompt=chatbot_config["system_configuration"],
                                                 memory=ChatMemoryBuffer.from_defaults())
     return dataset[dataset_info["col"]], ov_chat_engine
-
-
-def load_chat_model(model_name: str, token: str = None) -> OpenVINOLLM:
-    model_path = MODEL_DIR / model_name
-
-    # tokenizers are disabled anyway, this allows to avoid warning
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
-    if token is not None:
-        os.environ["HUGGING_FACE_HUB_TOKEN"] = token
-
-    ov_config = {"PERFORMANCE_HINT": "LATENCY", "CACHE_DIR": ""}
-    # load llama model and its tokenizer
-    if not model_path.exists():
-        log.info(f"Downloading {model_name}... It may take up to 1h depending on your Internet connection and model size.")
-
-        chat_tokenizer = AutoTokenizer.from_pretrained(model_name, token=token)
-        chat_tokenizer.save_pretrained(model_path)
-
-        # openvino models are used as is
-        is_openvino_model = model_name.split("/")[0] == "OpenVINO"
-        if is_openvino_model:
-            chat_model = OVModelForCausalLM.from_pretrained(model_name, export=False, compile=False, token=token)
-            chat_model.save_pretrained(model_path)
-        else:
-            log.info(f"Loading and quantizing {model_name} to INT4...")
-            log.info(f"Quantizing {model_name} to INT4... It may take significant amount of time depending on your machine power.")
-            quant_config = OVWeightQuantizationConfig(bits=4, sym=False, ratio=0.8, quant_method="awq", group_size=128, dataset="wikitext2")
-            chat_model = OVModelForCausalLM.from_pretrained(model_name, export=True, compile=False, quantization_config=quant_config,
-                                                            token=token, trust_remote_code=True, library_name="transformers")
-            chat_model.save_pretrained(model_path)
-
-    device = "GPU" if "GPU" in get_available_devices() else "CPU"
-    return OpenVINOLLM(context_window=4096, model_id_or_path=str(model_path), max_new_tokens=1024, device_map=device,
-                       model_kwargs={"ov_config": ov_config, "library_name": "transformers"}, generate_kwargs={"do_sample": True, "temperature": 0.7, "top_k": 50, "top_p": 0.95})
 
 
 def run_test_deepeval(chat_model_name: str, personality_file_path: Path, auth_token: str, selection_num: int = 10) -> float:
