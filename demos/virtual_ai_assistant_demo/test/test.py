@@ -30,9 +30,9 @@ from optimum.intel import OVModelForCausalLM, OVWeightQuantizationConfig
 DATASET_MAPPING = {
     "agribot_personality.yaml": {"name": "KisanVaani/agriculture-qa-english-only", "split": "train", "col": "question"},
     "healthcare_personality.yaml": {"name": "medalpaca/medical_meadow_medical_flashcards", "split": "train", "col": "input"},
-    "bartender_personality.yaml": {"name": str(Path(__file__).parent / "bartender_personality.txt"), "col": "text"},
-    "culinara_personality.yaml": {"name": str(Path(__file__).parent / "culinara_personality.txt"), "col": "text"},
-    "tutor_personality.yaml": {"name": str(Path(__file__).parent / "tutor_personality.txt"), "col": "text"}
+    "bartender_personality.yaml": {"name": str(Path(__file__).parent / "bartender_questions.txt"), "col": "text"},
+    "culinara_personality.yaml": {"name": str(Path(__file__).parent / "culinara_questions.txt"), "col": "text"},
+    "tutor_personality.yaml": {"name": str(Path(__file__).parent / "tutor_questions.txt"), "col": "text"}
 }
 MODEL_DIR = Path("model")
 
