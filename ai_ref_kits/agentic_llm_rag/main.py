@@ -9,7 +9,7 @@ def main(args):
     embedding_model_dir = chat.convert_embedding_model(args.embedding_model_type, Path(args.model_dir))    
     chat_model_dir = chat.convert_chat_model(args.chat_model_type, args.chat_precision, Path(args.model_dir), args.hf_token)
 
-    app.run(chat_model_dir, embedding_model_dir, Path(args.rag_pdf), args.device, args.public)
+    app.run(chat_model_dir, embedding_model_dir, Path(args.rag_pdf), "GPU", args.public)
 
 
 if __name__ == '__main__':
