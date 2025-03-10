@@ -22,7 +22,7 @@ if __name__ == '__main__':
     parser.add_argument("--chat_precision", type=str, default="int4", choices=["fp16", "int8", "int4"], help="Chat model precision")
     parser.add_argument("--hf_token", type=str, help="HuggingFace access token to get Llama3")
     parser.add_argument("--model_dir", type=str, default="model", help="Directory to place the model in")    
-    parser.add_argument("--example_pdf", type=str, default="data/large.pdf",
+    parser.add_argument("--rag_pdf", type=str, default="data/large.pdf",
                         help="Path to the PDF file which is an additional context")
     parser.add_argument("--public", default=False, action="store_true", help="Whether interface should be available publicly")
 
