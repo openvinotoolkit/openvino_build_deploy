@@ -11,6 +11,8 @@ from transformers import AutoTokenizer
 MODEL_MAPPING = {
     "qwen2-7B": "Qwen/Qwen2-7B-Instruct",
     "bge-large": "BAAI/bge-large-en-v1.5",
+    "bge-small": "BAAI/bge-small-en-v1.5",    
+    "bge-m3": "BAAI/bge-m3",
 }
 
 def optimize_model_for_npu(model: OVModelForFeatureExtraction):
