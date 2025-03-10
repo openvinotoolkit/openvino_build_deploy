@@ -127,7 +127,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--chat_model_type", type=str, choices=["qwen2-7B"],
                         default="qwen2-7B", help="Chat model to be converted")
-    parser.add_argument("--embedding_model_type", type=str, choices=["bge-large"],
+    parser.add_argument("--embedding_model_type", type=str, choices=["bge-small", "bge-large", "bge-m3"],
                         default="bge-large", help="Embedding model to be converted")
     parser.add_argument("--precision", type=str, default="int4", choices=["fp16", "int8", "int4"], help="Model precision")
     parser.add_argument("--hf_token", type=str, help="HuggingFace access token")
