@@ -247,8 +247,8 @@ def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", c
                 frame = zone_annotator.annotate(scene=frame)
 
                 # get detections relevant only for the zone
-                mask = zone.trigger(detections=det)
-                detections_filtered = det[mask]
+                mask = zone.trigger(detections=detections)
+                detections_filtered = detections[mask]
                 # visualize boxes around objects in the zone
                 frame = masks_annotator.annotate(scene=frame, detections=detections_filtered)
                 frame = box_annotator.annotate(scene=frame, detections=detections_filtered)
