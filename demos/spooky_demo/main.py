@@ -277,8 +277,8 @@ def run_demo(source, model_name, model_precision, device, flip):
             for i, dev in enumerate(device_mapping.keys()):
                 if key == ord('1') + i:
                     del compiled_model
-                    compiled_model, input_layer, pafs_output_key, heatmaps_output_key = load_and_compile_model(model_name, model_precision, device)
                     device = dev
+                    compiled_model, input_layer, pafs_output_key, heatmaps_output_key = load_and_compile_model(model_name, model_precision, device)
                     processing_times.clear()
     # ctrl-c
     except KeyboardInterrupt:

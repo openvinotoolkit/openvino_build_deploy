@@ -139,9 +139,10 @@ def run_pose_estimation(source: str, model_name: str, device: str, flip: bool = 
             for i, dev in enumerate(device_mapping.keys()):
                 if key == ord('1') + i:
                     del pose_model
+                    device = dev
+
                     pose_model = load_and_compile_model(model_path, device)
 
-                    device = dev
                     processing_times.clear()
     # ctrl-c
     except KeyboardInterrupt:
