@@ -15,7 +15,7 @@
 	- [🔦 Explainable AI](#-explainable-ai)
 	- [🖼️ Multimodal AI Visual Generator](#%EF%B8%8F-multimodal-ai-visual-generator)
 	- [💬 Conversational AI Chatbot](#-conversational-ai-chatbot)
-	- [🛒 AI Insight Agent with RAG](#-agentic-llm-rag)
+	- [🛒 AI Insight Agent with RAG](#-AI-Insight-Agent-with-RAG)
 
 - [Troubleshooting and Resources](#troubleshooting-and-resources)
 
