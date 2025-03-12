@@ -15,7 +15,7 @@
 	- [🔦 Explainable AI](#-explainable-ai)
 	- [🖼️ Multimodal AI Visual Generator](#%EF%B8%8F-multimodal-ai-visual-generator)
 	- [💬 Conversational AI Chatbot](#-conversational-ai-chatbot)
-	- [🛒 AI Insight Agent with RAG](#-agentic_llm_rag)
+	- [🛒 AI Insight Agent with RAG](#-agentic-llm-rag)
 
 - [Troubleshooting and Resources](#troubleshooting-and-resources)
 
@@ -120,7 +120,7 @@ The Conversational AI Chatbot is an open-source, voice-driven chat agent that an
 This kit demonstrates the AI Chatbot’s capabilities by simulating the experience of talking to a hotel concierge.
 
 ### 🛒 AI Insight Agent with RAG
-[![agentic_llm_rag](https://github.com/user-attachments/assets/0471ab91-ded5-4a5f-8d8e-5432f1b4b45c)](agentic_llm_rag)
+[![agentic_llm_rag](https://github.com/user-attachments/assets/0471ab91-ded5-4a5f-8d8e-5432f1b4b45c)](agentic-llm-rag)
 
 | [AI Insight Agent with RAG](agentic_llm_rag) |                                                                                                                                                         |
 |--------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
