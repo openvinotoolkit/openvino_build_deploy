@@ -120,7 +120,7 @@ The Conversational AI Chatbot is an open-source, voice-driven chat agent that an
 This kit demonstrates the AI Chatbot’s capabilities by simulating the experience of talking to a hotel concierge.
 
 ### 🛒 AI Insight Agent with RAG
-[![agentic_llm_rag](https://github.com/user-attachments/assets/ad51288e-142c-4cb1-9ef6-21839bd02d5e)](agentic_llm_rag)
+[![agentic_llm_rag](https://github.com/user-attachments/assets/0471ab91-ded5-4a5f-8d8e-5432f1b4b45c)](agentic_llm_rag)
 
 | [AI Insight Agent with RAG](agentic_llm_rag) |                                                                                                                                                         |
 |--------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
