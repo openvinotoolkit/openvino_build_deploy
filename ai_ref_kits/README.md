@@ -15,6 +15,7 @@
 	- [🔦 Explainable AI](#-explainable-ai)
 	- [🖼️ Multimodal AI Visual Generator](#%EF%B8%8F-multimodal-ai-visual-generator)
 	- [💬 Conversational AI Chatbot](#-conversational-ai-chatbot)
+	- [🛒 AI Insight Agent with RAG](#-agentic_llm_rag)
 
 - [Troubleshooting and Resources](#troubleshooting-and-resources)
 
@@ -115,7 +116,19 @@ An in-depth demo of how the Multimodal AI Visual Generator Kit creates a real-ti
 | Example industries                                     | Tourism                                                                                                                                                 |
 | Demo                                                   |                                                                                                                                                         |
 
-The Conversational AI Chatbot is an open-source, voice-driven chat agent that answers spoken questions with meaningful, spoken responses.  It can be configured to respond in any type of scenario or context. This kit demonstrates the AI Chatbot’s capabilities by simulating the experience of talking to a hotel concierge.
+The Conversational AI Chatbot is an open-source, voice-driven chat agent that answers spoken questions with meaningful, spoken responses.  It can be configured to respond in any type of scenario or context. 
+This kit demonstrates the AI Chatbot’s capabilities by simulating the experience of talking to a hotel concierge.
+
+### 🛒 AI Insight Agent with RAG
+[![agentic_llm_rag](https://github.com/user-attachments/assets/ad51288e-142c-4cb1-9ef6-21839bd02d5e)](agentic_llm_rag)
+
+| [AI Insight Agent with RAG](agentic_llm_rag) |                                                                                                                                                         |
+|--------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Related AI concepts                                    | Natural Language Understanding, Large Language Models (LLMs), Retrieval Augmented Generation (RAG), Agentic AI, Generative AI |
+| Example industries                                     | Retail                                                                                                                                                 |
+| Demo                                                   |                                                                                                                                                         |
+
+The AI Insight Agent with RAG uses Large Language Models (LLMs) and Retrieval-Augmented Generation (RAG) to interpret user prompts, engage in meaningful dialogue, perform calculations, use RAG techniques to improve its knowledge and interact with the user to add items to a virtual shopping cart.
 
 ## Troubleshooting and Resources
 - Open a [discussion topic](https://github.com/openvinotoolkit/openvino_build_deploy/discussions)
