@@ -3,6 +3,7 @@ import collections
 import os
 import sys
 import time
+import openvino as ov
 from pathlib import Path
 
 import cv2
@@ -25,15 +26,19 @@ reindeer_sunglasses_img = cv2.imread("assets/reindeer_sunglasses.png", cv2.IMREA
 reindeer_antlers_img = cv2.imread("assets/reindeer_antlers.png", cv2.IMREAD_UNCHANGED)
 
 
-def download_model(model_name, precision):
+def download_model(model_name, precision, provider="intel", suffix='xml'):
     base_model_dir = Path("model")
 
-    model_path = base_model_dir / "intel" / model_name / precision / f"{model_name}.xml"
+    model_path = base_model_dir / f"{provider}" / model_name / precision / f"{model_name}.{suffix}"
 
-    if not model_path.exists():
+    if provider == "intel" and not model_path.exists():
         model_url_dir = f"https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/3/{model_name}/{precision}/"
         utils.download_file(model_url_dir + model_name + '.bin', model_path.with_suffix('.bin').name, model_path.parent)
         utils.download_file(model_url_dir + model_name + '.xml', model_path.name, model_path.parent)
+
+    if provider == "google" and not model_path.exists():
+        model_url_dir = f"https://storage.googleapis.com/mediapipe-models/image_segmenter/{model_name}/float32/latest/"
+        utils.download_file(model_url_dir + model_name + '.tflite', model_path.name, model_path.parent)
 
     return model_path
 
@@ -43,7 +48,15 @@ def load_model(model_path, device):
     core = Core()
 
     # Read the network and corresponding weights from a file.
-    model = core.read_model(model=model_path)
+    ir_model_path = model_path.with_suffix(".xml")
+
+    if not ir_model_path.exists():
+        # Convert to IR
+        model = ov.convert_model(model_path)
+        ov.save_model(model, ir_model_path)
+    else:
+        model = core.read_model(ir_model_path)
+
     # Compile the model for CPU (you can choose manually CPU, GPU, MYRIAD etc.)
     # or let the engine choose the best available device (AUTO).
     compiled_model = core.compile_model(model=model, device_name=device)
@@ -58,10 +71,67 @@ def preprocess_images(imgs, width, height):
     result = []
     for img in imgs:
         # Resize the image and change dims to fit neural network input.
-        input_img = cv2.resize(src=img, dsize=(width, height), interpolation=cv2.INTER_AREA)
-        input_img = input_img.transpose(2, 0, 1)[np.newaxis, ...]
+        input_img = cv2.resize(src=img, dsize=(width, height), interpolation=cv2.INTER_NEAREST)
+        input_img = input_img.transpose(2, 0, 1)
+        input_img = np.expand_dims(input_img, 0)
         result.append(input_img)
     return np.array(result)
+
+
+def process_instance_segmentation_results(frame, bg_image, results, in_width, in_height, thresh=0.5):
+    labels = results['labels']
+    boxes = results['boxes']
+    masks = results['masks']
+
+    h, w = frame.shape[:2]
+    scale_x, scale_y = w / in_width, h / in_height
+
+    valid_indices = np.where(
+        (labels == 0) & # Default person class label is 0
+        (boxes[:, 4] > thresh) # Confidence score above threshold
+    )[0]
+
+    foreground_mask = np.zeros((h, w), dtype=np.uint8)
+
+    for idx in valid_indices:
+        xmin, ymin, xmax, ymax, _ = boxes[idx]
+
+        # Scale coordinates
+        xmin = int(xmin * scale_x)
+        ymin = int(ymin * scale_y)
+        xmax = int(xmax * scale_x)
+        ymax = int(ymax * scale_y)
+        
+        # Clip coordinates
+        xmin, ymin = max(0, xmin), max(0, ymin)
+        xmax, ymax = min(w, xmax), min(h, ymax)
+        
+        if xmax <= xmin or ymax <= ymin:
+            continue
+
+        # Process foreground mask
+        mask = cv2.resize(masks[idx], (xmax - xmin, ymax - ymin))
+        mask_binary = ((mask > thresh) * 255).astype(np.uint8)
+        
+        foreground_mask[ymin:ymax, xmin:xmax] = cv2.bitwise_or(
+            foreground_mask[ymin:ymax, xmin:xmax],
+            mask_binary
+        )
+
+    # Background replacement
+    background_mask = cv2.bitwise_not(foreground_mask)
+    bg_resized = cv2.resize(bg_image, (w, h))
+    background_mask = cv2.merge([background_mask] * 3)
+    return np.where(background_mask == 0, frame, bg_resized)
+
+
+def process_selfie_segmentation_results(frame, bg_image, results):
+    h, w = frame.shape[:2]
+    background_mask = np.argmax(results[0], -1)[0] # background class label is 0
+    background_mask = cv2.resize(background_mask, (w, h), interpolation=cv2.INTER_NEAREST)
+    background_mask = cv2.merge([background_mask] * 3)
+    frame = np.where(background_mask  > 0, frame, bg_image)
+    return frame
 
 
 def process_detection_results(frame, results, in_width, in_height, thresh=0.5):
@@ -186,12 +256,19 @@ def draw_christmas_masks(frame, detections):
     return frame
 
 
-def run_demo(source, face_detection_model, face_landmarks_model, face_emotions_model, model_precision, device, flip):
+def run_demo(source, face_detection_model, face_landmarks_model, face_emotions_model, segmentation_model, model_precision, device, flip):
     device_mapping = utils.available_devices()
 
     face_detection_model_path = download_model(face_detection_model, model_precision)
     face_landmarks_model_path = download_model(face_landmarks_model, model_precision)
     face_emotions_model_path = download_model(face_emotions_model, model_precision)
+    
+    if segmentation_model.startswith('instance-segmentation'):
+        segmentation_model_path = download_model(segmentation_model, model_precision)
+    elif segmentation_model == 'selfie_multiclass_256x256':
+        segmentation_model_path = download_model(segmentation_model, "FP32", provider="google", suffix="tflite")
+    else:
+        raise RuntimeError(f'Model {segmentation_model} is not supported.')
 
     # load face detection model
     fd_model, fd_input, fd_output = load_model(face_detection_model_path, device)
@@ -204,6 +281,26 @@ def run_demo(source, face_detection_model, face_landmarks_model, face_emotions_m
     # load emotion classification model
     fe_model, fe_input, fe_output = load_model(face_emotions_model_path, device)
     fe_height, fe_width = list(fe_input.shape)[2:4]
+    
+    # load segmentation model
+    seg_model, seg_input, _ = load_model(segmentation_model_path, device)
+    if segmentation_model == 'selfie_multiclass_256x256':
+        # input shape is 1*256*256*3 (N, H, W, C)
+        seg_height, seg_width = list(seg_input.shape)[1:3]
+    elif segmentation_model.startswith('instance-segmentation'):
+        seg_height, seg_width = list(seg_input.shape)[2:4]
+
+    
+    def replace_background(img, bg_image):
+        input_img = preprocess_images([img], seg_width, seg_height)[0]
+        if segmentation_model == 'selfie_multiclass_256x256':
+            input_img = input_img.transpose(0, 2, 3 ,1) # N, C, H, W -> N, H, W, C
+            input_img = input_img.astype(np.float32) / 255 # normalize
+            results = seg_model([input_img])
+            return process_selfie_segmentation_results(img, bg_image, results)
+        elif segmentation_model.startswith('instance-segmentation'):
+            results = seg_model([input_img])
+            return process_instance_segmentation_results(img, bg_image, results, seg_width, seg_height, thresh=0.5)
 
     def detect_faces(img):
         input_img = preprocess_images([img], fd_width, fd_height)[0]
@@ -243,6 +340,9 @@ def run_demo(source, face_detection_model, face_landmarks_model, face_emotions_m
         title = "Press ESC to Exit"
         cv2.namedWindow(title, cv2.WINDOW_GUI_NORMAL)
         cv2.setWindowProperty(title, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        
+        bg_image = cv2.imread("assets/christmas_background.jpg")
+        virtual_background = False
 
         processing_times = collections.deque()
         while True:
@@ -259,7 +359,12 @@ def run_demo(source, face_detection_model, face_landmarks_model, face_emotions_m
             landmarks = detect_landmarks(frame, boxes)
             emotions = recognize_emotions(frame, boxes)
             detections = zip(boxes, landmarks, emotions)
-
+            
+            if virtual_background:
+                if bg_image.shape != frame.shape:
+                    bg_image = cv2.resize(bg_image, frame.shape[:2][::-1], interpolation=cv2.INTER_AREA)
+                frame = replace_background(frame, bg_image)
+                    
             stop_time = time.time()
 
             # Draw watermark
@@ -286,6 +391,10 @@ def run_demo(source, face_detection_model, face_landmarks_model, face_emotions_m
             # escape = 27 or 'q' to close the app
             if key == 27 or key == ord('q'):
                 break
+
+            # 'b' to switch background
+            if key == ord('b'):
+                virtual_background = not virtual_background
 
             for i, dev in enumerate(device_mapping.keys()):
                 if key == ord('1') + i:
@@ -315,8 +424,13 @@ if __name__ == '__main__':
     parser.add_argument("--detection_model_name", type=str, default="face-detection-0205", help="Face detection model to be used")
     parser.add_argument("--landmarks_model_name", type=str, default="facial-landmarks-35-adas-0002", help="Face landmarks regression model to be used")
     parser.add_argument("--emotions_model_name", type=str, default="emotions-recognition-retail-0003", help="Face emotions recognition model to be used")
+    parser.add_argument("--segmentation_model_name", type=str, default="instance-segmentation-security-1039", 
+                        choices=["instance-segmentation-person-0007", "instance-segmentation-security-1039", 
+                                 "instance-segmentation-security-1040", "selfie_multiclass_256x256"],
+                        help="Instance segmentation model to be used")
     parser.add_argument("--model_precision", type=str, default="FP16-INT8", choices=["FP16-INT8", "FP16", "FP32"], help="All models precision")
     parser.add_argument("--flip", type=bool, default=True, help="Mirror input video")
 
     args = parser.parse_args()
-    run_demo(args.stream, args.detection_model_name, args.landmarks_model_name, args.emotions_model_name, args.model_precision, args.device, args.flip)
+    run_demo(args.stream, args.detection_model_name, args.landmarks_model_name, args.emotions_model_name, args.segmentation_model_name,
+             args.model_precision, args.device, args.flip)
