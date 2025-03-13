@@ -12,7 +12,7 @@ def main(args):
     embedding_model_dir = chat.convert_embedding_model(args.embedding_model_type, Path(args.model_dir))
     reranker_model_dir = chat.convert_reranker_model(args.reranker_model_type, Path(args.model_dir))
     chat_model_dir = chat.convert_chat_model(args.chat_model_type, args.chat_precision, Path(args.model_dir), args.hf_token)
-
+        
     app.run(asr_model_dir, chat_model_dir, embedding_model_dir, reranker_model_dir, Path(args.personality), Path(args.example_pdf), args.public)
 
 
