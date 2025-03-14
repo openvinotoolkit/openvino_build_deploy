@@ -22,7 +22,7 @@ This kit uses the following technology stack:
 
 Check out our [AI Reference Kits repository](/) for other kits.
 
-![ai-insight-agent-with-rag](https://github.com/user-attachments/assets/da97bea7-29e8-497f-b7ba-4e00c79773f1)
+![agentic_llm_rag](https://github.com/user-attachments/assets/0471ab91-ded5-4a5f-8d8e-5432f1b4b45c)
 
 <details open><summary><b>Table of Contents</b></summary>
   
