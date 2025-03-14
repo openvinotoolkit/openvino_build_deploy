@@ -1,0 +1,25 @@
+*Sample prompts*
+
+These are sample prompts that would work depends on the context.
+
+RAG:
+- what paint is the best for kitchens?
+- what is the price of it?
+- what else do I need to complete my project?
+- I want to paint my room. The size is 500 sqft. which products do you recommend?
+- create a table with paint products sorted by price
+- I have a room 1000 sqft, I'm looking for supplies to paint the room
+
+Paint Calculations tools:
+- how many gallons of paint do I need to cover 600 sq ft ?
+- Calculate the paint cost for a 600 sqft room using Sherwin-Williams Emerald
+
+Shopping Cart tools:
+- add them to my cart
+- add brushes to my cart
+- add rollers to my shopping cart
+- add 3 gallons of Benjamin Moore Aura Revere Pewter to my cart
+- add 3 gallons of that paint to my cart
+- add gloves to my cart
+- clear shopping cart
+- I want to see my current cart
