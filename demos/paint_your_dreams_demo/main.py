@@ -59,42 +59,29 @@ def download_models(model_name, safety_checker_model: str) -> None:
                               image_processor=AutoProcessor.from_pretrained(safety_checker_dir))
 
 
-async def load_static_pipeline(model_dir: Path,  device: str, size: int, pipeline: str) -> genai.Text2ImagePipeline | genai.Image2ImagePipeline:
-    # NPU requires model static input shape for now
+async def create_pipeline(model_dir: Path, device: str, size: int, pipeline: str) -> genai.Text2ImagePipeline | genai.Image2ImagePipeline | genai.InpaintingPipeline:
     ov_config = {"CACHE_DIR": "cache"}
 
-    scheduler = genai.Scheduler.from_config(model_dir / "scheduler" / "scheduler_config.json")
-
-    text_encoder = genai.CLIPTextModel(model_dir / "text_encoder")
-    text_encoder.reshape(1)
-    text_encoder.compile(device, **ov_config)
-
-    unet = genai.UNet2DConditionModel(model_dir / "unet")
-    max_position_embeddings = text_encoder.get_config().max_position_embeddings
-    unet.reshape(1, size, size, max_position_embeddings)
-    unet.compile(device, **ov_config)
-
-    vae = genai.AutoencoderKL(model_dir / "vae_encoder", model_dir / "vae_decoder")
-    vae.reshape(1, size, size)
-    vae.compile(device, **ov_config)
-
     if pipeline == "text2image":
-        ov_pipeline = genai.Text2ImagePipeline.latent_consistency_model(scheduler, text_encoder, unet, vae)
+        ov_pipeline = genai.Text2ImagePipeline(model_dir)
     elif pipeline == "image2image":
-        ov_pipeline = genai.Image2ImagePipeline.latent_consistency_model(scheduler, text_encoder, unet, vae)
+        ov_pipeline = genai.Image2ImagePipeline(model_dir)
     elif pipeline == "inpainting":
-        ov_pipeline = genai.InpaintingPipeline.latent_consistency_model(scheduler, text_encoder, unet, vae)
+        ov_pipeline = genai.InpaintingPipeline(model_dir)
     else:
         raise ValueError(f"Unknown pipeline: {pipeline}")
+
+    ov_pipeline.reshape(1, size, size, ov_pipeline.get_generation_config().guidance_scale)
+    ov_pipeline.compile(device, config=ov_config)
 
     return ov_pipeline
 
 
-async def load_pipeline(model_name: str, device: str, size: int, pipeline: str):
+async def load_pipeline(model_name: str, device: str, size: int, pipeline: str) -> genai.Text2ImagePipeline | genai.Image2ImagePipeline | genai.InpaintingPipeline:
     model_dir = MODEL_DIR / model_name
 
     if (device, pipeline) not in ov_pipelines:
-        ov_pipelines[(device, pipeline)] = await load_static_pipeline(model_dir, device, size, pipeline)
+        ov_pipelines[(device, pipeline)] = await create_pipeline(model_dir, device, size, pipeline)
 
     return ov_pipelines[(device, pipeline)]
 
@@ -105,7 +92,7 @@ async def stop():
 
 
 progress_bar = None
-def progress(step, num_steps, latent):
+def progress(step, num_steps, latent) -> bool:
     global progress_bar
     if progress_bar is None:
         progress_bar = tqdm.tqdm(total=num_steps)
@@ -199,7 +186,7 @@ def build_ui(image_size: int) -> gr.Interface:
                 )
             with gr.Row():
                 with gr.Column():
-                    with gr.Row():
+                    with gr.Row(equal_height=True):
                         input_image = gr.ImageMask(label="Input image (leave blank for text2image generation)", sources=["webcam", "clipboard", "upload"])
                         result_img = gr.Image(label="Generated image", elem_id="output_image", format="png")
                     with gr.Row():
