@@ -35,6 +35,22 @@ ov_pipelines = {}
 stop_generating: bool = True
 hf_model_name: Optional[str] = None
 
+dreamshaper = {
+  "guidance_scale_value": 8.5,
+  "num_inference_steps": 4,
+  "strength_value": 0.8
+}
+
+dreamlike_anime = {
+  "guidance_scale_value": 7.5,
+  "num_inference_steps": 50,
+  "strength_value": 0.8
+}
+flux = {
+  "guidance_scale_value": 8.5,
+  "num_inference_steps": 4,
+  "strength_value": 0.2
+}
 
 def download_models(model_name, safety_checker_model: str) -> None:
     global safety_checker
