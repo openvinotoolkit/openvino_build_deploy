@@ -38,7 +38,7 @@ hf_model_name: Optional[str] = None
 dreamshaper = {
   "guidance_scale_value": 8.5,
   "num_inference_steps": 4,
-  "strength_value": 0.8
+  "strength_value": 0.7
 }
 
 dreamlike_anime = {
