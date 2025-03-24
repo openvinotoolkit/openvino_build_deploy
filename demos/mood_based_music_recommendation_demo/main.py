@@ -146,16 +146,13 @@ def run_demo(
             logging.debug(
                 f"Emotion buffer: {[emotion_labels[e] for e in emotion_buffer]}")
 
-            # Calculate dominant emotion every 1 minute
             if time.time() - start_time > 20:
-                dominant_emotion = max(
-                    set(emotion_buffer), key=emotion_buffer.count)
-                logging.info(
-                    f"Dominant emotion: {
-                        emotion_labels[dominant_emotion]}")
+                dominant_emotion = max(set(emotion_buffer), key=emotion_buffer.count)
+                logging.info(f"Dominant emotion: {emotion_labels[dominant_emotion]}")
                 play_music(dominant_emotion, music_dir)
                 start_time = time.time()  # Reset the timer
-                emotion_buffer.clear()  # Clear the buffer for the next minute
+                emotion_buffer.clear()
+                # Clear the buffer for the next minute
 
             # Display result
             emotion_text = emotion_labels[emotion]
