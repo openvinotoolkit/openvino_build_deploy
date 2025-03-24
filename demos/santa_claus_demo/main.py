@@ -290,10 +290,10 @@ def run_demo(source, face_detection_model, face_landmarks_model, face_emotions_m
             for i, dev in enumerate(device_mapping.keys()):
                 if key == ord('1') + i:
                     del fd_model, fl_model, fe_model
+                    device = dev
                     fd_model, fd_input, fd_output = load_model(face_detection_model_path, dev)
                     fl_model, fl_input, fl_output = load_model(face_landmarks_model_path, dev)
                     fe_model, fe_input, fe_output = load_model(face_emotions_model_path, dev)
-                    device = dev
                     processing_times.clear()
     # ctrl-c
     except KeyboardInterrupt:
