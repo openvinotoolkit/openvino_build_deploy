@@ -30,8 +30,7 @@ MODEL_DIR = Path("model")
 
 safety_checker: Optional[Pipeline] = None
 
-ov_pipelines_t2i = {}
-ov_pipelines_i2i = {}
+ov_pipelines = {}
 
 stop_generating: bool = True
 hf_model_name: Optional[str] = None
@@ -60,49 +59,31 @@ def download_models(model_name, safety_checker_model: str) -> None:
                               image_processor=AutoProcessor.from_pretrained(safety_checker_dir))
 
 
-async def load_static_pipeline(model_dir: Path,  device: str, size: int, pipeline: str) -> genai.Text2ImagePipeline | genai.Image2ImagePipeline:
-    # NPU requires model static input shape for now
+async def create_pipeline(model_dir: Path, device: str, size: int, pipeline: str) -> genai.Text2ImagePipeline | genai.Image2ImagePipeline | genai.InpaintingPipeline:
     ov_config = {"CACHE_DIR": "cache"}
 
-    scheduler = genai.Scheduler.from_config(model_dir / "scheduler" / "scheduler_config.json")
-
-    text_encoder = genai.CLIPTextModel(model_dir / "text_encoder")
-    text_encoder.reshape(1)
-    text_encoder.compile(device, **ov_config)
-
-    unet = genai.UNet2DConditionModel(model_dir / "unet")
-    max_position_embeddings = text_encoder.get_config().max_position_embeddings
-    unet.reshape(1, size, size, max_position_embeddings)
-    unet.compile(device, **ov_config)
-
-    vae = genai.AutoencoderKL(model_dir / "vae_encoder", model_dir / "vae_decoder")
-    vae.reshape(1, size, size)
-    vae.compile(device, **ov_config)
-
     if pipeline == "text2image":
-        ov_pipeline = genai.Text2ImagePipeline.latent_consistency_model(scheduler, text_encoder, unet, vae)
+        ov_pipeline = genai.Text2ImagePipeline(model_dir)
     elif pipeline == "image2image":
-        ov_pipeline = genai.Image2ImagePipeline.latent_consistency_model(scheduler, text_encoder, unet, vae)
+        ov_pipeline = genai.Image2ImagePipeline(model_dir)
+    elif pipeline == "inpainting":
+        ov_pipeline = genai.InpaintingPipeline(model_dir)
     else:
         raise ValueError(f"Unknown pipeline: {pipeline}")
+
+    ov_pipeline.reshape(1, size, size, ov_pipeline.get_generation_config().guidance_scale)
+    ov_pipeline.compile(device, config=ov_config)
 
     return ov_pipeline
 
 
-async def load_pipeline(model_name: str, device: str, size: int, pipeline: str):
+async def load_pipeline(model_name: str, device: str, size: int, pipeline: str) -> genai.Text2ImagePipeline | genai.Image2ImagePipeline | genai.InpaintingPipeline:
     model_dir = MODEL_DIR / model_name
 
-    if pipeline == "text2image":
-        if device not in ov_pipelines_t2i:
-            ov_pipelines_t2i[device] = await load_static_pipeline(model_dir, device, size, pipeline)
+    if (device, pipeline) not in ov_pipelines:
+        ov_pipelines[(device, pipeline)] = await create_pipeline(model_dir, device, size, pipeline)
 
-        return ov_pipelines_t2i[device]
-
-    if pipeline == "image2image":
-        if device not in ov_pipelines_i2i:
-            ov_pipelines_i2i[device] = await load_static_pipeline(model_dir, device, size, pipeline)
-
-        return ov_pipelines_i2i[device]
+    return ov_pipelines[(device, pipeline)]
 
 
 async def stop():
@@ -111,7 +92,7 @@ async def stop():
 
 
 progress_bar = None
-def progress(step, num_steps, latent):
+def progress(step, num_steps, latent) -> bool:
     global progress_bar
     if progress_bar is None:
         progress_bar = tqdm.tqdm(total=num_steps)
@@ -124,27 +105,42 @@ def progress(step, num_steps, latent):
     return False
 
 
-async def generate_images(input_image: np.ndarray, prompt: str, seed: int, guidance_scale: float, num_inference_steps: int,
+async def generate_images(input_image_mask: np.ndarray, prompt: str, seed: int, guidance_scale: float, num_inference_steps: int,
                           strength: float, randomize_seed: bool, device: str, endless_generation: bool, size: int) -> tuple[np.ndarray, float]:
     global stop_generating
     stop_generating = not endless_generation
+
+    input_image = input_image_mask["background"][:, :, :3]
+    image_mask = input_image_mask["layers"][0][:, :, 3:]
+
+    # ensure image is square
+    input_image = utils.crop_center(input_image)
+    input_image = cv2.resize(input_image, (size, size))
+    image_mask = cv2.resize(image_mask, (size, size), interpolation=cv2.INTER_NEAREST)
+    image_mask = cv2.cvtColor(image_mask, cv2.COLOR_GRAY2BGR)
 
     while True:
         if randomize_seed:
             seed = random.randint(0, MAX_SEED)
 
         start_time = time.time()
-        if input_image is None:
+        if input_image.any():
+
+            # inpainting pipeline
+            if image_mask.any():
+                ov_pipeline = await load_pipeline(hf_model_name, device, size, "inpainting")
+                result = ov_pipeline.generate(prompt=prompt, image=ov.Tensor(input_image[None]), mask_image=ov.Tensor(image_mask[None]), num_inference_steps=num_inference_steps,
+                                              width=size, height=size, guidance_scale=guidance_scale, strength=1.0 - strength, rng_seed=seed, callback=progress).data[0]
+            # image2image pipeline
+            else:
+                ov_pipeline = await load_pipeline(hf_model_name, device, size,"image2image")
+                result = ov_pipeline.generate(prompt=prompt, image=ov.Tensor(input_image[None]), num_inference_steps=num_inference_steps, width=size, height=size,
+                                 guidance_scale=guidance_scale, strength=1.0 - strength, rng_seed=seed, callback=progress).data[0]
+        # text2image pipeline
+        else:
             ov_pipeline = await load_pipeline(hf_model_name, device, size, "text2image")
             result = ov_pipeline.generate(prompt=prompt, num_inference_steps=num_inference_steps, width=size, height=size,
                                           guidance_scale=guidance_scale, rng_seed=seed, callback=progress).data[0]
-        else:
-            ov_pipeline = await load_pipeline(hf_model_name, device, size,"image2image")
-            # ensure image is square
-            input_image = utils.crop_center(input_image)
-            input_image = cv2.resize(input_image, (size, size))
-            result = ov_pipeline.generate(prompt=prompt, image=ov.Tensor(input_image[None]), num_inference_steps=num_inference_steps, width=size, height=size,
-                             guidance_scale=guidance_scale, strength=1.0 - strength, rng_seed=seed, callback=progress).data[0]
         end_time = time.time()
 
         label = safety_checker(Image.fromarray(result), top_k=1)
@@ -190,8 +186,8 @@ def build_ui(image_size: int) -> gr.Interface:
                 )
             with gr.Row():
                 with gr.Column():
-                    with gr.Row():
-                        input_image = gr.Image(label="Input image (leave blank for text2image generation)", sources=["webcam", "clipboard", "upload"])
+                    with gr.Row(equal_height=True):
+                        input_image = gr.ImageMask(label="Input image (leave blank for text2image generation)", sources=["webcam", "clipboard", "upload"])
                         result_img = gr.Image(label="Generated image", elem_id="output_image", format="png")
                     with gr.Row():
                         result_time_label = gr.Text("", label="Inference time", type="text")
@@ -252,9 +248,9 @@ if __name__ == '__main__':
     log.getLogger().setLevel(log.INFO)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name", type=str, default="OpenVINO/LCM_Dreamshaper_v7-fp16-ov",
-                        choices=["OpenVINO/LCM_Dreamshaper_v7-int8-ov", "OpenVINO/LCM_Dreamshaper_v7-fp16-ov"],
-                        help="Visual GenAI model to be used")
+    parser.add_argument("--model_name", type=str, default="OpenVINO/LCM_Dreamshaper_v7-fp16-ov", help="Visual GenAI model to be used",
+                        choices=["OpenVINO/LCM_Dreamshaper_v7-int8-ov", "OpenVINO/LCM_Dreamshaper_v7-fp16-ov", "OpenVINO/FLUX.1-schnell-int4-ov",
+                                 "OpenVINO/FLUX.1-schnell-int8-ov", "OpenVINO/FLUX.1-schnell-fp16-ov"])
     parser.add_argument("--safety_checker_model", type=str, default="Falconsai/nsfw_image_detection",
                         choices=["Falconsai/nsfw_image_detection"], help="The model to verify if the generated image is NSFW")
     parser.add_argument("--image_size", type=int, default=512, help="The image size to generate")
