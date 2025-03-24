@@ -1,3 +1,5 @@
+import argparse
+
 import cv2
 import numpy as np
 import requests
@@ -14,7 +16,7 @@ import traceback
 
 # Initialize logging
 logging.basicConfig(level=logging.DEBUG)
-
+from utils import demo_utils as utils
 
 def download_model(model_name, precision):
     """Download the required OpenVINO model if not already present."""
@@ -92,12 +94,12 @@ def play_music(emotion, music_dir):
 
 
 def run_demo(
-        source,
-        emotion_model_name,
-        model_precision,
-        device,
-        music_dir,
-        flip):
+    source,
+    emotion_model_name,
+    model_precision,
+    device,
+    music_dir,
+    flip):
     """Run the emotion recognition demo."""
     cap = None
     # Buffer to store emotions for 1 minute
@@ -108,6 +110,8 @@ def run_demo(
         "angry",
         "neutral",
         "surprise"]  # Define emotion labels
+    processing_times = collections.deque(maxlen=200)  # Buffer to store processing times
+
     try:
         # Load model
         emotion_model_path = download_model(
@@ -138,6 +142,9 @@ def run_demo(
             if flip:
                 frame = cv2.flip(frame, 1)  # Flip the frame horizontally
 
+            # Measure processing time
+            start_time = time.time()
+
             # Detect emotion
             emotion = detect_emotions(
                 frame, emotion_model, emotion_input, emotion_output)
@@ -154,17 +161,29 @@ def run_demo(
                 emotion_buffer.clear()
                 # Clear the buffer for the next minute
 
+            # Measure processing time
+            stop_time = time.time()
+            processing_times.append(stop_time - start_time)
+            # Use processing times from last 200 frames
+            if len(processing_times) > 200:
+                processing_times.popleft()
+
+            # Calculate mean processing time and FPS
+            processing_time = np.mean(processing_times) * 1000
+            fps = 1000 / processing_time
+            utils.draw_text(
+                frame,
+                text=f"Currently running models ({model_precision}) on {device}",
+                point=(10, 10))
+            utils.draw_text(
+                frame, f"Inference time: {processing_time:.1f}ms ({fps:.1f} FPS)", (10, 50))
+
             # Display result
             emotion_text = emotion_labels[emotion]
-            cv2.putText(frame, f"Emotion: {emotion_text}", (10, 30),
+            frame_height = frame.shape[0]
+            cv2.putText(frame, f"Emotion: {emotion_text}", (10, frame_height - 60),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 0),
                         2, cv2.LINE_AA)  # Blue color for emotion text
-            cv2.putText(
-                frame,
-                f"Emotion: {emotion_text}",
-                (10, 30), cv2.FONT_HERSHEY_SIMPLEX,
-                0.8, (255, 0, 0), 2,
-                cv2.LINE_AA)  # Blue color for text
 
             # Add motivational text based on emotion
             if emotion_text in ["neutral", "angry"]:
@@ -176,7 +195,7 @@ def run_demo(
             else:
                 motivational_text = "Let's surprise us with a smile! :)"
 
-            cv2.putText(frame, motivational_text, (10, 60),
+            cv2.putText(frame, motivational_text, (10, frame_height - 30),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255),
                         2, cv2.LINE_AA)  # Red color for motivational text
             cv2.imshow("Emotion Recognition", frame)
@@ -199,8 +218,6 @@ def run_demo(
 
 
 if __name__ == '__main__':
-    import argparse
-
     parser = argparse.ArgumentParser()
     parser.add_argument('--stream', default="0", type=str,
                         help="Video file path or webcam ID")
@@ -214,7 +231,7 @@ if __name__ == '__main__':
                         help="Emotion recognition model to be used")
     parser.add_argument('--model_precision', type=str, default="FP32",
                         choices=["FP16-INT8", "FP16", "FP32"], help="Model precision")
-    parser.add_argument('--music_dir', type=str, required=True,
+    parser.add_argument('--music_dir', type=str, default="demos/mood_based_music_recommendation_demo/songs",
                         help="Directory containing music files organized by emotion")
     parser.add_argument('--flip', action='store_true', help="Flip the video stream horizontally")
 
