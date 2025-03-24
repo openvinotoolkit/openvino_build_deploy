@@ -46,17 +46,17 @@ The demo counts people (or any other selected object) standing in front of the w
 | Platforms                             | Client (CPU, GPU, NPU), Edge (CPU)                        |
 | Owner                                 | [@adrianboguszewski](https://github.com/adrianboguszewski) |
 
-### 🏭 Spot a Defect
+### 🏭 Spot the Object
 
 The demo detects, tracks and counts defined objects in front of the webcam. The default object is a hazelnut, but it can be changed to any other object. It works especially good with a conveyor belt.
 
-[![image](https://github.com/user-attachments/assets/103617f8-e895-4cc0-9ed9-60a1e87b8706)](spot-a-defect-demo)
+[![image](https://github.com/user-attachments/assets/103617f8-e895-4cc0-9ed9-60a1e87b8706)](spot_the_object_demo)
 
-| [Spot a Defect](spot-a-defect-demo)  |                                                               |
-|---------------------|---------------------------------------------------------------|
-| Related AI concepts | object detection, object tracking, object counting, YOLOWorld |
-| Platforms           | Client (CPU, GPU, NPU), Edge (CPU)                            |
-| Owner               | [@adrianboguszewski](https://github.com/adrianboguszewski)    |
+| [Spot the Object](spot_the_object_demo) |                                                               |
+|-----------------------------------------|---------------------------------------------------------------|
+| Related AI concepts                     | object detection, object tracking, object counting, YOLOWorld |
+| Platforms                               | Client (CPU, GPU, NPU), Edge (CPU)                            |
+| Owner                                   | [@adrianboguszewski](https://github.com/adrianboguszewski)    |
 
 ### 🔮 Hide Your Mess Behind
 
