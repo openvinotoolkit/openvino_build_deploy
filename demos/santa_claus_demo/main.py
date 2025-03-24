@@ -305,7 +305,6 @@ def run_demo(source, face_detection_model, face_landmarks_model, face_emotions_m
         if player is not None:
             # Stop capturing.
             player.stop()
-
         cv2.destroyAllWindows()
 
 
