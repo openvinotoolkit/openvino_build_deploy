@@ -457,10 +457,7 @@ def run_demo(source, theme, model_precision, device, flip):
             effect_text = f"Poses: {len(poses)}, Pumpkins: {len(faces)}"
         elif theme == "santa":
             frame = draw_santa(frame, faces, landmarks, emotions)
-            effect_text = f"Faces: {
-                len(faces)}, Santa: 1, Reindeer: {
-                max(
-                    0, len(faces) - 1)}"
+            effect_text = f"Faces: {len(faces)}, Santa: 1, Reindeer: {max(0, len(faces) - 1)}"
         elif theme == "easter":
             frame = draw_easter(frame, poses, faces, landmarks)
             effect_text = f"Poses: {len(poses)}, Bunnies: {len(faces)}"
