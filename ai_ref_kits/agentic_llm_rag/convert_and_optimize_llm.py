@@ -54,7 +54,7 @@ def optimize_model_for_npu(model: OVModelForFeatureExtraction):
     model.reshape(1, 512)
 
 
-def convert_chat_model(model_type: str, precision: str, model_dir: Path, access_token: str) -> Path:
+def convert_chat_model(model_type: str, precision: str, model_dir: Path, access_token: str | None) -> Path:
     """
     Convert chat model
 
