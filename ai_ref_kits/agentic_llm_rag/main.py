@@ -15,7 +15,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--chat_model_type", type=str, choices=["qwen2-7B", "llama3.2-3B"],
+    parser.add_argument("--chat_model_type", type=str, choices=["qwen2-7B", "llama3.2-3B", "llama3.2-1B"],
                         default="qwen2-7B", help="Chat model to be converted")
     parser.add_argument("--embedding_model_type", type=str, choices=["bge-small", "bge-large", "bge-m3"],
                         default="bge-large", help="Embedding model to be converted")

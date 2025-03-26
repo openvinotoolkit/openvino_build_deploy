@@ -10,7 +10,7 @@ import convert_and_optimize_llm as chat
 
 if __name__ == '__main__':
     model_dir = "model"
-    chat_model_type = "llama3.2-3B"
+    chat_model_type = "llama3.2-1B"
     embedding_model_type = "bge-small"
     chat_precision = "int4"
     rag_pdf = "../data/test_painting_llm_rag.pdf"
