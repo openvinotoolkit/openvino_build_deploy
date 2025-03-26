@@ -4,7 +4,7 @@ The demo works as a virtual AI assistant. The default personality is a healthcar
 
 The personality and behaviour can be easily changed with the config file (see Step 2).
 
-![](https://github.com/user-attachments/assets/f1ca6a23-0a5d-4a7d-94d4-89d0ef2b68ea)
+![virtual_ai_assistant](https://github.com/user-attachments/assets/0172c032-1032-48ba-9cdc-49666e1298ca)
 
 Here are the steps involved in this demo:
 
