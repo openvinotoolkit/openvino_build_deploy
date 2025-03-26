@@ -98,9 +98,18 @@ jobs:
         shell: bash
         run: |
           huggingface-cli login --token ${{ secrets.HF_TOKEN }}
+      - name: Check if test file exists
+        id: determine-script
+        shell: bash
+        run: |
+          if [[ -f "${{ matrix.subproject }}/ci/test.py" ]]; then
+            echo "script=ci/test.py" >> "$GITHUB_ENV"
+          else
+            echo "script=main.py" >> "$GITHUB_ENV"
+          fi
       - uses: ./.github/reusable-steps/gradio-action
         with:
-          script: ci/test.py
+          script: ${{ env.script }}
           project: ${{ matrix.subproject }}
           timeout: 3600
 
