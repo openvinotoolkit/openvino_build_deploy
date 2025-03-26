@@ -9,7 +9,7 @@ The demo generates images in seconds on Intel hardware. There are many options t
 
 Check "Generate endlessly" to generate a new image just after the previous has appeared (a very attention-bringing thing).
 
-![image](https://github.com/user-attachments/assets/d4d298e6-1df2-44bf-ae88-ba9771efeb2c)
+![paint_your_dreams](https://github.com/user-attachments/assets/1782e9c9-7b01-4862-9c60-207f9c3a95ac)
 
 Here are the steps involved in this demo:
 
