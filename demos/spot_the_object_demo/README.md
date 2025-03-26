@@ -2,7 +2,7 @@
 
 The demo detects, tracks and counts defined objects in front of the webcam. The default object is a hazelnut, but it can be changed to any other object. It works especially good with a conveyor belt.
 
-![image](https://github.com/user-attachments/assets/103617f8-e895-4cc0-9ed9-60a1e87b8706)
+![spot_the_object](https://github.com/user-attachments/assets/e0b1f56a-a7b3-4bf0-a056-1fac804c2de3)
 
 Here are the steps involved in this demo:
 
