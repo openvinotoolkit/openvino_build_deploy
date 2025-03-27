@@ -13,7 +13,7 @@ if __name__ == '__main__':
     chat_model_type = "llama3.2-1B"
     embedding_model_type = "bge-small"
     chat_precision = "int4"
-    rag_pdf = Path("../data/test_painting_llm_rag.pdf")
+    rag_pdf = Path(__file__).parent.parent / "data" / "test_painting_llm_rag.pdf"
     device = "AUTO"
 
     embedding_model_dir = chat.convert_embedding_model(embedding_model_type, model_dir)

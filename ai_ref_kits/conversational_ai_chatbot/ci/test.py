@@ -17,8 +17,8 @@ if __name__ == '__main__':
     reranker_model_type = "bge-reranker-base"
     chat_model_type = "llama3.2-1B"
     chat_precision = "int4"
-    personality_path = Path("../config/concierge_personality.yaml")
-    example_pdf = Path("../data/Grand_Azure_Resort_Spa_Full_Guide.pdf")
+    personality_path = Path(__file__).parent.parent / "config" / "concierge_personality.yaml"
+    example_pdf = Path(__file__).parent.parent / "data" / "Grand_Azure_Resort_Spa_Full_Guide.pdf"
 
     asr_model_dir = asr.convert_asr_model(asr_model_type, asr_precision, model_dir)
 
