@@ -22,20 +22,18 @@ from utils import demo_utils as utils
 MODEL_DIR = Path("model")
 DATA_DIR = Path("data")
 
-MAIN_CLASS = "hazelnut"
-AUX_CLASSES = ["nut", "brown ball"]
 # the following are "null" classes to improve detection of the main classes
 NULL_CLASSES = ["person", "hand", "finger", "fabric"]
 
 PROBABILITY_COEFFICIENT = 15
 
 
-def load_yolo_model(model_name: str, device: str) -> YOLOWorld:
+def load_yolo_model(model_name: str, device: str, main_class: str, aux_classes: list[str]) -> YOLOWorld:
     model = YOLOWorld(model_name)
     opts = {"device": device, "config": {"PERFORMANCE_HINT": "LATENCY"}, "model_caching" : True, "cache_dir": "cache"}
     model = torch.compile(model, backend="openvino", options=opts)
     # set classes to detect
-    model.set_classes([MAIN_CLASS] + AUX_CLASSES + NULL_CLASSES)
+    model.set_classes([main_class] + aux_classes + NULL_CLASSES)
 
     return model
 
@@ -76,15 +74,15 @@ def add_box_margin(box: tuple[int], frame_size: tuple[int], margin_ratio: float 
     return int(new_x1), int(new_y1), int(new_x2), int(new_y2)
 
 
-def filter_and_process_results(det_results: Results, tracker: ByteTrack, smoother: DetectionsSmoother, line_zone: LineZone) -> Detections:
+def filter_and_process_results(main_class: str, aux_classes: list[str], det_results: Results, tracker: ByteTrack, smoother: DetectionsSmoother, line_zone: LineZone) -> Detections:
     detections = Detections.from_ultralytics(det_results)
     # we have to increase probabilities, which are very low in case of YOLOWorld to be able to use tracking
     detections.confidence *= PROBABILITY_COEFFICIENT
 
     # filter out the null classes
-    detections = detections[np.isin(detections.class_id, np.arange(len(AUX_CLASSES) + 1))]
+    detections = detections[np.isin(detections.class_id, np.arange(len(aux_classes) + 1))]
     # set the class_id to 0 (MAIN_CLASS) for all detections
-    detections.data["class_name"] = [MAIN_CLASS] * len(detections)
+    detections.data["class_name"] = [main_class] * len(detections)
 
     detections = detections.with_nmm(class_agnostic=True)
     detections = tracker.update_with_detections(detections)
@@ -116,8 +114,8 @@ def draw_results(frame: np.ndarray, annotators: list[BaseAnnotator], line_zone: 
             annotator.annotate(frame, detections)
 
 
-def run(video_path: str, det_model_name: str, device: str, flip: bool):
-    det_model = load_yolo_model(det_model_name, device)
+def run(video_path: str, det_model_name: str, device: str, main_class: str, aux_classes: list[str], flip: bool):
+    det_model = load_yolo_model(det_model_name, device, main_class, aux_classes)
 
     video_size = (1920, 1080)
     # initialize video player to deliver frames
@@ -146,7 +144,7 @@ def run(video_path: str, det_model_name: str, device: str, flip: bool):
         start_time = time.time()
 
         det_results = det_model.predict(frame, conf=0.01, verbose=False)[0]
-        det_results = filter_and_process_results(det_results, tracker, smoother, line_zone)
+        det_results = filter_and_process_results(main_class, aux_classes, det_results, tracker, smoother, line_zone)
 
         end_time = time.time()
 
@@ -174,6 +172,8 @@ def run(video_path: str, det_model_name: str, device: str, flip: bool):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--stream', default="0", type=str, help="Path to a video file or the webcam number")
+    parser.add_argument('--class_name', default="hazelnut", type=str, help="The class name to detect")
+    parser.add_argument('--aux_classes', nargs='+', default=["nut", "brown ball"], type=str, help="Auxiliary classes supporting the detection of the main class")
     parser.add_argument('--device', default="AUTO", type=str, help="Device to run inference on")
     parser.add_argument("--detection_model", type=str, default="yolov8s-worldv2", help="Model for object detection",
                         choices=["yolov8s-world", "yolov8m-world", "yolov8l-world", "yolov8x-world",
@@ -181,4 +181,4 @@ if __name__ == '__main__':
     parser.add_argument("--flip", type=bool, default=True, help="Mirror input video")
 
     args = parser.parse_args()
-    run(args.stream, args.detection_model, args.device, args.flip)
+    run(args.stream, args.detection_model, args.device, args.class_name, args.aux_classes, args.flip)
