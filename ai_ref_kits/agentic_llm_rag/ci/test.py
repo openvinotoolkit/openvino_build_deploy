@@ -5,8 +5,8 @@ from pathlib import Path
 PARENT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 sys.path.append(os.path.dirname(PARENT_DIR))
 
-import app
-import convert_and_optimize_llm as chat
+from .. import app
+from .. import convert_and_optimize_llm as chat
 
 if __name__ == '__main__':
     model_dir = "model"
