@@ -9,7 +9,7 @@ def main(args):
     embedding_model_dir = chat.convert_embedding_model(args.embedding_model_type, Path(args.model_dir))
     chat_model_dir = chat.convert_chat_model(args.chat_model_type, args.chat_precision, Path(args.model_dir), args.hf_token)
 
-    app.run(str(chat_model_dir.parent), str(embedding_model_dir.parent), Path(args.rag_pdf), args.device, args.public)
+    app.run(chat_model_dir.parent, embedding_model_dir.parent, Path(args.rag_pdf), args.device, args.public)
 
 
 if __name__ == '__main__':

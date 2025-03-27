@@ -19,4 +19,4 @@ if __name__ == '__main__':
     embedding_model_dir = chat.convert_embedding_model(embedding_model_type, model_dir)
     chat_model_dir = chat.convert_chat_model(chat_model_type, chat_precision, model_dir, None)
 
-    app.run(str(chat_model_dir.parent), str(embedding_model_dir.parent), rag_pdf, device)
+    app.run(chat_model_dir.parent, embedding_model_dir.parent, rag_pdf, device)

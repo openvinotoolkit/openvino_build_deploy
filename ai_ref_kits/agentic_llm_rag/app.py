@@ -45,8 +45,8 @@ ov_config = {
 }
 
 def setup_models(
-    llm_model_path: str,
-    embedding_model_path: str,
+    llm_model_path: Path,
+    embedding_model_path: Path,
     device: str) -> Tuple[OpenVINOLLM, OpenVINOEmbedding]:
     """
     Sets up LLM and embedding models using OpenVINO.
@@ -71,7 +71,7 @@ def setup_models(
     )
 
     # Load the embedding model locally
-    embedding = OpenVINOEmbedding(model_id_or_path=embedding_model_path, device=device)
+    embedding = OpenVINOEmbedding(model_id_or_path=str(embedding_model_path), device=device)
 
     return llm, embedding
 
@@ -485,7 +485,7 @@ def run_app(agent: ReActAgent, public_interface: bool = False) -> None:
     run()
 
 
-def run(chat_model: str, embedding_model: str, rag_pdf: Path, device: str, public_interface: bool = False):
+def run(chat_model: Path, embedding_model: Path, rag_pdf: Path, device: str, public_interface: bool = False):
     """
     Initializes and runs the agentic rag solution
     
@@ -559,4 +559,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    run(args.chat_model, args.embedding_model, args.rag_pdf, args.device, args.public)
+    run(Path(args.chat_model), Path(args.embedding_model), Path(args.rag_pdf), args.device, args.public)
