@@ -83,11 +83,20 @@ To run the application, use the following command:
 ```shell
 python main.py --stream 0
 ```
+
 And you can run it on specific video input
 
 ```shell
 python main.py --stream input.mp4
 ```
+
+To change the class to detect, use the `--class_name` option. By default, hazelnut is used. You should also provide auxiliary classes to improve the detection.
+
+```shell
+python main.py --stream 0 --class_name hazelnut --aux_classes nut "brown ball"
+```
+
+```shell
 
 By default, the YOLOv8s-Worldv2 model is used. To change this, select another model from the family:
 
