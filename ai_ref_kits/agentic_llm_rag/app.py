@@ -212,7 +212,7 @@ def run_app(agent: ReActAgent, public_interface: bool = False) -> None:
             sys.stdout = self._stdout        
 
     def _handle_user_message(user_message, history):
-        return "", [*history, (user_message, "")]
+        return "", [*history, (user_message, None)]
 
     def update_cart_display()-> str:
         """
@@ -322,6 +322,7 @@ def run_app(agent: ReActAgent, public_interface: bool = False) -> None:
         # Quick fix for agent occasionally repeating the first word of its repsponse
         last_token = "Dummy Token"
         i = 0
+        chat_history[-1][1] = ""
         for token in response.response_gen:
             if i == 0:
                 last_token = token
