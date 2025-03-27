@@ -17,7 +17,7 @@ pillow==11.1.0
 #openvino GenAI (which also installs openvino packages)
 openvino_genai==2024.6.0
 # for VAD
-sherpa-onnx==1.10.41
+sherpa-onnx==1.10.46
 sounddevice==0.5.1
 # for the UI
 PySide6==6.8.1
