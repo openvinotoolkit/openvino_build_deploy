@@ -45,8 +45,8 @@ ov_config = {
 }
 
 def setup_models(
-    llm_model_path: str,
-    embedding_model_path: str,
+    llm_model_path: Path,
+    embedding_model_path: Path,
     device: str) -> Tuple[OpenVINOLLM, OpenVINOEmbedding]:
     """
     Sets up LLM and embedding models using OpenVINO.
@@ -71,7 +71,7 @@ def setup_models(
     )
 
     # Load the embedding model locally
-    embedding = OpenVINOEmbedding(model_id_or_path=embedding_model_path, device=device)
+    embedding = OpenVINOEmbedding(model_id_or_path=str(embedding_model_path), device=device)
 
     return llm, embedding
 
@@ -149,7 +149,7 @@ def setup_tools()-> Tuple[FunctionTool, FunctionTool, FunctionTool, FunctionTool
     return paint_cost_calculator, add_to_cart_tool, get_cart_items_tool, clear_cart_tool, paint_gallons_calculator
 
 
-def load_documents(text_example_en_path: str) -> VectorStoreIndex:
+def load_documents(text_example_en_path: Path) -> VectorStoreIndex:
     """
     Loads documents from the given path
     
@@ -212,7 +212,7 @@ def run_app(agent: ReActAgent, public_interface: bool = False) -> None:
             sys.stdout = self._stdout        
 
     def _handle_user_message(user_message, history):
-        return "", [*history, (user_message, "")]
+        return "", [*history, (user_message, None)]
 
     def update_cart_display()-> str:
         """
@@ -322,6 +322,7 @@ def run_app(agent: ReActAgent, public_interface: bool = False) -> None:
         # Quick fix for agent occasionally repeating the first word of its repsponse
         last_token = "Dummy Token"
         i = 0
+        chat_history[-1][1] = ""
         for token in response.response_gen:
             if i == 0:
                 last_token = token
@@ -485,7 +486,7 @@ def run_app(agent: ReActAgent, public_interface: bool = False) -> None:
     run()
 
 
-def run(chat_model: str, embedding_model: str, rag_pdf: str, device: str, public_interface: bool = False):
+def run(chat_model: Path, embedding_model: Path, rag_pdf: Path, device: str, public_interface: bool = False):
     """
     Initializes and runs the agentic rag solution
     
@@ -554,9 +555,9 @@ if __name__ == "__main__":
     parser.add_argument("--chat_model", type=str, default="model/qwen2-7B-INT4", help="Path to the chat model directory")
     parser.add_argument("--embedding_model", type=str, default="model/bge-large-FP32", help="Path to the embedding model directory")
     parser.add_argument("--rag_pdf", type=str, default="data/test_painting_llm_rag.pdf", help="Path to a RAG PDF file with additional knowledge the chatbot can rely on.")    
-    parser.add_argument("--device", type=str, default="GPU", help="Device for inferencing (CPU,GPU,GPU.1,NPU)")
+    parser.add_argument("--device", type=str, default="AUTO:GPU,CPU", help="Device for inferencing (CPU,GPU,GPU.1,NPU)")
     parser.add_argument("--public", default=False, action="store_true", help="Whether interface should be available publicly")
 
     args = parser.parse_args()
 
-    run(args.chat_model, args.embedding_model, args.rag_pdf, args.device, args.public)
+    run(Path(args.chat_model), Path(args.embedding_model), Path(args.rag_pdf), args.device, args.public)
