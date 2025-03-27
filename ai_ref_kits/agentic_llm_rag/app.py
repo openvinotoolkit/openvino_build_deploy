@@ -149,7 +149,7 @@ def setup_tools()-> Tuple[FunctionTool, FunctionTool, FunctionTool, FunctionTool
     return paint_cost_calculator, add_to_cart_tool, get_cart_items_tool, clear_cart_tool, paint_gallons_calculator
 
 
-def load_documents(text_example_en_path: str) -> VectorStoreIndex:
+def load_documents(text_example_en_path: Path) -> VectorStoreIndex:
     """
     Loads documents from the given path
     
@@ -485,7 +485,7 @@ def run_app(agent: ReActAgent, public_interface: bool = False) -> None:
     run()
 
 
-def run(chat_model: str, embedding_model: str, rag_pdf: str, device: str, public_interface: bool = False):
+def run(chat_model: str, embedding_model: str, rag_pdf: Path, device: str, public_interface: bool = False):
     """
     Initializes and runs the agentic rag solution
     
