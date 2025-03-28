@@ -2,6 +2,8 @@ import argparse
 import asyncio
 import logging as log
 import os
+import subprocess
+import platform
 import random
 import sys
 import time
@@ -73,7 +75,9 @@ def download_models(model_name, safety_checker_model: str) -> None:
         else:
             output_dir_dream = MODEL_DIR / model_name
             if not output_dir_dream.exists():
-                os.system(f"optimum-cli export openvino --model {model_name} --task stable-diffusion --weight-format fp16 {output_dir_dream}")
+                export_command = f"optimum-cli export openvino --model dreamlike-art/dreamlike-anime-1.0 --task stable-diffusion --weight-format fp16 {output_dir_dream}"
+                subprocess.run(export_command.split(" "), shell=(platform.system() == "Windows"), check=True,
+                               capture_output=True)
 
     safety_checker_dir = MODEL_DIR / safety_checker_model
     if not safety_checker_dir.exists():
