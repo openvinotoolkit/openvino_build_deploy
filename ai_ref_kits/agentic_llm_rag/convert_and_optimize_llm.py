@@ -88,7 +88,7 @@ def convert_chat_model(model_type: str, precision: str, model_dir: Path, access_
         # create a quantizer
         quantizer = OVQuantizer.from_pretrained(model, task="text-generation")
         # quantize weights and save the model to the output dir
-        quantizer.quantize(save_directory=output_dir, weights_only=True, ov_config=config)
+        quantizer.quantize(save_directory=output_dir, ov_config=config)
     else:
         output_dir = output_dir.with_name(output_dir.name + "-FP16")
         # save converted model
