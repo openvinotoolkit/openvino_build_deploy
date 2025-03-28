@@ -6,11 +6,10 @@ set -e
 # Get the current directory where the script is placed
 INSTALL_DIR="$(pwd)/openvino_build_deploy"
 
-# Check if Git is installed
-if ! command -v git &> /dev/null; then
-    echo "ERROR: Git is not installed. Please install Git and try again."
-    exit 1
-fi
+# Install dependencies
+echo "Installing required packages..."
+sudo apt update
+sudo apt install -y git python3-venv python3-dev
 
 # Clone the repository if it doesn't exist
 if [ ! -d "$INSTALL_DIR" ]; then
@@ -19,11 +18,6 @@ if [ ! -d "$INSTALL_DIR" ]; then
 else
     echo "Repository already exists. Skipping cloning..."
 fi
-
-# Install dependencies
-echo "Installing required packages..."
-sudo apt update
-sudo apt install -y git python3-venv python3-dev
 
 # Navigate to the People Counter Demo directory
 cd "$INSTALL_DIR/demos/people_counter_demo"
@@ -44,6 +38,6 @@ pip install -r requirements.txt
 echo ""
 echo "========================================"
 echo "All requirements installed for People Counter."
-echo "You can now run the demo using ./run_people_counter.sh"
+echo "You can now run the demo using ./run.sh"
 echo "========================================"
 
