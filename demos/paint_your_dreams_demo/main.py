@@ -35,21 +35,29 @@ ov_pipelines = {}
 stop_generating: bool = True
 hf_model_name: Optional[str] = None
 
-dreamshaper = {
+dreamshaper_config = {
     "guidance_scale_value": 8,
     "num_inference_steps": 5,
-    "strength_value": 0.8
+    "strength_value": 0.5
 }
-
-dreamlike_anime = {
+dreamlike_anime_config = {
     "guidance_scale_value": 7.5,
     "num_inference_steps": 50,
     "strength_value": 0.2
 }
-flux = {
+flux_config = {
     "guidance_scale_value": 8,
-    "num_inference_steps": 5,
-    "strength_value": 0.8
+    "num_inference_steps": 4,
+    "strength_value": 0.2
+}
+
+MODEL_CONFIGS = {
+    "OpenVINO/LCM_Dreamshaper_v7-int8-ov": dreamshaper_config,
+    "OpenVINO/LCM_Dreamshaper_v7-fp16-ov": dreamshaper_config,
+    "OpenVINO/FLUX.1-schnell-int4-ov": flux_config,
+    "OpenVINO/FLUX.1-schnell-int8-ov": flux_config,
+    "OpenVINO/FLUX.1-schnell-fp16-ov": flux_config,
+    "dreamlike-art/dreamlike-anime-1.0": dreamlike_anime_config,
 }
 
 
@@ -160,11 +168,6 @@ async def generate_images(input_image_mask: np.ndarray, prompt: str, seed: int, 
             # image2image pipeline
             else:
                 ov_pipeline = await load_pipeline(hf_model_name, device, size, "image2image")
-                if "dreamlike" in hf_model_name:
-                    # ensure image is square
-                    input_image = utils.crop_center(input_image)
-                    input_image = cv2.resize(input_image, (size, size))
-
                 result = ov_pipeline.generate(prompt=prompt, image=ov.Tensor(input_image[None]),
                                               num_inference_steps=num_inference_steps, width=size, height=size,
                                               guidance_scale=guidance_scale, strength=1.0 - strength, rng_seed=seed,
@@ -197,6 +200,7 @@ async def generate_images(input_image_mask: np.ndarray, prompt: str, seed: int, 
 
 
 def build_ui(image_size: int) -> gr.Interface:
+    model_config = MODEL_CONFIGS[hf_model_name]
     examples_t2i = [
         "A sail boat on a grass field with mountains in the morning and sunny day",
         "A beautiful sunset with a sail boat on the ocean, photograph, highly detailed, golden hour, Nikon D850",
@@ -233,24 +237,18 @@ def build_ui(image_size: int) -> gr.Interface:
                             stop_button = gr.Button("Stop generation", variant="secondary")
 
             with gr.Accordion("Advanced options", open=False):
-                if "dreamlike" in hf_model_name:
-                    dictionary = dreamlike_anime
-                if "Dreamshaper" in hf_model_name:
-                    dictionary = dreamshaper
-                if "FLUX" in hf_model_name:
-                    dictionary = flux
                 with gr.Row():
                     seed_slider = gr.Slider(label="Seed", minimum=0, maximum=MAX_SEED, step=1, value=0, randomize=True, scale=1)
                     randomize_seed_checkbox = gr.Checkbox(label="Randomize seed across runs", value=True, scale=0)
                     randomize_seed_button = gr.Button("Randomize seed", scale=0)
                 with gr.Row():
                     strength_slider = gr.Slider(label="Input image influence strength", minimum=0.0, maximum=1.0,
-                                                step=0.01, value=dictionary["strength_value"])
+                                                step=0.01, value=model_config["strength_value"])
                     guidance_scale_slider = gr.Slider(label="Guidance scale for base", minimum=2, maximum=14, step=0.1,
-                                                      value=dictionary["guidance_scale_value"])
+                                                      value=model_config["guidance_scale_value"])
                     num_inference_steps_slider = gr.Slider(label="Number of inference steps for base", minimum=1,
                                                            maximum=32, step=1,
-                                                           value=dictionary["num_inference_steps"], )
+                                                           value=model_config["num_inference_steps"], )
 
         gr.Examples(label="Examples for Text2Image", examples=examples_t2i, inputs=prompt_text, outputs=result_img, cache_examples=False)
         gr.Examples(label="Examples for Image2Image", examples=examples_i2i, inputs=prompt_text, outputs=result_img, cache_examples=False)
@@ -292,12 +290,9 @@ if __name__ == '__main__':
     log.getLogger().setLevel(log.INFO)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name", type=str, default="OpenVINO/LCM_Dreamshaper_v7-fp16-ov",
-                        help="Visual GenAI model to be used",
-                        choices=["OpenVINO/LCM_Dreamshaper_v7-int8-ov", "OpenVINO/LCM_Dreamshaper_v7-fp16-ov",
-                                 "OpenVINO/FLUX.1-schnell-int4-ov",
-                                 "OpenVINO/FLUX.1-schnell-int8-ov", "OpenVINO/FLUX.1-schnell-fp16-ov",
-                                 "dreamlike-art/dreamlike-anime-1.0"])
+    parser.add_argument("--model_name", type=str, default="OpenVINO/LCM_Dreamshaper_v7-fp16-ov", help="Visual GenAI model to be used",
+                        choices=["OpenVINO/LCM_Dreamshaper_v7-int8-ov", "OpenVINO/LCM_Dreamshaper_v7-fp16-ov", "dreamlike-art/dreamlike-anime-1.0",
+                                 "OpenVINO/FLUX.1-schnell-int4-ov", "OpenVINO/FLUX.1-schnell-int8-ov", "OpenVINO/FLUX.1-schnell-fp16-ov"])
     parser.add_argument("--safety_checker_model", type=str, default="Falconsai/nsfw_image_detection",
                         choices=["Falconsai/nsfw_image_detection"], help="The model to verify if the generated image is NSFW")
     parser.add_argument("--image_size", type=int, default=512, help="The image size to generate")
