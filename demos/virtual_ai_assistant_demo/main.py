@@ -332,7 +332,7 @@ if __name__ == "__main__":
     log.getLogger().setLevel(log.INFO)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--chat_model", type=str, default="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B", help="Path/name of the chat model")
+    parser.add_argument("--chat_model", type=str, default="meta-llama/Llama-3.2-3B-Instruct", help="Path/name of the chat model")
     parser.add_argument("--embedding_model", type=str, default="BAAI/bge-small-en-v1.5", help="Path/name of the model for embeddings")
     parser.add_argument("--reranker_model", type=str, default="BAAI/bge-reranker-base", help="Path/name of the reranker model")
     parser.add_argument("--personality", type=str, default="healthcare_personality.yaml", help="Path to the YAML file with chatbot personality")
