@@ -82,29 +82,18 @@ The demo estimates poses of all people standing in front of the webcam.
 | Platforms                           | Client (CPU, GPU, NPU), Edge (CPU)                         |
 | Owner                               | [@adrianboguszewski](https://github.com/adrianboguszewski) |
 
-### 🎃 Spooky Demo
+### 🎅 🎃 Theme Demo
 
-The demo detects people in front of the webcam and changes them into skeletons with a pumpkin head.
-
-[![image](https://github.com/openvinotoolkit/openvino_build_deploy/assets/4547501/b289b9f0-1c5b-4cae-ae0b-ea905d05d5e5)](spooky_demo)
-
-| [Spooky Demo](spooky_demo) |                                                            |
-|----------------------------|------------------------------------------------------------|
-| Related AI concepts        | pose estimation, Open Pose                                 |
-| Platforms                  | Client (CPU, GPU, NPU), Edge (CPU)                         |
-| Owner                      | [@adrianboguszewski](https://github.com/adrianboguszewski) |
-
-### 🎅 Santa Claus Demo
-
-The demo detects people in front of the webcam and changes them into Santa Claus (the biggest face) and reindeer (all other faces).
+This is a funny demo making people look like something/someone else based on the chosen theme. It brings much attention to the booth. The available themes are: Christmas and Halloween.
 
 [![image](https://github.com/openvinotoolkit/openvino_build_deploy/assets/4547501/0cbf768c-0260-41bc-af64-00dfdaa9110c)](santa_claus_demo)
+[![image](https://github.com/openvinotoolkit/openvino_build_deploy/assets/4547501/b289b9f0-1c5b-4cae-ae0b-ea905d05d5e5)](spooky_demo)
 
-| [Santa Claus Demo](santa_claus_demo) |                                                            |
-|--------------------------------------|------------------------------------------------------------|
-| Related AI concepts                  | face detection, landmarks regression, emotion recognition  |
-| Platforms                            | Client (CPU, GPU, NPU), Edge (CPU)                         |
-| Owner                                | [@adrianboguszewski](https://github.com/adrianboguszewski) |
+| [Theme Demo](theme_demo) |                                                                                      |
+|--------------------------|--------------------------------------------------------------------------------------|
+| Related AI concepts      | face detection, landmarks regression, emotion recognition, pose estimation, OpenPose |
+| Platforms                | Client (CPU, GPU, NPU), Edge (CPU)                                                   |
+| Owner                    | [@adrianboguszewski](https://github.com/adrianboguszewski)                           |
 
 ## Contributing
 
