@@ -1,6 +1,6 @@
 # Theme demo with OpenVINO™
 
-This is a funny demo making people look like something/someone else based on the chosen theme. It brings much attention to the booth. The available themes are: Christmas and Halloween.
+This is a funny demo making people look like something/someone else based on the chosen theme. It brings much attention to the booth. The available themes are: Christmas, Halloween and Easter.
 
 With Christmas theme, the demo detects people in front of the webcam and changes them into Santa Claus (the biggest face) and reindeer (all other faces). The name of the reindeer depends on the face expression (emotion).
 
@@ -9,6 +9,10 @@ With Christmas theme, the demo detects people in front of the webcam and changes
 When using the Halloween theme, the demo detects people in front of the webcam and changes them into skeletons with a pumpkin head.
 
 ![image](https://github.com/openvinotoolkit/openvino_build_deploy/assets/4547501/b289b9f0-1c5b-4cae-ae0b-ea905d05d5e5)
+
+With Easter theme, the demo detects people in front of the webcam and changes them into a bunny boss (the biggest face) and common bunnies (all other faces).
+
+![image](https://github.com/user-attachments/assets/425e0ecd-2ff6-42f1-881a-d028465038fc)
 
 Here are the steps involved in this demo:
 

@@ -82,12 +82,13 @@ The demo estimates poses of all people standing in front of the webcam.
 | Platforms                           | Client (CPU, GPU, NPU), Edge (CPU)                         |
 | Owner                               | [@adrianboguszewski](https://github.com/adrianboguszewski) |
 
-### 🎅 🎃 Theme Demo
+### 🎅 🎃 🐰 Theme Demo
 
-This is a funny demo making people look like something/someone else based on the chosen theme. It brings much attention to the booth. The available themes are: Christmas and Halloween.
+This is a funny demo making people look like something/someone else based on the chosen theme. It brings much attention to the booth. The available themes are: Christmas, Halloween and Easter.
 
-[![image](https://github.com/openvinotoolkit/openvino_build_deploy/assets/4547501/0cbf768c-0260-41bc-af64-00dfdaa9110c)](santa_claus_demo)
-[![image](https://github.com/openvinotoolkit/openvino_build_deploy/assets/4547501/b289b9f0-1c5b-4cae-ae0b-ea905d05d5e5)](spooky_demo)
+[![image](https://github.com/openvinotoolkit/openvino_build_deploy/assets/4547501/0cbf768c-0260-41bc-af64-00dfdaa9110c)](theme_demo)
+[![image](https://github.com/openvinotoolkit/openvino_build_deploy/assets/4547501/b289b9f0-1c5b-4cae-ae0b-ea905d05d5e5)](theme_demo)
+[![image](https://github.com/user-attachments/assets/425e0ecd-2ff6-42f1-881a-d028465038fc)](theme_demo)
 
 | [Theme Demo](theme_demo) |                                                                                      |
 |--------------------------|--------------------------------------------------------------------------------------|
