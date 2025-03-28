@@ -4,14 +4,14 @@
 set -e
 
 # Get the current directory where the script is placed
-INSTALL_DIR="$(pwd)/openvino_build_deploy/demos/people_counter_demo"
+DEMO_DIR="$(pwd)/openvino_build_deploy/demos/people_counter_demo"
 
 # Navigate to the People Counter Demo directory
-cd "$INSTALL_DIR"
+cd "$DEMO_DIR"
 
 # Check if virtual environment exists
 if [ ! -d "venv" ]; then
-    echo "ERROR: Virtual environment not found! Please run ./install_people_counter.sh first."
+    echo "ERROR: Virtual environment not found! Please run ./install.sh first."
     exit 1
 fi
 
