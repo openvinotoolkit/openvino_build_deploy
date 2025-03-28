@@ -18,8 +18,7 @@ from utils import demo_utils as utils
 
 
 class Theme(abc.ABC):
-    def __init__(self, name: str):
-        self.name = name
+    def __init__(self):
         self.model_dir = Path(__file__).parent / "model"
         self.assets_dir = Path(__file__).parent / "assets"
 
@@ -60,7 +59,7 @@ class Theme(abc.ABC):
 
 class ChristmasTheme(Theme):
     def __init__(self, device: str = "CPU"):
-        super().__init__("Christmas")
+        super().__init__()
         self.emotion_classes = ["neutral", "happy", "sad", "surprise", "anger"]
         self.emotion_mapping = {"neutral": "Rudolph", "happy": "Cupid", "surprise": "Blitzen", "sad": "Prancer", "anger": "Vixen"}
 
@@ -207,7 +206,7 @@ class ChristmasTheme(Theme):
 
         return landmarks
 
-    def __draw_mask(self, img, mask_img, center, face_size, scale=1.0, offset_coeffs=(0.5, 0.5)):
+    def _draw_mask(self, img, mask_img, center, face_size, scale=1.0, offset_coeffs=(0.5, 0.5)):
         face_width, face_height = face_size
 
         # scale mask to fit face size
@@ -239,25 +238,25 @@ class ChristmasTheme(Theme):
     def __draw_santa(self, img, detection):
         (score, box), landmarks, emotion = detection
         # draw beard
-        self.__draw_mask(img, self.assets["santa_beard"], landmarks[5], box[2:], offset_coeffs=(0.5, 0))
+        self._draw_mask(img, self.assets["santa_beard"], landmarks[5], box[2:], offset_coeffs=(0.5, 0))
         # draw cap
-        self.__draw_mask(img, self.assets["santa_cap"], np.mean(landmarks[13:17], axis=0, dtype=np.int32), box[2:], scale=1.5,
-                         offset_coeffs=(0.56, 0.78))
+        self._draw_mask(img, self.assets["santa_cap"], np.mean(landmarks[13:17], axis=0, dtype=np.int32), box[2:], scale=1.5,
+                        offset_coeffs=(0.56, 0.78))
 
     def __draw_reindeer(self, img, landmarks, box):
         # draw antlers
-        self.__draw_mask(img, self.assets["reindeer_antlers"], np.mean(landmarks[13:17], axis=0, dtype=np.int32), box[2:], scale=1.8,
-                         offset_coeffs=(0.5, 1.1))
+        self._draw_mask(img, self.assets["reindeer_antlers"], np.mean(landmarks[13:17], axis=0, dtype=np.int32), box[2:], scale=1.8,
+                        offset_coeffs=(0.5, 1.1))
         # draw sunglasses
-        self.__draw_mask(img, self.assets["reindeer_sunglasses"], np.mean(landmarks[:4], axis=0, dtype=np.int32), box[2:],
-                         offset_coeffs=(0.5, 0.33))
+        self._draw_mask(img, self.assets["reindeer_sunglasses"], np.mean(landmarks[:4], axis=0, dtype=np.int32), box[2:],
+                        offset_coeffs=(0.5, 0.33))
         # draw nose
-        self.__draw_mask(img, self.assets["reindeer_nose"], landmarks[4], box[2:], scale=0.25)
+        self._draw_mask(img, self.assets["reindeer_nose"], landmarks[4], box[2:], scale=0.25)
 
 
 class HalloweenTheme(Theme):
     def __init__(self, device: str = "CPU"):
-        super().__init__("Halloween")
+        super().__init__()
         self.default_skeleton = ((15, 13), (13, 11), (16, 14), (14, 12), (11, 12), (5, 6), (5, 7), (6, 8), (7, 9), (8, 10),
                     (1, 2), (0, 1), (0, 2), (1, 3), (2, 4), (17, 18), (20, 21), (23, 24), (26, 27), (29, 30))
 
@@ -445,3 +444,39 @@ class HalloweenTheme(Theme):
         # Multiply coordinates by a scaling factor.
         poses[:, :, :2] *= output_scale
         return poses, scores
+
+
+class EasterTheme(ChristmasTheme):
+    def __init__(self, device: str = "CPU"):
+        super().__init__(device)
+        self.assets = self._load_assets(["bunny_ears", "bunny_boss_ears", "bunny_nose", "bunny_tie"])
+
+    def draw_results(self, image: np.ndarray, detections: Any) -> np.ndarray:
+        if not detections:
+            return image
+
+        # sort by face size
+        detections = list(sorted(detections, key=lambda x: x[0][1][2] * x[0][1][3]))
+
+        for (score, box), landmarks, emotion in detections[:-1]:
+            self.__draw_bunny(image, landmarks, box)
+
+        # the largest face is bunny boss
+        self.__draw_bunny_boss(image, detections[-1][1], detections[-1][0][1])
+
+        return image
+
+    def __draw_bunny_boss(self, image, landmarks, box):
+        # draw ears
+        self._draw_mask(image, self.assets["bunny_boss_ears"], np.mean(landmarks[13:17], axis=0, dtype=np.int32),
+                        box[2:], scale=1.8, offset_coeffs=(0.5, 1.25))
+        # draw nose
+        self._draw_mask(image, self.assets["bunny_nose"], landmarks[4], box[2:], scale=0.85, offset_coeffs=(0.5, 0.2))
+
+    def __draw_bunny(self, image, landmarks, box):
+        # draw ears
+        self._draw_mask(image, self.assets["bunny_ears"], np.mean(landmarks[13:17], axis=0, dtype=np.int32),
+                        box[2:], scale=1.3, offset_coeffs=(0.5, 1.25))
+
+        # draw tie
+        self._draw_mask(image, self.assets["bunny_tie"], landmarks[26], box[2:], scale=0.6, offset_coeffs=(0.5, 0.0))
