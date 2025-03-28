@@ -71,16 +71,9 @@ def download_models(model_name, safety_checker_model: str) -> None:
         if is_openvino_model:
             snapshot_download(model_name, local_dir=output_dir, resume_download=True)
         else:
-            if model_name == "dreamlike-art/dreamlike-anime-1.0":
-                output_dir_dream = MODEL_DIR / "dreamlike_anime_1_0_fp16_ov"
-                global hf_model_name
-                hf_model_name = "dreamlike_anime_1_0_fp16_ov"
-                if not output_dir_dream.exists():
-                    os.system(
-                        'optimum-cli export openvino --model dreamlike-art/dreamlike-anime-1.0 --task stable-diffusion --weight-format fp16  ' + str(
-                            MODEL_DIR) + '/dreamlike_anime_1_0_fp16_ov')
-            else:
-                raise ValueError(f"Model {model_name} is not supported")
+            output_dir_dream = MODEL_DIR / model_name
+            if not output_dir_dream.exists():
+                os.system(f"optimum-cli export openvino --model {model_name} --task stable-diffusion --weight-format fp16 {output_dir_dream}")
 
     safety_checker_dir = MODEL_DIR / safety_checker_model
     if not safety_checker_dir.exists():
@@ -168,10 +161,8 @@ async def generate_images(input_image_mask: np.ndarray, prompt: str, seed: int, 
             # image2image pipeline
             else:
                 ov_pipeline = await load_pipeline(hf_model_name, device, size, "image2image")
-                result = ov_pipeline.generate(prompt=prompt, image=ov.Tensor(input_image[None]),
-                                              num_inference_steps=num_inference_steps, width=size, height=size,
-                                              guidance_scale=guidance_scale, strength=1.0 - strength, rng_seed=seed,
-                                              callback=progress).data[0]
+                result = ov_pipeline.generate(prompt=prompt, image=ov.Tensor(input_image[None]), num_inference_steps=num_inference_steps, width=size, height=size,
+                                              guidance_scale=guidance_scale, strength=1.0 - strength, rng_seed=seed, callback=progress).data[0]
 
         # text2image pipeline
         else:
@@ -247,8 +238,7 @@ def build_ui(image_size: int) -> gr.Interface:
                     guidance_scale_slider = gr.Slider(label="Guidance scale for base", minimum=2, maximum=14, step=0.1,
                                                       value=model_config["guidance_scale_value"])
                     num_inference_steps_slider = gr.Slider(label="Number of inference steps for base", minimum=1,
-                                                           maximum=32, step=1,
-                                                           value=model_config["num_inference_steps"], )
+                                                           maximum=32, step=1, value=model_config["num_inference_steps"])
 
         gr.Examples(label="Examples for Text2Image", examples=examples_t2i, inputs=prompt_text, outputs=result_img, cache_examples=False)
         gr.Examples(label="Examples for Image2Image", examples=examples_i2i, inputs=prompt_text, outputs=result_img, cache_examples=False)
