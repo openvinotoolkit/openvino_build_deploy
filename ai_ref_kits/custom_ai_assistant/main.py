@@ -19,7 +19,7 @@ if __name__ == '__main__':
     parser.add_argument("--asr_model_type", type=str, choices=["distil-whisper-large-v3", "belle-distilwhisper-large-v2-zh"],
                         default="distil-whisper-large-v3", help="Speech recognition model to be converted")
     parser.add_argument("--asr_precision", type=str, default="fp16", choices=["fp16", "int8"], help="ASR model precision")
-    parser.add_argument("--chat_model_type", type=str, choices=["llama3.1-8B", "llama3-8B", "qwen2-7B", "llama3.2-3B"],
+    parser.add_argument("--chat_model_type", type=str, choices=["llama3.1-8B", "llama3-8B", "qwen2-7B", "llama3.2-3B", "llama3.2-1B"],
                         default="llama3.2-3B", help="Chat model to be converted")
     parser.add_argument("--chat_precision", type=str, default="int4", choices=["fp16", "int8", "int4"], help="Chat model precision")
     parser.add_argument("--model_dir", type=str, default="model", help="Directory to place the model in")
