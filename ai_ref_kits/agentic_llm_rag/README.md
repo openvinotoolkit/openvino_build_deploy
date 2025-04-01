@@ -136,7 +136,7 @@ If using gated models from HuggingFace pass the `--hf_token` argument  with your
 
 After you run the conversion scripts, you can run `app.py` to launch the application.
 
-## Running the Application (Gradio Interface)
+## Running the Application
 
 To run the AI Insight Agent with RAG application, you execute the following python script. Make sure to include all of the necessary model directory arguments. 
 
