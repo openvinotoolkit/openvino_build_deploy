@@ -31,7 +31,7 @@ Check out our [AI Reference Kits repository](/) for other kits.
   - [Setting Up Your Environment](#setting-up-your-environment)  
   - [Converting and Optimizing the Model](#converting-and-optimizing-the-model)
   - [Running the Application](#running-the-application)
-    - [System Prompt Usage in LlamaIndex ReActAgent](#system-prompt-usage-i-llamaindex-reactagent)
+    - [System Prompt Usage in LlamaIndex ReActAgent](#system-prompt-usage-in-llamaindex-reactagent)
 - [Additional Resources](#additional-resources)
 
 </details>
