@@ -26,11 +26,12 @@ Check out our [AI Reference Kits repository](/) for other kits.
 
 <details open><summary><b>Table of Contents</b></summary>
   
-- [Getting Started](#get-started)
-  - [Installing Prerequisites](#install-prerequisites)
-  - [Setting Up Your Environment](#set-up-your-environment)  
-  - [Converting and Optimizing the Model](*convert-and-optimize-the-model)
-  - [Running the Application](#run-the-application)
+- [Getting Started](#getting-started)
+  - [Installing Prerequisites](#installing-prerequisites)
+  - [Setting Up Your Environment](#setting-up-your-environment)  
+  - [Converting and Optimizing the Model](#converting-and-optimizing-the-model)
+  - [Running the Application](#running-the-application)
+    - [System Prompt Usage in LlamaIndex ReActAgent](#system-prompt-usage-in-llamaindex-reactagent)
 - [Additional Resources](#additional-resources)
 
 </details>
@@ -134,9 +135,9 @@ python convert_and_optimize_llm.py --chat_model_type qwen2-7B --embedding_model_
 
 If using gated models from HuggingFace pass the `--hf_token` argument  with your HuggingFace token. Remember to request access to gated models if needed.
 
-After you run the conversion scripts, you can run `main.py` to launch the application.
+After you run the conversion scripts, you can run `app.py` to launch the application.
 
-## Running the Application (Gradio Interface)
+## Running the Application
 
 To run the AI Insight Agent with RAG application, you execute the following python script. Make sure to include all of the necessary model directory arguments. 
 
@@ -145,7 +146,7 @@ _NOTE: This application requires more than 16GB of memory because the models are
 After that, you should be able to run the application with default values:
 
 ```shell
-python main.py
+python app.py
 ```
 
 For more settings, you can change the argument values:
@@ -160,9 +161,9 @@ For more settings, you can change the argument values:
 
 - `--public`: Include this flag to make the Gradio interface publicly accessible over the network. Without this flag, the interface will only be available on your local machine.
 
-To run the application, execute the `main.py` script with the following command. Make sure to include all necessary model directory arguments.
+To run the application, execute the `app.py` script with the following command. Make sure to include all necessary model directory arguments.
 ```shell
-python main.py \ 
+python app.py \ 
   --chat_model model/qwen2-7B-INT4 \
   --embedding_model model/bge-small-FP32 \
   --rag_pdf data/test_painting_llm_rag.pdf \  
