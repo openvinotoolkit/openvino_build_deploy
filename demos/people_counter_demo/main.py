@@ -21,6 +21,7 @@ SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "uti
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 from utils import demo_utils as utils
+from deep_sort_realtime.deepsort_tracker import DeepSort
 
 CATEGORIES = [
     "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
@@ -111,7 +112,6 @@ def postprocess(pred_boxes: np.ndarray, pred_masks: np.ndarray, input_size: Tupl
     # filter out other predictions than selected category
     return det[det.class_id == category_id]
 
-
 def get_model(model_path: Path, device: str = "AUTO") -> ov.CompiledModel:
     # initialize OpenVINO
     core = ov.Core()
@@ -132,7 +132,7 @@ def load_zones(json_path: str) -> List[np.ndarray]:
     return [np.array(zone["points"], np.int32) for zone in zones_dict.values()]
 
 
-def get_annotators(json_path: str, resolution_wh: Tuple[int, int], colorful: bool = False) -> Tuple[List, List, List, List]:
+def get_annotators(json_path: str, resolution_wh: Tuple[int, int], colorful: bool = False) -> Tuple[List, List, List, List, List]:
     # list of points
     polygons = load_zones(json_path)
 
@@ -143,6 +143,7 @@ def get_annotators(json_path: str, resolution_wh: Tuple[int, int], colorful: boo
     zone_annotators = []
     box_annotators = []
     masks_annotators = []
+    label_annotators = []
     for index, polygon in enumerate(polygons, start=1):
         # a zone to count objects in
         zone = sv.PolygonZone(polygon=polygon, frame_resolution_wh=resolution_wh)
@@ -155,12 +156,29 @@ def get_annotators(json_path: str, resolution_wh: Tuple[int, int], colorful: boo
         # mask annotator, showing transparent mask
         mask_annotator = sv.MaskAnnotator(color_lookup=ColorLookup.INDEX) if colorful else sv.MaskAnnotator(color=colors.by_idx(index))
         masks_annotators.append(mask_annotator)
+        # label annotator, showing people ids
+        label_annotator = sv.LabelAnnotator(text_scale=0.7, color_lookup=ColorLookup.INDEX) if colorful else sv.LabelAnnotator(text_scale=0.7, color=colors.by_idx(index))
+        label_annotators.append(label_annotator)
 
-    return zones, zone_annotators, box_annotators, masks_annotators
+    return zones, zone_annotators, box_annotators, masks_annotators, label_annotators
+
+
+def track_objects(frame: np.array, detections: sv.Detections, tracker: DeepSort) -> List:
+    # Convert detections to the format required by the tracker
+    detection_list = []
+    for det in zip(detections.xyxy, detections.confidence):
+        bbox = det[0].tolist()
+        confidence = det[1]
+        detection_list.append((bbox, confidence))
+ 
+    # Update the tracker with the new detections
+    tracks = tracker.update_tracks(detection_list, frame=frame)
+    # detections are sorted by confidence so tracks must be also sorted the same way
+    return list(sorted(tracks, key=lambda x: x.det_conf if x.det_conf is not None else 0.0, reverse=True))
 
 
 def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", category: str = "person", zones_config_file: str = "",
-        object_limit: int = 3, flip: bool = True, colorful: bool = False, last_frames: int = 50) -> None:
+        object_limit: int = 3, flip: bool = True, tracker_frames: int = 1800, colorful: bool = False, last_frames: int = 50) -> None:
     # set up logging
     log.getLogger().setLevel(log.INFO)
 
@@ -187,13 +205,16 @@ def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", c
     player = utils.VideoPlayer(video_path, size=(1920, 1080), fps=60, flip=flip)
 
     # get zones, and zone and box annotators for zones
-    zones, zone_annotators, box_annotators, masks_annotators = get_annotators(json_path=zones_config_file, resolution_wh=(player.width, player.height), colorful=colorful)
+    zones, zone_annotators, box_annotators, masks_annotators, label_annotators = get_annotators(json_path=zones_config_file, resolution_wh=(player.width, player.height), colorful=colorful)
     category_id = CATEGORIES.index(category)
 
     # object counter
     queue_count = defaultdict(lambda: deque(maxlen=last_frames))
     # keep at most 100 last times
     processing_times = deque(maxlen=100)
+
+    # Initialize the tracker with a higher max_age
+    tracker = DeepSort(max_age=tracker_frames, n_init=3)
 
     title = "Press ESC to Exit"
     cv2.namedWindow(title, cv2.WINDOW_GUI_NORMAL)
@@ -222,33 +243,38 @@ def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", c
         # postprocessing
         detections = postprocess(pred_boxes=boxes, pred_masks=masks, input_size=input_shape[:2], orig_img=frame, padding=padding, category_id=category_id)
 
-        # annotate the frame with the detected persons within each zone
-        for zone_id, (zone, zone_annotator, box_annotator, masks_annotator) in enumerate(
-                zip(zones, zone_annotators, box_annotators, masks_annotators), start=1):
-            # visualize polygon for the zone
-            frame = zone_annotator.annotate(scene=frame)
+        if detections:
+            # uniquely track the objects
+            tracks = track_objects(frame, detections, tracker)
 
-            # get detections relevant only for the zone
-            mask = zone.trigger(detections=detections)
-            detections_filtered = detections[mask]
-            # visualize boxes around objects in the zone
-            frame = masks_annotator.annotate(scene=frame, detections=detections_filtered)
-            frame = box_annotator.annotate(scene=frame, detections=detections_filtered)
-            # count how many objects detected
-            det_count = len(detections_filtered)
+            # annotate the frame with the detected persons within each zone
+            for zone_id, (zone, zone_annotator, box_annotator, masks_annotator, label_annotator) in enumerate(
+                    zip(zones, zone_annotators, box_annotators, masks_annotators, label_annotators), start=1):
+                # visualize polygon for the zone
+                frame = zone_annotator.annotate(scene=frame)
 
-            # add the count to the list
-            queue_count[zone_id].append(det_count)
-            # calculate the mean number of customers in the queue
-            mean_customer_count = np.mean(queue_count[zone_id], dtype=np.int32)
+                # get detections relevant only for the zone
+                mask = zone.trigger(detections=detections)
+                detections_filtered = detections[mask]
+                # visualize boxes around objects in the zone
+                frame = masks_annotator.annotate(scene=frame, detections=detections_filtered)
+                frame = box_annotator.annotate(scene=frame, detections=detections_filtered)
+                # count how many objects detected
+                det_count = len(detections_filtered)
+                # Add track ID annotations
+                label_annotator.annotate(scene=frame, detections=detections_filtered, labels=[f"ID: {track.track_id}" for track in tracks if track.time_since_update == 0])
+                # add the count to the list
+                queue_count[zone_id].append(det_count)
+                # calculate the mean number of customers in the queue
+                mean_customer_count = np.mean(queue_count[zone_id], dtype=np.int32)
 
-            # add alert text to the frame if necessary, flash every second
-            if mean_customer_count > object_limit and time.time() % 2 > 1:
-                utils.draw_text(frame, text=f"Intel employee required in zone {zone_id}!", point=(20, 20), font_color=(0, 0, 255))
+                # add alert text to the frame if necessary, flash every second
+                if mean_customer_count > object_limit and time.time() % 2 > 1:
+                    utils.draw_text(frame, text=f"Intel employee required in zone {zone_id}!", point=(20, 20), font_color=(0, 0, 255))
 
-            # print an info about number of customers in the queue, ask for the more assistants if required
-            log.info(
-                f"Zone {zone_id}, avg {category} count: {mean_customer_count} {'Intel employee required!' if mean_customer_count > object_limit else ''}")
+                # print an info about number of customers in the queue, ask for the more assistants if required
+                log.info(
+                    f"Zone {zone_id}, avg {category} count: {mean_customer_count} {'Intel employee required!' if mean_customer_count > object_limit else ''}")
 
         # Mean processing time [ms].
         processing_time = np.mean(processing_times) * 1000
@@ -301,7 +327,8 @@ if __name__ == '__main__':
     parser.add_argument('--object_limit', type=int, default=3, help="The maximum number of objects in the area")
     parser.add_argument("--flip", type=bool, default=True, help="Mirror input video")
     parser.add_argument('--colorful', action="store_true", help="If objects should be annotated with random colors")
+    parser.add_argument('--tracker_frames', type=int, default=1800, help="Maximum number of missed frames for the tracker")
 
     args = parser.parse_args()
     model_paths = convert(args.model_name, Path(args.model_dir))
-    run(args.stream, model_paths, args.model_name, args.category, args.zones_config_file, args.object_limit, args.flip, args.colorful)
+    run(args.stream, model_paths, args.model_name, args.category, args.zones_config_file, args.object_limit, args.tracker_frames, args.flip, args.colorful)

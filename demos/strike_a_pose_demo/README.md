@@ -2,7 +2,7 @@
 
 The demo estimates poses of all people standing in front of the webcam. It's good especially where there are many people.
 
-![image](https://github.com/openvinotoolkit/openvino_build_deploy/assets/4547501/3bff0def-9050-450f-8699-389defec4136)
+![strike_a_pose](https://github.com/user-attachments/assets/a8db4437-6440-49d4-8df3-2b3956b26bac)
 
 Here are the steps involved in this demo:
 

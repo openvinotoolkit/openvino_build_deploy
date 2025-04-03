@@ -1,8 +1,18 @@
-# Spooky demo with OpenVINO™
+# Theme demo with OpenVINO™
 
-The demo detects people in front of the webcam and changes them into skeletons with a pumpkin head.
+This is a funny demo making people look like something/someone else based on the chosen theme. It brings much attention to the booth. The available themes are: Christmas, Halloween and Easter.
+
+With Christmas theme, the demo detects people in front of the webcam and changes them into Santa Claus (the biggest face) and reindeer (all other faces). The name of the reindeer depends on the face expression (emotion).
+
+![image](https://github.com/openvinotoolkit/openvino_build_deploy/assets/4547501/0cbf768c-0260-41bc-af64-00dfdaa9110c)
+
+When using the Halloween theme, the demo detects people in front of the webcam and changes them into skeletons with a pumpkin head.
 
 ![image](https://github.com/openvinotoolkit/openvino_build_deploy/assets/4547501/b289b9f0-1c5b-4cae-ae0b-ea905d05d5e5)
+
+With Easter theme, the demo detects people in front of the webcam and changes them into a bunny boss (the biggest face) and common bunnies (all other faces).
+
+![image](https://github.com/user-attachments/assets/425e0ecd-2ff6-42f1-881a-d028465038fc)
 
 Here are the steps involved in this demo:
 
@@ -43,7 +53,7 @@ git clone https://github.com/openvinotoolkit/openvino_build_deploy.git
 The above will clone the repository into a directory named "openvino_build_deploy" in the current directory. Then, navigate into the directory using the following command:
 
 ```shell
-cd openvino_build_deploy/demos/spooky_demo
+cd openvino_build_deploy/demos/theme_demo
 ```
 
 2. Create a virtual environment
@@ -84,10 +94,10 @@ To run the application, use the following command:
 python main.py --stream 0
 ```
 
-To change the model, precision or device use:
+To change the theme, use:
 
 ```shell
-python main.py --stream 0 --device AUTO --model_name human-pose-estimation-0001 --model_precision FP16-INT8
+python main.py --stream 0 --theme halloween
 ```
 
 Run the following to see all available options.

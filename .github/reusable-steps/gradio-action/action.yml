@@ -26,7 +26,7 @@ runs:
         fi
         
         # Assign process ID
-        app_pid=$(ps aux | grep -i '[p]ython main.py' | awk '{print $2}')
+        app_pid=$(ps aux | grep -i '[p]ython ${{ inputs.script }}' | awk '{print $2}')
 
         # Wait for the specific log message
         timeout ${{ inputs.timeout }} bash -c "

@@ -1,8 +1,8 @@
-# Spot a Defect with OpenVINO™
+# Spot the Object with OpenVINO™
 
 The demo detects, tracks and counts defined objects in front of the webcam. The default object is a hazelnut, but it can be changed to any other object. It works especially good with a conveyor belt.
 
-![image](https://github.com/user-attachments/assets/103617f8-e895-4cc0-9ed9-60a1e87b8706)
+![spot_the_object](https://github.com/user-attachments/assets/e0b1f56a-a7b3-4bf0-a056-1fac804c2de3)
 
 Here are the steps involved in this demo:
 
@@ -43,7 +43,7 @@ git clone https://github.com/openvinotoolkit/openvino_build_deploy.git
 The above will clone the repository into a directory named "openvino_build_deploy" in the current directory. Then, navigate into the directory using the following command:
 
 ```shell
-cd openvino_build_deploy/demos/spot_a_defect_demo
+cd openvino_build_deploy/demos/spot_the_object_demo
 ```
 
 2. Create a virtual environment
@@ -83,11 +83,20 @@ To run the application, use the following command:
 ```shell
 python main.py --stream 0
 ```
+
 And you can run it on specific video input
 
 ```shell
 python main.py --stream input.mp4
 ```
+
+To change the class to detect, use the `--class_name` option. By default, hazelnut is used. You should also provide auxiliary classes to improve the detection.
+
+```shell
+python main.py --stream 0 --class_name hazelnut --aux_classes nut "brown ball"
+```
+
+```shell
 
 By default, the YOLOv8s-Worldv2 model is used. To change this, select another model from the family:
 

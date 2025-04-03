@@ -23,7 +23,7 @@ if __name__ == '__main__':
                         choices=["distil-whisper-large-v3", "belle-distil-whisper-large-v3-zh"], default="distil-whisper-large-v3",
                         help="Speech recognition model to be converted")
     parser.add_argument("--asr_precision", type=str, default="fp16", choices=["fp16", "int8"], help="ASR model precision")
-    parser.add_argument("--chat_model_type", type=str, choices=["llama3.2-3B", "llama3.1-8B", "llama3-8B", "qwen2-7B"],
+    parser.add_argument("--chat_model_type", type=str, choices=["llama3.2-3B", "llama3.2-1B", "llama3.1-8B", "llama3-8B", "qwen2-7B"],
                         default="llama3.2-3B", help="Chat model to be converted")
     parser.add_argument("--embedding_model_type", type=str, choices=["bge-small", "bge-large", "bge-m3"],
                         default="bge-small", help="Embedding model to be converted")
