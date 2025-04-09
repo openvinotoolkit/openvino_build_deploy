@@ -1,0 +1,90 @@
+name: Build Upload and Validate Executable with Pyinstaller
+
+on:
+  workflow_dispatch:
+    inputs:
+      script_path:
+        description: 'Path to the Python script'
+        required: true
+        default: 'demos/dummy_demo/main.py'
+      requirements_path:
+        description: 'Path to the requirements file'
+        required: true
+        default: 'demos/dummy_demo/requirements.txt'   
+      release_version:
+        description: 'Especifcy the release version to publish the demo'
+        required: true
+        default: 'v1.0.0' 
+
+jobs:
+  build-and-upload:
+    runs-on: windows-latest
+
+    steps:
+      # Step 1: Check out the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.11'
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller argparse
+          pip install -r ${{ github.event.inputs.requirements_path }} 
+
+      # Step 4: Build the executable with PyInstaller
+      - name: Build executable
+        run: |
+          pyinstaller --onefile ${{ github.event.inputs.script_path }}
+
+      # Step 5: List directory contents for debugging
+      - name: List directory contents
+        run: |
+          echo "Listing current directory:"
+          dir
+          echo "Listing dist directory:"
+          dir dist
+
+      # Step 6: List directory contents for debugging
+      - name: Validate executable file
+        run: |
+          python .\.github\reusable_steps\validate_exe.py -p "dist/main.exe"
+             
+
+      # Step 7: Upload the built executable as an artifact
+      - name: Upload built executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: main
+          path: dist/main.exe
+
+      # Step 8: Create a new release
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        with:
+          tag_name: ${{ github.event.inputs.release_version }}
+          release_name: 'Release ${{ github.event.inputs.release_version }}'
+          body: |
+            This is the test release of the project.
+          draft: false
+          prerelease: false
+
+      # Step 8: Upload the executable to the release
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: dist/main.exe
+          asset_name: main.exe
+          asset_content_type: application/octet-stream
