@@ -9,7 +9,7 @@ cd /d "%INSTALL_DIR%"
 
 :: Check if virtual environment exists
 if not exist "venv\Scripts\activate.bat" (
-    echo ERROR: Virtual environment not found! Please run install_people_counter.bat first.
+    echo ERROR: Virtual environment not found! Please run install.bat first.
     exit /b
 )
 
