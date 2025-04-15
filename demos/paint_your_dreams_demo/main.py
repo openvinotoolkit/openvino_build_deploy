@@ -194,28 +194,38 @@ def build_ui(image_size: int) -> gr.Interface:
     model_config = MODEL_CONFIGS[hf_model_name]
     examples_t2i = [
         "A sail boat on a grass field with mountains in the morning and sunny day",
-        "A beautiful sunset with a sail boat on the ocean, photograph, highly detailed, golden hour, Nikon D850",
-        "Portrait photo of a girl, photograph, highly detailed face, depth of field, moody light, golden hour,"
-        "Style by Dan Winters, Russell James, Steve McCurry, centered, extremely detailed, Nikon D850, award winning photography"
+        "a portrait of a tall Valkyrie with long blonde hair, iron armor, and a crown sitting on a white horse. Depict them in the Nordic Vikings period",
+        "A surreal landscape image featuring floating islands, upside-down mountains, and unconventional flora, a dreamlike quality, pushing the boundaries of reality, a scene that has imaginative and otherworldly elements",
+        "An image of a deep, dark forest with ancient, towering trees, the mysterious atmosphere with twisted branches casting eerie shadows on the forest floor, a sense of solitude and intrigue",
+        "An underwater seascape image capturing the beauty of the ocean depths, coral reefs, exotic fish, and aquatic plants, with sunlight filtering through the water to create dramatic lighting and a play of colors",
+        "An image of a vintage red convertible driving along a winding coastal road at sunset, with the ocean waves crashing against rugged cliffs and seagulls soaring in the sky",
+        "A awe-inspiring oil painting of a regal white tiger with stark contrasting stripes set against a dense forest underbrush, in a powerful hyperrealistic style",
+        "An imaginative, one-of-a-kind digital illustration featuring a child wizard from a well-known fantasy novel, interacting with elements of grand, magical castles, with an emphasis on whimsical and dreamy designs for key details",
+        "An impressive 3D digital art showcasing a realistic contemporary kitchen model with photorealistic textures, shaders, and lighting poised at an interesting angle to highlight furniture details",
+        "A bold acrylic cubist art painting depicting a marine scene with boats and fish in an abstract geometric style with juxtaposed muted hues, embodying a stylistic fusion of Picasso and Braque's cubist works"
     ]
 
     examples_i2i = [
         "Make me a superhero, 8k",
         "Make me a beautiful cyborg with golden hair, 8k",
-        "Make me an astronaut, cold color palette, muted colors, 8k"
+        "Make me an astronaut, cold color palette, muted colors, 8k",
+        "Make me a man with a hat standing next to a blue car, with a blue sky and clouds, ice cream texture",
+        "Make me a figurehead of the medieval ship"
     ]
 
     with gr.Blocks() as demo:
+        with gr.Row():
+            t2i_button = gr.Button("Text2Image", variant="primary")
+            i2i_button = gr.Button("Image2Image", variant="secondary")
         with gr.Group():
-            with gr.Row():
-                t2i_button = gr.Button("Text2Image", variant="primary")
-                i2i_button = gr.Button("Image2Image", variant="secondary")
-            with gr.Row():
+            with gr.Row(equal_height=True):
                 prompt_text = gr.Text(
                     label="Prompt",
                     placeholder="Enter your prompt here",
-                    value="A sail boat on a grass field with mountains in the morning and sunny day"
+                    value=examples_t2i[0],
+                    scale=5
                 )
+                random_prompt_button = gr.Button("Random prompt", variant="secondary", scale=1)
             with gr.Row():
                 with gr.Column():
                     with gr.Row(equal_height=True):
@@ -252,6 +262,10 @@ def build_ui(image_size: int) -> gr.Interface:
         # switch between image2image and text2image
         t2i_button.click(swap_buttons_highlighting, outputs=[t2i_button, i2i_button]).then(lambda: gr.Image(visible=False), outputs=input_image)
         i2i_button.click(swap_buttons_highlighting, outputs=[i2i_button, t2i_button]).then(lambda: gr.Image(visible=True), outputs=input_image)
+
+        # rand the prompt
+        random_prompt_button.click(lambda: gr.Text(value=random.choice(examples_t2i)), outputs=prompt_text)
+
         # clicking run
         gr.on(
             triggers=[prompt_text.submit, start_button.click],
