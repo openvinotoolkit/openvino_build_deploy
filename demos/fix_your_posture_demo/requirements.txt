@@ -1,0 +1,15 @@
+certifi==2025.1.31
+charset-normalizer==3.4.1
+colorama==0.4.6
+idna==3.10
+logging==0.4.9.6
+numpy==1.26.4
+opencv-python==4.5.5.64
+openvino==2025.0.0
+openvino-telemetry==2025.0.1
+packaging==24.2
+pathlib==1.0.1
+plyer==2.1.0
+requests==2.32.3
+tqdm==4.67.1
+urllib3==2.3.0
