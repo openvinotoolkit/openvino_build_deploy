@@ -70,7 +70,7 @@ def load_asr_model(model_dir: Path) -> None:
     global asr_model, asr_processor
 
     if not model_dir.exists():
-        log.error(f"Cannot find {model_dir}")
+        log.error(f"Cannot find {model_dir}. Did you run convert_and_optimize_asr.py first?")
         return
 
     device = "AUTO:GPU,CPU" if ov.__version__ < "2024.3" else "AUTO:CPU"
@@ -92,7 +92,7 @@ def load_chat_model(model_dir: Path) -> Optional[OpenVINOLLM]:
         OpenVINO LLM model in LLama Index
     """
     if not model_dir.exists():
-        log.error(f"Cannot find {model_dir}")
+        log.error(f"Cannot find {model_dir}. Did you run convert_and_optimize_chat.py first?")
         return None
 
     ov_config = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1', "CACHE_DIR": ""}
@@ -111,7 +111,7 @@ def load_embedding_model(model_dir: Path) -> Optional[OpenVINOEmbedding]:
         OpenVINO Embedding model in LLama Index
     """
     if not model_dir.exists():
-        log.error(f"Cannot find {model_dir}")
+        log.error(f"Cannot find {model_dir}. Did you run convert_and_optimize_chat.py first?")
         return None
 
     device = "AUTO:NPU" if "NPU" in get_available_devices() else "AUTO:CPU"
@@ -129,7 +129,7 @@ def load_reranker_model(model_dir: Path) -> Optional[OpenVINORerank]:
         OpenVINO Reranker model in LLama Index
     """
     if not model_dir.exists():
-        log.error(f"Cannot find {model_dir}")
+        log.error(f"Cannot find {model_dir}. Did you run convert_and_optimize_chat.py first?")
         return None
 
     # load reranker model in the format of Llama Index
