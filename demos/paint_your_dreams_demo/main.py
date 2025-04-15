@@ -208,6 +208,9 @@ def build_ui(image_size: int) -> gr.Interface:
     with gr.Blocks() as demo:
         with gr.Group():
             with gr.Row():
+                t2i_button = gr.Button("Text2Image", variant="primary")
+                i2i_button = gr.Button("Image2Image", variant="secondary")
+            with gr.Row():
                 prompt_text = gr.Text(
                     label="Prompt",
                     placeholder="Enter your prompt here",
@@ -216,7 +219,7 @@ def build_ui(image_size: int) -> gr.Interface:
             with gr.Row():
                 with gr.Column():
                     with gr.Row(equal_height=True):
-                        input_image = gr.ImageMask(label="Input image (leave blank for text2image generation)", sources=["webcam", "clipboard", "upload"])
+                        input_image = gr.ImageMask(label="Input image", visible=False)
                         result_img = gr.Image(label="Generated image", elem_id="output_image", format="png")
                     with gr.Row():
                         result_time_label = gr.Text("", label="Inference time", type="text")
@@ -243,19 +246,23 @@ def build_ui(image_size: int) -> gr.Interface:
         gr.Examples(label="Examples for Text2Image", examples=examples_t2i, inputs=prompt_text, outputs=result_img, cache_examples=False)
         gr.Examples(label="Examples for Image2Image", examples=examples_i2i, inputs=prompt_text, outputs=result_img, cache_examples=False)
 
+        def swap_buttons_highlighting():
+            return gr.Button(variant="primary"), gr.Button(variant="secondary")
+
+        # switch between image2image and text2image
+        t2i_button.click(swap_buttons_highlighting, outputs=[t2i_button, i2i_button]).then(lambda: gr.Image(visible=False), outputs=input_image)
+        i2i_button.click(swap_buttons_highlighting, outputs=[i2i_button, t2i_button]).then(lambda: gr.Image(visible=True), outputs=input_image)
         # clicking run
         gr.on(
             triggers=[prompt_text.submit, start_button.click],
-            fn=lambda: (gr.Button(variant="secondary"), gr.Button(variant="primary")),
-            outputs=[start_button, stop_button]
+            fn=swap_buttons_highlighting,
+            outputs=[stop_button, start_button]
         ).then(
             partial(generate_images, size=image_size),
             inputs=[input_image, prompt_text, seed_slider, guidance_scale_slider, num_inference_steps_slider,
                     strength_slider, randomize_seed_checkbox, device_dropdown, endless_checkbox],
             outputs=[result_img, result_time_label]
-        ).then(
-            lambda: (gr.Button(variant="primary"), gr.Button(variant="secondary")), outputs=[start_button, stop_button]
-        )
+        ).then(swap_buttons_highlighting, outputs=[start_button, stop_button])
         # clicking stop
         stop_button.click(stop)
         randomize_seed_button.click(lambda _: random.randint(0, MAX_SEED), inputs=seed_slider, outputs=seed_slider)
