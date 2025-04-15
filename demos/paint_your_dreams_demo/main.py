@@ -35,6 +35,31 @@ ov_pipelines = {}
 stop_generating: bool = True
 hf_model_name: Optional[str] = None
 
+dreamshaper_config = {
+    "guidance_scale_value": 8,
+    "num_inference_steps": 5,
+    "strength_value": 0.5
+}
+dreamlike_anime_config = {
+    "guidance_scale_value": 7.5,
+    "num_inference_steps": 50,
+    "strength_value": 0.2
+}
+flux_config = {
+    "guidance_scale_value": 8,
+    "num_inference_steps": 4,
+    "strength_value": 0.2
+}
+
+MODEL_CONFIGS = {
+    "OpenVINO/LCM_Dreamshaper_v7-int8-ov": dreamshaper_config,
+    "OpenVINO/LCM_Dreamshaper_v7-fp16-ov": dreamshaper_config,
+    "OpenVINO/FLUX.1-schnell-int4-ov": flux_config,
+    "OpenVINO/FLUX.1-schnell-int8-ov": flux_config,
+    "OpenVINO/FLUX.1-schnell-fp16-ov": flux_config,
+    "dreamlike-art/dreamlike-anime-1.0": dreamlike_anime_config,
+}
+
 
 def download_models(model_name, safety_checker_model: str) -> None:
     global safety_checker
@@ -46,7 +71,9 @@ def download_models(model_name, safety_checker_model: str) -> None:
         if is_openvino_model:
             snapshot_download(model_name, local_dir=output_dir, resume_download=True)
         else:
-            raise ValueError(f"Model {model_name} is not from OpenVINO Hub and not supported")
+            output_dir_dream = MODEL_DIR / model_name
+            if not output_dir_dream.exists():
+                os.system(f"optimum-cli export openvino --model {model_name} --task stable-diffusion --weight-format fp16 {output_dir_dream}")
 
     safety_checker_dir = MODEL_DIR / safety_checker_model
     if not safety_checker_dir.exists():
@@ -133,9 +160,10 @@ async def generate_images(input_image_mask: np.ndarray, prompt: str, seed: int, 
                                               width=size, height=size, guidance_scale=guidance_scale, strength=1.0 - strength, rng_seed=seed, callback=progress).data[0]
             # image2image pipeline
             else:
-                ov_pipeline = await load_pipeline(hf_model_name, device, size,"image2image")
+                ov_pipeline = await load_pipeline(hf_model_name, device, size, "image2image")
                 result = ov_pipeline.generate(prompt=prompt, image=ov.Tensor(input_image[None]), num_inference_steps=num_inference_steps, width=size, height=size,
-                                 guidance_scale=guidance_scale, strength=1.0 - strength, rng_seed=seed, callback=progress).data[0]
+                                              guidance_scale=guidance_scale, strength=1.0 - strength, rng_seed=seed, callback=progress).data[0]
+
         # text2image pipeline
         else:
             ov_pipeline = await load_pipeline(hf_model_name, device, size, "text2image")
@@ -163,6 +191,7 @@ async def generate_images(input_image_mask: np.ndarray, prompt: str, seed: int, 
 
 
 def build_ui(image_size: int) -> gr.Interface:
+    model_config = MODEL_CONFIGS[hf_model_name]
     examples_t2i = [
         "A sail boat on a grass field with mountains in the morning and sunny day",
         "A beautiful sunset with a sail boat on the ocean, photograph, highly detailed, golden hour, Nikon D850",
@@ -171,7 +200,7 @@ def build_ui(image_size: int) -> gr.Interface:
     ]
 
     examples_i2i = [
-        "Make me a super hero, 8k",
+        "Make me a superhero, 8k",
         "Make me a beautiful cyborg with golden hair, 8k",
         "Make me an astronaut, cold color palette, muted colors, 8k"
     ]
@@ -204,9 +233,12 @@ def build_ui(image_size: int) -> gr.Interface:
                     randomize_seed_checkbox = gr.Checkbox(label="Randomize seed across runs", value=True, scale=0)
                     randomize_seed_button = gr.Button("Randomize seed", scale=0)
                 with gr.Row():
-                    strength_slider = gr.Slider(label="Input image influence strength", minimum=0.0, maximum=1.0, step=0.01, value=0.5)
-                    guidance_scale_slider = gr.Slider(label="Guidance scale for base", minimum=2, maximum=14, step=0.1, value=8.0)
-                    num_inference_steps_slider = gr.Slider(label="Number of inference steps for base", minimum=1, maximum=32, step=1, value=5,)
+                    strength_slider = gr.Slider(label="Input image influence strength", minimum=0.0, maximum=1.0,
+                                                step=0.01, value=model_config["strength_value"])
+                    guidance_scale_slider = gr.Slider(label="Guidance scale for base", minimum=2, maximum=14, step=0.1,
+                                                      value=model_config["guidance_scale_value"])
+                    num_inference_steps_slider = gr.Slider(label="Number of inference steps for base", minimum=1,
+                                                           maximum=32, step=1, value=model_config["num_inference_steps"])
 
         gr.Examples(label="Examples for Text2Image", examples=examples_t2i, inputs=prompt_text, outputs=result_img, cache_examples=False)
         gr.Examples(label="Examples for Image2Image", examples=examples_i2i, inputs=prompt_text, outputs=result_img, cache_examples=False)
@@ -249,8 +281,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", type=str, default="OpenVINO/LCM_Dreamshaper_v7-fp16-ov", help="Visual GenAI model to be used",
-                        choices=["OpenVINO/LCM_Dreamshaper_v7-int8-ov", "OpenVINO/LCM_Dreamshaper_v7-fp16-ov", "OpenVINO/FLUX.1-schnell-int4-ov",
-                                 "OpenVINO/FLUX.1-schnell-int8-ov", "OpenVINO/FLUX.1-schnell-fp16-ov"])
+                        choices=["OpenVINO/LCM_Dreamshaper_v7-int8-ov", "OpenVINO/LCM_Dreamshaper_v7-fp16-ov", "dreamlike-art/dreamlike-anime-1.0",
+                                 "OpenVINO/FLUX.1-schnell-int4-ov", "OpenVINO/FLUX.1-schnell-int8-ov", "OpenVINO/FLUX.1-schnell-fp16-ov"])
     parser.add_argument("--safety_checker_model", type=str, default="Falconsai/nsfw_image_detection",
                         choices=["Falconsai/nsfw_image_detection"], help="The model to verify if the generated image is NSFW")
     parser.add_argument("--image_size", type=int, default=512, help="The image size to generate")
