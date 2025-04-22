@@ -81,8 +81,6 @@ def load_chat_model(model_name: str, token: str = None) -> OpenVINOGenAILLM:
 
     llm = OpenVINOGenAILLM(model_path=str(model_path), device=device, config=ov_config)
 
-    # need to assign here that to avoid exception
-    llm.model_path = str(model_path)
     # change number of tokens to be generated in one step
     llm._streamer.tokens_len = 1
 
