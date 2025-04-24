@@ -7,11 +7,10 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-import torch
 from supervision import BoxCornerAnnotator, LabelAnnotator, TraceAnnotator, LineZoneAnnotator, LineZone, ByteTrack, \
     Point, Detections, Color, ColorLookup, DetectionsSmoother
 from supervision.annotators.base import BaseAnnotator
-from ultralytics import YOLOWorld
+from ultralytics import YOLOE, YOLO
 from ultralytics.engine.results import Results
 
 SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "utils")
@@ -28,14 +27,17 @@ NULL_CLASSES = ["person", "hand", "finger", "fabric"]
 PROBABILITY_COEFFICIENT = 15
 
 
-def load_yolo_model(model_name: str, device: str, main_class: str, aux_classes: list[str]) -> YOLOWorld:
-    model = YOLOWorld(model_name)
-    opts = {"device": device, "config": {"PERFORMANCE_HINT": "LATENCY"}, "model_caching" : True, "cache_dir": "cache"}
-    model = torch.compile(model, backend="openvino", options=opts)
-    # set classes to detect
-    model.set_classes([main_class] + aux_classes + NULL_CLASSES)
+def load_yolo_model(model_name: str, main_class: str, aux_classes: list[str]) -> YOLO:
+    model_path = MODEL_DIR / f"{model_name}.pt"
+    model = YOLOE(model_path)
 
-    return model
+    # set classes to detect
+    classes = [main_class] + aux_classes + NULL_CLASSES
+    model.set_classes(classes, model.get_text_pe(classes))
+
+    model_path = model.export(format="openvino", dynamic=False, half=True)
+
+    return YOLO(model_path)
 
 
 def load_annotators(size: tuple[int, int]) -> tuple[list[BaseAnnotator], LineZone, ByteTrack, DetectionsSmoother]:
@@ -115,7 +117,7 @@ def draw_results(frame: np.ndarray, annotators: list[BaseAnnotator], line_zone: 
 
 
 def run(video_path: str, det_model_name: str, device: str, main_class: str, aux_classes: list[str], flip: bool):
-    det_model = load_yolo_model(det_model_name, device, main_class, aux_classes)
+    det_model = load_yolo_model(det_model_name, main_class, aux_classes)
 
     video_size = (1920, 1080)
     # initialize video player to deliver frames
@@ -143,7 +145,7 @@ def run(video_path: str, det_model_name: str, device: str, main_class: str, aux_
 
         start_time = time.time()
 
-        det_results = det_model.predict(frame, conf=0.01, verbose=False)[0]
+        det_results = det_model.predict(frame, conf=0.01, verbose=False, device=f"intel:{device.lower()}")[0]
         det_results = filter_and_process_results(main_class, aux_classes, det_results, tracker, smoother, line_zone)
 
         end_time = time.time()
@@ -175,9 +177,8 @@ if __name__ == '__main__':
     parser.add_argument('--class_name', default="hazelnut", type=str, help="The class name to detect")
     parser.add_argument('--aux_classes', nargs='+', default=["nut", "brown ball"], type=str, help="Auxiliary classes supporting the detection of the main class")
     parser.add_argument('--device', default="AUTO", type=str, help="Device to run inference on")
-    parser.add_argument("--detection_model", type=str, default="yolov8s-worldv2", help="Model for object detection",
-                        choices=["yolov8s-world", "yolov8m-world", "yolov8l-world", "yolov8x-world",
-                                 "yolov8s-worldv2", "yolov8m-worldv2", "yolov8l-worldv2", "yolov8x-worldv2"])
+    parser.add_argument("--detection_model", type=str, default="yoloe-11m-seg", help="Model for object detection",
+                        choices=["yoloe-11s-seg", "yoloe-11m-seg", "yoloe-11l-seg", "yoloe-v8s-seg", "yoloe-v8m-seg", "yoloe-v8l-seg"])
     parser.add_argument("--flip", type=bool, default=True, help="Mirror input video")
 
     args = parser.parse_args()
