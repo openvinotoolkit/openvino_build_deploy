@@ -59,6 +59,15 @@ def setup_models(
     Returns:
         Tuple of (llm, embedding) models
     """
+    
+     # Check if model paths exist
+    if not llm_model_path.exists():
+        log.error(f"LLM model not found at {llm_model_path}. Please run convert_and_optimize_llm.py to download the model first.")
+        sys.exit(1)
+
+    if not embedding_model_path.exists():
+        log.error(f"Embedding model not found at {embedding_model_path}. Please run convert_and_optimize_llm.py to download the model first.")
+        sys.exit(1)
 
     # Load LLM model locally    
     llm = OpenVINOLLM(

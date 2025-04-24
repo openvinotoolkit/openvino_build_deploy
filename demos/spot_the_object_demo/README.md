@@ -4,6 +4,33 @@ The demo detects, tracks and counts defined objects in front of the webcam. The 
 
 ![spot_the_object](https://github.com/user-attachments/assets/e0b1f56a-a7b3-4bf0-a056-1fac804c2de3)
 
+## Quick Launch using Setup Scripts
+
+If you want a **quick setup** without manually installing dependencies, use the provided installer scripts. These scripts will **automatically configure** everything needed to run the Spot the Object Demo.
+
+### **For Windows**
+1. Download the `install.bat` and `run.bat` files to your local directory.
+2. Double-click `install.bat` to install dependencies and set up the environment.
+3. After installation, double-click `run.bat` to start the demo.
+
+### **For Linux**
+1. Download the `install.sh` and `run.sh` files to your local directory.
+2. First, ensure the installer scripts have execute permissions:
+```shell
+chmod +x install.sh run.sh
+```
+3. Run the installer to set up everything:
+```shell
+./install.sh
+```
+4. After installation, start the demo by running:
+```shell
+./run.sh
+```
+These scripts will handle cloning the repository, creating the virtual environment, and installing dependencies automatically. If you prefer a manual setup, follow Steps 1-3 below.
+
+## Manual Environment Setup
+
 Here are the steps involved in this demo:
 
 Step 1: Install Python and prerequisites
@@ -98,10 +125,10 @@ python main.py --stream 0 --class_name hazelnut --aux_classes nut "brown ball"
 
 ```shell
 
-By default, the YOLOv8s-Worldv2 model is used. To change this, select another model from the family:
+By default, the YOLOE-11M model is used. To change this, select another model from the family:
 
 ```shell
-python main.py --stream 0 --model_name yolov8x-world
+python main.py --stream 0 --model_name yoloe-11s-seg
 ```
 
 To change the inference device use the `--device` option. By default, AUTO is used.

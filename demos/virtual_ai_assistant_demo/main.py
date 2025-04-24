@@ -18,12 +18,13 @@ from llama_index.core.chat_engine.types import BaseChatEngine, ChatMode
 from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.core.node_parser import LangchainNodeParser
 from llama_index.embeddings.huggingface_openvino import OpenVINOEmbedding
-from llama_index.llms.openvino import OpenVINOLLM
+from llama_index.llms.openvino_genai import OpenVINOGenAILLM
 from llama_index.postprocessor.openvino_rerank import OpenVINORerank
 from llama_index.vector_stores.faiss import FaissVectorStore
 from openvino.runtime import opset10 as ops
 from openvino.runtime import passes
-from optimum.intel import OVModelForCausalLM, OVModelForFeatureExtraction, OVWeightQuantizationConfig, OVConfig, OVQuantizer, OVModelForSequenceClassification
+from optimum.intel import OVModelForCausalLM, OVModelForFeatureExtraction, OVWeightQuantizationConfig, OVModelForSequenceClassification
+from optimum.exporters.openvino.convert import export_tokenizer
 from transformers import AutoTokenizer
 # it must be imported as the last one; otherwise, it causes a crash on macOS
 import faiss
@@ -33,7 +34,7 @@ MODEL_DIR = Path("model")
 inference_lock = threading.Lock()
 
 # Initialize Model variables
-ov_llm: Optional[OpenVINOLLM] = None
+ov_llm: Optional[OpenVINOGenAILLM] = None
 ov_embedding: Optional[OpenVINOEmbedding] = None
 ov_reranker: Optional[OpenVINORerank] = None
 ov_chat_engine: Optional[BaseChatEngine] = None
@@ -46,7 +47,7 @@ def get_available_devices() -> Set[str]:
     return {device.split(".")[0] for device in core.available_devices}
 
 
-def load_chat_model(model_name: str, token: str = None) -> OpenVINOLLM:
+def load_chat_model(model_name: str, token: str = None) -> OpenVINOGenAILLM:
     model_path = MODEL_DIR / model_name    
 
     # tokenizers are disabled anyway, this allows to avoid warning
@@ -61,6 +62,7 @@ def load_chat_model(model_name: str, token: str = None) -> OpenVINOLLM:
         
         chat_tokenizer = AutoTokenizer.from_pretrained(model_name, token=token)
         chat_tokenizer.save_pretrained(model_path)
+        export_tokenizer(chat_tokenizer, model_path)
 
         # openvino models are used as is
         is_openvino_model = model_name.split("/")[0] == "OpenVINO"
@@ -76,8 +78,19 @@ def load_chat_model(model_name: str, token: str = None) -> OpenVINOLLM:
             chat_model.save_pretrained(model_path)
 
     device = "GPU" if "GPU" in get_available_devices() else "CPU"
-    return OpenVINOLLM(context_window=4096, model_id_or_path=str(model_path), max_new_tokens=1024, device_map=device,
-                       model_kwargs={"ov_config": ov_config, "library_name": "transformers"}, generate_kwargs={"do_sample": True, "temperature": 0.7, "top_k": 50, "top_p": 0.95})
+
+    llm = OpenVINOGenAILLM(model_path=str(model_path), device=device, config=ov_config)
+
+    # change number of tokens to be generated in one step
+    llm._streamer.tokens_len = 1
+
+    llm.config.max_new_tokens = 1024
+    llm.config.do_sample = True
+    llm.config.temperature = 0.7
+    llm.config.top_k = 50
+    llm.config.top_p = 0.95
+
+    return llm
 
 
 def optimize_model_for_npu(model: OVModelForFeatureExtraction):
@@ -145,7 +158,7 @@ def load_chat_models(chat_model_name: str, embedding_model_name: str, reranker_m
         chatbot_config = yaml.safe_load(f)
 
     ov_llm = load_chat_model(chat_model_name, auth_token)
-    log.info(f"Running {chat_model_name} on {','.join(ov_llm._model.request.get_compiled_model().get_property('EXECUTION_DEVICES'))}")
+    log.info(f"Running {chat_model_name} on {ov_llm.device}")
     ov_embedding = load_embedding_model(embedding_model_name)
     log.info(f"Running {embedding_model_name} on {ov_embedding._model.request.get_property('EXECUTION_DEVICES')}")   
     ov_reranker = load_reranker_model(reranker_model_name)
@@ -234,12 +247,12 @@ def chat(history: List[List[str]]) -> Tuple[List[List[str]], float]:
         yield history, 0.0
 
         # generate next tokens
-        tokens = 1
+        tokens = ov_chat_engine._llm._streamer.tokens_len
         start_time = time.time()
         for partial_text in chat_streamer:
             history[-1][1] += emphasize_thinking_mode(partial_text)
             processing_time = time.time() - start_time
-            tokens += 1
+            tokens += ov_chat_engine._llm._streamer.tokens_len
             # "return" partial response
             yield history, round(tokens / processing_time, 2)
 

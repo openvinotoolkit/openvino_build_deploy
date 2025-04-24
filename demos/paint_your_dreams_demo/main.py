@@ -35,6 +35,31 @@ ov_pipelines = {}
 stop_generating: bool = True
 hf_model_name: Optional[str] = None
 
+dreamshaper_config = {
+    "guidance_scale_value": 8,
+    "num_inference_steps": 5,
+    "strength_value": 0.5
+}
+dreamlike_anime_config = {
+    "guidance_scale_value": 7.5,
+    "num_inference_steps": 50,
+    "strength_value": 0.2
+}
+flux_config = {
+    "guidance_scale_value": 8,
+    "num_inference_steps": 4,
+    "strength_value": 0.2
+}
+
+MODEL_CONFIGS = {
+    "OpenVINO/LCM_Dreamshaper_v7-int8-ov": dreamshaper_config,
+    "OpenVINO/LCM_Dreamshaper_v7-fp16-ov": dreamshaper_config,
+    "OpenVINO/FLUX.1-schnell-int4-ov": flux_config,
+    "OpenVINO/FLUX.1-schnell-int8-ov": flux_config,
+    "OpenVINO/FLUX.1-schnell-fp16-ov": flux_config,
+    "dreamlike-art/dreamlike-anime-1.0": dreamlike_anime_config,
+}
+
 
 def download_models(model_name, safety_checker_model: str) -> None:
     global safety_checker
@@ -46,7 +71,9 @@ def download_models(model_name, safety_checker_model: str) -> None:
         if is_openvino_model:
             snapshot_download(model_name, local_dir=output_dir, resume_download=True)
         else:
-            raise ValueError(f"Model {model_name} is not from OpenVINO Hub and not supported")
+            output_dir_dream = MODEL_DIR / model_name
+            if not output_dir_dream.exists():
+                os.system(f"optimum-cli export openvino --model {model_name} --task stable-diffusion --weight-format fp16 {output_dir_dream}")
 
     safety_checker_dir = MODEL_DIR / safety_checker_model
     if not safety_checker_dir.exists():
@@ -133,9 +160,10 @@ async def generate_images(input_image_mask: np.ndarray, prompt: str, seed: int, 
                                               width=size, height=size, guidance_scale=guidance_scale, strength=1.0 - strength, rng_seed=seed, callback=progress).data[0]
             # image2image pipeline
             else:
-                ov_pipeline = await load_pipeline(hf_model_name, device, size,"image2image")
+                ov_pipeline = await load_pipeline(hf_model_name, device, size, "image2image")
                 result = ov_pipeline.generate(prompt=prompt, image=ov.Tensor(input_image[None]), num_inference_steps=num_inference_steps, width=size, height=size,
-                                 guidance_scale=guidance_scale, strength=1.0 - strength, rng_seed=seed, callback=progress).data[0]
+                                              guidance_scale=guidance_scale, strength=1.0 - strength, rng_seed=seed, callback=progress).data[0]
+
         # text2image pipeline
         else:
             ov_pipeline = await load_pipeline(hf_model_name, device, size, "text2image")
@@ -163,31 +191,45 @@ async def generate_images(input_image_mask: np.ndarray, prompt: str, seed: int, 
 
 
 def build_ui(image_size: int) -> gr.Interface:
+    model_config = MODEL_CONFIGS[hf_model_name]
     examples_t2i = [
         "A sail boat on a grass field with mountains in the morning and sunny day",
-        "A beautiful sunset with a sail boat on the ocean, photograph, highly detailed, golden hour, Nikon D850",
-        "Portrait photo of a girl, photograph, highly detailed face, depth of field, moody light, golden hour,"
-        "Style by Dan Winters, Russell James, Steve McCurry, centered, extremely detailed, Nikon D850, award winning photography"
+        "a portrait of a tall Valkyrie with long blonde hair, iron armor, and a crown sitting on a white horse. Depict them in the Nordic Vikings period",
+        "A surreal landscape image featuring floating islands, upside-down mountains, and unconventional flora, a dreamlike quality, pushing the boundaries of reality, a scene that has imaginative and otherworldly elements",
+        "An image of a deep, dark forest with ancient, towering trees, the mysterious atmosphere with twisted branches casting eerie shadows on the forest floor, a sense of solitude and intrigue",
+        "An underwater seascape image capturing the beauty of the ocean depths, coral reefs, exotic fish, and aquatic plants, with sunlight filtering through the water to create dramatic lighting and a play of colors",
+        "An image of a vintage red convertible driving along a winding coastal road at sunset, with the ocean waves crashing against rugged cliffs and seagulls soaring in the sky",
+        "A awe-inspiring oil painting of a regal white tiger with stark contrasting stripes set against a dense forest underbrush, in a powerful hyperrealistic style",
+        "An imaginative, one-of-a-kind digital illustration featuring a child wizard from a well-known fantasy novel, interacting with elements of grand, magical castles, with an emphasis on whimsical and dreamy designs for key details",
+        "An impressive 3D digital art showcasing a realistic contemporary kitchen model with photorealistic textures, shaders, and lighting poised at an interesting angle to highlight furniture details",
+        "A bold acrylic cubist art painting depicting a marine scene with boats and fish in an abstract geometric style with juxtaposed muted hues, embodying a stylistic fusion of Picasso and Braque's cubist works"
     ]
 
     examples_i2i = [
-        "Make me a super hero, 8k",
+        "Make me a superhero, 8k",
         "Make me a beautiful cyborg with golden hair, 8k",
-        "Make me an astronaut, cold color palette, muted colors, 8k"
+        "Make me an astronaut, cold color palette, muted colors, 8k",
+        "Make me a man with a hat standing next to a blue car, with a blue sky and clouds, ice cream texture",
+        "Make me a figurehead of the medieval ship"
     ]
 
     with gr.Blocks() as demo:
+        with gr.Row():
+            t2i_button = gr.Button("Text2Image", variant="primary")
+            i2i_button = gr.Button("Image2Image", variant="secondary")
         with gr.Group():
-            with gr.Row():
+            with gr.Row(equal_height=True):
                 prompt_text = gr.Text(
                     label="Prompt",
                     placeholder="Enter your prompt here",
-                    value="A sail boat on a grass field with mountains in the morning and sunny day"
+                    value=examples_t2i[0],
+                    scale=5
                 )
+                random_prompt_button = gr.Button("Random prompt", variant="secondary", scale=1)
             with gr.Row():
                 with gr.Column():
                     with gr.Row(equal_height=True):
-                        input_image = gr.ImageMask(label="Input image (leave blank for text2image generation)", sources=["webcam", "clipboard", "upload"])
+                        input_image = gr.ImageMask(label="Input image", visible=False)
                         result_img = gr.Image(label="Generated image", elem_id="output_image", format="png")
                     with gr.Row():
                         result_time_label = gr.Text("", label="Inference time", type="text")
@@ -204,26 +246,37 @@ def build_ui(image_size: int) -> gr.Interface:
                     randomize_seed_checkbox = gr.Checkbox(label="Randomize seed across runs", value=True, scale=0)
                     randomize_seed_button = gr.Button("Randomize seed", scale=0)
                 with gr.Row():
-                    strength_slider = gr.Slider(label="Input image influence strength", minimum=0.0, maximum=1.0, step=0.01, value=0.5)
-                    guidance_scale_slider = gr.Slider(label="Guidance scale for base", minimum=2, maximum=14, step=0.1, value=8.0)
-                    num_inference_steps_slider = gr.Slider(label="Number of inference steps for base", minimum=1, maximum=32, step=1, value=5,)
+                    strength_slider = gr.Slider(label="Input image influence strength", minimum=0.0, maximum=1.0,
+                                                step=0.01, value=model_config["strength_value"])
+                    guidance_scale_slider = gr.Slider(label="Guidance scale for base", minimum=2, maximum=14, step=0.1,
+                                                      value=model_config["guidance_scale_value"])
+                    num_inference_steps_slider = gr.Slider(label="Number of inference steps for base", minimum=1,
+                                                           maximum=32, step=1, value=model_config["num_inference_steps"])
 
         gr.Examples(label="Examples for Text2Image", examples=examples_t2i, inputs=prompt_text, outputs=result_img, cache_examples=False)
         gr.Examples(label="Examples for Image2Image", examples=examples_i2i, inputs=prompt_text, outputs=result_img, cache_examples=False)
 
+        def swap_buttons_highlighting():
+            return gr.Button(variant="primary"), gr.Button(variant="secondary")
+
+        # switch between image2image and text2image
+        t2i_button.click(swap_buttons_highlighting, outputs=[t2i_button, i2i_button]).then(lambda: gr.Image(visible=False), outputs=input_image)
+        i2i_button.click(swap_buttons_highlighting, outputs=[i2i_button, t2i_button]).then(lambda: gr.Image(visible=True), outputs=input_image)
+
+        # rand the prompt
+        random_prompt_button.click(lambda: gr.Text(value=random.choice(examples_t2i)), outputs=prompt_text)
+
         # clicking run
         gr.on(
             triggers=[prompt_text.submit, start_button.click],
-            fn=lambda: (gr.Button(variant="secondary"), gr.Button(variant="primary")),
-            outputs=[start_button, stop_button]
+            fn=swap_buttons_highlighting,
+            outputs=[stop_button, start_button]
         ).then(
             partial(generate_images, size=image_size),
             inputs=[input_image, prompt_text, seed_slider, guidance_scale_slider, num_inference_steps_slider,
                     strength_slider, randomize_seed_checkbox, device_dropdown, endless_checkbox],
             outputs=[result_img, result_time_label]
-        ).then(
-            lambda: (gr.Button(variant="primary"), gr.Button(variant="secondary")), outputs=[start_button, stop_button]
-        )
+        ).then(swap_buttons_highlighting, outputs=[start_button, stop_button])
         # clicking stop
         stop_button.click(stop)
         randomize_seed_button.click(lambda _: random.randint(0, MAX_SEED), inputs=seed_slider, outputs=seed_slider)
@@ -249,8 +302,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", type=str, default="OpenVINO/LCM_Dreamshaper_v7-fp16-ov", help="Visual GenAI model to be used",
-                        choices=["OpenVINO/LCM_Dreamshaper_v7-int8-ov", "OpenVINO/LCM_Dreamshaper_v7-fp16-ov", "OpenVINO/FLUX.1-schnell-int4-ov",
-                                 "OpenVINO/FLUX.1-schnell-int8-ov", "OpenVINO/FLUX.1-schnell-fp16-ov"])
+                        choices=["OpenVINO/LCM_Dreamshaper_v7-int8-ov", "OpenVINO/LCM_Dreamshaper_v7-fp16-ov", "dreamlike-art/dreamlike-anime-1.0",
+                                 "OpenVINO/FLUX.1-schnell-int4-ov", "OpenVINO/FLUX.1-schnell-int8-ov", "OpenVINO/FLUX.1-schnell-fp16-ov"])
     parser.add_argument("--safety_checker_model", type=str, default="Falconsai/nsfw_image_detection",
                         choices=["Falconsai/nsfw_image_detection"], help="The model to verify if the generated image is NSFW")
     parser.add_argument("--image_size", type=int, default=512, help="The image size to generate")

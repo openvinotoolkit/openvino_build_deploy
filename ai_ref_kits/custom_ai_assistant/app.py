@@ -68,7 +68,7 @@ def load_asr_model(model_dir: Path) -> None:
     global asr_model, asr_processor
 
     if not model_dir.exists():
-        log.error(f"Cannot find {model_dir}")
+        log.error(f"Cannot find {model_dir}. Did you run convert_and_optimize_asr.py first?")
         return
 
     # create a distil-whisper model and its processor
@@ -87,7 +87,7 @@ def load_chat_model(model_dir: Path) -> None:
     global chat_model, chat_tokenizer
 
     if not model_dir.exists():
-        log.error(f"Cannot find {model_dir}")
+        log.error(f"Cannot find {model_dir}. Did you run convert_and_optimize_chat.py first?")
         return
 
     # load llama model and its tokenizer

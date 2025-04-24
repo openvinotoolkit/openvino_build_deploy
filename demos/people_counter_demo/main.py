@@ -262,7 +262,7 @@ def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", c
                 # count how many objects detected
                 det_count = len(detections_filtered)
                 # Add track ID annotations
-                label_annotator.annotate(scene=frame, detections=detections_filtered, labels=[f"ID: {track.track_id}" for track in tracks if track.time_since_update == 0])
+                label_annotator.annotate(scene=frame, detections=detections_filtered, labels=[f"ID: {track.track_id if track.time_since_update == 0 else ' '}" for track, available in zip(tracks, mask) if available])
                 # add the count to the list
                 queue_count[zone_id].append(det_count)
                 # calculate the mean number of customers in the queue
