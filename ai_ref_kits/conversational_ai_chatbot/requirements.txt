@@ -15,7 +15,7 @@ faiss-cpu==1.9.0
 
 onnx==1.17.0
 onnxruntime==1.20.1
-torch==2.5.1
+torch==2.7.0
 torchaudio==2.5.1
 numpy==1.26.4
 
