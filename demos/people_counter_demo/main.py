@@ -6,7 +6,7 @@ import sys
 import time
 from collections import defaultdict, deque
 from pathlib import Path
-from typing import Tuple, List
+from typing import Tuple, List, Dict
 
 import cv2
 import numpy as np
@@ -177,6 +177,48 @@ def track_objects(frame: np.array, detections: sv.Detections, tracker: DeepSort)
     return list(sorted(tracks, key=lambda x: x.det_conf if x.det_conf is not None else 0.0, reverse=True))
 
 
+def draw_annotations(frame: np.array, detections: sv.Detections, tracker: DeepSort, queue_count: Dict, object_limit: int, category:str,
+                     zones: List, zone_annotators: List, box_annotators: List, masks_annotators: List, label_annotators: List) -> None:
+
+    for zone_annotator in zone_annotators:
+        # visualize polygon for the zone
+        frame = zone_annotator.annotate(scene=frame)
+
+    if detections:
+        # uniquely track the objects
+        tracks = track_objects(frame, detections, tracker)
+
+        # annotate the frame with the detected persons within each zone
+        for zone_id, (zone, box_annotator, masks_annotator, label_annotator) in enumerate(
+                zip(zones, box_annotators, masks_annotators, label_annotators), start=1):
+
+            # get detections relevant only for the zone
+            mask = zone.trigger(detections=detections)
+            detections_filtered = detections[mask]
+            # visualize boxes around objects in the zone
+            frame = masks_annotator.annotate(scene=frame, detections=detections_filtered)
+            frame = box_annotator.annotate(scene=frame, detections=detections_filtered)
+            # count how many objects detected
+            det_count = len(detections_filtered)
+            # Add track ID annotations
+            label_annotator.annotate(scene=frame, detections=detections_filtered,
+                                     labels=[f"ID: {track.track_id if track.time_since_update == 0 else ' '}" for
+                                             track, in_zone in zip(tracks, mask) if in_zone])
+            # add the count to the list
+            queue_count[zone_id].append(det_count)
+            # calculate the mean number of customers in the queue
+            mean_customer_count = np.mean(queue_count[zone_id], dtype=np.int32)
+
+            # add alert text to the frame if necessary, flash every second
+            if mean_customer_count > object_limit and time.time() % 2 > 1:
+                utils.draw_text(frame, text=f"Intel employee required in zone {zone_id}!", point=(20, 20),
+                                font_color=(0, 0, 255))
+
+            # print an info about number of customers in the queue, ask for the more assistants if required
+            log.info(
+                f"Zone {zone_id}, avg {category} count: {mean_customer_count} {'Intel employee required!' if mean_customer_count > object_limit else ''}")
+
+
 def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", category: str = "person", zones_config_file: str = "",
         object_limit: int = 3, flip: bool = True, tracker_frames: int = 1800, colorful: bool = False, last_frames: int = 50) -> None:
     # set up logging
@@ -243,38 +285,8 @@ def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", c
         # postprocessing
         detections = postprocess(pred_boxes=boxes, pred_masks=masks, input_size=input_shape[:2], orig_img=frame, padding=padding, category_id=category_id)
 
-        if detections:
-            # uniquely track the objects
-            tracks = track_objects(frame, detections, tracker)
-
-            # annotate the frame with the detected persons within each zone
-            for zone_id, (zone, zone_annotator, box_annotator, masks_annotator, label_annotator) in enumerate(
-                    zip(zones, zone_annotators, box_annotators, masks_annotators, label_annotators), start=1):
-                # visualize polygon for the zone
-                frame = zone_annotator.annotate(scene=frame)
-
-                # get detections relevant only for the zone
-                mask = zone.trigger(detections=detections)
-                detections_filtered = detections[mask]
-                # visualize boxes around objects in the zone
-                frame = masks_annotator.annotate(scene=frame, detections=detections_filtered)
-                frame = box_annotator.annotate(scene=frame, detections=detections_filtered)
-                # count how many objects detected
-                det_count = len(detections_filtered)
-                # Add track ID annotations
-                label_annotator.annotate(scene=frame, detections=detections_filtered, labels=[f"ID: {track.track_id if track.time_since_update == 0 else ' '}" for track, available in zip(tracks, mask) if available])
-                # add the count to the list
-                queue_count[zone_id].append(det_count)
-                # calculate the mean number of customers in the queue
-                mean_customer_count = np.mean(queue_count[zone_id], dtype=np.int32)
-
-                # add alert text to the frame if necessary, flash every second
-                if mean_customer_count > object_limit and time.time() % 2 > 1:
-                    utils.draw_text(frame, text=f"Intel employee required in zone {zone_id}!", point=(20, 20), font_color=(0, 0, 255))
-
-                # print an info about number of customers in the queue, ask for the more assistants if required
-                log.info(
-                    f"Zone {zone_id}, avg {category} count: {mean_customer_count} {'Intel employee required!' if mean_customer_count > object_limit else ''}")
+        # draw results
+        draw_annotations(frame, detections, tracker, queue_count, object_limit, category, zones, zone_annotators, box_annotators, masks_annotators, label_annotators)
 
         # Mean processing time [ms].
         processing_time = np.mean(processing_times) * 1000
