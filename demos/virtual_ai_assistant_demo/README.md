@@ -184,3 +184,6 @@ Run the following to see all available options.
 ```shell
 python main.py --help
 ```
+
+[//]: # (telemetry pixel)
+<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca?project=demos/virtual_ai_assistant_demo?file=README.md" />
