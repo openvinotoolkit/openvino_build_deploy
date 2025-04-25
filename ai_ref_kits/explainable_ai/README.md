@@ -162,3 +162,6 @@ Platform Configurations for Performance Benchmarks for YOLOv8m Model
 - [Interview on Building Ethical AI with Explainable AI](https://www.youtube.com/watch?v=wWjlWpI4EIE): Learn more about key topics around Explainable AI from Ria, our evangelist ​and creator of the Explainable AI kit.
 
 <p align="right"><a href="#top">Back to top ⬆️</a></p>
+
+[//]: # (telemetry pixel)
+<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca?project=ai_ref_kits/explainable_ai?file=README.md" />
