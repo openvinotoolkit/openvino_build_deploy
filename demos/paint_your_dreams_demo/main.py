@@ -137,22 +137,24 @@ async def generate_images(input_image_mask: np.ndarray, prompt: str, seed: int, 
     global stop_generating
     stop_generating = not endless_generation
 
-    input_image = input_image_mask["background"][:, :, :3]
-    image_mask = input_image_mask["layers"][0][:, :, 3:]
+    input_image = None
+    image_mask = None
+    if input_image_mask["background"] is not None:
+        input_image = input_image_mask["background"][:, :, :3]
+        image_mask = input_image_mask["layers"][0][:, :, 3:]
 
-    # ensure image is square
-    input_image = utils.crop_center(input_image)
-    input_image = cv2.resize(input_image, (size, size))
-    image_mask = cv2.resize(image_mask, (size, size), interpolation=cv2.INTER_NEAREST)
-    image_mask = cv2.cvtColor(image_mask, cv2.COLOR_GRAY2BGR)
+        # ensure image is square
+        input_image = utils.crop_center(input_image)
+        input_image = cv2.resize(input_image, (size, size))
+        image_mask = cv2.resize(image_mask, (size, size), interpolation=cv2.INTER_NEAREST)
+        image_mask = cv2.cvtColor(image_mask, cv2.COLOR_GRAY2BGR)
 
     while True:
         if randomize_seed:
             seed = random.randint(0, MAX_SEED)
 
         start_time = time.time()
-        if input_image.any():
-
+        if input_image is not None:
             # inpainting pipeline
             if image_mask.any():
                 ov_pipeline = await load_pipeline(hf_model_name, device, size, "inpainting")
