@@ -189,7 +189,7 @@ async def generate_images(input_image_mask: np.ndarray, prompt: str, seed: int, 
             break
 
         # small delay necessary for endless generation
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.5)
 
 
 def build_ui(image_size: int) -> gr.Interface:
