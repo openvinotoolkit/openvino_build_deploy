@@ -1,4 +1,4 @@
-This repository provides a simple set of demos for the Microsoft Build 2025 Workshop.
+This folder provides a simple set of demos for the Microsoft Build 2025 Workshop.
 
 There are 3 sets of tutorial materials here.
 
