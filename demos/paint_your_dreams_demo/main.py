@@ -153,7 +153,7 @@ async def generate_images(input_image_mask: np.ndarray, prompt: str, seed: int, 
         if randomize_seed:
             seed = random.randint(0, MAX_SEED)
 
-        start_time = time.time()
+        start_time = time.perf_counter()
         if input_image is not None:
             # inpainting pipeline
             if image_mask.any():
@@ -171,7 +171,7 @@ async def generate_images(input_image_mask: np.ndarray, prompt: str, seed: int, 
             ov_pipeline = await load_pipeline(hf_model_name, device, size, "text2image")
             result = ov_pipeline.generate(prompt=prompt, num_inference_steps=num_inference_steps, width=size, height=size,
                                           guidance_scale=guidance_scale, rng_seed=seed, callback=progress).data[0]
-        end_time = time.time()
+        end_time = time.perf_counter()
 
         label = safety_checker(Image.fromarray(result), top_k=1)
         if label[0]["label"].lower() == "nsfw":
