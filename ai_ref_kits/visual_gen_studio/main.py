@@ -38,12 +38,20 @@ qwen_model_dir = PROJECT_ROOT / "models" / "qwen2-7B-INT4"
 # ---------- Load Config ----------
 with open(CONFIG_PATH, "r") as f:
     config = yaml.safe_load(f)
-
+    
 # ---------- Load Flux Text2Image Model ----------
+if not flux_model_dir.exists():
+    print(f"Model path {flux_model_dir} not found.")
+    sys.exit(0)
+
 print("Loading Flux text-to-image model...")
 flux_pipe = ov_genai.Text2ImagePipeline(flux_model_dir, device="GPU")
 
 # ---------- Load Qwen LLM Model ----------
+if not qwen_model_dir.exists():
+    print(f"Model path {qwen_model_dir} not found.")
+    sys.exit(0)
+
 print("Loading Qwen LLM model...")
 llm_pipe = ov_genai.LLMPipeline(str(qwen_model_dir), device="GPU")
 llm_config = ov_genai.GenerationConfig()
