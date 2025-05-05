@@ -115,4 +115,4 @@ if __name__ == "__main__":
         exit(1)
 
     convert_image_model(model_type, args.precision, Path(args.model_dir))
-    print("🎉 Conversion and optimization completed.")
+    print("Conversion and optimization completed.")
