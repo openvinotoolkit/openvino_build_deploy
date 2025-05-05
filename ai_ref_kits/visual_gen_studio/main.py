@@ -40,11 +40,11 @@ with open(CONFIG_PATH, "r") as f:
     config = yaml.safe_load(f)
 
 # ---------- Load Flux Text2Image Model ----------
-print("🔵 Loading Flux text-to-image model...")
+print("Loading Flux text-to-image model...")
 flux_pipe = ov_genai.Text2ImagePipeline(flux_model_dir, device="GPU")
 
 # ---------- Load Qwen LLM Model ----------
-print("🟣 Loading Qwen LLM model...")
+print("Loading Qwen LLM model...")
 llm_pipe = ov_genai.LLMPipeline(str(qwen_model_dir), device="GPU")
 llm_config = ov_genai.GenerationConfig()
 llm_config.max_new_tokens = 256
@@ -160,6 +160,6 @@ def generate_image(request: PromptRequest):
     return {"image": img_str}
 
 # ---------- Server Start Print ----------
-print("✅ FastAPI backend is running.")
-print("👉 In a separate terminal, start the Streamlit app using:")
-print("   streamlit run app.py")
+print("FastAPI backend is running.")
+print("In a separate terminal, start the Streamlit app using:")
+print("streamlit run app.py")

@@ -51,7 +51,7 @@ def convert_image_model(model_type: str, precision: str, model_dir: Path) -> Pat
     output_dir = model_dir / f"{model_type}-{precision.upper()}"
     model_id = MODEL_MAPPING[model_type]
 
-    # ✅ Check if export already exists
+    # Check if export already exists
     if output_dir.exists():
         missing = [f for f in CRITICAL_FILES if not (output_dir / f).exists()]
         if not missing:
@@ -68,17 +68,17 @@ def convert_image_model(model_type: str, precision: str, model_dir: Path) -> Pat
     missing = []
     for file in CRITICAL_FILES:
         if not (output_dir / file).exists():
-            print(f"❌ Missing: {file}")
+            print(f"Missing: {file}")
             missing.append(file)
         else:
-            print(f"✅ Found: {file}")
+            print(f"Found: {file}")
 
     if missing:
-        print("\n⚠️ Export completed with missing files.")
+        print("Export completed with missing files.")
     else:
-        print("\n✅ All critical files verified successfully.")
+        print("All critical files verified successfully.")
 
-    print(f"\n📁 Model exported to: {output_dir}\n")
+    print(f"Model exported to: {output_dir}\n")
     return output_dir
 
 if __name__ == "__main__":
@@ -95,12 +95,12 @@ if __name__ == "__main__":
     model_type = args.image_model_type
 
     if not model_type:
-        print("\n📦 Available Models:")
+        print("Available Models:")
         for i, key in enumerate(model_keys, start=1):
             print(f"  {i}. {key}")
-        choice = input("\n🔢 Enter model number to export: ").strip()
+        choice = input("Enter model number to export: ").strip()
         if not choice.isdigit() or int(choice) < 1 or int(choice) > len(model_keys):
-            print("❌ Invalid choice. Exiting.")
+            print("Invalid choice. Exiting.")
             exit(1)
         model_type = model_keys[int(choice) - 1]
     elif model_type.isdigit():
@@ -108,10 +108,10 @@ if __name__ == "__main__":
         if 1 <= idx <= len(model_keys):
             model_type = model_keys[idx - 1]
         else:
-            print("❌ Invalid model index.")
+            print("Invalid model index.")
             exit(1)
     elif model_type not in model_keys:
-        print(f"❌ Unknown model: '{model_type}'. Use one of: {model_keys}")
+        print(f"Unknown model: '{model_type}'. Use one of: {model_keys}")
         exit(1)
 
     convert_image_model(model_type, args.precision, Path(args.model_dir))
