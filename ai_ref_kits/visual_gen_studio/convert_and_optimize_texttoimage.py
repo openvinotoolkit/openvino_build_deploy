@@ -64,7 +64,7 @@ def convert_image_model(model_type: str, precision: str, model_dir: Path) -> Pat
 
     run_optimum_export(model_id, output_dir, precision)
 
-    print("\n🧹 Verifying exported files:")
+    print("Verifying exported files:")
     missing = []
     for file in CRITICAL_FILES:
         if not (output_dir / file).exists():
