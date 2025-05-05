@@ -11,7 +11,7 @@ import openvino_genai as ov_genai
 
 
 # Import watermark function
-external_utils_path = (Path(__file__).resolve().parents[3] / "demo" / "utils").resolve()
+external_utils_path = (Path(__file__).resolve().parents[2] / "demos" / "utils").resolve()
 if not external_utils_path.exists():
     raise RuntimeError(f"utils folder not found at {external_utils_path}")
 sys.path.append(str(external_utils_path))

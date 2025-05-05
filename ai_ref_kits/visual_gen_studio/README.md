@@ -72,7 +72,7 @@ To clone the repository and navigate into the directory , run the following comm
 
 ```bash
 git clone https://github.com/AnishaUdayakumar/openvino_build_deploy.git
-cd openvino_build_deploy/ai_ref_kits/Visual_Story_Maker
+cd openvino_build_deploy/ai_ref_kits/visual_story_maker
 ```
 
 ### 3. Create a Virtual Environment
@@ -147,7 +147,7 @@ This app has two components: a FastAPI backend and a Streamlit frontend.
 ### Step 1: Run FastAPI (in Terminal 1)
 
 ```bash
-cd openvino_build_deploy/ai_ref_kits/Visual_Story_Maker
+cd openvino_build_deploy/ai_ref_kits/visual_story_maker
 source venv/bin/activate         # On Windows: venv\Scripts\activate
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
@@ -155,7 +155,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 ### Step 2: Run Streamlit UI (in Terminal 2)
 
 ```bash
-cd openvino_build_deploy/ai_ref_kits/Visual_Story_Maker
+cd openvino_build_deploy/ai_ref_kits/visual_story_maker
 source venv/bin/activate         # On Windows: venv\Scripts\activate
 streamlit run streamlit_app.py
 ```
