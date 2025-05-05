@@ -9,8 +9,6 @@ import sys
 import yaml
 import openvino_genai as ov_genai
 
-# # Import watermark function
-# from utils.demo_utils import draw_ov_watermark
 
 # Import watermark function
 external_utils_path = (Path(__file__).resolve().parents[3] / "demo" / "utils").resolve()
