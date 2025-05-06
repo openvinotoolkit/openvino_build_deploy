@@ -72,7 +72,7 @@ The demo incorporates a new Gradio-based UI (More about [Gradio](https://www.gra
 - A bar plot shows the detected object classes and their frequency.
 - The purchased items are shown as an independent table to contrast them with log messages and detected objects.
 
-The following simple steps is all you need to start the demo:
+The following simple steps are all you need to start the demo:
 
 1. Go to the  ~/oneclickai folder
 2. Run the runDemo.sh script. The YOLO model will be automatically downloaded in case of required. You will see a similar to Figure 4.
