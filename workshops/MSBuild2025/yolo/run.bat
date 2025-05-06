@@ -12,7 +12,7 @@ echo Activating virtual environment...
 call venv\Scripts\activate.bat
 
 :: Run the application
-echo Running YOLO Demo..
+echo Running YOLO Demo...
 python yoloe_openvino.py
 
 :: Keep console open after execution
