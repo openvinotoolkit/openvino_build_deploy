@@ -15,6 +15,7 @@ Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope CurrentUser
 ```
 
 ### Install the packages (may take a while)
+Double-click on the `install.bat` script to set up the environment automatically, or alternatively use the following instructions for manual installation.
 ```
 python -m venv openvino_venv
 openvino_venv\Scripts\activate
@@ -36,6 +37,7 @@ python -c "from openvino import Core; print(Core().available_devices)"
 Now your environment is ready for trying out the demos. 
 - [chat sample](https://github.com/raymondlo84Fork/MSBuild2025/tree/main/openvino_genai/chat_sample)
 - [whisper](https://github.com/raymondlo84Fork/MSBuild2025/tree/main/openvino_genai/whisper)
+
 
 ## References:
 NPU with OpenVINO GenAI: https://docs.openvino.ai/2025/openvino-workflow-generative/inference-with-genai/inference-with-genai-on-npu.html
