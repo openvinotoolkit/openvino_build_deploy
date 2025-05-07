@@ -3,7 +3,7 @@
 ![image](https://github.com/user-attachments/assets/8fcd323c-6a72-47aa-accd-26ed311b9b77)
 
 ## Install 
-Double click on the `install.bat` script will set up all dependencies automatically. Alternatively, you can enter the following manually. 
+Double-clicking the `install.bat` script sets up all dependencies automatically; alternatively, run the following commands manually.
 
 ```
 python -m venv venv
