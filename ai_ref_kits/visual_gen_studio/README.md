@@ -72,7 +72,7 @@ To clone the repository and navigate into the directory , run the following comm
 
 ```bash
 git clone https://github.com/AnishaUdayakumar/openvino_build_deploy.git
-cd openvino_build_deploy/ai_ref_kits/visual_story_maker
+cd openvino_build_deploy/ai_ref_kits/visual_gen_studio
 ```
 
 ### 3. Create a Virtual Environment
@@ -126,7 +126,7 @@ python convert_and_optimize_llm.py
 ### Convert the Image Generation Model
 
 ```bash
-python convert_and_optimize_texttoimage.py
+python convert_and_optimize_text2image.py
 ```
 
 The script will then handle download, export, and OpenVINO optimization automatically.
@@ -135,7 +135,7 @@ Alternatively, you can also run the scripts non-interactively by directly specif
 
 ```bash
 python convert_and_optimize_llm.py --chat_model_type qwen2-7B --precision int4
-python convert_and_optimize_texttoimage.py --image_model_type flux.1-schnell --precision int4
+python convert_and_optimize_text2image.py --image_model_type flux.1-schnell --precision int4
 ```
 
 ---
