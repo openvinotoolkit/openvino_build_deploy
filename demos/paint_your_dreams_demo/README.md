@@ -15,11 +15,6 @@ Check "Generate endlessly" to generate a new image just after the previous has a
 
 If you want a **quick setup** without manually installing dependencies, use the provided installer scripts. These scripts will **automatically configure** everything needed to run the Paint your Dreams Demo.
 
-Before running these scripts, make sure you’re inside the `setup/` folder:
-```shell
-cd openvino_build_deploy/demos/paint_your_dreams_demo/setup
-```
-
 ### **For Windows**
 1. Download the `install.bat` and `run.bat` files to your local directory.
 2. Double-click `install.bat` to install dependencies and set up the environment.
