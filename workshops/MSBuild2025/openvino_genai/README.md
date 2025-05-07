@@ -15,8 +15,7 @@ Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope CurrentUser
 ```
 
 ### Install the packages (may take a while)
-You can double click on the `install.bat` to setup the environment with the provided script. Alternatively, you can install manually with the instructions below for debugging and learning purposes.
-
+Double-click on the `install.bat` script to set up the environment automatically, or alternatively use the following instructions for manual installation.
 ```
 python -m venv openvino_venv
 openvino_venv\Scripts\activate
