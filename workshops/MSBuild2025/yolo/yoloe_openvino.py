@@ -12,12 +12,14 @@ model = YOLOE(model_name)
 names = ["person", "cup", "sunglasses", "black keyboard", "white keyboard"]
 model.set_classes(names, model.get_text_pe(names))
 
+# Dynamic shape is disabled for NPU. 
+#Please enable dynamic shape if we are using CPU or GPU
 model.export(format="openvino", dynamic=False, half=True)
 
 model_ov = YOLO(ov_model_name)
 video_cap = cv2.VideoCapture(0)
-video_cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-video_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+#video_cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+#video_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
 while True:
 	ret, frame = video_cap.read()
