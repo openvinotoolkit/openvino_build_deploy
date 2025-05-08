@@ -178,10 +178,10 @@ def load_tts_model() -> None:
     nltk.download('averaged_perceptron_tagger_eng')
 
     # CPU is sufficient for real-time inference.
-    model = TTS(language='EN', device='cpu')
+    ov_tts_model = TTS(language='EN', device='cpu')
     
     # Compile the model with OpenVINO backend for accelerated inference
-    ov_tts_model = torch.compile(model, backend='openvino')
+    ov_tts_model.model.infer = torch.compile(ov_tts_model.model.infer, backend='openvino')
 
     log.info(f"Running {type(ov_tts_model).__name__} on {ov_tts_model.device.__str__().upper()}")
 
@@ -353,8 +353,8 @@ def synthesize(conversation: List[List[str]], audio: Tuple[int, np.ndarray]) -> 
         Chatbot voice response (audio)
     """
     # if audio wasn't used in the conversation, return None
-    # if not audio:
-    #     return None
+    if not audio:
+        return None
 
     prompt = conversation[-1][1]
 
