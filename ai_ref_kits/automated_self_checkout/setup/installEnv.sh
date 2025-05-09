@@ -44,10 +44,10 @@ else
 fi
 
 # Move the remaining scripts to the current installEnv.sh location
-if [[ -d "openvino_build_deploy/ai_ref_kits/automated_self_checkout/scripts" ]]; then
+if [[ -d "openvino_build_deploy/ai_ref_kits/automated_self_checkout/setup" ]]; then
 	for ovscript in "${ovscripts[@]}"; do
 
-		cp openvino_build_deploy/ai_ref_kits/automated_self_checkout/scripts/$ovscript .
+		cp openvino_build_deploy/ai_ref_kits/automated_self_checkout/setup/$ovscript .
 		if [[ $? -eq 0 ]]; then
 			mess_oki "The $ovscript script has been copied"
 		else
@@ -55,7 +55,7 @@ if [[ -d "openvino_build_deploy/ai_ref_kits/automated_self_checkout/scripts" ]];
 		fi
 	done
 else
-	mess_war "The openvino_build_deploy/ai_ref_kits/automated_self_checkout/scripts folder does not exist"
+	mess_war "The openvino_build_deploy/ai_ref_kits/automated_self_checkout/setup folder does not exist"
 fi
 
 mess_inf "Entering into the openvino_build_deploy/ai_ref_kits/automated_self_checkout folder..."

@@ -26,9 +26,9 @@ sudo apt-get update -y && sudo apt-get upgrade -y
 sudo apt-get install wget
 sudo apt autoremove -y
 
-wget https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/ai_ref_kits/automated_self_checkout/scripts/utilities.sh -O utilities.sh
+wget https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/ai_ref_kits/automated_self_checkout/setup/utilities.sh -O utilities.sh
 
-wget https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/ai_ref_kits/automated_self_checkout/scripts/installEnv.sh -O installEnv.sh
+wget https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/ai_ref_kits/automated_self_checkout/setup/installEnv.sh -O installEnv.sh
 
 sudo chmod +x utilities.sh
 sudo chmod +x installEnv.sh
