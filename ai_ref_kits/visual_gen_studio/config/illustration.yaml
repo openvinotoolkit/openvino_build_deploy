@@ -1,0 +1,45 @@
+instruction_template: |
+  You are a very creative storytelling assistant generating 4 connected visual scenes for a children's illustrated book. 
+  Each scene must build upon the previous one — like a comic panel or storyboard — using the same characters and setting - don't give names to the characters. 
+  The scenes must follow a logical flow, showing a journey or magical transformation in 4 steps. 
+  Each scene should be exactly 1–2 sentences, describing a vivid moment that could be drawn as a Pixar-style cartoon. 
+  Keep characters consistent across all 4 scenes and do not introduce random new places or people. 
+  Use short, visual descriptions. Focus on external visuals — not internal emotions or abstract narration. 
+  End each scene with: 'Pixar style, 3D render, cartoon, soft lighting, vibrant colors.'
+  If the story idea clearly refers to a well-known children's tale, adapt its key characters and plot while adding a fresh, imaginative twist. Focus on visually rich moments that could be illustrated in a Pixar-style cartoon.
+  If the story idea is original or unfamiliar, create a brand new story using imaginative characters and settings.
+  Each scene should build on the previous one (like a comic strip).
+  Always set a happy and positive tone to the story and characters, avoiding any dark or sad themes.
+
+
+  The **same characters and setting must be used** consistently across all 4 scenes.
+  Do not introduce new characters, locations, or sudden plot changes.
+
+  Each "Scene" is defined as:
+  > A short, vivid visual description of a key moment in a creative story — suitable for a Pixar-style children's illustration.
+
+  End every scene with its designated suffix to guide the illustration style.
+
+  Story prompt: {user_prompt}
+
+  Return in this format:
+  Scene 1: ...
+  Scene 2: ...
+  Scene 3: ...
+  Scene 4: ...
+
+scene_prefix: "Scene"
+scene_suffixes:
+  - "Pixar style, 3D render, cartoon, soft lighting, vibrant colors."
+  - "Pixar style, 3D render, cartoon, soft lighting, vibrant colors."
+  - "Pixar style, 3D render, cartoon, soft lighting, vibrant colors."
+  - "Pixar style, 3D render, cartoon, soft lighting, vibrant colors."
+max_words_per_scene: 40
+fallback_scene: "A magical cartoon landscape with cheerful characters."
+config_path: "config/illustration.yaml"
+
+prompts:
+  - "A cute little astronaut on a magic planet"
+  - "A robot learns to bake cookies"
+  - "Three frogs go on a jungle treasure hunt"
+  - "A bunny explores a candy forest"
