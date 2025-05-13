@@ -4,23 +4,30 @@
 # Visual Gen Studio with OpenVINO™ Toolkit  
 Transform a single creative prompt into a vivid illustrated story or artistic T-shirt design using optimized LLMs and text-to-image models.
 
-[![Apache License](https://img.shields.io/badge/license-Apache_2.0-green.svg)](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/LICENSE.txt)
-
+  <h4>
+    <a href="https://www.intel.com/content/www/us/en/developer/topic-technology/edge-5g/open-potential.html">🏠&nbsp;About&nbsp;the&nbsp;Kits&nbsp;·</a>
+  </h4>
 </div>
+
+[![Apache License](https://img.shields.io/badge/license-Apache_2.0-green.svg)](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/LICENSE.txt)
 
 ---
 
-## Overview
+The Visual Gen Studio is a multimodal generative AI reference kit that demonstrates how large language models (LLMs) and diffusion-based image generation models can work together in a creative pipeline. It allows users to transform a single text prompt into detailed illustrated stories or stylized T-shirt design concepts, using optimized models for local deployment.
 
-The Visual Gen Studio is designed to turn user prompts into either a multi-scene illustrated story or visually striking T-shirt design concepts. 
-By combining large language models with image generation pipelines, the application demonstrates how OpenVINO™ can accelerate multimodal generative AI workflows across CPU, iGPU, and GPU devices.
+By combining LLM-driven prompt generation with image synthesis, the application shows how OpenVINO™ can accelerate multimodal generative AI workflows across Intel® NPUs, CPUs, integrated GPUs, and discrete GPUs. Visual Gen Studio delivers a complete pipeline, covering prompt input, scene generation, visual rendering, and PDF export.
+
+This kit serves as a practical foundation for building real-world applications in storytelling, branding, education, and other creative domains powered by generative AI.
 
 This kit uses the following technology stack:
 
 - [OpenVINO Toolkit](https://docs.openvino.ai/)
-- [OpenVINO™ GenAI](https://docs.openvino.ai/2025/openvino-workflow-generative/inference-with-genai.html) and [Optimum Intel](https://docs.openvino.ai/2025/openvino-workflow-generative/inference-with-optimum-intel.html) for model optimization and inference
-- Qwen2-7B (LLM), FLUX.1 (text-to-image) - both optimized with OpenVINO
-- Streamlit (frontend) and FastAPI (backend)
+- [OpenVINO™ GenAI](https://docs.openvino.ai/2025/openvino-workflow-generative/inference-with-genai.html)
+- [Optimum Intel](https://docs.openvino.ai/2025/openvino-workflow-generative/inference-with-optimum-intel.html)
+- [Qwen2-7B](https://huggingface.co/Qwen/Qwen2.5-7B-Instruct) (LLM)
+- [FLUX.1](https://github.com/black-forest-labs/flux) (text-to-image)
+- [Streamlit](https://docs.streamlit.io/) (frontend)
+- [FastAPI](https://fastapi.tiangolo.com/) (backend)
 
 Check out our [AI Reference Kits repository](https://github.com/openvinotoolkit/openvino_build_deploy) for other kits.
 
@@ -28,7 +35,7 @@ Check out our [AI Reference Kits repository](https://github.com/openvinotoolkit/
 
 ---
 
-## Kit Structure
+## What's Included
 
 This project includes:
 
@@ -39,6 +46,21 @@ This project includes:
 - **PDF output** generation
 
 ---
+### What's New
+
+New updates will be added to this contents list.
+
+<details open><summary><b>Table of Contents</b></summary>
+  
+- [Getting Started](#getting-started)
+  - [Install Prerequisites](#install-prerequisites)
+  - [Set Up Your Environment](#set-up-your-environment)
+  - [Convert and Optimize the Model](#convert-and-optimize-the-model)
+  - [Run the Application](#run-the-application)
+-  [Try it Out](#try-it-out) 
+- [Additional Resources](#additional-resources)
+
+</details>
 
 ## Getting Started
 
@@ -48,7 +70,7 @@ Now, let's dive into the steps starting with installing Python. We recommend usi
 
 Star the [repository](https://github.com/openvinotoolkit/openvino_build_deploy) (optional, but recommended :))
 
-### 1. Prerequisites
+### Install Prerequisites
 
 This project requires Python 3.10 or higher and a few libraries. If you don't have Python installed on your machine, go to https://www.python.org/downloads/ and download the latest version for your operating system. Follow the prompts to install Python, making sure to check the option to add Python to your PATH environment variable.
 
@@ -65,17 +87,20 @@ sudo apt update
 sudo apt install git git-lfs python3-venv python3-dev
 git lfs install
 ```
+## Set Up Your Environment
 
-### 2. Clone the Repository
+To set up your environment, you first clone the repository, then create a virtual environment, activate the environment, and install the packages.
 
-To clone the repository and navigate into the directory , run the following command:
+### Clone the Repository
+
+To clone the repository and navigate into the directory, run the following command:
 
 ```bash
 git clone https://github.com/AnishaUdayakumar/openvino_build_deploy.git
 cd openvino_build_deploy/ai_ref_kits/visual_gen_studio
 ```
 
-### 3. Create a Virtual Environment
+### Create a Virtual Environment
 
 To create a virtual environment, open your terminal or command prompt and navigate to the directory where you want to create the environment. Then, run the following command to create and activate the environment:
 
@@ -84,7 +109,7 @@ python3 -m venv venv
 source venv/bin/activate   # On Windows: venv\Scripts\activate
 ```
 
-### 4. Install Python Dependencies
+### Install Python Dependencies
 
 To install the required packages, run the following commands:
 
@@ -95,7 +120,7 @@ pip install -r requirements.txt
 
 ---
 
-## Model Conversion
+## Convert and Optimize the Model
 
 ### Accessing Gated Models with Hugging Face
 
@@ -164,7 +189,7 @@ Once both servers are up, the browser will open to `http://localhost:8501`.
 
 ---
 
-## Example Prompts
+## Try it Out
 
 Illustration mode:
 - "A bunny explores a candy forest"
