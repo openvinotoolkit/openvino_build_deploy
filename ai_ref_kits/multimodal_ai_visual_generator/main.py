@@ -44,37 +44,13 @@ qwen_model_dir = PROJECT_ROOT / "models" / f"{QWEN_MODEL_TYPE}-{PRECISION.upper(
 
 # ---------- Auto-export Flux model if missing ----------
 if not flux_model_dir.exists():
-    print(f"?? Model path {flux_model_dir} not found. Attempting to export...")
-    try:
-        subprocess.run([
-            "python", "convert_and_optimize_text2image.py",
-            "--image_model_type", FLUX_MODEL_TYPE,
-            "--precision", PRECISION,
-            "--model_dir", "models"
-        ], cwd=PROJECT_ROOT, check=True)
-    except Exception as e:
-        print(f"? Failed to export Flux model: {e}")
-        sys.exit(1)
-    if not flux_model_dir.exists():
-        print(f"? Still missing model folder: {flux_model_dir}")
-        sys.exit(1)
+    print(f"? Required model not found at {flux_model_dir}. Please export it before running the app.")
+    sys.exit(1)
 
 # ---------- Auto-export Qwen model if missing ----------
 if not qwen_model_dir.exists():
-    print(f"?? Model path {qwen_model_dir} not found. Attempting to export...")
-    try:
-        subprocess.run([
-            "python", "convert_and_optimize_llm.py",
-            "--chat_model_type", QWEN_MODEL_TYPE,
-            "--precision", PRECISION,
-            "--model_dir", "models"
-        ], cwd=PROJECT_ROOT, check=True)
-    except Exception as e:
-        print(f"? Failed to export Qwen model: {e}")
-        sys.exit(1)
-    if not qwen_model_dir.exists():
-        print(f"? Still missing model folder: {qwen_model_dir}")
-        sys.exit(1)
+    print(f"? Required model not found at {qwen_model_dir}. Please export it before running the app.")
+    sys.exit(1)
 
 # ---------- Load Config ----------
 with open(CONFIG_PATH, "r") as f:
