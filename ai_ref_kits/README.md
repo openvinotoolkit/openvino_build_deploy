@@ -13,10 +13,9 @@
 	- [🛍️ Automated Self-Checkout](#%EF%B8%8F-automated-self-checkout)
 	- [🗣️ Custom AI Assistant](#%EF%B8%8F-custom-ai-assistant)
 	- [🔦 Explainable AI](#-explainable-ai)
-	- [🖼️ Multimodal AI Visual Generator](#%EF%B8%8F-multimodal-ai-visual-generator)
 	- [💬 Conversational AI Chatbot](#-conversational-ai-chatbot)
 	- [🛒 AI Insight Agent with RAG](#-AI-Insight-Agent-with-RAG)
-	- [🎨 Visual Gen Studio](#-visual-gen-studio)
+   	- [🎨 Multimodal AI Visual Generator](#-multimodal-ai-visual-generator)
 
 - [Troubleshooting and Resources](#troubleshooting-and-resources)
 
@@ -97,17 +96,6 @@ The Custom AI Assistant, powered by the OpenVINO™ toolkit, integrates voice-ac
 
 Understanding why computer vision models make certain predictions using data and model explainability can help us refine our models to be more efficient and performant. This solution demonstrates how to leverage the OpenVINO™ toolkit, Datumaro, and Ultralytics to generate data quality measurements and saliency maps to understand the predictions and performance of computer vision models during inference.
 
-### 🖼️ Multimodal AI Visual Generator
-![multimodal-ai-visual-generator](https://github.com/user-attachments/assets/2144ae33-9e41-4e48-9992-ddec17ef5579)
-
-| [Multimodal AI Visual Generator](multimodal_ai_visual_generator) |  |
-| - | - |
-| Related AI concepts | image generation, automatic speech recognition, natural language processing |
-| Example industries | retail, education​, entertainment |
-| Demo | |
-
-An in-depth demo of how the Multimodal AI Visual Generator Kit creates a real-time visual generative AI workflow. This allows the intake of multimodal inputs from sources like a camera, voice, or typed text to produce visual outputs driven by AI models like Whisper, Llama, nanoLLaVA, and Latent Consistency Models.
-
 ### 💬 Conversational AI Chatbot
 [![conversational-ai-chatbot](https://github.com/user-attachments/assets/262ba878-b845-445b-aff7-0a118517d409)](conversational-ai-chatbot)
 
@@ -131,16 +119,16 @@ This kit demonstrates the AI Chatbot’s capabilities by simulating the experien
 
 The AI Insight Agent with RAG uses Large Language Models (LLMs) and Retrieval-Augmented Generation (RAG) to interpret user prompts, engage in meaningful dialogue, perform calculations, use RAG techniques to improve its knowledge and interact with the user to add items to a virtual shopping cart.
 
-### 🎨 Visual Gen Studio
+### 🎨 Multimodal AI Visual Generator
 ![visual-gen-studio](https://github.com/user-attachments/assets/43d6e473-19c1-4047-aee1-07a484cd0dc1)
 
-| [Visual Gen Studio](visual_gen_studio) |  |
+| [Multimodal AI Visual Generator](multimodal_ai_visual_generator) |  |
 | - | - |
 | Related AI concepts | Large Language Models (LLMs), Image Generation, Multimodal AI |
 | Example industries |  Retail and E-commerce, Creative Design, Digital Marketing |
 | Demo |  |
 
-Visual Gen Studio is a generative AI reference kit that transforms a single creative prompt into either a multi-scene illustrated story or a set of stylized T-shirt design ideas. The pipeline combines an instruction-tuned LLM (Qwen2) and a diffusion-based image generator (FLUX.1), both optimized with OpenVINO™. The kit features a FastAPI backend and Streamlit UI for a responsive, end-to-end user experience, and supports PDF export for sharing outputs.
+Multimodal AI Visual Generator is a generative AI reference kit that transforms a single creative prompt into either a multi-scene illustrated story or a set of stylized T-shirt design ideas. The pipeline combines an instruction-tuned LLM (Qwen2) and a diffusion-based image generator (FLUX.1), both optimized with OpenVINO™. The kit features a FastAPI backend and Streamlit UI for a responsive, end-to-end user experience, and supports PDF export for sharing outputs.
 
 ## Troubleshooting and Resources
 - Open a [discussion topic](https://github.com/openvinotoolkit/openvino_build_deploy/discussions)
