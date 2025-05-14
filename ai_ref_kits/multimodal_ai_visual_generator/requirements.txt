@@ -24,6 +24,7 @@ fpdf==1.7.2
 # FastAPI Backend
 fastapi==0.115.12
 uvicorn==0.34.2
+click>=8.0
 
 # Utility
 opencv-python==4.11.0.86

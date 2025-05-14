@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
@@ -7,6 +7,7 @@ from PIL import Image
 import base64
 import sys
 import yaml
+import subprocess
 import openvino_genai as ov_genai
 
 
@@ -32,27 +33,57 @@ app.add_middleware(
 PROJECT_ROOT = Path(__file__).resolve().parent
 CONFIG_PATH = PROJECT_ROOT / "config" / "illustration.yaml"
 
-flux_model_dir = PROJECT_ROOT / "models" / "flux.1-schnell-INT4"
-qwen_model_dir = PROJECT_ROOT / "models" / "qwen2-7B-INT4"
+
+FLUX_MODEL_TYPE = "flux.1-schnell"
+QWEN_MODEL_TYPE = "qwen2-7B"
+PRECISION = "int4"
+
+flux_model_dir = PROJECT_ROOT / "models" / f"{FLUX_MODEL_TYPE}-{PRECISION.upper()}"
+qwen_model_dir = PROJECT_ROOT / "models" / f"{QWEN_MODEL_TYPE}-{PRECISION.upper()}"
+
+
+# ---------- Auto-export Flux model if missing ----------
+if not flux_model_dir.exists():
+    print(f"?? Model path {flux_model_dir} not found. Attempting to export...")
+    try:
+        subprocess.run([
+            "python", "convert_and_optimize_text2image.py",
+            "--image_model_type", FLUX_MODEL_TYPE,
+            "--precision", PRECISION,
+            "--model_dir", "models"
+        ], cwd=PROJECT_ROOT, check=True)
+    except Exception as e:
+        print(f"? Failed to export Flux model: {e}")
+        sys.exit(1)
+    if not flux_model_dir.exists():
+        print(f"? Still missing model folder: {flux_model_dir}")
+        sys.exit(1)
+
+# ---------- Auto-export Qwen model if missing ----------
+if not qwen_model_dir.exists():
+    print(f"?? Model path {qwen_model_dir} not found. Attempting to export...")
+    try:
+        subprocess.run([
+            "python", "convert_and_optimize_llm.py",
+            "--chat_model_type", QWEN_MODEL_TYPE,
+            "--precision", PRECISION,
+            "--model_dir", "models"
+        ], cwd=PROJECT_ROOT, check=True)
+    except Exception as e:
+        print(f"? Failed to export Qwen model: {e}")
+        sys.exit(1)
+    if not qwen_model_dir.exists():
+        print(f"? Still missing model folder: {qwen_model_dir}")
+        sys.exit(1)
 
 # ---------- Load Config ----------
 with open(CONFIG_PATH, "r") as f:
     config = yaml.safe_load(f)
     
 # ---------- Load Flux Text2Image Model ----------
-if not flux_model_dir.exists():
-    print(f"Model path {flux_model_dir} not found.")
-    sys.exit(0)
-
-print("Loading Flux text-to-image model...")
 flux_pipe = ov_genai.Text2ImagePipeline(flux_model_dir, device="GPU")
 
 # ---------- Load Qwen LLM Model ----------
-if not qwen_model_dir.exists():
-    print(f"Model path {qwen_model_dir} not found.")
-    sys.exit(0)
-
-print("Loading Qwen LLM model...")
 llm_pipe = ov_genai.LLMPipeline(str(qwen_model_dir), device="GPU")
 llm_config = ov_genai.GenerationConfig()
 llm_config.max_new_tokens = 256
@@ -65,9 +96,7 @@ class PromptRequest(BaseModel):
 class StoryRequest(BaseModel):
     prompt: str
 
-# ---------- LLM Endpoint (Story Splitter) ----------
-from fastapi import Request
-
+# ---------- LLM Endpoint (Story Splitter) ---------
 @app.post("/generate_story_prompts")
 def generate_story_prompts(request: StoryRequest, req: Request):
     config_type = req.query_params.get("config", "illustration")
@@ -77,8 +106,6 @@ def generate_story_prompts(request: StoryRequest, req: Request):
     with open(config_file, "r") as f:
         config = yaml.safe_load(f)
 
-# @app.post("/generate_story_prompts")
-# def generate_story_prompts(request: StoryRequest):
     user_prompt = request.prompt
 
     instruction = config["instruction_template"].replace("{user_prompt}", user_prompt)
