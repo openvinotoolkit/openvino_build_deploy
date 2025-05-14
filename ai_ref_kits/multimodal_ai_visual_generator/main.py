@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pathlib import Path
 from io import BytesIO
 from PIL import Image
@@ -41,26 +42,32 @@ PRECISION = "int4"
 flux_model_dir = PROJECT_ROOT / "models" / f"{FLUX_MODEL_TYPE}-{PRECISION.upper()}"
 qwen_model_dir = PROJECT_ROOT / "models" / f"{QWEN_MODEL_TYPE}-{PRECISION.upper()}"
 
-
-# ---------- Auto-export Flux model if missing ----------
-if not flux_model_dir.exists():
-    print(f"? Required model not found at {flux_model_dir}. Please export it before running the app.")
-    sys.exit(1)
-
-# ---------- Auto-export Qwen model if missing ----------
-if not qwen_model_dir.exists():
-    print(f"? Required model not found at {qwen_model_dir}. Please export it before running the app.")
-    sys.exit(1)
-
 # ---------- Load Config ----------
 with open(CONFIG_PATH, "r") as f:
     config = yaml.safe_load(f)
-    
-# ---------- Load Flux Text2Image Model ----------
-flux_pipe = ov_genai.Text2ImagePipeline(flux_model_dir, device="GPU")
 
-# ---------- Load Qwen LLM Model ----------
-llm_pipe = ov_genai.LLMPipeline(str(qwen_model_dir), device="GPU")
+# ---------- Lazy load models if available ----------
+flux_pipe = None
+qwen_pipe = None
+
+if flux_model_dir.exists():
+    try:
+        flux_pipe = ov_genai.Text2ImagePipeline(flux_model_dir, device="GPU")
+        print("? Flux model loaded.")
+    except Exception as e:
+        print(f"?? Failed to load Flux model: {e}")
+else:
+    print(f"?? Flux model not found at {flux_model_dir}")
+
+if qwen_model_dir.exists():
+    try:
+        qwen_pipe = ov_genai.LLMPipeline(str(qwen_model_dir), device="GPU")
+        print("? Qwen model loaded.")
+    except Exception as e:
+        print(f"?? Failed to load Qwen model: {e}")
+else:
+    print(f"?? Qwen model not found at {qwen_model_dir}")
+    
 llm_config = ov_genai.GenerationConfig()
 llm_config.max_new_tokens = 256
 llm_config.apply_chat_template = False
@@ -75,6 +82,8 @@ class StoryRequest(BaseModel):
 # ---------- LLM Endpoint (Story Splitter) ---------
 @app.post("/generate_story_prompts")
 def generate_story_prompts(request: StoryRequest, req: Request):
+    if not qwen_pipe:
+        return JSONResponse(status_code=503, content={"error": "Qwen model not available. Please export it before using this endpoint."})
     config_type = req.query_params.get("config", "illustration")
     config_file = PROJECT_ROOT / "config" / f"{config_type}.yaml"
     if not config_file.exists():
@@ -136,6 +145,9 @@ def generate_story_prompts(request: StoryRequest, req: Request):
 # ---------- Flux Endpoint (Image Generator) ----------
 @app.post("/generate_images")
 def generate_image(request: PromptRequest):
+    if not flux_pipe:
+        return JSONResponse(status_code=503, content={"error": "Flux model not available. Please export it before using this endpoint."})
+
     prompt = request.prompt
     height = 512
     width = 512
