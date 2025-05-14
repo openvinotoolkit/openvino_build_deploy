@@ -35,38 +35,38 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 CONFIG_PATH = PROJECT_ROOT / "config" / "illustration.yaml"
 
 
-FLUX_MODEL_TYPE = "flux.1-schnell"
-QWEN_MODEL_TYPE = "qwen2-7B"
+IMAGE_MODEL_TYPE = "flux.1-schnell"
+LLM_MODEL_TYPE = "qwen2-7B"
 PRECISION = "int4"
 
-flux_model_dir = PROJECT_ROOT / "models" / f"{FLUX_MODEL_TYPE}-{PRECISION.upper()}"
-qwen_model_dir = PROJECT_ROOT / "models" / f"{QWEN_MODEL_TYPE}-{PRECISION.upper()}"
+image_model_dir = PROJECT_ROOT / "models" / f"{IMAGE_MODEL_TYPE}-{PRECISION.upper()}"
+llm_model_dir = PROJECT_ROOT / "models" / f"{LLM_MODEL_TYPE}-{PRECISION.upper()}"
 
 # ---------- Load Config ----------
 with open(CONFIG_PATH, "r") as f:
     config = yaml.safe_load(f)
 
 # ---------- Lazy load models if available ----------
-flux_pipe = None
-qwen_pipe = None
+image_pipe = None
+llm_pipe = None
 
-if flux_model_dir.exists():
+if image_model_dir.exists():
     try:
-        flux_pipe = ov_genai.Text2ImagePipeline(flux_model_dir, device="GPU")
-        print("? Flux model loaded.")
+        image_pipe = ov_genai.Text2ImagePipeline(image_model_dir, device="GPU")
+        print("Image model loaded.")
     except Exception as e:
-        print(f"?? Failed to load Flux model: {e}")
+        print(f"Failed to load Image model: {e}")
 else:
-    print(f"?? Flux model not found at {flux_model_dir}")
+    print(f"Image model not found at {image_model_dir}")
 
-if qwen_model_dir.exists():
+if llm_model_dir.exists():
     try:
-        qwen_pipe = ov_genai.LLMPipeline(str(qwen_model_dir), device="GPU")
-        print("? Qwen model loaded.")
+        llm_pipe = ov_genai.LLMPipeline(str(llm_model_dir), device="GPU")
+        print("LLM model loaded.")
     except Exception as e:
-        print(f"?? Failed to load Qwen model: {e}")
+        print(f"Failed to load LLM model: {e}")
 else:
-    print(f"?? Qwen model not found at {qwen_model_dir}")
+    print(f"LLM model not found at {llm_model_dir}")
     
 llm_config = ov_genai.GenerationConfig()
 llm_config.max_new_tokens = 256
@@ -82,8 +82,8 @@ class StoryRequest(BaseModel):
 # ---------- LLM Endpoint (Story Splitter) ---------
 @app.post("/generate_story_prompts")
 def generate_story_prompts(request: StoryRequest, req: Request):
-    if not qwen_pipe:
-        return JSONResponse(status_code=503, content={"error": "Qwen model not available. Please export it before using this endpoint."})
+    if not llm_pipe:
+        return JSONResponse(status_code=503, content={"error": "LLM model not available. Please export it before using this endpoint."})
     config_type = req.query_params.get("config", "illustration")
     config_file = PROJECT_ROOT / "config" / f"{config_type}.yaml"
     if not config_file.exists():
@@ -142,11 +142,11 @@ def generate_story_prompts(request: StoryRequest, req: Request):
    
     return {"scenes": final_scenes}
 
-# ---------- Flux Endpoint (Image Generator) ----------
+# ---------- Image Model Endpoint (Image Generator) ----------
 @app.post("/generate_images")
 def generate_image(request: PromptRequest):
-    if not flux_pipe:
-        return JSONResponse(status_code=503, content={"error": "Flux model not available. Please export it before using this endpoint."})
+    if not image_pipe:
+        return JSONResponse(status_code=503, content={"error": "Image model not available. Please export it before using this endpoint."})
 
     prompt = request.prompt
     height = 512
@@ -161,7 +161,7 @@ def generate_image(request: PromptRequest):
         sys.stdout.flush()
         return False
 
-    result = flux_pipe.generate(
+    result = image_pipe.generate(
         prompt=prompt,
         num_inference_steps=steps,
         generator=generator,
@@ -185,4 +185,4 @@ def generate_image(request: PromptRequest):
 # ---------- Server Start Print ----------
 print("FastAPI backend is running.")
 print("In a separate terminal, start the Streamlit app using:")
-print("streamlit run app.py")
+print("streamlit run streamlit_app.py")
