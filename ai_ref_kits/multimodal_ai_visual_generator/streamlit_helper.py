@@ -286,7 +286,7 @@ def render_image_generation_page():
         image_paths = []
         for img, caption in st.session_state.generated_images:
             pdf.add_page()
-            img_path = f"temp_image_{hash(caption)}.png"
+            img_path = f"temp_image_{uuid.uuid4().hex}.png"
             img.save(img_path)
             image_paths.append(img_path)
             pdf.image(img_path, w=180)
