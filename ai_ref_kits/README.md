@@ -97,7 +97,7 @@ The Custom AI Assistant, powered by the OpenVINO™ toolkit, integrates voice-ac
 Understanding why computer vision models make certain predictions using data and model explainability can help us refine our models to be more efficient and performant. This solution demonstrates how to leverage the OpenVINO™ toolkit, Datumaro, and Ultralytics to generate data quality measurements and saliency maps to understand the predictions and performance of computer vision models during inference.
 
 ### 🎨 Multimodal AI Visual Generator
-![visual-gen-studio](https://github.com/user-attachments/assets/43d6e473-19c1-4047-aee1-07a484cd0dc1)
+![multimodal-ai-visual-generator](https://github.com/user-attachments/assets/43d6e473-19c1-4047-aee1-07a484cd0dc1)
 
 | [Multimodal AI Visual Generator](multimodal_ai_visual_generator) |  |
 | - | - |
