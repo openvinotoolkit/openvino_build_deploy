@@ -7,6 +7,7 @@ from io import BytesIO
 from fpdf import FPDF
 import os
 import yaml
+import uuid
 import streamlit.components.v1 as components
 
 # ------------------ Dark Theme Styling ------------------
