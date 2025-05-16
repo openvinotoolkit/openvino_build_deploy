@@ -138,7 +138,7 @@ The source code of this demo is included in the [self-checkout-recipe.ipynb](sel
 
 ### Cleaning the environment
 
-It removes the OpenVino framework, virtual environment, and associated libraries, leaving the oneclickai folder with the setup scripts. It does not remove the Linux packages (for example, git). You can remove the folder with a simple deletion or use setup scripts to reinstall and run the demo when required.
+It removes the OpenVINO framework, virtual environment, and associated libraries, leaving the oneclickai folder with the setup scripts. It does not remove the Linux packages (for example, git). You can remove the folder with a simple deletion or use setup scripts to reinstall and run the demo when required.
 
 ![Cleaning the Environment](https://github.com/user-attachments/assets/5618339d-682f-474a-b988-c37cc487f30b)
 **Figure 6. Cleaning the Environment**
