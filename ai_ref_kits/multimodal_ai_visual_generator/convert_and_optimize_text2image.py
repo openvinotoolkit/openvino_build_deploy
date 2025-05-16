@@ -55,12 +55,12 @@ def convert_image_model(model_type: str, precision: str, model_dir: Path) -> Pat
     if output_dir.exists():
         missing = [f for f in CRITICAL_FILES if not (output_dir / f).exists()]
         if not missing:
-            print(f"\n✅ Model already exported at: {output_dir}")
-            print("ℹ️ Skipping re-export.\n")
+            print(f"Model already exported at: {output_dir}")
+            print("Skipping re-export.\n")
             return output_dir
         else:
-            print(f"\n⚠️ Export folder exists but missing files: {missing}")
-            print("🔁 Re-exporting model...\n")
+            print(f"Export folder exists but missing files: {missing}")
+            print("Re-exporting model...\n")
 
     run_optimum_export(model_id, output_dir, precision)
 
@@ -82,37 +82,40 @@ def convert_image_model(model_type: str, precision: str, model_dir: Path) -> Pat
     return output_dir
 
 if __name__ == "__main__":
+    model_keys = list(MODEL_MAPPING.keys())
+
     parser = argparse.ArgumentParser(description="Export and optimize a text-to-image model using Optimum + OpenVINO")
-    parser.add_argument("--image_model_type", type=str,
-                        help="Text-to-image model to convert (name or index from list)")
-    parser.add_argument("--precision", type=str, choices=["fp16", "int4"],
-                        default="int4", help="Desired weight format (default: int4)")
-    parser.add_argument("--model_dir", type=str, default="models",
-                        help="Base model output directory (default: models)")
+    parser.add_argument(
+        "--image_model_type",
+        type=str,
+        choices=model_keys,
+        help="Model to convert. If not provided, a list will be shown for interactive selection."
+    )
+    parser.add_argument(
+        "--precision",
+        type=str,
+        choices=["fp16", "int4"],
+        default="int4",
+        help="Desired weight format (default: int4)"
+    )
+    parser.add_argument(
+        "--model_dir",
+        type=str,
+        default="models",
+        help="Base model output directory (default: models)"
+    )
 
     args = parser.parse_args()
-    model_keys = list(MODEL_MAPPING.keys())
-    model_type = args.image_model_type
 
-    if not model_type:
-        print("Available Models:")
+    if not args.image_model_type:
+        print("Available Image Models:")
         for i, key in enumerate(model_keys, start=1):
             print(f"  {i}. {key}")
         choice = input("Enter model number to export: ").strip()
-        if not choice.isdigit() or int(choice) < 1 or int(choice) > len(model_keys):
+        if not choice.isdigit() or not (1 <= int(choice) <= len(model_keys)):
             print("Invalid choice. Exiting.")
             exit(1)
-        model_type = model_keys[int(choice) - 1]
-    elif model_type.isdigit():
-        idx = int(model_type)
-        if 1 <= idx <= len(model_keys):
-            model_type = model_keys[idx - 1]
-        else:
-            print("Invalid model index.")
-            exit(1)
-    elif model_type not in model_keys:
-        print(f"Unknown model: '{model_type}'. Use one of: {model_keys}")
-        exit(1)
+        args.image_model_type = model_keys[int(choice) - 1]
 
-    convert_image_model(model_type, args.precision, Path(args.model_dir))
+    convert_image_model(args.image_model_type, args.precision, Path(args.model_dir))
     print("Conversion and optimization completed.")

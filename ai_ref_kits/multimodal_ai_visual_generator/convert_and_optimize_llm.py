@@ -114,35 +114,40 @@ def convert_chat_model(model_type: str, precision: str, model_dir: Path) -> Path
     return output_dir
 
 if __name__ == "__main__":
+    model_keys = list(MODEL_MAPPING.keys())
+
     parser = argparse.ArgumentParser(description="Export and quantize a chat LLM with OpenVINO")
-    parser.add_argument("--chat_model_type", type=str, help="Model name or index to convert")
-    parser.add_argument("--precision", type=str, choices=["fp16", "int8", "int4"], default="int4",
-                        help="Precision to use (default: int4)")
-    parser.add_argument("--model_dir", type=str, default="models", help="Output directory")
+    parser.add_argument(
+        "--chat_model_type",
+        type=str,
+        choices=model_keys,
+        help="Model type to convert. If not provided, an interactive prompt will be shown."
+    )
+    parser.add_argument(
+        "--precision",
+        type=str,
+        choices=["fp16", "int8", "int4"],
+        default="int4",
+        help="Precision to use (default: int4)"
+    )
+    parser.add_argument(
+        "--model_dir",
+        type=str,
+        default="models",
+        help="Output directory"
+    )
 
     args = parser.parse_args()
-    model_keys = list(MODEL_MAPPING.keys())
-    model_type = args.chat_model_type
 
-    if not model_type:
+    if not args.chat_model_type:
         print("Available Chat Models:")
         for i, key in enumerate(model_keys, start=1):
             print(f"  {i}. {key}")
         choice = input("Enter model number to export: ").strip()
-        if not choice.isdigit() or int(choice) < 1 or int(choice) > len(model_keys):
+        if not choice.isdigit() or not (1 <= int(choice) <= len(model_keys)):
             print("Invalid choice. Exiting.")
             exit(1)
-        model_type = model_keys[int(choice) - 1]
-    elif model_type.isdigit():
-        idx = int(model_type)
-        if 1 <= idx <= len(model_keys):
-            model_type = model_keys[idx - 1]
-        else:
-            print("Invalid model index.")
-            exit(1)
-    elif model_type not in model_keys:
-        print(f"Unknown model: '{model_type}'. Use one of: {model_keys}")
-        exit(1)
+        args.chat_model_type = model_keys[int(choice) - 1]
 
-    convert_chat_model(model_type, args.precision, Path(args.model_dir))
+    convert_chat_model(args.chat_model_type, args.precision, Path(args.model_dir))
     print("Conversion and optimization completed.")
