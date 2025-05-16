@@ -25,7 +25,7 @@ print("Launching FastAPI server...")
 process = subprocess.Popen([sys.executable, "-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8000"])
 
 try:
-    # Wait up to ~130 seconds (130 retries × 1s sleep) for FastAPI server to come up
+    # Wait up to ~130 seconds (130 retries x 1s sleep) for FastAPI server to come up
     for _ in range(130):
         try:
             r = requests.get("http://localhost:8000/docs", timeout=2)

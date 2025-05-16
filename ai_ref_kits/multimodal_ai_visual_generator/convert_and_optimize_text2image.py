@@ -30,6 +30,10 @@ CRITICAL_FILES = [
 ]
 
 def run_optimum_export(model_id: str, output_dir: Path, precision: str):
+    """
+    Run the Optimum CLI export for a given model and precision.
+    Uses OpenVINO as backend with task = text-to-image.
+    """
     cmd = [
         "optimum-cli", "export", "openvino",
         "--model", model_id,
@@ -44,7 +48,47 @@ def run_optimum_export(model_id: str, output_dir: Path, precision: str):
 
     cmd.append(str(output_dir))
 
-    print(f"\n🚀 Exporting with command:\n{' '.join(cmd)}\n")
+    print(f"Exporting with command:\n{' '.join(cmd)}\n")
+    subprocess.run(cmd, shell=(platform.system() == "Windows"), check=True)
+
+def validate_export(output_dir: Path, critical_files: list[str]) -> list[str]:
+    """
+    Check if all expected files exist after export.
+    Logs each file's presence and returns a list of missing files.
+    """
+    print("Verifying exported files:")
+    missing = []
+
+    for file in critical_files:
+        if not (output_dir / file).exists():
+            print(f"Missing: {file}")
+            missing.append(file)
+        else:
+            print(f"Found: {file}")
+
+    if missing:
+        print("Export completed with missing files.")
+    else:
+        print("All critical files verified successfully.")
+
+    return missing
+
+def run_optimum_export(model_id: str, output_dir: Path, precision: str):
+    cmd = [
+        "optimum-cli", "export", "openvino",
+        "--model", model_id,
+        "--task", "text-to-image",
+        "--trust-remote-code",
+    ]
+
+    if precision == "int4":
+        cmd += ["--weight-format", "int4", "--group-size", "64", "--ratio", "1.0"]
+    else:
+        cmd += ["--weight-format", "fp16"]
+
+    cmd.append(str(output_dir))
+
+    print(f"Exporting with command:\n{' '.join(cmd)}\n")
     subprocess.run(cmd, shell=(platform.system() == "Windows"), check=True)
 
 def convert_image_model(model_type: str, precision: str, model_dir: Path) -> Path:
@@ -63,20 +107,7 @@ def convert_image_model(model_type: str, precision: str, model_dir: Path) -> Pat
             print("Re-exporting model...\n")
 
     run_optimum_export(model_id, output_dir, precision)
-
-    print("Verifying exported files:")
-    missing = []
-    for file in CRITICAL_FILES:
-        if not (output_dir / file).exists():
-            print(f"Missing: {file}")
-            missing.append(file)
-        else:
-            print(f"Found: {file}")
-
-    if missing:
-        print("Export completed with missing files.")
-    else:
-        print("All critical files verified successfully.")
+    missing_files = validate_export(output_dir, CRITICAL_FILES)
 
     print(f"Model exported to: {output_dir}\n")
     return output_dir
@@ -117,5 +148,6 @@ if __name__ == "__main__":
             exit(1)
         args.image_model_type = model_keys[int(choice) - 1]
 
+    # Execute model conversion
     convert_image_model(args.image_model_type, args.precision, Path(args.model_dir))
     print("Conversion and optimization completed.")
