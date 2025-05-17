@@ -2,6 +2,7 @@ import argparse
 import json
 from pathlib import Path
 import os
+import logging
 
 from optimum.intel import (
     OVModelForCausalLM,
@@ -10,6 +11,13 @@ from optimum.intel import (
     OVQuantizer
 )
 from transformers import AutoTokenizer
+
+# -------- Logging Setup --------
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(levelname)s] %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 # Extend timeout to avoid HF read failures
 os.environ["HF_HUB_TIMEOUT"] = "60"
@@ -34,40 +42,32 @@ CRITICAL_FILES = [
 ]
 
 def convert_and_save_tokenizer(model_name: str, output_dir: Path):
-    """
-    Saves and converts the tokenizer to OpenVINO format.
-    Adds fallback creation for missing tokenizer configs.
-    """
-    print("Saving tokenizer...")
+    logger.info("Saving tokenizer...")
     tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
     tokenizer.save_pretrained(output_dir)
 
     try:
         from openvino_tokenizers import convert_tokenizer
         import openvino as ov
-        print("Converting and saving OpenVINO tokenizer...")
+        logger.info("Converting and saving OpenVINO tokenizer...")
         ov_tokenizer, ov_detokenizer = convert_tokenizer(tokenizer, with_detokenizer=True)
         ov.save_model(ov_tokenizer, output_dir / "openvino_tokenizer.xml")
         ov.save_model(ov_detokenizer, output_dir / "openvino_detokenizer.xml")
     except ImportError:
-        print("openvino_tokenizers not installed. Skipping OV tokenizer export.")
+        logger.warning("openvino_tokenizers not installed. Skipping OV tokenizer export.")
 
     if not (output_dir / "tokenizer_config.json").exists():
-        print("tokenizer_config.json missing, creating fallback...")
+        logger.warning("tokenizer_config.json missing, creating fallback...")
         (output_dir / "tokenizer_config.json").write_text(
             json.dumps({"tokenizer_class": tokenizer.__class__.__name__}, indent=2)
         )
 
     if not (output_dir / "special_tokens_map.json").exists():
-        print("special_tokens_map.json missing, creating fallback...")
+        logger.warning("special_tokens_map.json missing, creating fallback...")
         (output_dir / "special_tokens_map.json").write_text(json.dumps({}, indent=2))
 
 
 def convert_chat_model(model_type: str, precision: str, model_dir: Path) -> Path:
-    """
-    Loads and exports a chat-based LLM with optional quantization.
-    Skips export if all critical files are already present.
-    """
     base_output_dir = model_dir / model_type
     suffix = "-FP16" if precision == "fp16" else "-INT4" if precision == "int4" else "-INT8"
     output_dir = base_output_dir.with_name(base_output_dir.name + suffix)
@@ -76,24 +76,23 @@ def convert_chat_model(model_type: str, precision: str, model_dir: Path) -> Path
     if output_dir.exists():
         missing = [f for f in CRITICAL_FILES if not (output_dir / f).exists()]
         if not missing:
-            print(f"\n Model already exported at: {output_dir}")
-            print("Skipping re-export.\n")
+            logger.info(f"\n Model already exported at: {output_dir}")
+            logger.info("Skipping re-export.\n")
             return output_dir
         else:
-            print(f"\n Model folder exists but missing files: {missing}")
-            print("Proceeding to re-export...\n")
+            logger.warning(f"\n Model folder exists but missing files: {missing}")
+            logger.info("Proceeding to re-export...\n")
 
-    # Load model from Hugging Face
     model_name = MODEL_MAPPING[model_type]
-    print(f"\n Loading model: {model_name}")
+    logger.info(f"\n Loading model: {model_name}")
     model = OVModelForCausalLM.from_pretrained(model_name, export=True, compile=False, load_in_8bit=False)
 
     if precision == "fp16":
-        print("Converting model to FP16...")
+        logger.info("Converting model to FP16...")
         model.half()
         model.save_pretrained(output_dir)
     else:
-        print(f"Quantizing model to {precision.upper()}...")
+        logger.info(f"Quantizing model to {precision.upper()}...")
         quant_config = OVWeightQuantizationConfig(bits=4, sym=False, ratio=0.8) if precision == "int4" \
                        else OVWeightQuantizationConfig(bits=8, sym=False)
         config = OVConfig(quantization_config=quant_config)
@@ -101,10 +100,9 @@ def convert_chat_model(model_type: str, precision: str, model_dir: Path) -> Path
         quantizer = OVQuantizer.from_pretrained(model, task="text-generation")
         quantizer.quantize(save_directory=output_dir, ov_config=config)
 
-    # Save tokenizer and OV tokenizer
     convert_and_save_tokenizer(model_name, output_dir)
 
-    print("Writing model_index.json...")
+    logger.info("Writing model_index.json...")
     model_index = {
         "model_type": "text-generation",
         "precision": precision.upper(),
@@ -112,22 +110,21 @@ def convert_chat_model(model_type: str, precision: str, model_dir: Path) -> Path
     }
     (output_dir / "model_index.json").write_text(json.dumps(model_index, indent=2))
 
-    # Verify export completeness
-    print("Verifying critical files:")
+    logger.info("Verifying critical files:")
     missing_files = []
     for file in CRITICAL_FILES:
         if not (output_dir / file).exists():
-            print(f"Missing: {file}")
+            logger.error(f"Missing: {file}")
             missing_files.append(file)
         else:
-            print(f"Found: {file}")
+            logger.info(f"Found: {file}")
 
     if missing_files:
-        print("Export completed with missing files.")
+        logger.warning("Export completed with missing files.")
     else:
-        print("Export successful. All critical files are present.")
+        logger.info("Export successful. All critical files are present.")
 
-    print(f"Final exported model at: {output_dir}\n")
+    logger.info(f"Final exported model at: {output_dir}\n")
     return output_dir
 
 if __name__ == "__main__":
@@ -166,6 +163,5 @@ if __name__ == "__main__":
             exit(1)
         args.chat_model_type = model_keys[int(choice) - 1]
 
-    # Execute model conversion
     convert_chat_model(args.chat_model_type, args.precision, Path(args.model_dir))
-    print("Conversion and optimization completed.")
+    logger.info("Conversion and optimization completed.")

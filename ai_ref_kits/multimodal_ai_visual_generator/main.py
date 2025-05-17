@@ -10,7 +10,14 @@ import sys
 import yaml
 import subprocess
 import openvino_genai as ov_genai
+import logging
 
+# -------- Logging Setup --------
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(levelname)s] %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 # Import watermark function
 external_utils_path = (Path(__file__).resolve().parents[2] / "demos" / "utils").resolve()
@@ -53,20 +60,20 @@ llm_pipe = None
 if image_model_dir.exists():
     try:
         image_pipe = ov_genai.Text2ImagePipeline(image_model_dir, device="GPU")
-        print("Image model loaded.")
+        logger.info("Image model loaded.")
     except Exception as e:
-        print(f"Failed to load Image model: {e}")
+        logger.error(f"Failed to load Image model: {e}")
 else:
-    print(f"Image model not found at {image_model_dir}")
+    logger.warning(f"Image model not found at {image_model_dir}")
 
 if llm_model_dir.exists():
     try:
         llm_pipe = ov_genai.LLMPipeline(str(llm_model_dir), device="GPU")
-        print("LLM model loaded.")
+        logger.info("LLM model loaded.")
     except Exception as e:
-        print(f"Failed to load LLM model: {e}")
+        logger.error(f"Failed to load LLM model: {e}")
 else:
-    print(f"LLM model not found at {llm_model_dir}")
+    logger.warning(f"LLM model not found at {llm_model_dir}")
     
 llm_config = ov_genai.GenerationConfig()
 llm_config.max_new_tokens = 256

@@ -4,6 +4,7 @@ import platform
 from pathlib import Path
 import json
 import os
+import logging
 
 # Optional: Extend timeout to avoid HF download errors
 os.environ["HF_HUB_TIMEOUT"] = "60"
@@ -29,11 +30,14 @@ CRITICAL_FILES = [
     "transformer/openvino_model.xml",
 ]
 
+# -------- Logging Setup --------
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(levelname)s] %(message)s"
+)
+logger = logging.getLogger(__name__)
+
 def run_optimum_export(model_id: str, output_dir: Path, precision: str):
-    """
-    Run the Optimum CLI export for a given model and precision.
-    Uses OpenVINO as backend with task = text-to-image.
-    """
     cmd = [
         "optimum-cli", "export", "openvino",
         "--model", model_id,
@@ -48,71 +52,55 @@ def run_optimum_export(model_id: str, output_dir: Path, precision: str):
 
     cmd.append(str(output_dir))
 
-    print(f"Exporting with command:\n{' '.join(cmd)}\n")
+    logger.info(f"Exporting with command:\n{' '.join(cmd)}\n")
     subprocess.run(cmd, shell=(platform.system() == "Windows"), check=True)
 
 def validate_export(output_dir: Path, critical_files: list[str]) -> list[str]:
-    """
-    Check if all expected files exist after export.
-    Logs each file's presence and returns a list of missing files.
-    """
-    print("Verifying exported files:")
+    logger.info("Verifying exported files:")
     missing = []
 
     for file in critical_files:
         if not (output_dir / file).exists():
-            print(f"Missing: {file}")
+            logger.error(f"Missing: {file}")
             missing.append(file)
         else:
-            print(f"Found: {file}")
+            logger.info(f"Found: {file}")
 
     if missing:
-        print("Export completed with missing files.")
+        logger.warning("Export completed with missing files.")
     else:
-        print("All critical files verified successfully.")
+        logger.info("All critical files verified successfully.")
 
     return missing
 
-def run_optimum_export(model_id: str, output_dir: Path, precision: str):
-    cmd = [
-        "optimum-cli", "export", "openvino",
-        "--model", model_id,
-        "--task", "text-to-image",
-        "--trust-remote-code",
-    ]
-
-    if precision == "int4":
-        cmd += ["--weight-format", "int4", "--group-size", "64", "--ratio", "1.0"]
-    else:
-        cmd += ["--weight-format", "fp16"]
-
-    cmd.append(str(output_dir))
-
-    print(f"Exporting with command:\n{' '.join(cmd)}\n")
-    subprocess.run(cmd, shell=(platform.system() == "Windows"), check=True)
-
 def convert_image_model(model_type: str, precision: str, model_dir: Path) -> Path:
+    """
+    Convert and export a text-to-image model using Optimum + OpenVINO.
+    Skips export if all critical files already exist.
+    """
     output_dir = model_dir / f"{model_type}-{precision.upper()}"
     model_id = MODEL_MAPPING[model_type]
 
-    # Check if export already exists
+    # Skip export if already complete
     if output_dir.exists():
         missing = [f for f in CRITICAL_FILES if not (output_dir / f).exists()]
         if not missing:
-            print(f"Model already exported at: {output_dir}")
-            print("Skipping re-export.\n")
+            logger.info(f"Model already exported at: {output_dir}")
+            logger.info("Skipping re-export.\n")
             return output_dir
         else:
-            print(f"Export folder exists but missing files: {missing}")
-            print("Re-exporting model...\n")
+            logger.warning(f"Export folder exists but missing files: {missing}")
+            logger.info("Re-exporting model...\n")
 
+    # Run export and validate output
     run_optimum_export(model_id, output_dir, precision)
     missing_files = validate_export(output_dir, CRITICAL_FILES)
 
-    print(f"Model exported to: {output_dir}\n")
+    logger.info(f"Model exported to: {output_dir}\n")
     return output_dir
 
 if __name__ == "__main__":
+    # Setup argument parser
     model_keys = list(MODEL_MAPPING.keys())
 
     parser = argparse.ArgumentParser(description="Export and optimize a text-to-image model using Optimum + OpenVINO")
@@ -137,7 +125,8 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-
+    
+    # Prompt user to select model if not specified
     if not args.image_model_type:
         print("Available Image Models:")
         for i, key in enumerate(model_keys, start=1):
@@ -148,6 +137,5 @@ if __name__ == "__main__":
             exit(1)
         args.image_model_type = model_keys[int(choice) - 1]
 
-    # Execute model conversion
     convert_image_model(args.image_model_type, args.precision, Path(args.model_dir))
-    print("Conversion and optimization completed.")
+    logger.info("Conversion and optimization completed.")
