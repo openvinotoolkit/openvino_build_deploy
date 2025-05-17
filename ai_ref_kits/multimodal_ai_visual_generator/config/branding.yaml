@@ -4,15 +4,15 @@ instruction_template: |
   Each design should be short — just one sentence — and visually descriptive.
   Focus purely on visual elements — imagine a graphic printed on a T-shirt.
   Avoid all obscene, offensive, political, or personally identifiable content.
-  Do NOT include any letters, texts, speech bubbles, slogans, phrases, or complete sentences.
-  Absolutely no real names, text, logos, brands, or copyrighted elements.
+  Strictly do NOT include any letters, texts, speech bubbles, slogans, phrases, or complete sentences.
+  Absolutely avoid real names, text, logos, brands, or copyrighted elements.
   Each design should be unique in style (e.g., cartoon, pixel art, retro, anime) and convey personality or visual impact.
   End each design idea with its designated suffix to guide the illustration style.
   
   
   Each "Design" should be:
   - A short, vivid **visual description** of an image
-  - Strictly no **text, font, brand name, logos, or slogans**
+  - Strictly no text, no font, no brand name, no logos, or no slogans
   - Imagine how it would look **printed on a T-shirt**
   - Styled differently (e.g., cartoon, Pixar, retro, anime)
 
@@ -30,7 +30,7 @@ instruction_template: |
 scene_prefix: "Design"
 scene_suffixes:
   - "Cartoon style T-shirt design, centered, high contrast, high definition, bright."
-  - "Pixar style, 3D render, T-shirt design, centered, clean layout, high contrast, renderer"
+  - "Pixar style, Blender style 3D render, centered, photorealistic lighting, clean layout, high contrast, renderer"
   - "Retro 80s style T-shirt design with neon colors, synthwave grid background, high contrast , centered, clean layout, high contrast, renderer"
   - "Cute Anime, chibi style, pastel tones, centered, clean layout, high definition, renderer"
 max_words_per_scene: 35
