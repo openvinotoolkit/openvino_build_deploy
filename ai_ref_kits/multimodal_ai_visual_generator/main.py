@@ -5,12 +5,14 @@ from fastapi.responses import JSONResponse
 from pathlib import Path
 from io import BytesIO
 from PIL import Image
+import os
 import base64
 import sys
 import yaml
 import subprocess
 import openvino_genai as ov_genai
 import logging
+import random
 
 # -------- Logging Setup --------
 logging.basicConfig(
@@ -20,9 +22,12 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Import watermark function
-external_utils_path = (Path(__file__).resolve().parents[2] / "demos" / "utils").resolve()
+default_utils_path = (Path(__file__).resolve().parents[2] / "demos" / "utils")
+external_utils_path = Path(os.getenv("UTILS_PATH", str(default_utils_path)))
+
 if not external_utils_path.exists():
     raise RuntimeError(f"utils folder not found at {external_utils_path}")
+    
 sys.path.append(str(external_utils_path))
 
 from demo_utils import draw_ov_watermark
@@ -86,36 +91,20 @@ class PromptRequest(BaseModel):
 class StoryRequest(BaseModel):
     prompt: str
 
-# ---------- LLM Endpoint (Story Splitter) ---------
-@app.post("/generate_story_prompts")
-def generate_story_prompts(request: StoryRequest, req: Request):
-    if not llm_pipe:
-        return JSONResponse(status_code=503, content={"error": "LLM model not available. Please export it before using this endpoint."})
+# --- Helper: Load YAML config ---
+def load_story_config(req: Request) -> dict:
     config_type = req.query_params.get("config", "illustration")
     config_file = PROJECT_ROOT / "config" / f"{config_type}.yaml"
     if not config_file.exists():
         raise RuntimeError(f"Config file not found: {config_file}")
     with open(config_file, "r") as f:
-        config = yaml.safe_load(f)
+        return yaml.safe_load(f)
 
-    user_prompt = request.prompt
-
-    instruction = config["instruction_template"].replace("{user_prompt}", user_prompt)
-
-    output = []
-    def streamer(subword):
-        sys.stdout.write(subword)
-        sys.stdout.flush()
-        output.append(subword)
-        return False
-
-    _ = llm_pipe.generate(instruction, llm_config, streamer)
-    full_output = "".join(output)
-
-    # --- Parse scenes ---
+# --- Helper: Parse LLM output into scenes ---
+def parse_scenes(output_text: str, config: dict) -> list[str]:
     scenes = []
     current_scene = ""
-    for line in full_output.split("\n"):
+    for line in output_text.split("\n"):
         clean = line.strip()
         if clean.lower().startswith(config["scene_prefix"].lower()):
             if current_scene:
@@ -125,11 +114,12 @@ def generate_story_prompts(request: StoryRequest, req: Request):
                 current_scene = parts[1].strip()
         elif clean:
             current_scene += " " + clean
-
     if current_scene:
         scenes.append(current_scene.strip())
+    return scenes
 
-    # --- Clean & format output ---
+# --- Helper: Clean scenes and apply suffix ---
+def finalize_scenes(scenes: list[str], config: dict) -> list[str]:
     suffixes = config["scene_suffixes"]
     max_words = config["max_words_per_scene"]
     final_scenes = []
@@ -142,11 +132,34 @@ def generate_story_prompts(request: StoryRequest, req: Request):
                 trimmed += "."
             trimmed += " " + suffix
         final_scenes.append(trimmed.strip())
-
     while len(final_scenes) < 4:
+        fallback = config["fallback_scene"]
         fallback_suffix = suffixes[len(final_scenes)] if len(suffixes) > len(final_scenes) else suffixes[-1]
-        final_scenes.append(config["fallback_scene"] + ". " + fallback_suffix)
-   
+        final_scenes.append(fallback + ". " + fallback_suffix)
+    return final_scenes
+
+# ---------- LLM Endpoint (Story Splitter) ---------
+@app.post("/generate_story_prompts")
+def generate_story_prompts(request: StoryRequest, req: Request):
+    if not llm_pipe:
+        return JSONResponse(status_code=503, content={"error": "LLM model not available. Please export it before using this endpoint."})
+
+    config = load_story_config(req)
+    instruction = config["instruction_template"].replace("{user_prompt}", request.prompt)
+
+    output = []
+    def streamer(subword):
+        sys.stdout.write(subword)
+        sys.stdout.flush()
+        output.append(subword)
+        return False
+
+    _ = llm_pipe.generate(instruction, llm_config, streamer)
+    full_output = "".join(output)
+
+    parsed_scenes = parse_scenes(full_output, config)
+    final_scenes = finalize_scenes(parsed_scenes, config)
+
     return {"scenes": final_scenes}
 
 # ---------- Image Model Endpoint (Image Generator) ----------
@@ -158,9 +171,10 @@ def generate_image(request: PromptRequest):
     prompt = request.prompt
     height = 512
     width = 512
-    seed = 191524753
+    seed = random.randint(1_000_000_000, 4_294_967_295)
     steps = 4
 
+    logger.info(f"Generating image for prompt: '{prompt}' with seed: {seed}")
     generator = ov_genai.TorchGenerator(seed)
 
     def callback(step, num_steps, latent):
