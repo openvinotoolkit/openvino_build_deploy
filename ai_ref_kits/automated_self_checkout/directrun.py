@@ -120,7 +120,7 @@ def intersecting_bboxes(bboxes, person_bbox, action_str):
 # collect available videos under the data folder in case the user wants to use a different one
 
 
-def getSampleVideos() -> []:
+def get_sample_videos() -> []:
     files = glob.glob("./data/*.mp4")
     paths = []
     for file in files:
@@ -131,8 +131,8 @@ def getSampleVideos() -> []:
 # provide the first video in the folder as a default value
 
 
-def getFirstSampleVideo() -> Path:
-    videos = getSampleVideos()
+def get_first_sample_video() -> Path:
+    videos = get_sample_videos()
     if len(videos) >= 1:
         return videos[0]
 
@@ -141,7 +141,7 @@ def getFirstSampleVideo() -> Path:
 # Items is a list of a list with length 2 (row). The row contains 2 elements: <Item:str> and <Quantity:int>
 
 
-def getPandasDF(items):
+def get_pandas_df(items):
     if items is None:
         return None
 
@@ -187,7 +187,7 @@ def plog(logtable, message, pclass, pop):
 # It will convert a set of text with this organization {'1 #3 bottle', '1 #1 banana', '1 #2 apple'} in a list of rows[item, quantity]
 
 
-def toList(myset) -> list:
+def to_list(myset) -> list:
     if myset is None or not isinstance(myset, set):
         return None
 
@@ -350,13 +350,13 @@ def stream_object_detection(video):
                                 plog(logtable, added_action_str, k, "add")
 
                 output_video.write(frame)
-                yield gr.skip(), pd.DataFrame(logtable, columns=['time', 'action', 'class', 'message']), toList(purchased_items), getPandasDF(item_list)
+                yield gr.skip(), pd.DataFrame(logtable, columns=['time', 'action', 'class', 'message']), to_list(purchased_items), get_pandas_df(item_list)
 
             batch = []  # Restart the batch
             output_video.release()
 
             # return gr.skip() (instead of a value) will keep the component wihout any change
-            yield output_video_name, pd.DataFrame(logtable, columns=['time', 'action', 'class', 'message']), toList(purchased_items), getPandasDF(item_list)
+            yield output_video_name, pd.DataFrame(logtable, columns=['time', 'action', 'class', 'message']), to_list(purchased_items), get_pandas_df(item_list)
 
             output_video_name = f"output_{uuid.uuid4()}.mp4"
             output_video = cv2.VideoWriter(
@@ -371,100 +371,113 @@ def stream_object_detection(video):
 def open_browser(url):
     webbrowser.open_new_tab(url)
 
+def ascd_init():
+    print("Starting the Automated Self-Checkout Demo...")
 
-###########################################################
-print("Starting the Automated Self-Checkout Demo...")
+    # Specify our models path
+    models_dir = Path("./model")
+    models_dir.mkdir(exist_ok=True)
 
-# Specify our models path
-models_dir = Path("./model")
-models_dir.mkdir(exist_ok=True)
+    print("Loading model...")
+    DET_MODEL_NAME = "yolov8m"
+    det_model = YOLO(models_dir / f'{DET_MODEL_NAME}.pt')
+    global label_map
+    label_map = det_model.model.names
 
-print("Loading model...")
-DET_MODEL_NAME = "yolov8m"
-det_model = YOLO(models_dir / f'{DET_MODEL_NAME}.pt')
-label_map = det_model.model.names
+    # Load our Yolov8 object detection model
+    ov_model_path = Path(
+        f"model/{DET_MODEL_NAME}_openvino_model/{DET_MODEL_NAME}.xml")
+    if not ov_model_path.exists():
+        # export model to OpenVINO format
+        out_dir = det_model.export(format="openvino", dynamic=False, half=True)
 
-# Load our Yolov8 object detection model
-ov_model_path = Path(
-    f"model/{DET_MODEL_NAME}_openvino_model/{DET_MODEL_NAME}.xml")
-if not ov_model_path.exists():
-    # export model to OpenVINO format
-    out_dir = det_model.export(format="openvino", dynamic=False, half=True)
+    global model
+    model = YOLO("model/yolov8m_openvino_model/", task="detect")
 
-model = YOLO("model/yolov8m_openvino_model/", task="detect")
+    print("Gathering default video and zone information...")
+    # Default Video
+    VID_PATH = "data/example.mp4"
+    video_info = sv.VideoInfo.from_video_path(VID_PATH)
+    polygon = load_zones("config/zones.json", "test-example-1")
+    global zone
+    zone = sv.PolygonZone(
+        polygon=polygon, frame_resolution_wh=video_info.resolution_wh)
+    global box_annotator, zone_annotator
+    box_annotator = sv.BoxAnnotator(thickness=4, text_thickness=4, text_scale=2)
+    zone_annotator = sv.PolygonZoneAnnotator(
+        zone=zone, color=sv.Color.white(), thickness=6, text_thickness=6, text_scale=4)
 
-print("Gathering default video and zone information...")
-# Default Video
-VID_PATH = "data/example.mp4"
-video_info = sv.VideoInfo.from_video_path(VID_PATH)
-polygon = load_zones("config/zones.json", "test-example-1")
-zone = sv.PolygonZone(
-    polygon=polygon, frame_resolution_wh=video_info.resolution_wh)
-box_annotator = sv.BoxAnnotator(thickness=4, text_thickness=4, text_scale=2)
-zone_annotator = sv.PolygonZoneAnnotator(
-    zone=zone, color=sv.Color.white(), thickness=6, text_thickness=6, text_scale=4)
+    print("Initializing variables...")
+    # Aux variable to show items and quantity dynamically
+    global SUBSAMPLE 
+    SUBSAMPLE = 2  # Video Processing Subsample rate
 
-print("Initializing variables...")
-# Aux variable to show items and quantity dynamically
-SUBSAMPLE = 2  # Video Processing Subsample rate
+    # Log Table organization
+    plog_cols = ["time", "class", "action", "message"]
+    plog_list = []
 
-# Log Table organization
-plog_cols = ["time", "class", "action", "message"]
-plog_list = []
+    # Detected Objects
+    item_list = {}
 
-# Detected Objects
-item_list = {}
+    print("Defining UI...")
+    header = "# Detect and Track Objects with OpenVINO™ for Self-Checkout\n"
+    header += "### [Go to Jupyter Notebook](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/ai_ref_kits/automated_self_checkout/self-checkout-recipe.ipynb)"
+    footer = "**<center>License: [Apache 2.0](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/LICENSE.txt) | Learn more about [OpenVINO](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) | Explore [OpenVINO’s documentation](https://docs.openvino.ai/2023.0/home.html)</center>**"
+    with gr.Blocks(theme=gr.themes.Soft()) as demo:
+        with gr.Row():
+            gr.Markdown(header)
+        with gr.Row(equal_height=True):
+            video = gr.PlayableVideo(label="Video Source",
+                                    value=get_first_sample_video())
+            output_video = gr.Video(label="Processed Video",
+                                    streaming=True, autoplay=True)
 
-print("Defining UI...")
-header = "# Detect and Track Objects with OpenVINO™ for Self-Checkout\n"
-header += "### [Go to Jupyter Notebook](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/ai_ref_kits/automated_self_checkout/self-checkout-recipe.ipynb)"
-footer = "**<center>License: [Apache 2.0](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/LICENSE.txt) | Learn more about [OpenVINO](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) | Explore [OpenVINO’s documentation](https://docs.openvino.ai/2023.0/home.html)</center>**"
-with gr.Blocks(theme=gr.themes.Soft()) as demo:
-    with gr.Row():
-        gr.Markdown(header)
-    with gr.Row(equal_height=True):
-        video = gr.PlayableVideo(label="Video Source",
-                                 value=getFirstSampleVideo())
-        output_video = gr.Video(label="Processed Video",
-                                streaming=True, autoplay=True)
+        with gr.Row(equal_height=True):
+            generate_btn = gr.Button("Start Video Processing", variant="primary")
 
-    with gr.Row(equal_height=True):
-        generate_btn = gr.Button("Start Video Processing", variant="primary")
+        with gr.Row(equal_height=True):
+            with gr.Column():
+                rtlog = gr.DataFrame(
+                    value=None,
+                    headers=["time", "action", "class", "message"],
+                    datatype=["str", "str", "str", "str"],
+                    label="Detection Message Log",
+                    column_widths=["25%", "15%", "15%", "45%"],
+                    show_search="filter",
+                    show_copy_button=True
+                )
 
-    with gr.Row(equal_height=True):
-        with gr.Column():
-            rtlog = gr.DataFrame(
-                value=None,
-                headers=["time", "action", "class", "message"],
-                datatype=["str", "str", "str", "str"],
-                label="Detection Message Log",
-                column_widths=["25%", "15%", "15%", "45%"],
-                show_search="filter",
-                show_copy_button=True
-            )
+            with gr.Column():
+                plot = gr.BarPlot(None,  # Empty dataframe
+                                x="Item", y="Quantity", y_aggregate="sum",
+                                title="Detected Items",
+                                height=400  # pixels
+                                )
+                items = gr.DataFrame(
+                    value=None,
+                    headers=["Item", "Added"],
+                    datatype=["str", "number"],
+                    label="Purchased Items"
+                )
+        with gr.Row():
+            gr.Markdown(footer)
 
-        with gr.Column():
-            plot = gr.BarPlot(None,  # Empty dataframe
-                              x="Item", y="Quantity", y_aggregate="sum",
-                              title="Detected Items",
-                              height=400  # pixels
-                              )
-            items = gr.DataFrame(
-                value=None,
-                headers=["Item", "Added"],
-                datatype=["str", "number"],
-                label="Purchased Items"
-            )
-    with gr.Row():
-        gr.Markdown(footer)
+        generate_btn.click(
+            fn=stream_object_detection,
+            inputs=[video],
+            outputs=[output_video, rtlog, items, plot])
+        
+        return demo
 
-    generate_btn.click(
-        fn=stream_object_detection,
-        inputs=[video],
-        outputs=[output_video, rtlog, items, plot])
+if __name__ == "__main__":   
+    # Initialize the application
+    demo = ascd_init()
+    
+    if demo is None:
+        print("Unable to initialize the application")
+        exit(1)
 
-if __name__ == "__main__":
-    print("Starting the server...")
+    print("Starting the server...")    
     _, localurl, _ = demo.launch(inbrowser=True, prevent_thread_lock=True)
     print("Server running at "+localurl)
     print("Opening browser...")
