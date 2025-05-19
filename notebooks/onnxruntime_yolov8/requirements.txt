@@ -10,4 +10,4 @@ onnx==1.17.0
 torch==2.6.0
 numpy==2.1.3
 opencv-python==4.11.0.86
-setuptools==73.0.1
+setuptools==78.1.1
