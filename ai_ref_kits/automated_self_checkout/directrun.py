@@ -410,7 +410,7 @@ def ascd_init():
     print("Initializing variables...")
     # Aux variable to show items and quantity dynamically
     global SUBSAMPLE 
-    SUBSAMPLE = 2  # Video Processing Subsample rate
+    SUBSAMPLE = 4  # Video Processing Subsample rate
 
     # Log Table organization
     plog_cols = ["time", "class", "action", "message"]
