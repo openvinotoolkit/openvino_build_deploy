@@ -51,7 +51,7 @@ Star the [repository](https://github.com/openvinotoolkit/openvino_build_deploy) 
 
 ## Step 1: Install Python and prerequisites 
 
-This project requires Python 3.10-3.12 and a few libraries. If you don't have Python installed on your machine, go to https://www.python.org/downloads/ and download the latest version for your operating system. Follow the prompts to install Python, making sure to check the option to add Python to your PATH environment variable.
+This project requires Python 3.10-3.13 and a few libraries. If you don't have Python installed on your machine, go to https://www.python.org/downloads/ and download the latest version for your operating system. Follow the prompts to install Python, making sure to check the option to add Python to your PATH environment variable.
 
 Install libraries and tools:
 
