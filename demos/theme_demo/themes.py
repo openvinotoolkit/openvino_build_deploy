@@ -3,6 +3,7 @@ import os
 import sys
 from pathlib import Path
 from typing import Any
+import time
 
 import cv2
 import numpy as np
@@ -21,6 +22,10 @@ class Theme(abc.ABC):
     def __init__(self):
         self.model_dir = Path(__file__).parent / "model"
         self.assets_dir = Path(__file__).parent / "assets"
+        self.tracked_faces = {}  # track_id: {'box': np.ndarray, ...}
+        self.next_face_id = 0
+        self.iou_threshold = 0.5
+        self.smoothing_tau = 0.3  # seconds
 
     def __download_model(self, model_name: str, precision: str):
         model_path = self.model_dir / model_name / precision / f"{model_name}"
@@ -56,6 +61,92 @@ class Theme(abc.ABC):
     def draw_results(self, image: np.ndarray, detections: Any) -> np.ndarray:
         return image
 
+    def _calculate_iou_matrix(self, boxes1, boxes2):
+        # boxes: (N, 4) arrays
+        if len(boxes1) == 0 or len(boxes2) == 0:
+            return np.zeros((len(boxes1), len(boxes2)), dtype=np.float32)
+        boxes1 = np.array(boxes1)
+        boxes2 = np.array(boxes2)
+        x11, y11, w1, h1 = np.split(boxes1, 4, axis=1)
+        x12, y12 = x11 + w1, y11 + h1
+        x21, y21, w2, h2 = np.split(boxes2, 4, axis=1)
+        x22, y22 = x21 + w2, y21 + h2
+        xi1 = np.maximum(x11, x21.T)
+        yi1 = np.maximum(y11, y21.T)
+        xi2 = np.minimum(x12, x22.T)
+        yi2 = np.minimum(y12, y22.T)
+        inter_area = np.maximum(xi2 - xi1, 0) * np.maximum(yi2 - yi1, 0)
+        box1_area = w1 * h1
+        box2_area = w2 * h2
+        union_area = box1_area + box2_area.T - inter_area
+        return inter_area / (union_area + 1e-6)
+
+    def _smooth_detections(self, current_detections):
+        now = time.time()
+        if not current_detections:
+            self.tracked_faces = {}
+            return []
+        # Prepare current faces
+        curr_boxes = [det[0][1] for det in current_detections]
+        curr_scores = [det[0][0] for det in current_detections]
+        curr_landmarks = [det[1] for det in current_detections]
+        curr_emotions = [det[2] if len(det) > 2 else None for det in current_detections]
+        curr_boxes_np = np.array(curr_boxes)
+        # Prepare tracked faces
+        tracked_ids = list(self.tracked_faces.keys())
+        tracked_boxes_np = np.array([self.tracked_faces[tid]['box'] for tid in tracked_ids]) if tracked_ids else np.zeros((0,4))
+        # IoU matrix
+        ious = self._calculate_iou_matrix(tracked_boxes_np, curr_boxes_np)
+        # Greedy matching
+        matched_tracked = set()
+        matched_current = set()
+        matches = []
+        for t_idx, tid in enumerate(tracked_ids):
+            if ious.shape[1] == 0:
+                break
+            c_idx = np.argmax(ious[t_idx])
+            if ious[t_idx, c_idx] >= self.iou_threshold and c_idx not in matched_current:
+                matches.append((tid, c_idx))
+                matched_tracked.add(tid)
+                matched_current.add(c_idx)
+        # Update matched tracks
+        for tid, c_idx in matches:
+            prev = self.tracked_faces[tid]
+            dt = now - prev['last_update']
+            alpha = np.exp(-dt / self.smoothing_tau)
+            new_box = prev['box'] * alpha + curr_boxes_np[c_idx] * (1 - alpha)
+            self.tracked_faces[tid].update({
+                'box': new_box,
+                'score': curr_scores[c_idx],
+                'landmarks': curr_landmarks[c_idx],
+                'emotion': curr_emotions[c_idx],
+                'last_update': now
+            })
+        # Add new tracks
+        for c_idx in range(len(current_detections)):
+            if c_idx not in matched_current:
+                tid = self.next_face_id
+                self.next_face_id += 1
+                self.tracked_faces[tid] = {
+                    'box': curr_boxes_np[c_idx],
+                    'score': curr_scores[c_idx],
+                    'landmarks': curr_landmarks[c_idx],
+                    'emotion': curr_emotions[c_idx],
+                    'last_update': now
+                }
+        # Remove old tracks
+        for tid in tracked_ids:
+            if tid not in matched_tracked:
+                del self.tracked_faces[tid]
+        # Output
+        smoothed = []
+        for face in self.tracked_faces.values():
+            det = ((float(face['score']), tuple(map(int, face['box']))), face['landmarks'])
+            if face['emotion'] is not None:
+                det = det + (face['emotion'],)
+            smoothed.append(det)
+        return smoothed
+
 
 class ChristmasTheme(Theme):
     def __init__(self, device: str = "CPU"):
@@ -84,7 +175,8 @@ class ChristmasTheme(Theme):
         boxes = self.__detect_faces(frame)
         landmarks = self.__detect_landmarks(frame, boxes)
         emotions = self.__recognize_emotions(frame, boxes)
-        return list(zip(boxes, landmarks, emotions))
+        detections = list(zip(boxes, landmarks, emotions))
+        return self._smooth_detections(detections)
 
     def draw_results(self, image: np.ndarray, detections: Any) -> np.ndarray:
         # sort by face size
@@ -229,12 +321,6 @@ class ChristmasTheme(Theme):
             mask_img = mask_img[max(0, -y1):max(0, -y1) + face_crop.shape[0],
                        max(0, -x1):max(0, -x1) + face_crop.shape[1]]
             
-            # Ensure mask_img has 4 channels (BGRA)
-            if mask_img.shape[2] == 3:
-                # Add alpha channel if missing
-                alpha = np.ones((mask_img.shape[0], mask_img.shape[1], 1), dtype=mask_img.dtype) * 255
-                mask_img = np.concatenate([mask_img, alpha], axis=2)
-            
             # alpha channel to blend images
             alpha_mask = mask_img[:, :, 3:4] / 255.0
             alpha_bg = 1.0 - alpha_mask
@@ -295,8 +381,8 @@ class HalloweenTheme(Theme):
         poses, scores = self.__process_results(frame, pafs, heatmaps)
         # add additional points to skeletons
         poses = [self.__add_artificial_points(pose, self.point_score_threshold) for pose in poses]
-
-        return list(zip(poses, scores))
+        detections = list(zip(poses, scores))
+        return self._smooth_detections(detections)
 
     def draw_results(self, image: np.ndarray, poses: Any) -> np.ndarray:
         img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
