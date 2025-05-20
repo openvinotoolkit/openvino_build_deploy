@@ -228,12 +228,19 @@ class ChristmasTheme(Theme):
             # overlay
             mask_img = mask_img[max(0, -y1):max(0, -y1) + face_crop.shape[0],
                        max(0, -x1):max(0, -x1) + face_crop.shape[1]]
+            
+            # Ensure mask_img has 4 channels (BGRA)
+            if mask_img.shape[2] == 3:
+                # Add alpha channel if missing
+                alpha = np.ones((mask_img.shape[0], mask_img.shape[1], 1), dtype=mask_img.dtype) * 255
+                mask_img = np.concatenate([mask_img, alpha], axis=2)
+            
             # alpha channel to blend images
-            alpha_pumpkin = mask_img[:, :, 3:4] / 255.0
-            alpha_bg = 1.0 - alpha_pumpkin
+            alpha_mask = mask_img[:, :, 3:4] / 255.0
+            alpha_bg = 1.0 - alpha_mask
 
             # blend images
-            face_crop[:] = (alpha_pumpkin * mask_img)[:, :, :3] + alpha_bg * face_crop
+            face_crop[:] = (alpha_mask * mask_img[:, :, :3] + alpha_bg * face_crop).astype(np.uint8)
 
     def __draw_santa(self, img, detection):
         (score, box), landmarks, emotion = detection
@@ -480,3 +487,38 @@ class EasterTheme(ChristmasTheme):
 
         # draw tie
         self._draw_mask(image, self.assets["bunny_tie"], landmarks[26], box[2:], scale=0.6, offset_coeffs=(0.5, 0.0))
+
+
+class WildTheme(ChristmasTheme):
+    def __init__(self, device: str = "CPU"):
+        super().__init__(device)
+        # Override assets with bear and raccoon faces
+        self.assets = self._load_assets(["bear", "raccoon"])
+
+    def draw_results(self, image: np.ndarray, detections: Any) -> np.ndarray:
+        if not detections:
+            return image
+
+        for (score, box), landmarks, emotion in detections:
+            # Calculate face size
+            face_size = max(box[2], box[3])  # width or height, whichever is larger
+            
+            # Draw bear for faces larger than 1/8 of frame width, raccoon for smaller faces
+            if face_size > image.shape[1] / 8:
+                self.__draw_bear(image, landmarks, box)
+            else:
+                self.__draw_raccoon(image, landmarks, box)
+
+        return image
+
+    def __draw_bear(self, image, landmarks, box):
+        # Draw bear face using landmarks for positioning
+        self._draw_mask(image, self.assets["bear"], 
+                       np.mean(landmarks[:4], axis=0, dtype=np.int32),  # Use eye landmarks for positioning
+                       box[2:], scale=2.2, offset_coeffs=(0.5, 0.5))
+
+    def __draw_raccoon(self, image, landmarks, box):
+        # Draw raccoon face using landmarks for positioning
+        self._draw_mask(image, self.assets["raccoon"], 
+                       np.mean(landmarks[:4], axis=0, dtype=np.int32),  # Use eye landmarks for positioning
+                       box[2:], scale=2.2, offset_coeffs=(0.5, 0.5))
