@@ -20,7 +20,6 @@ jobs:
   find-subprojects:
     runs-on: ubuntu-latest
     outputs:
-      qt: ${{ steps.categorize-subprojects.outputs.qt }}
       gradio: ${{ steps.categorize-subprojects.outputs.gradio }}
       webcam: ${{ steps.categorize-subprojects.outputs.webcam }}
       python: ${{ steps.categorize-subprojects.outputs.python }}
@@ -41,37 +40,6 @@ jobs:
         uses: ./.github/reusable-steps/categorize-projects
         with:
           subprojects: ${{ steps.find-updates.outputs.subproject_dirs }}
-
-  qt:
-    needs: find-subprojects
-    if: ${{ needs.find-subprojects.outputs.qt != '[]' }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python: ["3.10", "3.12"]
-        subproject: ${{ fromJson(needs.find-subprojects.outputs.qt) }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/reusable-steps/setup-os
-      - name: Set up Python ${{ matrix.python }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python }}
-      - uses: ./.github/reusable-steps/setup-python
-        with:
-          python: ${{ matrix.python }}
-          project: ${{ matrix.subproject }}
-      - name: Login to HF
-        shell: bash
-        run: |
-          huggingface-cli login --token ${{ secrets.HF_TOKEN }}
-      - uses: ./.github/reusable-steps/gradio-action
-        with:
-          script: main.py
-          project: ${{ matrix.subproject }}
-          timeout: 3600
 
   gradio:
     needs: find-subprojects
