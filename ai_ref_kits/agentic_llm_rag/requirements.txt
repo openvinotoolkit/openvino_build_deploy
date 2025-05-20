@@ -13,7 +13,7 @@ llama-index-vector-stores-faiss==0.3.0
 faiss-cpu==1.9.0
 onnx==1.17.0
 onnxruntime==1.17.3
-torch==2.5.1
+torch==2.7.0
 
 transformers==4.48.3
 librosa==0.10.2
