@@ -16,7 +16,7 @@ faiss-cpu==1.9.0
 onnx==1.17.0
 onnxruntime==1.20.1
 torch==2.7.0
-torchaudio==2.5.1
+torchaudio==2.7.0
 numpy==1.26.4
 
 transformers==4.48.3
@@ -24,7 +24,7 @@ librosa==0.10.2
 pyyaml==6.0.1
 pymupdf==1.24.10
 
-gradio==5.12.0
+gradio==5.23.3
 
 # melotts dependencies
 cn2an==0.5.22
@@ -40,4 +40,4 @@ g2p_en==2.1.0
 anyascii==0.3.2
 jamo==0.4.1
 gruut[de,es,fr]==2.4.0
-cached_path==1.6.4
+cached_path==1.7.3
