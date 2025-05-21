@@ -10,7 +10,7 @@ llama-index-llms-openvino==0.4.0
 llama-index-embeddings-openvino==0.5.1
 llama-index-postprocessor-openvino-rerank==0.4.1
 llama-index-vector-stores-faiss==0.3.0
-faiss-cpu==1.9.0
+faiss-cpu==1.11.0
 onnx==1.17.0
 onnxruntime==1.17.3
 torch==2.7.0
