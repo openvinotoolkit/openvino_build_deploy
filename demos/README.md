@@ -107,4 +107,4 @@ Please follow the rules defined in the [contributing guide](CONTRIBUTING.md) to 
 - Explore [OpenVINO’s documentation](https://docs.openvino.ai/2024/home.html)
 
 [//]: # (telemetry pixel)
-<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca?project=demos?file=README.md" />
+<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca&project=demos&file=README.md" />

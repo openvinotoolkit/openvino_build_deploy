@@ -33,4 +33,4 @@ This notebook demonstrates how to  run [LCM_Dreamshaper_v7](https://huggingface.
 - All other dependencies are installed in the notebook itself
 
 [//]: # (telemetry pixel)
-<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca?project=notebooks/onnxruntime_lcm?file=README.md" />
+<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca&project=notebooks/onnxruntime_lcm&file=README.md" />
