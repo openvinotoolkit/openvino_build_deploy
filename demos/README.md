@@ -8,7 +8,7 @@ _Please note: even though you can find here a lot of useful OpenVINO code, educa
 
 ## Available Demos
 
-Currently, there are the following demos that work on Python :warning:3.10-3.12 :warning: only:
+Currently, the following demos are tested for Python :warning:3.10-3.13 :warning: only:
 
 ### 🎨 Paint Your Dreams
 
