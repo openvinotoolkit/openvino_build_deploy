@@ -12,8 +12,6 @@ outputs:
     value: ${{ steps.group-subprojects.outputs.gradio }}
   webcam:
     value: ${{ steps.group-subprojects.outputs.webcam }}
-  qt:
-    value: ${{ steps.group-subprojects.outputs.qt }}
   js:
     value: ${{ steps.group-subprojects.outputs.js }}
 
@@ -28,7 +26,6 @@ runs:
         python=()
         gradio=()
         webcam=()
-        qt=()
         js=()
 
         for dir in ${{ inputs.subprojects }}; do
@@ -38,8 +35,6 @@ runs:
             notebook+=("$dir")
           elif [ -f "$dir/requirements.txt" ] && { grep -q "gradio" "$dir/requirements.txt" || grep -q "fastapi" "$dir/requirements.txt"; }; then
             gradio+=("$dir")
-          elif [ -f "$dir/requirements.txt" ] && grep -iq "pyside" "$dir/requirements.txt"; then
-            qt+=("$dir")
           elif [ -f "$dir/main.py" ] && grep -q -- "--stream" "$dir/main.py"; then
             webcam+=("$dir")
           elif [ -f "$dir/main.py" ]; then
@@ -51,14 +46,12 @@ runs:
         python_json=$(printf '%s\n' "${python[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
         gradio_json=$(printf '%s\n' "${gradio[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
         webcam_json=$(printf '%s\n' "${webcam[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
-        qt_json=$(printf '%s\n' "${qt[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
         js_json=$(printf '%s\n' "${js[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
 
         echo "notebook=$notebook_json" >> $GITHUB_OUTPUT
         echo "python=$python_json" >> $GITHUB_OUTPUT
         echo "gradio=$gradio_json" >> $GITHUB_OUTPUT
         echo "webcam=$webcam_json" >> $GITHUB_OUTPUT
-        echo "qt=$qt_json" >> $GITHUB_OUTPUT
         echo "js=$js_json" >> $GITHUB_OUTPUT
     - name: Print subprojects to test
       shell: bash
@@ -67,5 +60,4 @@ runs:
         echo "Python subprojects: ${{ steps.group-subprojects.outputs.python }}"
         echo "Gradio subprojects: ${{ steps.group-subprojects.outputs.gradio }}"
         echo "Webcam subprojects: ${{ steps.group-subprojects.outputs.webcam }}"
-        echo "Qt subprojects: ${{ steps.group-subprojects.outputs.qt }}"
         echo "JS subprojects: ${{ steps.group-subprojects.outputs.js }}"

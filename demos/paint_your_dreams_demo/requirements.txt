@@ -4,7 +4,7 @@ openvino==2025.1
 openvino-genai==2025.1
 optimum-intel==1.23.0
 optimum==1.25.3
-onnx==1.17.0
+onnx==1.18.0
 huggingface-hub==0.29.3
 diffusers==0.32.1
 transformers==4.50.3
