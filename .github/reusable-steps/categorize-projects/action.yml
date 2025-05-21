@@ -36,7 +36,7 @@ runs:
             js+=("$dir")
           elif find "$dir" -maxdepth 1 -name "*.ipynb" | grep -q "."; then
             notebook+=("$dir")
-          elif [ -f "$dir/requirements.txt" ] && { grep -q "gradio" "$dir/requirements.txt" || grep -q "fastapi" "$dir/requirements.txt" }; then
+          elif [ -f "$dir/requirements.txt" ] && { grep -q "gradio" "$dir/requirements.txt" || grep -q "fastapi" "$dir/requirements.txt"; }; then
             gradio+=("$dir")
           elif [ -f "$dir/requirements.txt" ] && grep -iq "pyside" "$dir/requirements.txt"; then
             qt+=("$dir")
