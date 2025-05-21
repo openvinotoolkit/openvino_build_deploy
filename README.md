@@ -66,4 +66,4 @@ Hello, we're the AI Evangelist team at Intel! We’re a group of experts in AI s
 |**[Anisha Udayakumar](https://www.linkedin.com/in/anisha-uday/)** <br> AI Innovation Consultant <br> (Bengaluru, India) <br><br> BTech in Civil Engineering <br> 5+ years as a Innovation Consultant|**[Zhuo Wu](https://www.linkedin.com/in/wuzhuo/)** <br> Professor and Research Scientist <br> (Shanghai, China) <br><br> PhD in Electronics <br> 15+ Years as a Researcher and Professor|
 
 [//]: # (telemetry pixel)
-<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca?project=root?file=README.md" />
+<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca&project=root&file=README.md" />
