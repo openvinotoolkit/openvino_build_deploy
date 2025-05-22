@@ -19,8 +19,8 @@ from convert_and_optimize_text2image import convert_image_model
 
 # ----- Configuration -----
 MODEL_DIR = Path("models")
-LLM_MODEL_TYPE = "qwen2-7B"
-IMAGE_MODEL_TYPE = "flux.1-schnell"
+LLM_MODEL_TYPE = "tiny-llama-1b-chat"
+IMAGE_MODEL_TYPE = "lcm"
 PRECISION = "int4"
 
 # ----- Step 1: Export Models if Needed -----
