@@ -61,11 +61,21 @@ MODEL_CONFIGS = {
 }
 
 
-def download_models(model_name, safety_checker_model: str) -> None:
+def download_safety_checker(model_name: str) -> None:
     global safety_checker
+    safety_checker_dir = MODEL_DIR / model_name
+    if not safety_checker_dir.exists():
+        model = OVModelForImageClassification.from_pretrained(model_name, export=True, compile=False)
+        model.save_pretrained(safety_checker_dir)
+        processor = AutoProcessor.from_pretrained(model_name)
+        processor.save_pretrained(safety_checker_dir)
 
+    safety_checker = pipeline("image-classification", model=OVModelForImageClassification.from_pretrained(safety_checker_dir),
+                            image_processor=AutoProcessor.from_pretrained(safety_checker_dir))
+
+
+def download_model(model_name: str) -> None:
     is_openvino_model = model_name.split("/")[0] == "OpenVINO"
-
     output_dir = MODEL_DIR / model_name
     if not output_dir.exists():
         if is_openvino_model:
@@ -74,16 +84,6 @@ def download_models(model_name, safety_checker_model: str) -> None:
             output_dir_dream = MODEL_DIR / model_name
             if not output_dir_dream.exists():
                 os.system(f"optimum-cli export openvino --model {model_name} --task stable-diffusion --weight-format fp16 {output_dir_dream}")
-
-    safety_checker_dir = MODEL_DIR / safety_checker_model
-    if not safety_checker_dir.exists():
-        model = OVModelForImageClassification.from_pretrained(safety_checker_model, export=True, compile=False)
-        model.save_pretrained(safety_checker_dir)
-        processor = AutoProcessor.from_pretrained(safety_checker_model)
-        processor.save_pretrained(safety_checker_dir)
-
-    safety_checker = pipeline("image-classification", model=OVModelForImageClassification.from_pretrained(safety_checker_dir),
-                              image_processor=AutoProcessor.from_pretrained(safety_checker_dir))
 
 
 async def create_pipeline(model_dir: Path, device: str, size: int, pipeline: str) -> genai.Text2ImagePipeline | genai.Image2ImagePipeline | genai.InpaintingPipeline:
@@ -132,10 +132,26 @@ def progress(step, num_steps, latent) -> bool:
     return False
 
 
+def clear_model_from_memory() -> None:
+    # Clear all pipelines from memory
+    global ov_pipelines
+    ov_pipelines.clear()
+
+
 async def generate_images(input_image_mask: np.ndarray, prompt: str, seed: int, guidance_scale: float, num_inference_steps: int,
-                          strength: float, randomize_seed: bool, device: str, endless_generation: bool, size: int) -> tuple[np.ndarray, float]:
-    global stop_generating
+                          strength: float, randomize_seed: bool, device: str, endless_generation: bool, model_name: str, image_size: int) -> tuple[np.ndarray, float]:
+    global stop_generating, hf_model_name
     stop_generating = not endless_generation
+    
+    # Clear previous model if it's different from the current one
+    if hf_model_name is not None and hf_model_name != model_name:
+        clear_model_from_memory(hf_model_name)
+    
+    # Download model if it hasn't been downloaded yet
+    if not (MODEL_DIR / model_name).exists():
+        download_model(model_name)
+    
+    hf_model_name = model_name
 
     input_image = None
     image_mask = None
@@ -145,8 +161,8 @@ async def generate_images(input_image_mask: np.ndarray, prompt: str, seed: int, 
 
         # ensure image is square
         input_image = utils.crop_center(input_image)
-        input_image = cv2.resize(input_image, (size, size))
-        image_mask = cv2.resize(image_mask, (size, size), interpolation=cv2.INTER_NEAREST)
+        input_image = cv2.resize(input_image, (image_size, image_size))
+        image_mask = cv2.resize(image_mask, (image_size, image_size), interpolation=cv2.INTER_NEAREST)
         image_mask = cv2.cvtColor(image_mask, cv2.COLOR_GRAY2BGR)
 
     while True:
@@ -157,19 +173,19 @@ async def generate_images(input_image_mask: np.ndarray, prompt: str, seed: int, 
         if input_image is not None:
             # inpainting pipeline
             if image_mask.any():
-                ov_pipeline = await load_pipeline(hf_model_name, device, size, "inpainting")
+                ov_pipeline = await load_pipeline(hf_model_name, device, image_size, "inpainting")
                 result = ov_pipeline.generate(prompt=prompt, image=ov.Tensor(input_image[None]), mask_image=ov.Tensor(image_mask[None]), num_inference_steps=num_inference_steps,
-                                              width=size, height=size, guidance_scale=guidance_scale, strength=1.0 - strength, rng_seed=seed, callback=progress).data[0]
+                                              width=image_size, height=image_size, guidance_scale=guidance_scale, strength=1.0 - strength, rng_seed=seed, callback=progress).data[0]
             # image2image pipeline
             else:
-                ov_pipeline = await load_pipeline(hf_model_name, device, size, "image2image")
-                result = ov_pipeline.generate(prompt=prompt, image=ov.Tensor(input_image[None]), num_inference_steps=num_inference_steps, width=size, height=size,
+                ov_pipeline = await load_pipeline(hf_model_name, device, image_size, "image2image")
+                result = ov_pipeline.generate(prompt=prompt, image=ov.Tensor(input_image[None]), num_inference_steps=num_inference_steps, width=image_size, height=image_size,
                                               guidance_scale=guidance_scale, strength=1.0 - strength, rng_seed=seed, callback=progress).data[0]
 
         # text2image pipeline
         else:
-            ov_pipeline = await load_pipeline(hf_model_name, device, size, "text2image")
-            result = ov_pipeline.generate(prompt=prompt, num_inference_steps=num_inference_steps, width=size, height=size,
+            ov_pipeline = await load_pipeline(hf_model_name, device, image_size, "text2image")
+            result = ov_pipeline.generate(prompt=prompt, num_inference_steps=num_inference_steps, width=image_size, height=image_size,
                                           guidance_scale=guidance_scale, rng_seed=seed, callback=progress).data[0]
         end_time = time.perf_counter()
 
@@ -193,7 +209,8 @@ async def generate_images(input_image_mask: np.ndarray, prompt: str, seed: int, 
 
 
 def build_ui(image_size: int) -> gr.Interface:
-    model_config = MODEL_CONFIGS[hf_model_name]
+    model_choices = list(MODEL_CONFIGS.keys())
+    
     examples_t2i = [
         "A sail boat on a grass field with mountains in the morning and sunny day",
         "a portrait of a tall Valkyrie with long blonde hair, iron armor, and a crown sitting on a white horse. Depict them in the Nordic Vikings period",
@@ -235,6 +252,8 @@ def build_ui(image_size: int) -> gr.Interface:
                         result_img = gr.Image(label="Generated image", elem_id="output_image", format="png")
                     with gr.Row():
                         result_time_label = gr.Text("", label="Inference time", type="text")
+                    with gr.Row():
+                        model_dropdown = gr.Dropdown(choices=model_choices, value=model_choices[0], label="Model")
                     with gr.Row(equal_height=True):
                         device_dropdown = gr.Dropdown(choices=utils.available_devices(), value="AUTO", label="Inference device", scale=4)
                         endless_checkbox = gr.Checkbox(label="Generate endlessly", value=False)
@@ -249,17 +268,32 @@ def build_ui(image_size: int) -> gr.Interface:
                     randomize_seed_button = gr.Button("Randomize seed", scale=0)
                 with gr.Row():
                     strength_slider = gr.Slider(label="Input image influence strength", minimum=0.0, maximum=1.0,
-                                                step=0.01, value=model_config["strength_value"])
+                                                step=0.01, value=MODEL_CONFIGS[model_choices[0]]["strength_value"])
                     guidance_scale_slider = gr.Slider(label="Guidance scale for base", minimum=2, maximum=14, step=0.1,
-                                                      value=model_config["guidance_scale_value"])
+                                                      value=MODEL_CONFIGS[model_choices[0]]["guidance_scale_value"])
                     num_inference_steps_slider = gr.Slider(label="Number of inference steps for base", minimum=1,
-                                                           maximum=32, step=1, value=model_config["num_inference_steps"])
+                                                           maximum=32, step=1, value=MODEL_CONFIGS[model_choices[0]]["num_inference_steps"])
 
         gr.Examples(label="Examples for Text2Image", examples=examples_t2i, inputs=prompt_text, outputs=result_img, cache_examples=False)
         gr.Examples(label="Examples for Image2Image", examples=examples_i2i, inputs=prompt_text, outputs=result_img, cache_examples=False)
 
         def swap_buttons_highlighting():
             return gr.Button(variant="primary"), gr.Button(variant="secondary")
+
+        def update_model_config(model_name):
+            config = MODEL_CONFIGS[model_name]
+            return (
+                gr.Slider(value=config["strength_value"]),
+                gr.Slider(value=config["guidance_scale_value"]),
+                gr.Slider(value=config["num_inference_steps"])
+            )
+
+        # Update sliders when model changes
+        model_dropdown.change(
+            update_model_config,
+            inputs=[model_dropdown],
+            outputs=[strength_slider, guidance_scale_slider, num_inference_steps_slider]
+        )
 
         # switch between image2image and text2image
         t2i_button.click(swap_buttons_highlighting, outputs=[t2i_button, i2i_button]).then(lambda: gr.Image(visible=False), outputs=input_image)
@@ -274,9 +308,9 @@ def build_ui(image_size: int) -> gr.Interface:
             fn=swap_buttons_highlighting,
             outputs=[stop_button, start_button]
         ).then(
-            partial(generate_images, size=image_size),
+            partial(generate_images, image_size=image_size),
             inputs=[input_image, prompt_text, seed_slider, guidance_scale_slider, num_inference_steps_slider,
-                    strength_slider, randomize_seed_checkbox, device_dropdown, endless_checkbox],
+                    strength_slider, randomize_seed_checkbox, device_dropdown, endless_checkbox, model_dropdown],
             outputs=[result_img, result_time_label]
         ).then(swap_buttons_highlighting, outputs=[start_button, stop_button])
         # clicking stop
@@ -286,12 +320,11 @@ def build_ui(image_size: int) -> gr.Interface:
     return demo
 
 
-def run_endless_lcm(model_name: str, safety_checker_model: str, image_size: int, local_network: bool = False, public_interface: bool = False) -> None:
-    global hf_model_name
-    hf_model_name = model_name
+def run_endless_lcm(safety_checker_model: str, image_size: int, local_network: bool = False, public_interface: bool = False) -> None:
     server_name = "0.0.0.0" if local_network else None
 
-    download_models(model_name, safety_checker_model)
+    # Download only the safety checker model at startup
+    download_safety_checker(safety_checker_model)
 
     demo = build_ui(image_size)
     log.info("Demo is ready!")
@@ -303,9 +336,6 @@ if __name__ == '__main__':
     log.getLogger().setLevel(log.INFO)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name", type=str, default="OpenVINO/LCM_Dreamshaper_v7-fp16-ov", help="Visual GenAI model to be used",
-                        choices=["OpenVINO/LCM_Dreamshaper_v7-int8-ov", "OpenVINO/LCM_Dreamshaper_v7-fp16-ov", "dreamlike-art/dreamlike-anime-1.0",
-                                 "OpenVINO/FLUX.1-schnell-int4-ov", "OpenVINO/FLUX.1-schnell-int8-ov", "OpenVINO/FLUX.1-schnell-fp16-ov"])
     parser.add_argument("--safety_checker_model", type=str, default="Falconsai/nsfw_image_detection",
                         choices=["Falconsai/nsfw_image_detection"], help="The model to verify if the generated image is NSFW")
     parser.add_argument("--image_size", type=int, default=512, help="The image size to generate")
@@ -313,4 +343,4 @@ if __name__ == '__main__':
     parser.add_argument("--public", default=False, action="store_true", help="Whether interface should be available publicly")
 
     args = parser.parse_args()
-    run_endless_lcm(args.model_name, args.safety_checker_model, args.image_size, args.local_network, args.public)
+    run_endless_lcm(args.safety_checker_model, args.image_size, args.local_network, args.public)
