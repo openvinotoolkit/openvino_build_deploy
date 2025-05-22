@@ -209,9 +209,9 @@ def generate_image(request: PromptRequest):
 
 # ---------- Server Start Print ----------
 if image_pipe or llm_pipe:
-    print("FastAPI backend is running.")
-    print("In a separate terminal, start the Streamlit app using:")
-    print("streamlit run streamlit_app.py")
+    logger.info("Demo is ready!")
+    logger.info("FastAPI backend is running.")
+    logger.info("In a separate terminal, start the Streamlit app using: streamlit run streamlit_app.py")
 else:
-    print("FastAPI backend is running, but no models were loaded.")
-    print("Please export models before running the Streamlit app.")
+    logger.warning("FastAPI backend is running, but no models were loaded.")
+    logger.warning("Please export models before running the Streamlit app.")
