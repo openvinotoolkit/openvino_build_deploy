@@ -10,7 +10,6 @@ import os
 import base64
 import sys
 import yaml
-import subprocess
 import openvino_genai as ov_genai
 import logging
 import random
@@ -47,10 +46,14 @@ app.add_middleware(
 PROJECT_ROOT = Path(__file__).resolve().parent
 CONFIG_PATH = PROJECT_ROOT / "config" / "illustration.yaml"
 
+# Get model types from environment variables with defaults
+IMAGE_MODEL_TYPE = os.getenv("IMAGE_MODEL_TYPE", "flux.1-schnell")
+LLM_MODEL_TYPE = os.getenv("LLM_MODEL_TYPE", "qwen2-7B")
+PRECISION = os.getenv("MODEL_PRECISION", "int4")
 
-IMAGE_MODEL_TYPE = "flux.1-schnell"
-LLM_MODEL_TYPE = "qwen2-7B"
-PRECISION = "int4"
+logger.info(f"Using Image Model Type: {IMAGE_MODEL_TYPE}")
+logger.info(f"Using LLM Model Type: {LLM_MODEL_TYPE}")
+logger.info(f"Using Model Precision: {PRECISION}")
 
 image_model_dir = PROJECT_ROOT / "models" / f"{IMAGE_MODEL_TYPE}-{PRECISION.upper()}"
 llm_model_dir = PROJECT_ROOT / "models" / f"{LLM_MODEL_TYPE}-{PRECISION.upper()}"
