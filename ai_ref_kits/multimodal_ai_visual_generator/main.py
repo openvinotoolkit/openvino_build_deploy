@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from pathlib import Path
 from io import BytesIO
 from PIL import Image
+import numpy as np
 import os
 import base64
 import sys
@@ -171,7 +172,7 @@ def generate_image(request: PromptRequest):
     prompt = request.prompt
     height = 512
     width = 512
-    seed = random.randint(1_000_000_000, 4_294_967_295)
+    seed = random.randint(0, np.iinfo(np.int32).max)
     steps = 4
 
     logger.info(f"Generating image for prompt: '{prompt}' with seed: {seed}")
@@ -204,6 +205,10 @@ def generate_image(request: PromptRequest):
     return {"image": img_str}
 
 # ---------- Server Start Print ----------
-print("FastAPI backend is running.")
-print("In a separate terminal, start the Streamlit app using:")
-print("streamlit run streamlit_app.py")
+if image_pipe or llm_pipe:
+    print("FastAPI backend is running.")
+    print("In a separate terminal, start the Streamlit app using:")
+    print("streamlit run streamlit_app.py")
+else:
+    print("FastAPI backend is running, but no models were loaded.")
+    print("Please export models before running the Streamlit app.")
