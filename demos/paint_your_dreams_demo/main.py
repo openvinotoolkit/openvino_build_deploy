@@ -28,12 +28,15 @@ from utils import demo_utils as utils
 MAX_SEED = np.iinfo(np.int32).max
 MODEL_DIR = Path("model")
 
+SAFETY_CHECKER_MODEL_NAME = "Falconsai/nsfw_image_detection"
+
 safety_checker: Optional[Pipeline] = None
 
 ov_pipelines = {}
 
 stop_generating: bool = True
-hf_model_name: Optional[str] = None
+hf_model_name: str = ""
+current_image_size: int = 512
 
 dreamshaper_config = {
     "guidance_scale_value": 8,
@@ -61,7 +64,7 @@ MODEL_CONFIGS = {
 }
 
 
-def download_safety_checker(model_name: str) -> None:
+def download_and_load_safety_checker(model_name: str) -> None:
     global safety_checker
     safety_checker_dir = MODEL_DIR / model_name
     if not safety_checker_dir.exists():
@@ -132,26 +135,21 @@ def progress(step, num_steps, latent) -> bool:
     return False
 
 
-def clear_model_from_memory() -> None:
-    # Clear all pipelines from memory
-    global ov_pipelines
-    ov_pipelines.clear()
-
-
 async def generate_images(input_image_mask: np.ndarray, prompt: str, seed: int, guidance_scale: float, num_inference_steps: int,
                           strength: float, randomize_seed: bool, device: str, endless_generation: bool, model_name: str, image_size: int) -> tuple[np.ndarray, float]:
-    global stop_generating, hf_model_name
+    global stop_generating, hf_model_name, current_image_size
     stop_generating = not endless_generation
     
-    # Clear previous model if it's different from the current one
-    if hf_model_name is not None and hf_model_name != model_name:
-        clear_model_from_memory(hf_model_name)
-    
+    # Clear pipelines if model or image size changed
+    if hf_model_name != model_name or current_image_size != image_size:
+        ov_pipelines.clear()
+
     # Download model if it hasn't been downloaded yet
     if not (MODEL_DIR / model_name).exists():
         download_model(model_name)
     
     hf_model_name = model_name
+    current_image_size = image_size
 
     input_image = None
     image_mask = None
@@ -208,7 +206,7 @@ async def generate_images(input_image_mask: np.ndarray, prompt: str, seed: int, 
         await asyncio.sleep(0.5)
 
 
-def build_ui(image_size: int) -> gr.Interface:
+def build_ui() -> gr.Interface:
     model_choices = list(MODEL_CONFIGS.keys())
     
     examples_t2i = [
@@ -271,6 +269,8 @@ def build_ui(image_size: int) -> gr.Interface:
                                                 step=0.01, value=MODEL_CONFIGS[model_choices[0]]["strength_value"])
                     guidance_scale_slider = gr.Slider(label="Guidance scale for base", minimum=2, maximum=14, step=0.1,
                                                       value=MODEL_CONFIGS[model_choices[0]]["guidance_scale_value"])
+                    image_size_slider = gr.Slider(label="Image size", minimum=256, maximum=1024, step=64,
+                                                value=512)
                     num_inference_steps_slider = gr.Slider(label="Number of inference steps for base", minimum=1,
                                                            maximum=32, step=1, value=MODEL_CONFIGS[model_choices[0]]["num_inference_steps"])
 
@@ -295,24 +295,25 @@ def build_ui(image_size: int) -> gr.Interface:
             outputs=[strength_slider, guidance_scale_slider, num_inference_steps_slider]
         )
 
-        # switch between image2image and text2image
-        t2i_button.click(swap_buttons_highlighting, outputs=[t2i_button, i2i_button]).then(lambda: gr.Image(visible=False), outputs=input_image)
-        i2i_button.click(swap_buttons_highlighting, outputs=[i2i_button, t2i_button]).then(lambda: gr.Image(visible=True), outputs=input_image)
-
-        # rand the prompt
-        random_prompt_button.click(lambda: gr.Text(value=random.choice(examples_t2i)), outputs=prompt_text)
-
         # clicking run
         gr.on(
             triggers=[prompt_text.submit, start_button.click],
             fn=swap_buttons_highlighting,
             outputs=[stop_button, start_button]
         ).then(
-            partial(generate_images, image_size=image_size),
+            generate_images,
             inputs=[input_image, prompt_text, seed_slider, guidance_scale_slider, num_inference_steps_slider,
-                    strength_slider, randomize_seed_checkbox, device_dropdown, endless_checkbox, model_dropdown],
+                    strength_slider, randomize_seed_checkbox, device_dropdown, endless_checkbox, model_dropdown, image_size_slider],
             outputs=[result_img, result_time_label]
         ).then(swap_buttons_highlighting, outputs=[start_button, stop_button])
+
+        # rand the prompt
+        random_prompt_button.click(lambda: gr.Text(value=random.choice(examples_t2i)), outputs=prompt_text)
+
+        # switch between image2image and text2image
+        t2i_button.click(swap_buttons_highlighting, outputs=[t2i_button, i2i_button]).then(lambda: gr.Image(visible=False), outputs=input_image)
+        i2i_button.click(swap_buttons_highlighting, outputs=[i2i_button, t2i_button]).then(lambda: gr.Image(visible=True), outputs=input_image)
+
         # clicking stop
         stop_button.click(stop)
         randomize_seed_button.click(lambda _: random.randint(0, MAX_SEED), inputs=seed_slider, outputs=seed_slider)
@@ -320,13 +321,13 @@ def build_ui(image_size: int) -> gr.Interface:
     return demo
 
 
-def run_endless_lcm(safety_checker_model: str, image_size: int, local_network: bool = False, public_interface: bool = False) -> None:
+def run_demo(local_network: bool = False, public_interface: bool = False) -> None:
     server_name = "0.0.0.0" if local_network else None
 
     # Download only the safety checker model at startup
-    download_safety_checker(safety_checker_model)
+    download_and_load_safety_checker(SAFETY_CHECKER_MODEL_NAME)
 
-    demo = build_ui(image_size)
+    demo = build_ui()
     log.info("Demo is ready!")
     demo.launch(server_name=server_name, share=public_interface)
 
@@ -336,11 +337,8 @@ if __name__ == '__main__':
     log.getLogger().setLevel(log.INFO)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--safety_checker_model", type=str, default="Falconsai/nsfw_image_detection",
-                        choices=["Falconsai/nsfw_image_detection"], help="The model to verify if the generated image is NSFW")
-    parser.add_argument("--image_size", type=int, default=512, help="The image size to generate")
     parser.add_argument("--local_network", action="store_true", help="Whether demo should be available in local network")
     parser.add_argument("--public", default=False, action="store_true", help="Whether interface should be available publicly")
 
     args = parser.parse_args()
-    run_endless_lcm(args.safety_checker_model, args.image_size, args.local_network, args.public)
+    run_demo(args.local_network, args.public)
