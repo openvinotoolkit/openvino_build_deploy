@@ -283,9 +283,9 @@ def build_ui() -> gr.Interface:
         def update_model_config(model_name):
             config = MODEL_CONFIGS[model_name]
             return (
-                gr.Slider(value=config["strength_value"]),
-                gr.Slider(value=config["guidance_scale_value"]),
-                gr.Slider(value=config["num_inference_steps"])
+                config["strength_value"],
+                config["guidance_scale_value"],
+                config["num_inference_steps"]
             )
 
         # Update sliders when model changes
