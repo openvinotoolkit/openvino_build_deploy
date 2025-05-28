@@ -17,8 +17,7 @@ import tqdm
 from PIL import Image
 from huggingface_hub import snapshot_download
 from optimum.exporters.openvino.convert import export_tokenizer
-from optimum.intel import OVStableDiffusionPipeline
-from optimum.intel.openvino import OVModelForImageClassification
+from optimum.intel.openvino import OVModelForImageClassification, OVStableDiffusionPipeline
 from transformers import Pipeline, pipeline, AutoProcessor
 
 SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "utils")
@@ -85,14 +84,14 @@ def download_model(model_name: str) -> None:
         if is_openvino_model:
             snapshot_download(model_name, local_dir=output_dir, resume_download=True)
         else:
-            output_dir_dream = MODEL_DIR / model_name
-            if not output_dir_dream.exists():
+            output_dir = MODEL_DIR / model_name
+            if not output_dir.exists():
                 pipeline = OVStableDiffusionPipeline.from_pretrained(model_name, export=True)
                 try:
-                    pipeline.save_pretrained(str(output_dir_dream))
-                    export_tokenizer(pipeline.tokenizer, str(output_dir_dream / "tokenizer"))
+                    pipeline.save_pretrained(str(output_dir))
+                    export_tokenizer(pipeline.tokenizer, str(output_dir / "tokenizer"))
                 except Exception as e:
-                    log.error(f"Failed to export model '{model_name}' to '{output_dir_dream}': {e}")
+                    log.error(f"Failed to export model '{model_name}' to '{output_dir}': {e}")
                     raise
 
 
