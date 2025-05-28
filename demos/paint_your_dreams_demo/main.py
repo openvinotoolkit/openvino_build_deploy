@@ -5,7 +5,6 @@ import os
 import random
 import sys
 import time
-from functools import partial
 from pathlib import Path
 from typing import Optional
 
@@ -17,7 +16,8 @@ import openvino_genai as genai
 import tqdm
 from PIL import Image
 from huggingface_hub import snapshot_download
-from optimum.intel.openvino import OVModelForImageClassification
+from optimum.exporters.openvino.convert import export_tokenizer
+from optimum.intel.openvino import OVModelForImageClassification, OVStableDiffusionPipeline
 from transformers import Pipeline, pipeline, AutoProcessor
 
 SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "utils")
@@ -84,9 +84,15 @@ def download_model(model_name: str) -> None:
         if is_openvino_model:
             snapshot_download(model_name, local_dir=output_dir, resume_download=True)
         else:
-            output_dir_dream = MODEL_DIR / model_name
-            if not output_dir_dream.exists():
-                os.system(f"optimum-cli export openvino --model {model_name} --task stable-diffusion --weight-format fp16 {output_dir_dream}")
+            output_dir = MODEL_DIR / model_name
+            if not output_dir.exists():
+                pipeline = OVStableDiffusionPipeline.from_pretrained(model_name, export=True)
+                try:
+                    pipeline.save_pretrained(str(output_dir))
+                    export_tokenizer(pipeline.tokenizer, str(output_dir / "tokenizer"))
+                except Exception as e:
+                    log.error(f"Failed to export model '{model_name}' to '{output_dir}': {e}")
+                    raise
 
 
 async def create_pipeline(model_dir: Path, device: str, size: int, pipeline: str) -> genai.Text2ImagePipeline | genai.Image2ImagePipeline | genai.InpaintingPipeline:
