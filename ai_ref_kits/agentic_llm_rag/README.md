@@ -14,6 +14,8 @@
 
 The AI Insight Agent with RAG uses Large Language Models (LLMs) and Retrieval-Augmented Generation (RAG) to interpret user prompts, engage in meaningful dialogue, perform calculations, use RAG techniques to improve its knowledge and interact with the user to add items to a virtual shopping cart. This solution uses the OpenVINO™ toolkit to power the AI models at the edge. Designed for both consumers and employees, it functions as a smart, personalized retail assistant, offering an interactive and user-friendly experience similar to an advanced digital kiosk.
 
+📖 Learn more in our [Medium article](https://medium.com/openvino-toolkit/building-an-agentic-llm-with-rag-using-openvino-4d98bef28205) detailing the design, architecture, and key takeaways from building this AI agentic RAG kit.
+
 This kit uses the following technology stack:
 - [OpenVINO Toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([docs](https://docs.openvino.ai/))
 - [Qwen2-7B-Instruct](https://huggingface.co/Qwen/Qwen2-7B-Instruct)
