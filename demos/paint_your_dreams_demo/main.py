@@ -17,8 +17,7 @@ import tqdm
 from PIL import Image
 from huggingface_hub import snapshot_download
 from optimum.exporters.openvino.convert import export_tokenizer
-from optimum.intel import OVPipelineForText2Image
-from optimum.intel.openvino import OVModelForImageClassification
+from optimum.intel import OVPipelineForText2Image, OVModelForImageClassification
 from transformers import Pipeline, pipeline, AutoProcessor
 
 SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "utils")
@@ -56,12 +55,7 @@ flux_config = {
 }
 flux_lite_config = {
     "guidance_scale_value": 3.5,
-    "num_inference_steps": 25,
-    "strength_value": 0.5
-}
-shuttle_config = {
-    "guidance_scale_value": 3.5,
-    "num_inference_steps": 4,
+    "num_inference_steps": 12,
     "strength_value": 0.5
 }
 sdxl_config = {
@@ -77,8 +71,6 @@ MODEL_CONFIGS = {
     "OpenVINO/FLUX.1-schnell-int8-ov": flux_config,
     "OpenVINO/FLUX.1-schnell-fp16-ov": flux_config,
     "Freepik/flux.1-lite-8B": flux_lite_config,
-    "shuttleai/shuttle-3-diffusion": shuttle_config,
-    "shuttleai/shuttle-3.1-aesthetic": shuttle_config,
     "stabilityai/sdxl-turbo": sdxl_config,
     "dreamlike-art/dreamlike-anime-1.0": dreamlike_anime_config,
 }
