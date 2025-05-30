@@ -53,6 +53,21 @@ flux_config = {
     "num_inference_steps": 4,
     "strength_value": 0.2
 }
+flux_lite_config = {
+    "guidance_scale_value": 3.5,
+    "num_inference_steps": 25,
+    "strength_value": 0.5
+}
+shuttle_config = {
+    "guidance_scale_value": 3.5,
+    "num_inference_steps": 4,
+    "strength_value": 0.5
+}
+sdxl_config = {
+    "guidance_scale_value": 0.0,
+    "num_inference_steps": 1,
+    "strength_value": 0.5
+}
 
 MODEL_CONFIGS = {
     "OpenVINO/LCM_Dreamshaper_v7-int8-ov": dreamshaper_config,
@@ -60,6 +75,10 @@ MODEL_CONFIGS = {
     "OpenVINO/FLUX.1-schnell-int4-ov": flux_config,
     "OpenVINO/FLUX.1-schnell-int8-ov": flux_config,
     "OpenVINO/FLUX.1-schnell-fp16-ov": flux_config,
+    "Freepik/flux.1-lite-8B": flux_lite_config,
+    "shuttleai/shuttle-3-diffusion": shuttle_config,
+    "shuttleai/shuttle-3.1-aesthetic": shuttle_config,
+    "stabilityai/sdxl-turbo": sdxl_config,
     "dreamlike-art/dreamlike-anime-1.0": dreamlike_anime_config,
 }
 
