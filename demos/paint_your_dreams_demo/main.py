@@ -66,7 +66,7 @@ shuttle_config = {
 }
 sdxl_config = {
     "guidance_scale_value": 1.1,
-    "num_inference_steps": 1,
+    "num_inference_steps": 2,
     "strength_value": 0.5
 }
 
