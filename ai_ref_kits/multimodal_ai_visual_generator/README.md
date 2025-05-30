@@ -171,12 +171,26 @@ This app has two components: a FastAPI backend and a Streamlit frontend.
 
 ### Step 1: Run FastAPI (in Terminal 1)
 
+The FastAPI backend can be configured using environment variables to specify which models to use:
+
+- `IMAGE_MODEL_TYPE`: The type of image generation model to use (default: "flux.1-schnell")
+- `LLM_MODEL_TYPE`: The type of language model to use (default: "qwen2-7B")
+- `MODEL_PRECISION`: The precision to use for both models (default: "int4")
+
+You can set these variables when running the application:
+
 ```bash
 cd openvino_build_deploy/ai_ref_kits/multimodal_ai_visual_generator
 source venv/bin/activate         # On Windows: venv\Scripts\activate
+
+# Run with default values
 uvicorn main:app --host 0.0.0.0 --port 8000
+
+# Or run with custom model configuration
+IMAGE_MODEL_TYPE="your-image-model" LLM_MODEL_TYPE="your-llm-model" MODEL_PRECISION="int4" uvicorn main:app --host 0.0.0.0 --port 8000
 ```
-> **Note:** If you're using different models, update the paths in `main.py` accordingly.
+
+If no environment variables are set, the application will use the default values.
 
 ### Step 2: Run Streamlit UI (in Terminal 2)
 
@@ -205,7 +219,7 @@ Branding mode:
 ## Additional Resources
 
 - Learn more about [OpenVINO](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html)
-- Explore [OpenVINO’s documentation](https://docs.openvino.ai/2024/home.html)
+- Explore [OpenVINO's documentation](https://docs.openvino.ai/2024/home.html)
 
 <p align="right"><a href="#top">Back to top ⬆️</a></p>
 
