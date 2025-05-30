@@ -64,7 +64,7 @@ shuttle_config = {
     "strength_value": 0.5
 }
 sdxl_config = {
-    "guidance_scale_value": 0.0,
+    "guidance_scale_value": 1.1,
     "num_inference_steps": 1,
     "strength_value": 0.5
 }
@@ -291,7 +291,7 @@ def build_ui() -> gr.Interface:
                 with gr.Row():
                     strength_slider = gr.Slider(label="Input image influence strength", minimum=0.0, maximum=1.0,
                                                 step=0.01, value=MODEL_CONFIGS[model_choices[0]]["strength_value"])
-                    guidance_scale_slider = gr.Slider(label="Guidance scale for base", minimum=2, maximum=14, step=0.1,
+                    guidance_scale_slider = gr.Slider(label="Guidance scale for base", minimum=1.1, maximum=15, step=0.1,
                                                       value=MODEL_CONFIGS[model_choices[0]]["guidance_scale_value"])
                     image_size_slider = gr.Slider(label="Image size", minimum=256, maximum=1024, step=64,
                                                 value=512)
