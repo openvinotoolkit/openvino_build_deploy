@@ -17,7 +17,7 @@ import tqdm
 from PIL import Image
 from huggingface_hub import snapshot_download
 from optimum.exporters.openvino.convert import export_tokenizer
-from optimum.intel.openvino import OVModelForImageClassification, OVStableDiffusionPipeline
+from optimum.intel import OVPipelineForText2Image, OVModelForImageClassification
 from transformers import Pipeline, pipeline, AutoProcessor
 
 SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "utils")
@@ -53,6 +53,16 @@ flux_config = {
     "num_inference_steps": 4,
     "strength_value": 0.2
 }
+flux_lite_config = {
+    "guidance_scale_value": 3.5,
+    "num_inference_steps": 12,
+    "strength_value": 0.5
+}
+sdxl_config = {
+    "guidance_scale_value": 1.1,
+    "num_inference_steps": 2,
+    "strength_value": 0.5
+}
 
 MODEL_CONFIGS = {
     "OpenVINO/LCM_Dreamshaper_v7-int8-ov": dreamshaper_config,
@@ -60,6 +70,8 @@ MODEL_CONFIGS = {
     "OpenVINO/FLUX.1-schnell-int4-ov": flux_config,
     "OpenVINO/FLUX.1-schnell-int8-ov": flux_config,
     "OpenVINO/FLUX.1-schnell-fp16-ov": flux_config,
+    "Freepik/flux.1-lite-8B": flux_lite_config,
+    "stabilityai/sdxl-turbo": sdxl_config,
     "dreamlike-art/dreamlike-anime-1.0": dreamlike_anime_config,
 }
 
@@ -86,26 +98,25 @@ def download_model(model_name: str) -> None:
         else:
             output_dir = MODEL_DIR / model_name
             if not output_dir.exists():
-                pipeline = OVStableDiffusionPipeline.from_pretrained(model_name, export=True)
-                try:
-                    pipeline.save_pretrained(str(output_dir))
-                    export_tokenizer(pipeline.tokenizer, str(output_dir / "tokenizer"))
-                except Exception as e:
-                    log.error(f"Failed to export model '{model_name}' to '{output_dir}': {e}")
-                    raise
+                ov_pipeline = OVPipelineForText2Image.from_pretrained(model_name, export=True)
+                ov_pipeline.save_pretrained(str(output_dir))
+                for tokenizer_name in ("tokenizer", "tokenizer_2", "tokenizer_3"):
+                    tokenizer = getattr(ov_pipeline, tokenizer_name, None)
+                    if tokenizer:
+                        export_tokenizer(tokenizer, output_dir / tokenizer_name)
 
 
-async def create_pipeline(model_dir: Path, device: str, size: int, pipeline: str) -> genai.Text2ImagePipeline | genai.Image2ImagePipeline | genai.InpaintingPipeline:
+async def create_pipeline(model_dir: Path, device: str, size: int, pipeline_type: str) -> genai.Text2ImagePipeline | genai.Image2ImagePipeline | genai.InpaintingPipeline:
     ov_config = {"CACHE_DIR": "cache"}
 
-    if pipeline == "text2image":
+    if pipeline_type == "text2image":
         ov_pipeline = genai.Text2ImagePipeline(model_dir)
-    elif pipeline == "image2image":
+    elif pipeline_type == "image2image":
         ov_pipeline = genai.Image2ImagePipeline(model_dir)
-    elif pipeline == "inpainting":
+    elif pipeline_type == "inpainting":
         ov_pipeline = genai.InpaintingPipeline(model_dir)
     else:
-        raise ValueError(f"Unknown pipeline: {pipeline}")
+        raise ValueError(f"Unknown pipeline: {pipeline_type}")
 
     ov_pipeline.reshape(1, size, size, ov_pipeline.get_generation_config().guidance_scale)
     ov_pipeline.compile(device, config=ov_config)
@@ -113,13 +124,13 @@ async def create_pipeline(model_dir: Path, device: str, size: int, pipeline: str
     return ov_pipeline
 
 
-async def load_pipeline(model_name: str, device: str, size: int, pipeline: str) -> genai.Text2ImagePipeline | genai.Image2ImagePipeline | genai.InpaintingPipeline:
+async def load_pipeline(model_name: str, device: str, size: int, pipeline_type: str) -> genai.Text2ImagePipeline | genai.Image2ImagePipeline | genai.InpaintingPipeline:
     model_dir = MODEL_DIR / model_name
 
-    if (device, pipeline) not in ov_pipelines:
-        ov_pipelines[(device, pipeline)] = await create_pipeline(model_dir, device, size, pipeline)
+    if (device, pipeline_type) not in ov_pipelines:
+        ov_pipelines[(device, pipeline_type)] = await create_pipeline(model_dir, device, size, pipeline_type)
 
-    return ov_pipelines[(device, pipeline)]
+    return ov_pipelines[(device, pipeline_type)]
 
 
 async def stop():
@@ -273,7 +284,7 @@ def build_ui() -> gr.Interface:
                 with gr.Row():
                     strength_slider = gr.Slider(label="Input image influence strength", minimum=0.0, maximum=1.0,
                                                 step=0.01, value=MODEL_CONFIGS[model_choices[0]]["strength_value"])
-                    guidance_scale_slider = gr.Slider(label="Guidance scale for base", minimum=2, maximum=14, step=0.1,
+                    guidance_scale_slider = gr.Slider(label="Guidance scale for base", minimum=1.1, maximum=15, step=0.1,
                                                       value=MODEL_CONFIGS[model_choices[0]]["guidance_scale_value"])
                     image_size_slider = gr.Slider(label="Image size", minimum=256, maximum=1024, step=64,
                                                 value=512)
