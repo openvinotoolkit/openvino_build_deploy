@@ -106,12 +106,11 @@ def download_model(model_name: str) -> None:
             output_dir = MODEL_DIR / model_name
             if not output_dir.exists():
                 pipeline = OVStableDiffusionPipeline.from_pretrained(model_name, export=True)
-                try:
-                    pipeline.save_pretrained(str(output_dir))
-                    export_tokenizer(pipeline.tokenizer, str(output_dir / "tokenizer"))
-                except Exception as e:
-                    log.error(f"Failed to export model '{model_name}' to '{output_dir}': {e}")
-                    raise
+                pipeline.save_pretrained(str(output_dir))
+                for tokenizer_name in ("tokenizer", "tokenizer_2", "tokenizer_3"):
+                    tokenizer = getattr(pipeline, tokenizer_name, None)
+                    if tokenizer:
+                        export_tokenizer(tokenizer, output_dir / tokenizer_name)
 
 
 async def create_pipeline(model_dir: Path, device: str, size: int, pipeline: str) -> genai.Text2ImagePipeline | genai.Image2ImagePipeline | genai.InpaintingPipeline:
