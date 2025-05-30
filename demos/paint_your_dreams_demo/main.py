@@ -35,23 +35,36 @@ safety_checker: Optional[Pipeline] = None
 ov_pipelines = {}
 
 stop_generating: bool = True
-hf_model_name: str = ""
-current_image_size: int = 512
+
+current_pipeline_configuration = {
+    "model_name": "",
+    "image_size": 512,
+    "lora_adapter": None,
+    "adapter_alpha": 0.0
+}
 
 dreamshaper_config = {
     "guidance_scale_value": 8,
     "num_inference_steps": 5,
-    "strength_value": 0.5
+    "strength_value": 0.5,
+    "lora_adapters": [
+    ]
 }
+
 dreamlike_anime_config = {
     "guidance_scale_value": 7.5,
     "num_inference_steps": 50,
-    "strength_value": 0.2
+    "strength_value": 0.2,
+    "lora_adapters": [
+    ]
 }
+
 flux_config = {
     "guidance_scale_value": 8,
     "num_inference_steps": 4,
-    "strength_value": 0.2
+    "strength_value": 0.2,
+    "lora_adapters": [
+    ]
 }
 
 MODEL_CONFIGS = {
@@ -77,26 +90,45 @@ def download_and_load_safety_checker(model_name: str) -> None:
                             image_processor=AutoProcessor.from_pretrained(safety_checker_dir))
 
 
-def download_model(model_name: str) -> None:
+def download_model(model_name: str, is_lora_adapter: bool = False) -> None:
     is_openvino_model = model_name.split("/")[0] == "OpenVINO"
     output_dir = MODEL_DIR / model_name
     if not output_dir.exists():
-        if is_openvino_model:
+        if is_openvino_model or is_lora_adapter:
             snapshot_download(model_name, local_dir=output_dir, resume_download=True)
         else:
             output_dir = MODEL_DIR / model_name
             if not output_dir.exists():
                 pipeline = OVStableDiffusionPipeline.from_pretrained(model_name, export=True)
-                try:
-                    pipeline.save_pretrained(str(output_dir))
-                    export_tokenizer(pipeline.tokenizer, str(output_dir / "tokenizer"))
-                except Exception as e:
-                    log.error(f"Failed to export model '{model_name}' to '{output_dir}': {e}")
-                    raise
+                pipeline.save_pretrained(str(output_dir))
+                export_tokenizer(pipeline.tokenizer, str(output_dir / "tokenizer"))
 
 
-async def create_pipeline(model_dir: Path, device: str, size: int, pipeline: str) -> genai.Text2ImagePipeline | genai.Image2ImagePipeline | genai.InpaintingPipeline:
+def load_lora_adapter(adapter_model_name: str, adapter_alpha: float) -> genai.AdapterConfig:
+    adapter_model_dir = MODEL_DIR / adapter_model_name
+    if not adapter_model_dir.exists():
+        download_model(adapter_model_name, is_lora_adapter=True)
+
+    # find a file with lora weights
+    safetensors_file = next(adapter_model_dir.glob("*.safetensors"))
+
+    adapter = genai.Adapter(safetensors_file)
+    adapter_config = genai.AdapterConfig()
+    adapter_config.add(adapter, adapter_alpha)
+    return adapter_config
+
+
+async def create_pipeline(model_name: str, device: str, size: int, adapter_model_name: str, adapter_alpha: float, pipeline: str) -> genai.Text2ImagePipeline | genai.Image2ImagePipeline | genai.InpaintingPipeline:
     ov_config = {"CACHE_DIR": "cache"}
+
+    # Download model if it hasn't been downloaded yet
+    model_dir = MODEL_DIR / model_name
+    if not model_dir.exists():
+        download_model(model_name)
+
+    adapter = None
+    if adapter_model_name is not None and adapter_model_name != "None":
+        adapter = load_lora_adapter(adapter_model_name, adapter_alpha)
 
     if pipeline == "text2image":
         ov_pipeline = genai.Text2ImagePipeline(model_dir)
@@ -108,16 +140,18 @@ async def create_pipeline(model_dir: Path, device: str, size: int, pipeline: str
         raise ValueError(f"Unknown pipeline: {pipeline}")
 
     ov_pipeline.reshape(1, size, size, ov_pipeline.get_generation_config().guidance_scale)
-    ov_pipeline.compile(device, config=ov_config)
+    # todo improve the below
+    if adapter is None:
+        ov_pipeline.compile(device, config=ov_config)
+    else:
+        ov_pipeline.compile(device, config=ov_config, adapters=adapter)
 
     return ov_pipeline
 
 
-async def load_pipeline(model_name: str, device: str, size: int, pipeline: str) -> genai.Text2ImagePipeline | genai.Image2ImagePipeline | genai.InpaintingPipeline:
-    model_dir = MODEL_DIR / model_name
-
+async def load_pipeline(model_name: str, device: str, size: int, adapter_model_name: str, adapter_alpha: float, pipeline: str) -> genai.Text2ImagePipeline | genai.Image2ImagePipeline | genai.InpaintingPipeline:
     if (device, pipeline) not in ov_pipelines:
-        ov_pipelines[(device, pipeline)] = await create_pipeline(model_dir, device, size, pipeline)
+        ov_pipelines[(device, pipeline)] = await create_pipeline(model_name, device, size, adapter_model_name, adapter_alpha, pipeline)
 
     return ov_pipelines[(device, pipeline)]
 
@@ -141,21 +175,23 @@ def progress(step, num_steps, latent) -> bool:
     return False
 
 
-async def generate_images(input_image_mask: np.ndarray, prompt: str, seed: int, guidance_scale: float, num_inference_steps: int,
-                          strength: float, randomize_seed: bool, device: str, endless_generation: bool, model_name: str, image_size: int) -> tuple[np.ndarray, float]:
-    global stop_generating, hf_model_name, current_image_size
+async def generate_images(model_name: str, device: str, image_size: int, adapter_model_name: str, adapter_alpha: float, input_image_mask: np.ndarray, prompt: str, seed: int,
+                          guidance_scale: float, num_inference_steps: int, strength: float, randomize_seed: bool, endless_generation: bool) -> tuple[np.ndarray, float]:
+    global stop_generating, current_pipeline_configuration, ov_pipelines
     stop_generating = not endless_generation
-    
-    # Clear pipelines if model or image size changed
-    if hf_model_name != model_name or current_image_size != image_size:
+
+    pipeline_config = {
+        "model_name": model_name,
+        "image_size": image_size,
+        "lora_adapter": adapter_model_name,
+        "adapter_alpha": adapter_alpha
+    }
+
+    # Clear pipelines if model, adapter or image size changed
+    if pipeline_config != current_pipeline_configuration:
         ov_pipelines.clear()
 
-    # Download model if it hasn't been downloaded yet
-    if not (MODEL_DIR / model_name).exists():
-        download_model(model_name)
-    
-    hf_model_name = model_name
-    current_image_size = image_size
+    current_pipeline_configuration = pipeline_config
 
     input_image = None
     image_mask = None
@@ -177,18 +213,18 @@ async def generate_images(input_image_mask: np.ndarray, prompt: str, seed: int, 
         if input_image is not None:
             # inpainting pipeline
             if image_mask.any():
-                ov_pipeline = await load_pipeline(hf_model_name, device, image_size, "inpainting")
+                ov_pipeline = await load_pipeline(model_name, device, image_size, adapter_model_name, adapter_alpha, "inpainting")
                 result = ov_pipeline.generate(prompt=prompt, image=ov.Tensor(input_image[None]), mask_image=ov.Tensor(image_mask[None]), num_inference_steps=num_inference_steps,
                                               width=image_size, height=image_size, guidance_scale=guidance_scale, strength=1.0 - strength, rng_seed=seed, callback=progress).data[0]
             # image2image pipeline
             else:
-                ov_pipeline = await load_pipeline(hf_model_name, device, image_size, "image2image")
+                ov_pipeline = await load_pipeline(model_name, device, image_size, adapter_model_name, adapter_alpha, "image2image")
                 result = ov_pipeline.generate(prompt=prompt, image=ov.Tensor(input_image[None]), num_inference_steps=num_inference_steps, width=image_size, height=image_size,
                                               guidance_scale=guidance_scale, strength=1.0 - strength, rng_seed=seed, callback=progress).data[0]
 
         # text2image pipeline
         else:
-            ov_pipeline = await load_pipeline(hf_model_name, device, image_size, "text2image")
+            ov_pipeline = await load_pipeline(model_name, device, image_size, adapter_model_name, adapter_alpha, "text2image")
             result = ov_pipeline.generate(prompt=prompt, num_inference_steps=num_inference_steps, width=image_size, height=image_size,
                                           guidance_scale=guidance_scale, rng_seed=seed, callback=progress).data[0]
         end_time = time.perf_counter()
@@ -214,7 +250,10 @@ async def generate_images(input_image_mask: np.ndarray, prompt: str, seed: int, 
 
 def build_ui() -> gr.Interface:
     model_choices = list(MODEL_CONFIGS.keys())
-    
+    initial_model = model_choices[0]
+    initial_config = MODEL_CONFIGS[initial_model]
+    adapter_choices = ["None"] + initial_config["lora_adapters"]
+
     examples_t2i = [
         "A sail boat on a grass field with mountains in the morning and sunny day",
         "a portrait of a tall Valkyrie with long blonde hair, iron armor, and a crown sitting on a white horse. Depict them in the Nordic Vikings period",
@@ -257,7 +296,9 @@ def build_ui() -> gr.Interface:
                     with gr.Row():
                         result_time_label = gr.Text("", label="Inference time", type="text")
                     with gr.Row():
-                        model_dropdown = gr.Dropdown(choices=model_choices, value=model_choices[0], label="Model")
+                        model_dropdown = gr.Dropdown(choices=model_choices, value=initial_model, label="Model")
+                        adapter_dropdown = gr.Dropdown(choices=adapter_choices, value="None", label="LoRA Adapter")
+                        adapter_alpha_slider = gr.Slider(label="LoRA Alpha", minimum=0.0, maximum=1.0, step=0.05, value=0.5, visible=False)
                     with gr.Row(equal_height=True):
                         device_dropdown = gr.Dropdown(choices=utils.available_devices(), value="AUTO", label="Inference device", scale=4)
                         endless_checkbox = gr.Checkbox(label="Generate endlessly", value=False)
@@ -272,13 +313,13 @@ def build_ui() -> gr.Interface:
                     randomize_seed_button = gr.Button("Randomize seed", scale=0)
                 with gr.Row():
                     strength_slider = gr.Slider(label="Input image influence strength", minimum=0.0, maximum=1.0,
-                                                step=0.01, value=MODEL_CONFIGS[model_choices[0]]["strength_value"])
+                                                step=0.01, value=initial_config["strength_value"])
                     guidance_scale_slider = gr.Slider(label="Guidance scale for base", minimum=2, maximum=14, step=0.1,
-                                                      value=MODEL_CONFIGS[model_choices[0]]["guidance_scale_value"])
+                                                      value=initial_config["guidance_scale_value"])
                     image_size_slider = gr.Slider(label="Image size", minimum=256, maximum=1024, step=64,
                                                 value=512)
                     num_inference_steps_slider = gr.Slider(label="Number of inference steps for base", minimum=1,
-                                                           maximum=32, step=1, value=MODEL_CONFIGS[model_choices[0]]["num_inference_steps"])
+                                                           maximum=32, step=1, value=initial_config["num_inference_steps"])
 
         gr.Examples(label="Examples for Text2Image", examples=examples_t2i, inputs=prompt_text, outputs=result_img, cache_examples=False)
         gr.Examples(label="Examples for Image2Image", examples=examples_i2i, inputs=prompt_text, outputs=result_img, cache_examples=False)
@@ -288,17 +329,27 @@ def build_ui() -> gr.Interface:
 
         def update_model_config(model_name):
             config = MODEL_CONFIGS[model_name]
-            return (
-                config["strength_value"],
-                config["guidance_scale_value"],
-                config["num_inference_steps"]
-            )
+            # Add "None" as the first choice followed by available adapters
+            adapter_choices = ["None"] + list(config["lora_adapters"])
+            return gr.Slider(value=config["strength_value"]), gr.Slider(value=config["guidance_scale_value"]), gr.Slider(value=config["num_inference_steps"]), \
+                gr.Dropdown(choices=adapter_choices, value="None"), gr.Slider(value=0.5, visible=False)
 
-        # Update sliders when model changes
+        def on_adapter_change(adapter_name):
+            # Update visibility of alpha slider
+            is_adapter_selected = adapter_name != "None"
+            return gr.Slider(visible=is_adapter_selected)
+
+        adapter_dropdown.change(
+            on_adapter_change,
+            inputs=[adapter_dropdown],
+            outputs=[adapter_alpha_slider]
+        )
+
+        # Update widgets when model changes
         model_dropdown.change(
             update_model_config,
             inputs=[model_dropdown],
-            outputs=[strength_slider, guidance_scale_slider, num_inference_steps_slider]
+            outputs=[strength_slider, guidance_scale_slider, num_inference_steps_slider, adapter_dropdown, adapter_alpha_slider]
         )
 
         # clicking run
@@ -308,8 +359,8 @@ def build_ui() -> gr.Interface:
             outputs=[stop_button, start_button]
         ).then(
             generate_images,
-            inputs=[input_image, prompt_text, seed_slider, guidance_scale_slider, num_inference_steps_slider,
-                    strength_slider, randomize_seed_checkbox, device_dropdown, endless_checkbox, model_dropdown, image_size_slider],
+            inputs=[model_dropdown, device_dropdown, image_size_slider, adapter_dropdown, adapter_alpha_slider, input_image, prompt_text, seed_slider, guidance_scale_slider,
+                    num_inference_steps_slider, strength_slider, randomize_seed_checkbox, endless_checkbox],
             outputs=[result_img, result_time_label]
         ).then(swap_buttons_highlighting, outputs=[start_button, stop_button])
 
