@@ -11,6 +11,7 @@ import base64
 import sys
 import yaml
 import openvino_genai as ov_genai
+import openvino as ov
 import logging
 import random
 
@@ -61,29 +62,38 @@ llm_model_dir = PROJECT_ROOT / "models" / f"{LLM_MODEL_TYPE}-{PRECISION.upper()}
 # ---------- Load Config ----------
 with open(CONFIG_PATH, "r") as f:
     config = yaml.safe_load(f)
+    
+# ---------- Determine Device (GPU if available, else fallback) ----------
+core = ov.Core()
+available_devices = core.available_devices
+if "GPU" in available_devices:
+    preferred_device = "GPU"
+else:
+    preferred_device = available_devices[0] if available_devices else "CPU"
+print(f"Using OpenVINO device: {preferred_device}")
 
-# ---------- Lazy load models if available ----------
+# ---------- Load models ----------
 image_pipe = None
 llm_pipe = None
 
 if image_model_dir.exists():
     try:
-        image_pipe = ov_genai.Text2ImagePipeline(image_model_dir, device="GPU")
-        logger.info("Image model loaded.")
+        image_pipe = ov_genai.Text2ImagePipeline(image_model_dir, device=preferred_device)
+        print("Image model loaded successfully.")
     except Exception as e:
-        logger.error(f"Failed to load Image model: {e}")
+        print(f"Failed to load image model: {e}")
 else:
-    logger.warning(f"Image model not found at {image_model_dir}")
+    print(f"Image model not found at {image_model_dir}")
 
 if llm_model_dir.exists():
     try:
-        llm_pipe = ov_genai.LLMPipeline(str(llm_model_dir), device="GPU")
-        logger.info("LLM model loaded.")
+        llm_pipe = ov_genai.LLMPipeline(str(llm_model_dir), device=preferred_device)
+        print("LLM model loaded successfully.")
     except Exception as e:
-        logger.error(f"Failed to load LLM model: {e}")
+        print(f"Failed to load LLM model: {e}")
 else:
-    logger.warning(f"LLM model not found at {llm_model_dir}")
-    
+    print(f"LLM model not found at {llm_model_dir}")
+
 llm_config = ov_genai.GenerationConfig()
 llm_config.max_new_tokens = 256
 llm_config.apply_chat_template = False

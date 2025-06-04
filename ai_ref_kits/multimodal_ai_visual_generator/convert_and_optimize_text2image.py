@@ -2,6 +2,7 @@ import argparse
 import subprocess
 import platform
 from pathlib import Path
+import json
 import os
 import logging
 
@@ -55,22 +56,11 @@ def run_optimum_export(model_id: str, output_dir: Path, precision: str):
     subprocess.run(cmd, shell=(platform.system() == "Windows"), check=True)
 
 def validate_export(output_dir: Path, critical_files: list[str]) -> list[str]:
-    logger.info("Verifying exported files:")
-    missing = []
-
-    for file in critical_files:
-        if not (output_dir / file).exists():
-            logger.error(f"Missing: {file}")
-            missing.append(file)
-        else:
-            logger.info(f"Found: {file}")
-
-    if missing:
-        logger.warning("Export completed with missing files.")
-    else:
-        logger.info("All critical files verified successfully.")
-
-    return missing
+    """
+    Silently checks for the presence of required exported files.
+    Returns a list of missing files, without logging each one.
+    """
+    return [file for file in critical_files if not (output_dir / file).exists()]
 
 def convert_image_model(model_type: str, precision: str, model_dir: Path) -> Path:
     """
@@ -88,12 +78,15 @@ def convert_image_model(model_type: str, precision: str, model_dir: Path) -> Pat
             logger.info("Skipping re-export.\n")
             return output_dir
         else:
-            logger.warning(f"Export folder exists but missing files: {missing}")
             logger.info("Re-exporting model...\n")
 
     # Run export and validate output
     run_optimum_export(model_id, output_dir, precision)
     missing_files = validate_export(output_dir, CRITICAL_FILES)
+    if missing_files:
+        logger.warning("Export completed with missing files.")
+    else:
+        logger.info("All critical files verified successfully.")
 
     logger.info(f"Model exported to: {output_dir}\n")
     return output_dir
