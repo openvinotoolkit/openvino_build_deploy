@@ -10,7 +10,6 @@ import os
 import base64
 import sys
 import yaml
-import subprocess
 import openvino_genai as ov_genai
 import logging
 import random
@@ -47,10 +46,14 @@ app.add_middleware(
 PROJECT_ROOT = Path(__file__).resolve().parent
 CONFIG_PATH = PROJECT_ROOT / "config" / "illustration.yaml"
 
+# Get model types from environment variables with defaults
+IMAGE_MODEL_TYPE = os.getenv("IMAGE_MODEL_TYPE", "flux.1-schnell")
+LLM_MODEL_TYPE = os.getenv("LLM_MODEL_TYPE", "qwen2-7B")
+PRECISION = os.getenv("MODEL_PRECISION", "int4")
 
-IMAGE_MODEL_TYPE = "flux.1-schnell"
-LLM_MODEL_TYPE = "qwen2-7B"
-PRECISION = "int4"
+logger.info(f"Using Image Model Type: {IMAGE_MODEL_TYPE}")
+logger.info(f"Using LLM Model Type: {LLM_MODEL_TYPE}")
+logger.info(f"Using Model Precision: {PRECISION}")
 
 image_model_dir = PROJECT_ROOT / "models" / f"{IMAGE_MODEL_TYPE}-{PRECISION.upper()}"
 llm_model_dir = PROJECT_ROOT / "models" / f"{LLM_MODEL_TYPE}-{PRECISION.upper()}"
@@ -206,9 +209,9 @@ def generate_image(request: PromptRequest):
 
 # ---------- Server Start Print ----------
 if image_pipe or llm_pipe:
-    print("FastAPI backend is running.")
-    print("In a separate terminal, start the Streamlit app using:")
-    print("streamlit run streamlit_app.py")
+    logger.info("Demo is ready!")
+    logger.info("FastAPI backend is running.")
+    logger.info("In a separate terminal, start the Streamlit app using: streamlit run streamlit_app.py")
 else:
-    print("FastAPI backend is running, but no models were loaded.")
-    print("Please export models before running the Streamlit app.")
+    logger.warning("FastAPI backend is running, but no models were loaded.")
+    logger.warning("Please export models before running the Streamlit app.")

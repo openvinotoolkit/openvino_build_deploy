@@ -2,7 +2,6 @@ import argparse
 import subprocess
 import platform
 from pathlib import Path
-import json
 import os
 import logging
 
@@ -16,6 +15,7 @@ MODEL_MAPPING = {
     "stable-diffusionv3-large": "stabilityai/stable-diffusion-3.5-large",
     "stable-diffusionv3-medium": "stabilityai/stable-diffusion-3.5-medium",
     "stable-diffusion-2-1": "stabilityai/stable-diffusion-2-1",
+    "lcm": "SimianLuo/LCM_Dreamshaper_v7",
 }
 
 CRITICAL_FILES = [

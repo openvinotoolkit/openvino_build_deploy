@@ -2,6 +2,7 @@ import subprocess
 import time
 import requests
 import sys
+import os
 from pathlib import Path
 import logging
 
@@ -19,8 +20,8 @@ from convert_and_optimize_text2image import convert_image_model
 
 # ----- Configuration -----
 MODEL_DIR = Path("models")
-LLM_MODEL_TYPE = "qwen2-7B"
-IMAGE_MODEL_TYPE = "flux.1-schnell"
+LLM_MODEL_TYPE = "tiny-llama-1b-chat"
+IMAGE_MODEL_TYPE = "lcm"
 PRECISION = "int4"
 
 # ----- Step 1: Export Models if Needed -----
@@ -30,7 +31,17 @@ convert_image_model(IMAGE_MODEL_TYPE, PRECISION, MODEL_DIR)
 
 # ----- Step 2: Launch FastAPI Backend -----
 logger.info("Launching FastAPI server...")
-process = subprocess.Popen([sys.executable, "-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8000"])
+env = os.environ.copy()
+env.update({
+    "IMAGE_MODEL_TYPE": IMAGE_MODEL_TYPE,
+    "LLM_MODEL_TYPE": LLM_MODEL_TYPE,
+    "MODEL_PRECISION": PRECISION
+})
+
+process = subprocess.Popen(
+    [sys.executable, "-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8000"],
+    env=env
+)
 
 try:
     # Wait up to ~130 seconds (130 retries x 1s sleep) for FastAPI server to come up
