@@ -18,31 +18,31 @@ runs:
       run: |
         cd ${{ inputs.project }}
 
-        if [[ "${{ inputs.script }}" == *"test.py" ]]; then
-          echo "Detected test.py. Running in foreground so it controls FastAPI lifecycle."
-          python ${{ inputs.script }} 2>&1 | tee gradio_log.txt
-          exit $?
+        if [ "${{ runner.os }}" == "Linux" ]; then
+          # Start the Gradio app in the background
+          xvfb-run python ${{ inputs.script }} 2>&1 | tee gradio_log.txt &
         else
-          if [ "${{ runner.os }}" == "Linux" ]; then
-            xvfb-run python ${{ inputs.script }} 2>&1 | tee gradio_log.txt &
-          else
-            python ${{ inputs.script }} 2>&1 | tee gradio_log.txt &
-          fi
+          python ${{ inputs.script }} 2>&1 | tee gradio_log.txt &
         fi
 
+        # Assign process ID
         app_pid=$(ps aux | grep -i '[p]ython ${{ inputs.script }}' | awk '{print $2}')
 
+        # Wait for the specific log message
         timeout ${{ inputs.timeout }} bash -c "
           (tail -f gradio_log.txt &) | awk '/Demo is ready!/ {exit}'
         "
 
+        # Capture the readiness status
         status=$?
 
+        # Stop the Gradio app process
         echo "Stopping the Gradio app..."
         pkill -P $app_pid || echo "No child processes to kill."
         kill $app_pid || echo "App process already terminated."
         wait $app_pid || echo "App process cleanup complete."
 
+        # Exit with the readiness check status
         exit $status
 
     - name: Run Gradio App (Windows)
@@ -58,8 +58,7 @@ runs:
 
         if ("${{ inputs.script }}" -like "*test.py") {
           Write-Output "==> test.py detected. Running in foreground..."
-          
-          # Avoid redirecting stdout/stderr together to the same file
+
           $output = python "${{ inputs.script }}"
           $output | Out-File -FilePath gradio_log.txt -Encoding utf8
           Get-Content -Path gradio_log.txt
@@ -72,7 +71,7 @@ runs:
 
         } else {
           Write-Output "==> Long-running app detected. Launching in background..."
-          $proc = Start-Process -NoNewWindow -FilePath "python" -ArgumentList "${{ inputs.script }}" `
+          $proc = Start-Process -NoNewWindow -FilePath "python" -ArgumentList "${{ inputs.script }}" 
                    -RedirectStandardOutput gradio_stdout.txt -RedirectStandardError gradio_stderr.txt -PassThru
           $app_pid = $proc.Id
           Write-Output "==> App PID: $app_pid"

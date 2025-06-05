@@ -58,7 +58,7 @@ try:
     while time.time() - start_time < timeout:
         if LOG_FILE.exists():
             content = LOG_FILE.read_text()
-            if "Uvicorn running on" in content or "Demo is ready!" in content or "Application startup complete." in content:
+            if "Uvicorn running on" in content or "Application startup complete." in content:
                 logger.info("FastAPI server is up.")
                 break
         time.sleep(1)
@@ -84,6 +84,7 @@ try:
     assert response2.status_code == 200, f"Image generation failed: {response2.text}"
     image = response2.json()["image"]
     logger.info("Image generation test passed. Base64 (truncated): %s", image[:100])
+    logger.info("Demo is ready!")
 
 finally:
     logger.info("Shutting down FastAPI server...")

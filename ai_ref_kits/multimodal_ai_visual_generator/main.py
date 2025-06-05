@@ -65,11 +65,7 @@ with open(CONFIG_PATH, "r") as f:
     
 # ---------- Determine Device (GPU if available, else fallback) ----------
 core = ov.Core()
-available_devices = core.available_devices
-if "GPU" in available_devices:
-    preferred_device = "GPU"
-else:
-    preferred_device = available_devices[0] if available_devices else "CPU"
+preferred_device = "GPU" if "GPU" in core.available_devices else "CPU"
 print(f"Using OpenVINO device: {preferred_device}")
 
 # ---------- Load models ----------
@@ -219,7 +215,6 @@ def generate_image(request: PromptRequest):
 
 # ---------- Server Start Print ----------
 if image_pipe or llm_pipe:
-    logger.info("Demo is ready!")
     logger.info("FastAPI backend is running.")
     logger.info("In a separate terminal, start the Streamlit app using: streamlit run streamlit_app.py")
 else:
