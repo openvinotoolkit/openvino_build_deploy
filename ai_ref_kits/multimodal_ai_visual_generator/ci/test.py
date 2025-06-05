@@ -20,7 +20,8 @@ from convert_and_optimize_llm import convert_chat_model
 from convert_and_optimize_text2image import convert_image_model
 
 # ----- Configuration -----
-MODEL_DIR = Path(__file__).resolve().parent.parent / "models"
+
+MODEL_DIR = Path("models")
 LLM_MODEL_TYPE = "tiny-llama-1b-chat"
 IMAGE_MODEL_TYPE = "lcm"
 PRECISION = "int4"
@@ -39,16 +40,10 @@ env.update({
     "MODEL_PRECISION": PRECISION
 })
 
-main_path = Path(__file__).resolve().parent.parent / "main.py"
-
-process = subprocess.Popen([
-    sys.executable,
-    "-m", "uvicorn",
-    f"{main_path.stem}:app",
-    "--app-dir", str(main_path.parent),
-    "--host", "127.0.0.1",
-    "--port", "8000"
-], env=env)
+process = subprocess.Popen(
+    [sys.executable, "-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8000"],
+    env=env
+)
 
 try:
     # Wait for FastAPI to become responsive

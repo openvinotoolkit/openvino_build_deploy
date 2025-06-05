@@ -2,7 +2,6 @@ import argparse
 import subprocess
 import platform
 from pathlib import Path
-import json
 import os
 import logging
 
