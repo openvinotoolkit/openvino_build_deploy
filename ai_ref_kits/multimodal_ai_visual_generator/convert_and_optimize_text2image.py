@@ -83,7 +83,7 @@ def convert_image_model(model_type: str, precision: str, model_dir: Path) -> Pat
     run_optimum_export(model_id, output_dir, precision)
     missing_files = validate_export(output_dir, CRITICAL_FILES)
     if missing_files:
-        logger.warning("Export completed with missing files.")
+        logger.warning(f"Export completed with missing files: {missing_files}")
     else:
         logger.info("All critical files verified successfully.")
 

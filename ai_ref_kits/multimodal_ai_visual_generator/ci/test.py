@@ -25,6 +25,7 @@ MODEL_DIR = Path("models")
 LLM_MODEL_TYPE = "tiny-llama-1b-chat"
 IMAGE_MODEL_TYPE = "lcm"
 PRECISION = "int4"
+LOG_FILE = Path("gradio_log.txt")
 
 # ----- Step 1: Export Models if Needed (will handle download internally) -----
 logger.info("Checking and exporting LLM + Text2Image models if necessary...")
@@ -40,21 +41,27 @@ env.update({
     "MODEL_PRECISION": PRECISION
 })
 
-process = subprocess.Popen(
-    [sys.executable, "-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8000"],
-    env=env
-)
+with LOG_FILE.open("w") as lf:
+    process = subprocess.Popen(
+        [sys.executable, "-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8000"],
+        env=env,
+        stdout=lf,
+        stderr=subprocess.STDOUT
+    )
 
 try:
-    # Wait for FastAPI to become responsive
-    retries = 1000 if platform.system() == "Darwin" else 130
-    for _ in range(retries):
-        try:
-            r = requests.get("http://localhost:8000/docs", timeout=4)
-            if r.status_code == 200:
+    # ----- Wait for Readiness from Logs -----
+    logger.info("Waiting for FastAPI log to report readiness...")
+    start_time = time.time()
+    timeout = 130  # seconds
+
+    while time.time() - start_time < timeout:
+        if LOG_FILE.exists():
+            content = LOG_FILE.read_text()
+            if "Uvicorn running on" in content or "Demo is ready!" in content or "Application startup complete." in content:
+                logger.info("FastAPI server is up.")
                 break
-        except requests.ConnectionError:
-            time.sleep(1)
+        time.sleep(1)
     else:
         raise RuntimeError("FastAPI server did not start within timeout period.")
 
