@@ -3,7 +3,6 @@ import time
 import requests
 import sys
 import os
-import platform
 from pathlib import Path
 import logging
 
