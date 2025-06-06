@@ -11,6 +11,7 @@ import base64
 import sys
 import yaml
 import openvino_genai as ov_genai
+import openvino as ov
 import logging
 import random
 
@@ -61,29 +62,34 @@ llm_model_dir = PROJECT_ROOT / "models" / f"{LLM_MODEL_TYPE}-{PRECISION.upper()}
 # ---------- Load Config ----------
 with open(CONFIG_PATH, "r") as f:
     config = yaml.safe_load(f)
+    
+# ---------- Determine Device (GPU if available, else fallback) ----------
+core = ov.Core()
+preferred_device = "GPU" if "GPU" in core.available_devices else "CPU"
+print(f"Using OpenVINO device: {preferred_device}")
 
-# ---------- Lazy load models if available ----------
+# ---------- Load models ----------
 image_pipe = None
 llm_pipe = None
 
 if image_model_dir.exists():
     try:
-        image_pipe = ov_genai.Text2ImagePipeline(image_model_dir, device="GPU")
-        logger.info("Image model loaded.")
+        image_pipe = ov_genai.Text2ImagePipeline(image_model_dir, device=preferred_device)
+        logger.info("Image model loaded successfully.")
     except Exception as e:
-        logger.error(f"Failed to load Image model: {e}")
+        logger.error(f"Failed to load image model: {e}")
 else:
     logger.warning(f"Image model not found at {image_model_dir}")
 
 if llm_model_dir.exists():
     try:
-        llm_pipe = ov_genai.LLMPipeline(str(llm_model_dir), device="GPU")
-        logger.info("LLM model loaded.")
+        llm_pipe = ov_genai.LLMPipeline(str(llm_model_dir), device=preferred_device)
+        logger.info("LLM model loaded successfully.")
     except Exception as e:
         logger.error(f"Failed to load LLM model: {e}")
 else:
     logger.warning(f"LLM model not found at {llm_model_dir}")
-    
+
 llm_config = ov_genai.GenerationConfig()
 llm_config.max_new_tokens = 256
 llm_config.apply_chat_template = False
@@ -209,7 +215,6 @@ def generate_image(request: PromptRequest):
 
 # ---------- Server Start Print ----------
 if image_pipe or llm_pipe:
-    logger.info("Demo is ready!")
     logger.info("FastAPI backend is running.")
     logger.info("In a separate terminal, start the Streamlit app using: streamlit run streamlit_app.py")
 else:

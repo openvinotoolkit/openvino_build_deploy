@@ -75,15 +75,7 @@ def validate_export(output_dir: Path) -> list[str]:
     Validates the presence of all required files in the exported model directory.
     Returns a list of any missing critical files.
     """
-    logger.info("Verifying exported files:")
-    missing = []
-    for file in CRITICAL_FILES:
-        if not (output_dir / file).exists():
-            logger.error(f"Missing: {file}")
-            missing.append(file)
-        else:
-            logger.info(f"Found: {file}")
-    return missing
+    return [file for file in CRITICAL_FILES if not (output_dir / file).exists()]
 
 def quantize_model(model, precision: str, output_dir: Path):
     """
@@ -137,7 +129,7 @@ def convert_chat_model(model_type: str, precision: str, model_dir: Path) -> Path
     }
     (output_dir / "model_index.json").write_text(json.dumps(model_index, indent=2))
 
-    logger.info("Verifying critical files:")
+    logger.info("Checking for missing critical files silently...")
     missing_files = validate_export(output_dir)
     if missing_files:
         logger.warning("Export completed with missing files.")
