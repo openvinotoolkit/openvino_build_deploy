@@ -75,20 +75,20 @@ llm_pipe = None
 if image_model_dir.exists():
     try:
         image_pipe = ov_genai.Text2ImagePipeline(image_model_dir, device=preferred_device)
-        print("Image model loaded successfully.")
+        logger.info("Image model loaded successfully.")
     except Exception as e:
-        print(f"Failed to load image model: {e}")
+        logger.error(f"Failed to load image model: {e}")
 else:
-    print(f"Image model not found at {image_model_dir}")
+    logger.warning(f"Image model not found at {image_model_dir}")
 
 if llm_model_dir.exists():
     try:
         llm_pipe = ov_genai.LLMPipeline(str(llm_model_dir), device=preferred_device)
-        print("LLM model loaded successfully.")
+        logger.info("LLM model loaded successfully.")
     except Exception as e:
-        print(f"Failed to load LLM model: {e}")
+        logger.error(f"Failed to load LLM model: {e}")
 else:
-    print(f"LLM model not found at {llm_model_dir}")
+    logger.warning(f"LLM model not found at {llm_model_dir}")
 
 llm_config = ov_genai.GenerationConfig()
 llm_config.max_new_tokens = 256
