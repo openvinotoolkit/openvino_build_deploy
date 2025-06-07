@@ -346,6 +346,7 @@ def run_demo(local_network: bool = False, public_interface: bool = False) -> Non
 
     demo = build_ui()
     log.info("Demo is ready!")
+    print("Demo is ready!")  # Required for Windows CI to detect readiness
     demo.launch(server_name=server_name, share=public_interface)
 
 

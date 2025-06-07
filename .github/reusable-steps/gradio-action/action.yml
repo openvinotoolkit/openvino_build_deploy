@@ -71,8 +71,10 @@ runs:
 
         } else {
           Write-Output "==> Long-running app detected. Launching in background..."
-          $proc = Start-Process -NoNewWindow -FilePath "python" -ArgumentList "${{ inputs.script }}" 
-                   -RedirectStandardOutput gradio_stdout.txt -RedirectStandardError gradio_stderr.txt -PassThru
+          $proc = Start-Process -NoNewWindow -FilePath "python" -ArgumentList "${{ inputs.script }}" `
+                   -RedirectStandardOutput gradio_stdout.txt `
+                   -RedirectStandardError gradio_stderr.txt `
+                   -PassThru
           $app_pid = $proc.Id
           Write-Output "==> App PID: $app_pid"
 
