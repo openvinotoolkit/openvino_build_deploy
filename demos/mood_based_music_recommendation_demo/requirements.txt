@@ -1,0 +1,9 @@
+opencv-python-headless==4.5.5.64
+opencv-python==4.5.5.64
+numpy==1.26.4
+requests==2.32.3
+openvino==2025.0.0
+tqdm==4.67.1
+logging==0.4.9.6
+pathlib==1.0.1
+pygame==2.6.1
