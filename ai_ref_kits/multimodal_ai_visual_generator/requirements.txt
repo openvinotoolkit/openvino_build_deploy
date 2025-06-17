@@ -13,7 +13,7 @@ transformers==4.48.3
 diffusers==0.33.1
 huggingface-hub==0.30.2
 sentencepiece==0.2.0
-protobuf==6.30.2
+protobuf==6.31.1
 peft==0.15.2
 torch==2.7.0
 scipy==1.13.1
