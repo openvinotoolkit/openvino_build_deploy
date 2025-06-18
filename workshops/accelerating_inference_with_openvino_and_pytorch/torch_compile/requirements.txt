@@ -3,7 +3,7 @@ openvino==2024.4.0
 accelerate==1.0.1
 diffusers==0.31.0
 ipywidgets==8.1.5
-torch==2.6.0
+torch==2.7.1+cpu
 transformers==4.48.3
 jupyterlab==4.2.5
 urllib3==2.2.3
