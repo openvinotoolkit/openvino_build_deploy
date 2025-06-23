@@ -14,6 +14,8 @@ outputs:
     value: ${{ steps.group-subprojects.outputs.webcam }}
   js:
     value: ${{ steps.group-subprojects.outputs.js }}
+  unittest:
+    value: ${{ steps.group-subprojects.outputs.unittest }}
 
 runs:
   using: 'composite'
@@ -27,6 +29,7 @@ runs:
         gradio=()
         webcam=()
         js=()
+        unittest=()
 
         for dir in ${{ inputs.subprojects }}; do
           if [ -f "$dir/package.json" ]; then
@@ -37,6 +40,8 @@ runs:
             gradio+=("$dir")
           elif [ -f "$dir/main.py" ] && grep -q -- "--stream" "$dir/main.py"; then
             webcam+=("$dir")
+          elif [ -d "$dir/test" ]; then
+            unittest+=("$dir/test")
           elif [ -f "$dir/main.py" ]; then
             python+=("$dir")
           fi
@@ -47,12 +52,14 @@ runs:
         gradio_json=$(printf '%s\n' "${gradio[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
         webcam_json=$(printf '%s\n' "${webcam[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
         js_json=$(printf '%s\n' "${js[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+        unittest_json=$(printf '%s\n' "${unittest[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
 
         echo "notebook=$notebook_json" >> $GITHUB_OUTPUT
         echo "python=$python_json" >> $GITHUB_OUTPUT
         echo "gradio=$gradio_json" >> $GITHUB_OUTPUT
         echo "webcam=$webcam_json" >> $GITHUB_OUTPUT
         echo "js=$js_json" >> $GITHUB_OUTPUT
+        echo "unittest=$unittest_json" >> $GITHUB_OUTPUT
     - name: Print subprojects to test
       shell: bash
       run: |
@@ -61,3 +68,4 @@ runs:
         echo "Gradio subprojects: ${{ steps.group-subprojects.outputs.gradio }}"
         echo "Webcam subprojects: ${{ steps.group-subprojects.outputs.webcam }}"
         echo "JS subprojects: ${{ steps.group-subprojects.outputs.js }}"
+        echo "Unit test subprojects: ${{ steps.group-subprojects.outputs.unittest }}"
