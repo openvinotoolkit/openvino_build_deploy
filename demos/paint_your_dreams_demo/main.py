@@ -345,7 +345,7 @@ def run_demo(local_network: bool = False, public_interface: bool = False) -> Non
     download_and_load_safety_checker(SAFETY_CHECKER_MODEL_NAME)
 
     demo = build_ui()
-    log.info("Demo is ready!")
+    print("Demo is ready!", flush=True) # Required for the CI to detect readiness
     demo.launch(server_name=server_name, share=public_interface)
 
 
