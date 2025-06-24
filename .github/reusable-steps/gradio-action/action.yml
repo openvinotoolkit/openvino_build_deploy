@@ -15,6 +15,8 @@ runs:
     - name: Run Gradio App (Linux/Mac)
       if: ${{ runner.os != 'Windows' }}
       shell: bash
+      env:
+        HF_TOKEN: ${{ secrets.HF_TOKEN }}  # Hugging Face token for Linux/Mac
       run: |
         cd ${{ inputs.project }}
 
@@ -48,6 +50,8 @@ runs:
     - name: Run Gradio App (Windows)
       if: ${{ runner.os == 'Windows' }}
       shell: powershell
+      env:
+        HF_TOKEN: ${{ secrets.HF_TOKEN }}  # Hugging Face token for Windows
       run: |
         cd ${{ inputs.project }}
         Write-Output "==> Running script: ${{ inputs.script }}"
