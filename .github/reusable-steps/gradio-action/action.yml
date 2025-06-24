@@ -16,7 +16,7 @@ runs:
       if: ${{ runner.os != 'Windows' }}
       shell: bash
       env:
-        HF_TOKEN: ${{ secrets.HF_TOKEN }}  # Hugging Face token for Linux/Mac
+        HF_TOKEN: ${{ inputs.HF_TOKEN }}  # Hugging Face token for Linux/Mac
       run: |
         cd ${{ inputs.project }}
 
@@ -51,7 +51,7 @@ runs:
       if: ${{ runner.os == 'Windows' }}
       shell: powershell
       env:
-        HF_TOKEN: ${{ secrets.HF_TOKEN }}  # Hugging Face token for Windows
+        HF_TOKEN: ${{ inputs.HF_TOKEN }}  # Hugging Face token for Windows
       run: |
         cd ${{ inputs.project }}
         Write-Output "==> Running script: ${{ inputs.script }}"
