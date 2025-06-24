@@ -2,4 +2,4 @@ openvino==2025.1
 opencv-python==4.10.0.84
 numpy==2.2.6
 tqdm==4.67.1
-requests==2.32.3
+requests==2.32.4
