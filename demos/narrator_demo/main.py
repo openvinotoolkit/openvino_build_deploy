@@ -170,7 +170,8 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
     # set up logging
     log.getLogger().setLevel(log.INFO)
 
-    device_mapping = utils.available_devices()
+    # NPU won't work with the dynamic shape models, so we exclude it
+    device_mapping = utils.available_devices(exclude=["NPU"])
     device_type = "AUTO"
 
     vision_model, text_decoder, processor = load_models(model_name, device_type)
