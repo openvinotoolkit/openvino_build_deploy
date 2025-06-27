@@ -2,6 +2,7 @@ import argparse
 import logging as log
 import os
 import sys
+import threading
 import time
 from collections import deque
 from functools import partial
@@ -21,6 +22,17 @@ from utils import demo_utils as utils
 
 MODEL_DIR = Path("model")
 TEXT_CONFIG = BlipTextConfig()
+
+current_frame = np.zeros((1080, 1920, 3), dtype=np.uint8)  # Placeholder for the current frame
+current_caption = ""
+
+processing_times = deque(maxlen=100)
+
+global_stop_event = threading.Event()
+
+global_frame_lock = threading.Lock()
+global_result_lock = threading.Lock()
+
 
 def convert_vision_model(vision_model: BlipVisionModel, processor: BlipProcessor, output_dir: Path) -> None:
     vision_model.eval()
@@ -85,7 +97,7 @@ def load_models(model_name: str, device: str = "AUTO") -> tuple[ov.CompiledModel
     vision_model = core.compile_model(vision_model_path, device)
     text_decoder = core.compile_model(text_decoder_path, device)
 
-    processor = BlipProcessor.from_pretrained(model_dir)
+    processor = BlipProcessor.from_pretrained(model_dir, use_fast=True)
     text_model = BlipTextLMHeadModel.from_pretrained(model_dir)
     text_model.forward = partial(text_decoder_forward, ov_text_decoder_with_past=text_decoder)
 
@@ -137,7 +149,24 @@ def generate_caption(image: np.array, vision_model: ov.CompiledModel, text_decod
     return processor.decode(outputs[0], skip_special_tokens=True)
 
 
+def inference_worker(vision_model, text_decoder, processor):
+    global current_frame, current_caption, processing_times
+
+    while not global_stop_event.is_set():
+        with global_frame_lock:
+            frame = current_frame.copy()
+
+        start_time = time.perf_counter()
+        caption = generate_caption(frame, vision_model, text_decoder, processor)
+        elapsed = time.perf_counter() - start_time
+
+        with global_result_lock:
+            current_caption = caption
+            processing_times.append(elapsed)
+
+
 def run(video_path: str, model_name: str, flip: bool = True) -> None:
+    global current_frame, current_caption, processing_times
     # set up logging
     log.getLogger().setLevel(log.INFO)
 
@@ -158,6 +187,14 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
     cv2.namedWindow(title, cv2.WINDOW_GUI_NORMAL)
     cv2.setWindowProperty(title, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
+    # Start the inference thread
+    worker = threading.Thread(
+        target=inference_worker,
+        args=(vision_model, text_decoder, processor),
+        daemon=True
+    )
+    worker.start()
+
     # start a video stream
     player.start()
     while True:
@@ -167,20 +204,22 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
             print("Source ended")
             break
 
+        # Update the latest frame for inference
+        with global_frame_lock:
+            current_frame = frame
+
         f_height, f_width = frame.shape[:2]
 
-        # prediction
-        start_time = time.perf_counter()
-        caption = generate_caption(frame, vision_model, text_decoder, processor)
-        processing_times.append(time.perf_counter() - start_time)
+        # Get the latest caption
+        with global_result_lock:
+            caption = current_caption
+
+            # Get the mean processing time
+            processing_time = np.mean(processing_times) * 1000 if processing_times else 0
+            fps = 1000 / processing_time if processing_time > 0 else 0
 
         # Draw the results on the frame
         utils.draw_text(frame, text=caption, point=(f_width // 2, f_height - 50), center=True, font_scale=1.5, with_background=True)
-
-        # Mean processing time [ms].
-        processing_time = np.mean(processing_times) * 1000
-
-        fps = 1000 / processing_time
         utils.draw_text(frame, text=f"Inference time: {processing_time:.0f}ms ({fps:.1f} FPS)", point=(10, 10))
         utils.draw_text(frame, text=f"Currently running {model_name} on {device_type}", point=(10, 50))
 
@@ -198,6 +237,8 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
 
     # stop the stream
     player.stop()
+    global_stop_event.set()
+    worker.join(timeout=1)
     # clean-up windows
     cv2.destroyAllWindows()
 
