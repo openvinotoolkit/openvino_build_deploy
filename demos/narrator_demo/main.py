@@ -124,8 +124,8 @@ def generate_caption(image: np.array, vision_model: ov.CompiledModel, text_decod
     pixel_values = np.array(processor(image).pixel_values)
     image_embeds = vision_model(np.array(pixel_values))[vision_model.output(0)]
 
-    image_attention_mask = np.ones(image_embeds.shape[:-1], dtype=np.long)
-    input_ids = np.array([[TEXT_CONFIG.bos_token_id, TEXT_CONFIG.eos_token_id]], dtype=np.long)
+    image_attention_mask = np.ones(image_embeds.shape[:-1], dtype=np.int64)
+    input_ids = np.array([[TEXT_CONFIG.bos_token_id, TEXT_CONFIG.eos_token_id]], dtype=np.int64)
 
     outputs = text_decoder.generate(
         input_ids=torch.LongTensor(input_ids[:, :-1]),
