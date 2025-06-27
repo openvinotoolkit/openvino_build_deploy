@@ -233,7 +233,25 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
 
         for i, dev in enumerate(device_mapping.keys()):
             if key == ord('1') + i:
-                device_type = dev
+                if device_type != dev:
+                    device_type = dev
+                    # Stop the current worker
+                    global_stop_event.set()
+                    worker.join(timeout=1)
+                    global_stop_event.clear()
+
+                    # Recompile models for the new device
+                    vision_model, text_decoder, processor = load_models(model_name, device_type)
+                    # Start a new inference worker
+                    worker = threading.Thread(
+                        target=inference_worker,
+                        args=(vision_model, text_decoder, processor),
+                        daemon=True
+                    )
+                    worker.start()
+                    # Clear the processing times
+                    with global_result_lock:
+                        processing_times.clear()
 
     # stop the stream
     player.stop()
