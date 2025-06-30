@@ -1,6 +1,6 @@
 # Image generation using Latent Consistency Model and ONNX Runtime with OpenVINO Execution Provider 
 
-*Warning: This demo requires Python 3.11 or 3.12.*
+*Warning: This demo requires Python 3.11-3.13.*
 
 LCMs: The next generation of generative models after Latent Diffusion Models (LDMs). 
 Latent Diffusion models (LDMs) have achieved remarkable results in synthesizing high-resolution images. However, the iterative sampling is computationally intensive and leads to slow generation.
