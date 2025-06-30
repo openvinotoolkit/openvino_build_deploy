@@ -1,7 +1,7 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 
-jupyterlab==4.2.5
-ipywidgets==8.1.5
+jupyterlab==4.4.4
+ipywidgets==8.1.7
 
 openvino==2025.1.0
 onnxruntime-openvino==1.22.0
@@ -11,5 +11,5 @@ optimum-intel==1.23.1
 optimum==1.25.3
 accelerate==0.33.0
 diffusers==0.34.0
-numpy==2.3.1
+numpy==2.2.6
 huggingface-hub==0.33.1

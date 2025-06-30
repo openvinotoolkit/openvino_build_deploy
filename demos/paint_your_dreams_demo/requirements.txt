@@ -8,11 +8,11 @@ optimum==1.25.3
 onnx==1.18.0
 huggingface-hub==0.29.3
 diffusers==0.34.0
-transformers==4.53.0
+transformers==4.51.3
 torch==2.7.1
 accelerate==1.2.1
 pillow==11.1.0
 opencv-python==4.10.0.84
-numpy==2.1.3
+numpy==2.2.6
 gradio==5.35.0
 tqdm==4.67.1
