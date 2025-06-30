@@ -2,7 +2,7 @@
 
 openvino==2025.2
 nncf==2.16.0
-ultralytics==8.3.141
+ultralytics==8.3.161
 numpy==2.2.6
 pillow==11.2.1
 opencv-python==4.10.0.84
