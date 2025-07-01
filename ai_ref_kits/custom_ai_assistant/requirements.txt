@@ -7,9 +7,9 @@ nncf==2.16.0
 
 onnx==1.17.0
 onnxruntime==1.20.1
-torch==2.7.0
+torch==2.7.1
 
 transformers==4.50.3
 librosa==0.10.2
 
-gradio==5.23.1
+gradio==5.35.0

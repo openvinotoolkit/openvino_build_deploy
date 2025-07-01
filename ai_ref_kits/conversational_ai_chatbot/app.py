@@ -457,7 +457,7 @@ def run(asr_model_dir: Path, chat_model_dir: Path, embedding_model_dir: Path, re
     # create user interface
     demo = create_UI(initial_message, example_pdf_path)
 
-    log.info("Demo is ready!")
+    print("Demo is ready!")
     # launch demo
     demo.queue().launch(share=public_interface)
 
