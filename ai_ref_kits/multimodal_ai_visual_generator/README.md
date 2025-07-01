@@ -96,7 +96,7 @@ To set up your environment, you first clone the repository, then create a virtua
 To clone the repository and navigate into the directory, run the following command:
 
 ```bash
-git clone https://github.com/AnishaUdayakumar/openvino_build_deploy.git
+git clone https://github.com/openvinotoolkit/openvino_build_deploy.git
 cd openvino_build_deploy/ai_ref_kits/multimodal_ai_visual_generator
 ```
 
