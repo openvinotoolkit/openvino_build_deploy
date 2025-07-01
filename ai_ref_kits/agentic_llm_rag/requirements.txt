@@ -13,11 +13,11 @@ llama-index-vector-stores-faiss==0.3.0
 faiss-cpu==1.11.0
 onnx==1.17.0
 onnxruntime==1.17.3
-torch==2.7.0
+torch==2.7.1
 
 transformers==4.50.3
 librosa==0.10.2
 pyyaml==6.0.1
 PyMuPDF==1.24.10
 
-gradio==5.23.1
+gradio==5.35.0
