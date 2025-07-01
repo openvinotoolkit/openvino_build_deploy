@@ -3,10 +3,10 @@
 jupyterlab==4.4.4
 ipywidgets==8.1.7
 
-openvino==2025.2.0
-onnxruntime-openvino==1.22.0
-onnx==1.18.0
-optimum==1.26.1
+openvino==2025.0.0
+onnxruntime-openvino==1.21.0
+onnx==1.17.0
+optimum==1.23.1
 accelerate==1.8.1
 diffusers==0.34.0
 numpy==2.2.6
