@@ -489,7 +489,7 @@ def run_app(agent: ReActAgent, public_interface: bool = False) -> None:
 
             gr.Markdown("------------------------------")            
 
-        log.info("Demo is ready!")
+        print("Demo is ready!")
         demo.queue().launch(share=public_interface)
 
     run()
