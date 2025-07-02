@@ -4,9 +4,9 @@
 set -e
 
 # Get the current directory where the script is placed
-DEMO_DIR="$(pwd)/openvino_build_deploy/demos/narrator_demo"
+DEMO_DIR="$(pwd)/openvino_build_deploy/demos/the_narrator_demo"
 
-# Navigate to the Narrator Demo directory
+# Navigate to the The The Narrator Demo directory
 cd "$DEMO_DIR"
 
 # Check if virtual environment exists
@@ -20,11 +20,11 @@ echo "Activating virtual environment..."
 source venv/bin/activate
 
 # Run the application
-echo "Running Narrator Demo..."
+echo "Running The Narrator Demo..."
 python main.py --stream 0
 
 # Final message
 echo ""
 echo "========================================"
-echo "Narrator Demo execution completed."
+echo "The Narrator Demo execution completed."
 echo "========================================"

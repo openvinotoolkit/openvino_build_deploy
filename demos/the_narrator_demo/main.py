@@ -198,6 +198,8 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
 
     # start a video stream
     player.start()
+    t1 = time.time()
+    caption = current_caption
     while True:
         # Grab the frame.
         frame = player.next()
@@ -213,7 +215,11 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
 
         # Get the latest caption
         with global_result_lock:
-            caption = current_caption
+            t2 = time.time()
+            # update the caption only if the time difference is significant, otherwise it will be flickering
+            if t2 - t1 > 1 or not caption:
+                caption = current_caption
+                t1 = t2
 
             # Get the mean processing time
             processing_time = np.mean(processing_times) * 1000 if processing_times else 0

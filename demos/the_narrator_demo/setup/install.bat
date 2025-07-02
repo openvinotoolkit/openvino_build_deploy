@@ -19,8 +19,8 @@ if not exist "%INSTALL_DIR%" (
     echo Repository already exists. Skipping cloning...
 )
 
-:: Navigate to Narrator Demo directory
-cd /d "%INSTALL_DIR%\demos\narrator_demo"
+:: Navigate to The Narrator Demo directory
+cd /d "%INSTALL_DIR%\demos\the_narrator_demo"
 
 :: Create virtual environment
 echo Creating virtual environment...
@@ -40,7 +40,7 @@ pip install -r requirements.txt
 :: Final success message
 echo.
 echo ========================================
-echo All requirements installed for Narrator.
+echo All requirements installed for The Narrator.
 echo You can now run the demo!
 echo ========================================
 pause

@@ -2,9 +2,9 @@
 setlocal enabledelayedexpansion
 
 :: Get the current directory where the script is placed
-set "INSTALL_DIR=%CD%\openvino_build_deploy\demos\narrator_demo"
+set "INSTALL_DIR=%CD%\openvino_build_deploy\demos\the_narrator_demo"
 
-:: Navigate to the Narrator Demo directory
+:: Navigate to The Narrator Demo directory
 cd /d "%INSTALL_DIR%"
 
 :: Check if virtual environment exists
@@ -18,7 +18,7 @@ echo Activating virtual environment...
 call venv\Scripts\activate.bat
 
 :: Run the application
-echo Running Narrator Demo...
+echo Running The Narrator Demo...
 python main.py --stream 0
 
 :: Keep console open after execution
