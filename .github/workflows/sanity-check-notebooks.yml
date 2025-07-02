@@ -51,6 +51,16 @@ jobs:
         subproject: ${{ fromJson(needs.find-subprojects.outputs.notebook) }}
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/reusable-steps/setup-os
+      - name: Cache Hugging Face models
+        uses: actions/cache@v3
+        with:
+          path: ${{ github.workspace }}/.hf_home
+          key: hfhome-${{ runner.os }}-${{ github.ref }}-${{ hashFiles('**/requirements.txt') }}
+          restore-keys:
+            - hfhome-${{ runner.os }}-${{ github.ref }}
+            - hfhome-${{ runner.os }}
+            - hfhome-
       - name: Set up Python ${{ matrix.python }}
         uses: actions/setup-python@v5
         with:
