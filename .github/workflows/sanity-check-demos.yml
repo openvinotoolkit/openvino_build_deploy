@@ -103,7 +103,11 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ${{ github.workspace }}/.hf_home
-          key: hfhome-global
+          key: hfhome-${{ runner.os }}-${{ github.ref }}-${{ hashFiles('**/requirements.txt') }}
+          restore-keys:
+            - hfhome-${{ runner.os }}-${{ github.ref }}
+            - hfhome-${{ runner.os }}
+            - hfhome-
       - uses: ./.github/reusable-steps/setup-python
         with:
           python: ${{ matrix.python }}
