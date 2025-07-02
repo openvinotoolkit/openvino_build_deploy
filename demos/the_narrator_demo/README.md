@@ -2,7 +2,7 @@
 
 This demo generates natural language captions for images or video streams using the BLIP (Bootstrapped Language Image Pretraining) model, accelerated by OpenVINO™. The application can process live webcam feeds or video files, displaying the generated captions in real time. You can switch between different devices (CPU, GPU, etc.) on the fly to compare performance.
 
-![the_narrator_demo](https://github.com/user-attachments/assets/e2a3ed34-93ff-4aaa-87cd-e6ad61eaf421)
+![the_narrator_demo](https://github.com/user-attachments/assets/8fe98025-34ac-44a7-ad46-6f71327c9cdc)
 
 ## Quick Launch using Setup Scripts
 
