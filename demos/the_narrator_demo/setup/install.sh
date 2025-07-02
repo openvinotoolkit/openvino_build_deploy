@@ -19,8 +19,8 @@ else
     echo "Repository already exists. Skipping cloning..."
 fi
 
-# Navigate to the Narrator Demo directory
-cd "$INSTALL_DIR/demos/narrator_demo"
+# Navigate to the The Narrator Demo directory
+cd "$INSTALL_DIR/demos/the_narrator_demo"
 
 # Create a virtual environment
 echo "Creating virtual environment..."
@@ -37,7 +37,7 @@ pip install -r requirements.txt
 # Final success message
 echo ""
 echo "========================================"
-echo "All requirements installed for Narrator."
+echo "All requirements installed for The Narrator."
 echo "You can now run the demo using ./run.sh"
 echo "========================================"
 

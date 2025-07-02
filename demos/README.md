@@ -34,15 +34,15 @@ The demo works as a virtual AI assistant. The default personality is a healthcar
 | Platforms                                         | Client (CPU, GPU, NPU), Cloud (CPU, GPU)                   |
 | Owner                                             | [@adrianboguszewski](https://github.com/adrianboguszewski) |
 
-### 💬 Narrator
+### 💬 The Narrator
 
-[![image](https://github.com/user-attachments/assets/e2a3ed34-93ff-4aaa-87cd-e6ad61eaf421)](narrator_demo)
+[![image](https://github.com/user-attachments/assets/e2a3ed34-93ff-4aaa-87cd-e6ad61eaf421)](the_narrator_demo)
 
-| [Narrator](narrator_demo) |                                                          |
-|---------------------------|----------------------------------------------------------|
-| Related AI concepts       | image captioning, video captioning, BLIP                 |
-| Platforms                 | Client (CPU, GPU), Edge (CPU)                         |
-| Owner                     | [@adrianboguszewski](https://github.com/adrianboguszewski) |
+| [The Narrator](the_narrator_demo) |                                                          |
+|-----------------------------------|----------------------------------------------------------|
+| Related AI concepts               | image captioning, video captioning, BLIP                 |
+| Platforms                         | Client (CPU, GPU), Edge (CPU)                         |
+| Owner                             | [@adrianboguszewski](https://github.com/adrianboguszewski) |
 
 ### 🚶 People Counter
 

@@ -1,12 +1,12 @@
-# Narrator Demo with OpenVINO™
+# The Narrator Demo with OpenVINO™
 
 This demo generates natural language captions for images or video streams using the BLIP (Bootstrapped Language Image Pretraining) model, accelerated by OpenVINO™. The application can process live webcam feeds or video files, displaying the generated captions in real time. You can switch between different devices (CPU, GPU, etc.) on the fly to compare performance.
 
-![narrator_demo](https://github.com/user-attachments/assets/e2a3ed34-93ff-4aaa-87cd-e6ad61eaf421)
+![the_narrator_demo](https://github.com/user-attachments/assets/e2a3ed34-93ff-4aaa-87cd-e6ad61eaf421)
 
 ## Quick Launch using Setup Scripts
 
-If you want a **quick setup** without manually installing dependencies, use the provided installer scripts in the `setup` directory. These scripts will **automatically configure** everything needed to run the Narrator Demo.
+If you want a **quick setup** without manually installing dependencies, use the provided installer scripts in the `setup` directory. These scripts will **automatically configure** everything needed to run the The Narrator Demo.
 
 ### **For Windows**
 1. Download or copy the `install.bat` and `run.bat` files to your local directory (or use them directly from the repo).
@@ -51,7 +51,7 @@ _NOTE: If you are using Windows, you may need to install [Microsoft Visual C++ R
 
 ```shell
 git clone https://github.com/openvinotoolkit/openvino_build_deploy.git
-cd openvino_build_deploy/demos/narrator_demo
+cd openvino_build_deploy/demos/the_narrator_demo
 ```
 
 ### Step 3: Create and Activate a Virtual Environment
@@ -119,6 +119,6 @@ python main.py --help
 ---
 
 [//]: # (telemetry pixel)
-<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca&project=demos/narrator_demo&file=README.md" />
+<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca&project=demos/the_narrator_demo&file=README.md" />
 
 ---
