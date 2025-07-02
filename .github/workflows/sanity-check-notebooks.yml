@@ -16,6 +16,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  HF_HOME: ${{ github.workspace }}/.hf_home
+
 jobs:
   find-subprojects:
     runs-on: ubuntu-latest
