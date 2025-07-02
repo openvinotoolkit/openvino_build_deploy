@@ -16,6 +16,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  HF_HOME: ${{ github.workspace }}/.hf_home
+
 jobs:
   find-subprojects:
     runs-on: ubuntu-latest
@@ -53,6 +56,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/reusable-steps/setup-os
+      - name: Cache Hugging Face HF_HOME
+        uses: actions/cache@v3
+        with:
+          path: ${{ github.workspace }}/.hf_home
+          key: hfhome-global
       - name: Set up Python ${{ matrix.python }}
         uses: actions/setup-python@v5
         with:
@@ -87,6 +95,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/reusable-steps/setup-os
+      - name: Cache Hugging Face HF_HOME
+        uses: actions/cache@v3
+        with:
+          path: ${{ github.workspace }}/.hf_home
+          key: hfhome-global
       - uses: ./.github/reusable-steps/setup-python
         with:
           python: ${{ matrix.python }}
