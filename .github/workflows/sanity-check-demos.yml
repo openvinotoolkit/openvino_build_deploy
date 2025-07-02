@@ -60,7 +60,11 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ${{ github.workspace }}/.hf_home
-          key: hfhome-global
+          key: hfhome-${{ runner.os }}-${{ github.ref }}-${{ hashFiles('**/requirements.txt') }}
+          restore-keys:
+            - hfhome-${{ runner.os }}-${{ github.ref }}
+            - hfhome-${{ runner.os }}
+            - hfhome-
       - name: Set up Python ${{ matrix.python }}
         uses: actions/setup-python@v5
         with:
