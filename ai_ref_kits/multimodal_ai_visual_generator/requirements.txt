@@ -20,7 +20,7 @@ scipy==1.13.1
 
 # Streamlit Frontend
 streamlit==1.45.0
-pillow==11.2.1
+pillow==11.3.0
 fpdf==1.7.2
 
 # FastAPI Backend
