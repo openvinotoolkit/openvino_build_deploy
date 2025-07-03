@@ -1,0 +1,19 @@
+name: 'Cache Hugging Face Models'
+description: 'Caches Hugging Face models to speed up workflows'
+inputs:
+  requirements-path:
+    description: 'Path to requirements.txt for hashing'
+    required: false
+    default: '**/requirements.txt'
+runs:
+  using: "composite"
+  steps:
+    - name: Cache Hugging Face models
+      uses: actions/cache@v4
+      with:
+        path: ${{ github.workspace }}/.hf_home
+        key: hfhome-${{ runner.os }}-${{ github.ref }}-${{ hashFiles(inputs.requirements-path) }}
+        restore-keys: |
+          hfhome-${{ runner.os }}-${{ github.ref }}
+          hfhome-${{ runner.os }}
+          hfhome-
