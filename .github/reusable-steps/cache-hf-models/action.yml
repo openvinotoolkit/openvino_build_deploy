@@ -8,6 +8,9 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Ensure .hf_home directory exists
+      shell: bash
+      run: mkdir -p ${{ github.workspace }}/.hf_home
     - name: Cache Hugging Face models
       uses: actions/cache@v4
       with:
