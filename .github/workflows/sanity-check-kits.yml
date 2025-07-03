@@ -57,7 +57,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/reusable-steps/setup-os
-      - uses: ./.github/actions/cache-hf-models
+      - uses: ./.github/reusable-steps/cache-hf-models
       - name: Set up Python ${{ matrix.python }}
         uses: actions/setup-python@v5
         with:
