@@ -16,3 +16,4 @@ runs:
       with:
         path: ${{ github.workspace }}/.hf_home
         key: hf-home-${{ github.sha }}
+        enableCrossOsArchive: true
