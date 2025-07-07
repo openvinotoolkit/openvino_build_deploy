@@ -1,0 +1,21 @@
+[project]
+name = "onnxruntime_lcm"
+version = "1.0.0"
+readme = "README.md"
+license = { file = "../../LICENSE" }
+requires-python = ">=3.10"
+dependencies = [
+    "jupyterlab==4.4.4",
+    "ipywidgets==8.1.7",
+    "openvino==2024.5.0",
+    "onnx==1.17.0",
+    "onnxruntime-openvino==1.20.0",
+    "optimum==1.23.1",
+    "accelerate==0.33.0",
+    "diffusers==0.32.2",
+    "numpy==1.26.4",
+    "huggingface_hub==0.25.0",
+]
+
+[tool.uv]
+extra-index-url = "https://download.pytorch.org/whl/cpu"

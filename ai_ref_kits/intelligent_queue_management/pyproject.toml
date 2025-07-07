@@ -1,0 +1,25 @@
+[project]
+name = "intelligent_queue_management"
+version = "1.0.0"
+readme = "README.md"
+license = { file = "../../LICENSE" }
+requires-python = ">=3.10"
+dependencies = [
+    "openvino-dev==2024.6",
+    "nncf==2.14.1",
+    "ultralytics==8.3.59",
+    "numpy==1.26.4",
+    "pillow==10.3.0",
+    "opencv-python==4.10.0.82",
+    "onnx==1.17.0",
+    "torch==2.7.1",
+    "torchvision==0.22.1",
+    "supervision==0.11.0",
+    "jupyterlab==4.2.5",
+    "tqdm==4.66.3",
+    "pycocotools==2.0.6",
+    "cython==0.29.35",
+]
+
+[tool.uv]
+extra-index-url = "https://download.pytorch.org/whl/cpu"

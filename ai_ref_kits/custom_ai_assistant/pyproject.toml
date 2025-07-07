@@ -1,0 +1,21 @@
+[project]
+name = "custom_ai_assistant"
+version = "1.0.0"
+readme = "README.md"
+license = { file = "../../LICENSE" }
+requires-python = ">=3.10"
+dependencies = [
+    "openvino==2025.1",
+    "optimum-intel==1.23.0",
+    "optimum==1.25.3",
+    "nncf==2.16.0",
+    "onnx==1.17.0",
+    "onnxruntime==1.20.1",
+    "torch==2.7.1",
+    "transformers==4.50.3",
+    "librosa==0.10.2",
+    "gradio==5.35.0",
+]
+
+[tool.uv]
+extra-index-url = "https://download.pytorch.org/whl/cpu"
