@@ -116,7 +116,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python: ["3.10", "3.12"]
+        python: ["3.10", "3.13"]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.python) }}
     steps:
       - uses: actions/checkout@v4
