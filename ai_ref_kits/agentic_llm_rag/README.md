@@ -44,7 +44,7 @@ To get started with the AI Insight Agent with RAG, you install Python, set up yo
 
 ## Installing Prerequisites
 
-This project requires Python 3.8 or higher and a few libraries. If you don't already have Python installed on your machine, go to [https://www.python.org/downloads/](https://www.python.org/downloads/) and download the latest version for your operating system. Follow the prompts to install Python, and make  sure to select the option to add Python to your PATH environment variable.
+This project requires Python 3.10 or higher and a few libraries. If you don't already have Python installed on your machine, go to [https://www.python.org/downloads/](https://www.python.org/downloads/) and download the latest version for your operating system. Follow the prompts to install Python, and make  sure to select the option to add Python to your PATH environment variable.
 
 To install the Python libraries and tools, run this command:
 
