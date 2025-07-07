@@ -14,7 +14,7 @@ jupyterlab==4.2.5
 tqdm==4.66.6
 pycocotools==2.0.8
 cython==3.0.11
-datumaro[default]==1.9.1
+datumaro[default]==1.10.0
 iprogress==0.4
 ipywidgets==8.1.5
 lapx==0.5.11
