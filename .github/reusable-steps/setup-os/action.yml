@@ -15,14 +15,20 @@ runs:
         dotnet: true
         haskell: true
         docker-images: true
-    - name: Install OpenCL and EGL (Ubuntu only)
+    - name: Install OpenCL, EGL and uv (Ubuntu only)
       if: runner.os == 'Linux'
       shell: bash
       run: |
         sudo apt-get update
         sudo apt-get install -y ocl-icd-opencl-dev libegl1 libgles2 mesa-utils libxcb-cursor0 libxcb-xinerama0 libxcb-util1 libxcb-keysyms1 libxcb-randr0 libxkbcommon-x11-0 libegl1-mesa-dev
-    - name: Install coreutils (macOS only)
+        wget -qO- https://astral.sh/uv/install.sh | sh
+    - name: Install coreutils and uv (macOS only)
       if: runner.os == 'macOS'
       shell: bash
       run: |
-        brew install coreutils
+        brew install coreutils uv
+    - name: Install uv (Windows only)
+      if: runner.os == "Windows"
+      shell: powershell
+      run: |
+        powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
