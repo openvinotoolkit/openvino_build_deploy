@@ -28,7 +28,7 @@ runs:
       run: |
         brew install coreutils uv
     - name: Install uv (Windows only)
-      if: runner.os == "Windows"
-      shell: powershell
+      if: runner.os == 'Windows'
+      shell: pwsh
       run: |
         powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
