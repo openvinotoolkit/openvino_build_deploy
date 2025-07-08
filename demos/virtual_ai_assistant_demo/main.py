@@ -60,7 +60,7 @@ def load_chat_model(model_name: str, token: str = None) -> OpenVINOGenAILLM:
     if not model_path.exists():
         log.info(f"Downloading {model_name}... It may take up to 1h depending on your Internet connection and model size.")     
         
-        chat_tokenizer = AutoTokenizer.from_pretrained(model_name, token=token)
+        chat_tokenizer = AutoTokenizer.from_pretrained(model_name, token=token, use_fast=True)
         chat_tokenizer.save_pretrained(model_path)
         export_tokenizer(chat_tokenizer, model_path)
 
@@ -132,7 +132,7 @@ def load_embedding_model(model_name: str) -> OpenVINOEmbedding:
         embedding_model = OVModelForFeatureExtraction.from_pretrained(model_name, export=True, compile=False)
         optimize_model_for_npu(embedding_model)
         embedding_model.save_pretrained(model_path)
-        embedding_tokenizer = AutoTokenizer.from_pretrained(model_name)
+        embedding_tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True)
         embedding_tokenizer.save_pretrained(model_path)
 
     device = "NPU" if "NPU" in get_available_devices() else "CPU"
@@ -145,7 +145,7 @@ def load_reranker_model(model_name: str) -> OpenVINORerank:
     if not model_path.exists():
         reranker_model = OVModelForSequenceClassification.from_pretrained(model_name, export=True, compile=False)
         reranker_model.save_pretrained(model_path)
-        reranker_tokenizer = AutoTokenizer.from_pretrained(model_name)
+        reranker_tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True)
         reranker_tokenizer.save_pretrained(model_path)
 
     return OpenVINORerank(model_id_or_path=str(model_path), device="CPU", top_n=3)
