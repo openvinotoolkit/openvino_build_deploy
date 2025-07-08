@@ -82,11 +82,11 @@ def download_and_load_safety_checker(model_name: str) -> None:
     if not safety_checker_dir.exists():
         model = OVModelForImageClassification.from_pretrained(model_name, export=True, compile=False)
         model.save_pretrained(safety_checker_dir)
-        processor = AutoProcessor.from_pretrained(model_name)
+        processor = AutoProcessor.from_pretrained(model_name, use_fast=True)
         processor.save_pretrained(safety_checker_dir)
 
     safety_checker = pipeline("image-classification", model=OVModelForImageClassification.from_pretrained(safety_checker_dir),
-                            image_processor=AutoProcessor.from_pretrained(safety_checker_dir))
+                            image_processor=AutoProcessor.from_pretrained(safety_checker_dir, use_fast=True))
 
 
 def download_model(model_name: str) -> None:

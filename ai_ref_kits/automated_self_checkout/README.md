@@ -149,7 +149,7 @@ As the previous figure shows (See Figure 6), the script requests confirmation to
 
 ## Manual - Installing Prerequisites
 
-This project requires Python 3.9 or higher and a few libraries. If you don't have Python installed on your machine, go to <https://www.python.org/downloads/> and download the latest version for your operating system. Follow the prompts to install Python, making sure to check the option to add Python to your PATH environment variable.
+This project requires Python 3.10 or higher and a few libraries. If you don't have Python installed on your machine, go to <https://www.python.org/downloads/> and download the latest version for your operating system. Follow the prompts to install Python, making sure to check the option to add Python to your PATH environment variable.
 
 Install libraries and tools:
 
