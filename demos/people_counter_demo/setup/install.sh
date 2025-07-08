@@ -24,23 +24,13 @@ if [ "$MACHINE" = "Mac" ]; then
         /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
     fi
     
-    # Install git if not present
-    if ! command -v git &> /dev/null; then
-        echo "Installing git..."
-        brew install git
-    fi
-    
-    # Install python3 if not present
-    if ! command -v python3 &> /dev/null; then
-        echo "Installing python3..."
-        brew install python3
-    fi
-    
-    echo "macOS dependencies checked/installed."
+    # Install dependencies
+    echo "Installing required packages..."
+    brew install git python@3.10
     
 elif [ "$MACHINE" = "Linux" ]; then
     sudo apt update
-    sudo apt install -y git python3-venv python3-dev
+    sudo apt install -y git python3.10 python3.10-venv python3.10-dev
 else
     echo "Unsupported OS: ${MACHINE}"
     exit 1
@@ -59,7 +49,7 @@ cd "$INSTALL_DIR/demos/people_counter_demo"
 
 # Create a virtual environment
 echo "Creating virtual environment..."
-python3 -m venv venv
+python3.10 -m venv venv
 
 # Activate the virtual environment
 source venv/bin/activate
