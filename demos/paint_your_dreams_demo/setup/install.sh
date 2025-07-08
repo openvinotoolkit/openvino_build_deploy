@@ -51,7 +51,7 @@ cd "$INSTALL_DIR/demos/paint_your_dreams_demo"
 
 # Create a virtual environment
 echo "Creating virtual environment..."
-python3.12 -m venv venv
+python3 -m venv venv
 
 # Activate the virtual environment
 source venv/bin/activate
