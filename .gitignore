@@ -117,4 +117,3 @@ pipcache_openvino/
 demos/*/node_modules/**
 **/kernel.errors.txt
 .DS_Store
-**/datasets/
