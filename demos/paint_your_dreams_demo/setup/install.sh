@@ -26,11 +26,13 @@ if [ "$MACHINE" = "Mac" ]; then
     
     # Install dependencies (Python 3.10-3.13 required)
     echo "Installing required packages..."
-    brew install git python@3.12
+    brew install git python3
+    echo "Python version installed:"
+    python3 --version
     
 elif [ "$MACHINE" = "Linux" ]; then
     sudo apt update
-    sudo apt install -y git python3.12 python3.12-venv python3.12-dev
+    sudo apt install -y git python3 python3-venv python3-dev
 else
     echo "Unsupported OS: ${MACHINE}"
     exit 1
