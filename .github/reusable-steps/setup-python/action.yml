@@ -30,6 +30,7 @@ runs:
       shell: bash
       run: |
         uv venv
+        source .venv/bin/activate
     - name: Install MeloTTS (Conversational AI Chatbot only)
       if: ${{ inputs.project == 'ai_ref_kits/conversational_ai_chatbot' }}
       shell: bash
