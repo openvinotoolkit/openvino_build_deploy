@@ -36,9 +36,4 @@ runs:
     - name: Install dependencies
       shell: bash
       run: |
-        python -m pip install --upgrade pip
         uv pip install -r ${{ inputs.project }}/requirements.txt --index-strategy unsafe-best-match --system
-    - name: List dependencies
-      shell: bash
-      run: |
-        uv pip list --system
