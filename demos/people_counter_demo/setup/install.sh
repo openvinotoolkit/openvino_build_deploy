@@ -3,13 +3,38 @@
 # Enable error handling
 set -e
 
+# Detect OS
+OS="$(uname -s)"
+case "${OS}" in
+    Linux*)     MACHINE=Linux;;
+    Darwin*)    MACHINE=Mac;;
+    *)          MACHINE="UNKNOWN:${OS}"
+esac
+
 # Get the current directory where the script is placed
 INSTALL_DIR="$(pwd)/openvino_build_deploy"
 
-# Install dependencies
-echo "Installing required packages..."
-sudo apt update
-sudo apt install -y git python3-venv python3-dev
+# Install dependencies based on OS
+echo "Installing required packages for ${MACHINE}..."
+
+if [ "$MACHINE" = "Mac" ]; then
+    # Check if Homebrew is installed
+    if ! command -v brew &> /dev/null; then
+        echo "Homebrew not found. Installing Homebrew..."
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    fi
+    
+    # Install dependencies
+    echo "Installing required packages..."
+    brew install git python3
+    
+elif [ "$MACHINE" = "Linux" ]; then
+    sudo apt update
+    sudo apt install -y git python3 python3-venv python3-dev
+else
+    echo "Unsupported OS: ${MACHINE}"
+    exit 1
+fi
 
 # Clone the repository if it doesn't exist
 if [ ! -d "$INSTALL_DIR" ]; then

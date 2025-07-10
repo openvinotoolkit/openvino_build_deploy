@@ -15,7 +15,7 @@ If you want a **quick setup** without manually installing dependencies, use the 
 2. Double-click `install.bat` to install dependencies and set up the environment.
 3. After installation, double-click `run.bat` to start the demo.
 
-### **For Linux**
+### **For Linux and MacOS**
 1. Download the `install.sh` and `run.sh` files to your local directory.
 2. First, ensure the installer scripts have execute permissions:
 ```shell
