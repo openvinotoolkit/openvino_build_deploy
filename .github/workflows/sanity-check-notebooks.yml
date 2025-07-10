@@ -51,6 +51,7 @@ jobs:
         subproject: ${{ fromJson(needs.find-subprojects.outputs.notebook) }}
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/reusable-steps/setup-os
       - name: Set up Python ${{ matrix.python }}
         uses: actions/setup-python@v5
         with:
