@@ -20,8 +20,8 @@ runs:
       shell: bash
       run: |
         sudo apt-get update
-        sudo apt-get install -y ocl-icd-opencl-dev libegl1 libgles2 mesa-utils libxcb-cursor0 libxcb-xinerama0 libxcb-util1 libxcb-keysyms1 libxcb-randr0 libxkbcommon-x11-0 libegl1-mesa-dev
-        wget -qO- https://astral.sh/uv/install.sh | sh
+        sudo apt-get install -y ocl-icd-opencl-dev libegl1 libgles2 mesa-utils libxcb-cursor0 libxcb-xinerama0 libxcb-util1 libxcb-keysyms1 libxcb-randr0 libxkbcommon-x11-0 libegl1-mesa-dev cargo
+        cargo install --git https://github.com/astral-sh/uv uv
     - name: Install coreutils and uv (macOS only)
       if: runner.os == 'macOS'
       shell: bash
