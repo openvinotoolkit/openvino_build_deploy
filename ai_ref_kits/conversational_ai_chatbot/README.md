@@ -20,6 +20,8 @@ This kit uses the following technology stack:
 - [MeloTTS](https://github.com/myshell-ai/MeloTTS/tree/main)
 - [Gradio interface](https://www.gradio.app/docs/gradio/chatinterface)
 
+You can also explore [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html) to view performance benchmarks for models like Llama3.2-3B and Qwen2-7B.
+
 For other Intel AI kits, see the [Edge AI Reference Kits repository](/).
 
 ![conversational-ai-chatbot](https://github.com/user-attachments/assets/262ba878-b845-445b-aff7-0a118517d409)
