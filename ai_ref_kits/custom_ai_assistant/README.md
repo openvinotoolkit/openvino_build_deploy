@@ -14,6 +14,8 @@ This kit uses the following technology stack:
 - [OpenVINO Toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([docs](https://docs.openvino.ai/))
 - [Llama 3](https://llama.meta.com/llama3/)
 
+You can also explore [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html) to view performance benchmarks for models like Llama3.2-3B and Qwen2-7B.
+
 Check out our [AI Reference Kits repository](/) for other kits.
 
 ![custom-ai-assistant](https://github.com/openvinotoolkit/openvino_notebooks/assets/138901786/e0c2f2db-c213-4071-970b-09ebc1eea710)
