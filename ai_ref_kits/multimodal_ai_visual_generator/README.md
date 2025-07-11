@@ -24,10 +24,12 @@ This kit uses the following technology stack:
 - [OpenVINO Toolkit](https://docs.openvino.ai/)
 - [OpenVINO™ GenAI](https://docs.openvino.ai/2025/openvino-workflow-generative/inference-with-genai.html)
 - [Optimum Intel](https://docs.openvino.ai/2025/openvino-workflow-generative/inference-with-optimum-intel.html)
-- [Qwen2-7B](https://huggingface.co/Qwen/Qwen2.5-7B-Instruct) (LLM)
+- [Qwen2.5-7B](https://huggingface.co/Qwen/Qwen2.5-7B-Instruct) (LLM)
 - [FLUX.1](https://github.com/black-forest-labs/flux) (text-to-image)
 - [Streamlit](https://docs.streamlit.io/) (frontend)
 - [FastAPI](https://fastapi.tiangolo.com/) (backend)
+
+You can also explore [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html) to view performance benchmarks for models like Qwen2.5-7B and FLUX.1-schnell across Intel CPUs, GPUs, and NPUs.
 
 Check out our [AI Reference Kits repository](https://github.com/openvinotoolkit/openvino_build_deploy) for other kits.
 
@@ -220,6 +222,7 @@ Branding mode:
 
 - Learn more about [OpenVINO](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html)
 - Explore [OpenVINO's documentation](https://docs.openvino.ai/2024/home.html)
+- Browse the [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html) for real-world model benchmarks
 
 <p align="right"><a href="#top">Back to top ⬆️</a></p>
 
