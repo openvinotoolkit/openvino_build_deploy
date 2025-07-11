@@ -16,6 +16,8 @@ This kit uses the following technology stack:
 - [OpenVINO Datumaro](https://docs.openvino.ai/2023.3/datumaro_documentation.html)
 - [Ultralytic YOLOv8](https://github.com/ultralytics/ultralytics)
 
+You can also explore [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html) to view performance benchmarks for models like YOLO.
+
 Check out our [AI Reference Kits repository](/) for other kits.
 
 ![explainable-ai](https://github.com/openvinotoolkit/openvino_notebooks/assets/138901786/14958589-433b-4617-b3ea-e2307fe6cb53)
