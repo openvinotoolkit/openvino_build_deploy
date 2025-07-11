@@ -3,7 +3,8 @@
 jupyterlab==4.4.4
 ipywidgets==8.1.7
 
-openvino==2025.1.0
+openvino==2025.2; sys_platform == "win32"
+openvino==2025.1; sys_platform == "linux"
 onnxruntime-openvino==1.22.0
 onnx==1.18.0
 optimum==1.26.1
