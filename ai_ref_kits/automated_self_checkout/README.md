@@ -20,6 +20,8 @@ This kit uses the following technology stack:
 - [Roboflow Supervision](https://supervision.roboflow.com/latest/)
 - [Gradio](https://www.gradio.app/)
 
+You can also explore [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html) to view performance benchmarks for models like YOLO.
+
 Check out our [AI Reference Kits repository](/) for other kits.
 
 ![automated-self-checkout](https://github.com/openvinotoolkit/openvino_notebooks/assets/138901786/965a6604-fa15-427e-9d44-c23fa0bbeb6b)
