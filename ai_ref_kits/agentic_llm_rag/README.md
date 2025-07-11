@@ -22,6 +22,8 @@ This kit uses the following technology stack:
 - [bge-large-en-v1.5](https://huggingface.co/BAAI/bge-large-en-v1.5)
 - [Gradio interface](https://www.gradio.app/docs/gradio/chatinterface)
 
+You can also explore [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html) to view performance benchmarks for models like Llama3.2-3B-Instruct and Qwen2-7B.
+
 Check out our [AI Reference Kits repository](/) for other kits.
 
 ![agentic_llm_rag](https://github.com/user-attachments/assets/0471ab91-ded5-4a5f-8d8e-5432f1b4b45c)

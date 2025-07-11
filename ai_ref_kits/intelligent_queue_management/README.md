@@ -18,6 +18,8 @@ This kit uses the following technology stack:
 - [OpenVINO Toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([docs](https://docs.openvino.ai/))
 - [Ultralytic YOLOv8](https://github.com/ultralytics/ultralytics)
 
+You can also explore [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html) to view performance benchmarks for models like YOLO.
+
 Check out our [AI Reference Kits repository](/) for other kits.
 
 ![intelligent-queue-management](https://github.com/openvinotoolkit/openvino_notebooks/assets/138901786/6874cfe8-3462-4b30-8026-c14aab7b695c)
