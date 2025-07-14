@@ -218,6 +218,13 @@ Branding mode:
 
 ---
 
+# Benchmark Results 
+
+<img width="1367" height="942" alt="image" src="https://github.com/user-attachments/assets/07efd67d-989f-459a-b8b9-7ecebf27abaa" />
+
+You can evaluate performance benchmarks for models like Qwen2.5-7B and FLUX.1-schnell across a range of Intel® platforms using the [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html). The Model Hub is a curated resource for developers to explore OpenVINO optimized models and assess their latency and throughput on Intel® CPUs, integrated GPUs, discrete GPUs, and NPUs.
+
+---
 ## Additional Resources
 
 - Learn more about [OpenVINO](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html)
