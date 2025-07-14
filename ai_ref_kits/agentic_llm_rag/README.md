@@ -22,8 +22,6 @@ This kit uses the following technology stack:
 - [bge-large-en-v1.5](https://huggingface.co/BAAI/bge-large-en-v1.5)
 - [Gradio interface](https://www.gradio.app/docs/gradio/chatinterface)
 
-You can also explore [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html) to view performance benchmarks for models like Llama3.2-3B-Instruct and Qwen2-7B.
-
 Check out our [AI Reference Kits repository](/) for other kits.
 
 ![agentic_llm_rag](https://github.com/user-attachments/assets/0471ab91-ded5-4a5f-8d8e-5432f1b4b45c)
@@ -200,6 +198,13 @@ When you test the AI Insight Agent with RAG application, you can test both the i
 For further testing of the AI Insight Agent with RAG appplication, you can engage with the chatbot assistant by asking it questions, or giving it commands that align with the assistant's capabilities. This hands-on experience can help you to understand the assistant's interactive quality and performance.
 
 Enjoy exploring the capabilities of your AI Insight Agent with RAG appplication!
+
+
+# Benchmark Results 
+
+<img width="1229" height="982" alt="image" src="https://github.com/user-attachments/assets/5cd865c8-6f67-439f-bb31-d1dc5aa5727b" />
+
+You can evaluate performance benchmarks for models like Llama3.2-3B-Instruct and Qwen2-7B across a range of Intel® platforms using the [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html). The Model Hub is a curated resource for developers to explore OpenVINO optimized models and assess their latency and throughput on Intel® CPUs, integrated GPUs, discrete GPUs, and NPUs.
 
 # Additional Resources
 - Learn more about [OpenVINO](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html)
