@@ -29,8 +29,6 @@ This kit uses the following technology stack:
 - [Streamlit](https://docs.streamlit.io/) (frontend)
 - [FastAPI](https://fastapi.tiangolo.com/) (backend)
 
-You can also explore [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html) to view performance benchmarks for models like Qwen2.5-7B and FLUX.1-schnell across Intel CPUs, GPUs, and NPUs.
-
 Check out our [AI Reference Kits repository](https://github.com/openvinotoolkit/openvino_build_deploy) for other kits.
 
 ![visual-gen-studio](https://github.com/user-attachments/assets/43d6e473-19c1-4047-aee1-07a484cd0dc1)
