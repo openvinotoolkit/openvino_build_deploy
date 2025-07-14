@@ -11,11 +11,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const toggleInferenceSwitch = document.getElementById('toggleSwitch');
   const toggleValue = document.getElementById('toggleValue');
   const processingTimeElement = document.getElementById('processingTime');
+  const backgroundMode = document.getElementById('backgroundModeSelect');
   // streaming:
   let webcamStream = null;
 
   let streamingActive = false;
   let inferenceActive = false;
+  let currentBackgroundMode = 'blur';
 
   updateDeviceSelect();
   updateWebcamSelect();
@@ -44,7 +46,12 @@ document.addEventListener('DOMContentLoaded', () => {
     inferenceActive = toggleInferenceSwitch.checked;
     if (!inferenceActive) {
       await window.electronAPI.clearWatermarkCache();
-  }
+    }
+  });
+
+  //CHANGING BACKGROUND MODE
+  backgroundMode.addEventListener('change', async() => {
+    currentBackgroundMode = backgroundMode.value;
   });
 
 
@@ -60,8 +67,13 @@ async function processFrame() {
     const imageData = ctx.getImageData(0, 0, canvasElement.width, canvasElement.height);
 
     if (inferenceActive) {
-      let resultMask = await window.electronAPI.runModel(imageData, canvasElement.width, canvasElement.height, device);            
-      let result = await window.electronAPI.blurImage(imageData, canvasElement.width, canvasElement.height);
+      let resultMask = await window.electronAPI.runModel(imageData, canvasElement.width, canvasElement.height, device);
+      let result;
+      if (currentBackgroundMode == 'blur'){        
+        result = await window.electronAPI.blurImage(imageData, canvasElement.width, canvasElement.height);
+      } else {
+        result = await window.electronAPI.removeBackground(imageData, canvasElement.width, canvasElement.height);
+      }
       let blurredImage = new ImageData(result.img, result.width, result.height); 
       result = await window.electronAPI.addWatermark(blurredImage, canvasElement.width, canvasElement.height);     
       blurredImage = new ImageData(result.img, result.width, result.height);

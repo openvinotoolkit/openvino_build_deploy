@@ -5,7 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
-module.exports = { detectDevices, runModel, blurImage, addWatermark, clearWatermarkCache, initializeWatermark }
+module.exports = { detectDevices, runModel, blurImage, removeBackground, addWatermark, clearWatermarkCache, initializeWatermark }
 
 // Sharp settings
 sharp.cache(100);  // Increased cache size
@@ -305,6 +305,63 @@ async function blurImage(image, width, height) {
         };
     }
 }
+
+async function removeBackground(image, width, height) {
+    if (outputMask == null) {
+        return {
+            img: image.data,
+            width: width,
+            height: height
+        };
+    }
+
+    try {
+        const maskBuffer = await sharp(outputMask, {
+            raw: {
+                channels: 3,
+                width: inputSize.w,
+                height: inputSize.h
+            },
+            limitInputPixels: false
+        })
+        .resize(width, height, {
+            fit: 'fill',
+            kernel: 'lanczos3'
+        })
+        .removeAlpha()
+        .raw()
+        .toBuffer();
+
+        const original = image.data;
+        const resultData = new Uint8ClampedArray(original.length);
+
+        for (let i = 0; i < width * height; i++) {
+            const maskR = maskBuffer[i * 3];
+            const isForeground = maskR < 127;
+
+            for (let c = 0; c < 4; c++) {
+                resultData[i * 4 + c] = isForeground
+                    ? original[i * 4 + c]
+                    : (c === 3 ? 255 : 255);
+            }
+        }
+
+        return {
+            img: resultData,
+            width,
+            height
+        };
+    } catch (error) {
+        console.error('Error in removeBackground:', error);
+        return {
+            img: image.data,
+            width,
+            height
+        };
+    }
+}
+
+
 
 async function addWatermark(image, width, height) {
     try {
