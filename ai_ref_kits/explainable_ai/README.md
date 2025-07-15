@@ -137,6 +137,8 @@ Use the following command to run the benchmark:
 ```
 Replace `int8_model_det_path` with the path to your INT8 model and $device with the specific device you're using (CPU, GPU, etc.). This command performs inference on the model for 30 seconds. Run `benchmark_app --help` for additional command-line options.
 
+You can evaluate performance benchmarks for the YOLO model across a range of Intel® platforms using the [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html). The Model Hub is a curated resource for developers to explore OpenVINO-optimized models and assess their latency and throughput on Intel® CPUs, integrated GPUs, discrete GPUs, and NPUs.
+
 ### Appendix
 
 Platform Configurations for Performance Benchmarks for YOLOv8m Model
