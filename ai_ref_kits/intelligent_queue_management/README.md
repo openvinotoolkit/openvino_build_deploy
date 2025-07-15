@@ -160,6 +160,8 @@ Replace `int8_model_det_path` with the path to your INT8 model and $device with 
 
 Congratulations! You have successfully set up and run the Intelligent Queue Management application with OpenVINO™.
 
+You can evaluate performance benchmarks for the YOLO model across a range of Intel® platforms using the [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html). The Model Hub is a curated resource for developers to explore OpenVINO-optimized models and assess their latency and throughput on Intel® CPUs, integrated GPUs, discrete GPUs, and NPUs.
+
 ### Appendix
 
 Platform Configurations for Performance Benchmarks for YOLOv8m Model
@@ -182,8 +184,6 @@ Platform Configurations for Performance Benchmarks for YOLOv8m Model
 | OpenVINO Version | 2023.0.0-10926 | 2023.0.0-10926 | 2023.0.0-10926 | 2023.0.0-10926 | 2023.0.0-10926 | 2023.0.0-10926 |
 | Benchmark Date | May 31, 2023 | May 29, 2023 | June 15, 2023 | May 29, 2023 | June 15, 2023 | May 29, 2023 
 | Benchmarked by | Intel Corporation | Intel Corporation | Intel Corporation | Intel Corporation | Intel Corporation | Intel Corporation |
-
-You can evaluate performance benchmarks for the YOLO model across a range of Intel® platforms using the [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html). The Model Hub is a curated resource for developers to explore OpenVINO-optimized models and assess their latency and throughput on Intel® CPUs, integrated GPUs, discrete GPUs, and NPUs.
 
 # Additional Resources
 - Learn more about [OpenVINO](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html)
