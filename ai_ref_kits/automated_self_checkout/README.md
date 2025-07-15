@@ -20,8 +20,6 @@ This kit uses the following technology stack:
 - [Roboflow Supervision](https://supervision.roboflow.com/latest/)
 - [Gradio](https://www.gradio.app/)
 
-You can also explore [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html) to view performance benchmarks for models like YOLO.
-
 Check out our [AI Reference Kits repository](/) for other kits.
 
 ![automated-self-checkout](https://github.com/openvinotoolkit/openvino_notebooks/assets/138901786/965a6604-fa15-427e-9d44-c23fa0bbeb6b)
@@ -244,6 +242,8 @@ Use the following command to run the benchmark:
 Replace `int8_model_det_path` with the path to your INT8 model and $device with the specific device you're using (CPU, GPU, etc.). This command performs inference on the model for 30 seconds. Run `benchmark_app --help` for additional command-line options.
 
 Congratulations! You have successfully set up and run the Detection and Tracking for Automated Self-Checkout application with OpenVINO.
+
+You can evaluate performance benchmarks for the YOLO model across a range of Intel® platforms using the [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html). The Model Hub is a curated resource for developers to explore OpenVINO-optimized models and assess their latency and throughput on Intel® CPUs, integrated GPUs, discrete GPUs, and NPUs.
 
 ### Appendix
 
