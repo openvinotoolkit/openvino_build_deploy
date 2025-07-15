@@ -20,8 +20,6 @@ This kit uses the following technology stack:
 - [MeloTTS](https://github.com/myshell-ai/MeloTTS/tree/main)
 - [Gradio interface](https://www.gradio.app/docs/gradio/chatinterface)
 
-You can also explore [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html) to view performance benchmarks for models like Llama3.2-3B and Qwen2-7B.
-
 For other Intel AI kits, see the [Edge AI Reference Kits repository](/).
 
 ![conversational-ai-chatbot](https://github.com/user-attachments/assets/262ba878-b845-445b-aff7-0a118517d409)
@@ -266,6 +264,12 @@ When you test the AI Chatbot assistant, you can test both the voice interaction 
 For further testing of the Conversational AI Chatbot, you can engage with the chatbot assistant by asking it questions, or giving it commands that align with the assistant's capabilities. This hands-on experience can help you to understand the assistant's interactive quality and performance.
 
 Enjoy exploring the capabilities of your Conversational AI Chatbot!
+
+# Benchmark Results 
+
+<img width="1229" height="982" alt="image" src="https://github.com/user-attachments/assets/5cd865c8-6f67-439f-bb31-d1dc5aa5727b" />
+
+You can evaluate performance benchmarks for models like Llama3.2-3B and Qwen2-7B across a range of Intel® platforms using the [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html). The Model Hub is a curated resource for developers to explore OpenVINO optimized models and assess their latency and throughput on Intel® CPUs, integrated GPUs, discrete GPUs, and NPUs.
 
 # Additional Resources
 - Learn more about [OpenVINO](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html)
