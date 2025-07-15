@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   //CHANGING BACKGROUND MODE
-  backgroundMode.addEventListener('change', async() => {
+  backgroundMode.addEventListener('change', () => {
     currentBackgroundMode = backgroundMode.value;
   });
 
