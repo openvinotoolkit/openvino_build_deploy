@@ -14,8 +14,6 @@ This kit uses the following technology stack:
 - [OpenVINO Toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([docs](https://docs.openvino.ai/))
 - [Llama 3](https://llama.meta.com/llama3/)
 
-You can also explore [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html) to view performance benchmarks for models like Llama3.2-3B and Qwen2-7B.
-
 Check out our [AI Reference Kits repository](/) for other kits.
 
 ![custom-ai-assistant](https://github.com/openvinotoolkit/openvino_notebooks/assets/138901786/e0c2f2db-c213-4071-970b-09ebc1eea710)
@@ -200,6 +198,12 @@ Trying Out the Application
 Feel free to engage with the Custom AI Assistant, ask questions, or give commands as per the assistant's capabilities. This hands-on experience will help you understand the assistant's interactive quality and performance.
 
 Enjoy exploring the capabilities of your Custom AI Assistant!
+
+# Benchmark Results 
+
+<img width="1229" height="982" alt="image" src="https://github.com/user-attachments/assets/5cd865c8-6f67-439f-bb31-d1dc5aa5727b" />
+
+You can evaluate performance benchmarks for models like Llama3.2-3B-Instruct and Qwen2-7B across a range of Intel® platforms using the [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html). The Model Hub is a curated resource for developers to explore OpenVINO optimized models and assess their latency and throughput on Intel® CPUs, integrated GPUs, discrete GPUs, and NPUs.
 
 # Additional Resources
 - Learn more about [OpenVINO](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html)
