@@ -215,39 +215,65 @@ def load_file(file_path: Path) -> Document:
 
 
 def load_context(file_path: Path) -> None:
-    """
-    Load context (document) and create a RAG pipeline
-
-    Params:
-        file_path: the path to the document
-    """
     global ov_chat_engine
 
-    # limit chat history
     memory = ChatMemoryBuffer.from_defaults()
 
-    # when context removed, no longer RAG pipeline is needed
     if not file_path:
-        ov_chat_engine = SimpleChatEngine.from_defaults(llm=ov_llm, system_prompt=chatbot_config["system_configuration"], memory=memory)
+        ov_chat_engine = SimpleChatEngine.from_defaults(
+            llm=ov_llm,
+            system_prompt=chatbot_config["system_configuration"],
+            memory=memory
+        )
         return
 
     document = load_file(file_path)
-
-    # a splitter to divide document into chunks
     splitter = LangchainNodeParser(RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100))
-
-    # set embedding model
     Settings.embed_model = ov_embedding
     
-    # FAISS has persistent ID mapping issues with LlamaIndex that cause KeyError during retrieval
-    # Using SimpleVectorStore which is reliable and works consistently
-    # For performance-critical deployments, consider using other vector stores like Qdrant or Pinecone
-    index = VectorStoreIndex.from_documents([document], transformations=[splitter])
+    # Split document into chunks (nodes)
+    nodes = splitter.get_nodes_from_documents([document])
     
-    # create a RAG pipeline
-    ov_chat_engine = index.as_chat_engine(llm=ov_llm, chat_mode=ChatMode.CONTEXT, system_prompt=chatbot_config["system_configuration"],
-                                          memory=memory, node_postprocessors=[ov_reranker])
+    # Get dimension of embedding vector
+    try:
+        dim = len(ov_embedding.embed_query("test"))
+    except (AttributeError, IndexError):
+        dummy_embedding = ov_embedding.get_text_embedding("test")
+        dim = len(dummy_embedding)
+    
+    # Create FAISS index with ID mapping
+    faiss_index = faiss.IndexFlatL2(dim)
 
+
+    # Prepare embedding vectors and IDs lists
+    embeddings = []
+    ids = []
+    uuid_to_int = {}
+
+    for i, node in enumerate(nodes):
+        # Get embedding vector for each node
+        emb = ov_embedding.get_text_embedding(node.get_text())
+        embeddings.append(emb)
+        ids.append(i)  # integer ID
+        uuid_to_int[node.node_id] = i
+
+    vector_store = FaissVectorStore(faiss_index=faiss_index)
+    storage_context = StorageContext.from_defaults(vector_store=vector_store)
+    index = VectorStoreIndex.from_documents([document], storage_context=storage_context,
+    transformations=[splitter], embed_model=ov_embedding)
+
+    print(f"FAISS index size: {faiss_index.ntotal}")
+    print(f"Number of indexed nodes: {len(nodes)}")
+    print(f"UUID to int mapping example: {list(uuid_to_int.items())[:3]}")
+
+    # Build RAG chat engine with reranker and memory
+    ov_chat_engine = index.as_chat_engine(
+        llm=ov_llm,
+        chat_mode=ChatMode.CONTEXT,
+        system_prompt=chatbot_config["system_configuration"],
+        memory=memory,
+        node_postprocessors=[ov_reranker]
+    )
 
 def generate_initial_greeting() -> str:
     """
