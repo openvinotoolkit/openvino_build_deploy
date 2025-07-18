@@ -236,15 +236,14 @@ def load_context(file_path: Path) -> None:
     # a splitter to divide document into chunks
     splitter = LangchainNodeParser(RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100))
 
-    dim = ov_embedding._model.request.outputs[0].get_partial_shape()[2].get_length()
-    # a memory database to store chunks
-    faiss_index = faiss.IndexFlatL2(dim)
-    vector_store = FaissVectorStore(faiss_index=faiss_index)
-    storage_context = StorageContext.from_defaults(vector_store=vector_store)
-
     # set embedding model
     Settings.embed_model = ov_embedding
-    index = VectorStoreIndex.from_documents([document], storage_context, transformations=[splitter])
+    
+    # FAISS has persistent ID mapping issues with LlamaIndex that cause KeyError during retrieval
+    # Using SimpleVectorStore which is reliable and works consistently
+    # For performance-critical deployments, consider using other vector stores like Qdrant or Pinecone
+    index = VectorStoreIndex.from_documents([document], transformations=[splitter])
+    
     # create a RAG pipeline
     ov_chat_engine = index.as_chat_engine(llm=ov_llm, chat_mode=ChatMode.CONTEXT, system_prompt=chatbot_config["system_configuration"],
                                           memory=memory, node_postprocessors=[ov_reranker])
