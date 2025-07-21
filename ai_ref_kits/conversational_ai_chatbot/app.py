@@ -212,10 +212,18 @@ def load_file(file_path: Path) -> Document:
 
 
 def load_context(file_path: Path) -> None:
+    """
+     Load context (document) and create a RAG pipeline
+     Params:
+         file_path: the path to the document
+     """
+    # initialize the chat engine    
     global ov_chat_engine
 
+    # Create memory buffer for chat history
     memory = ChatMemoryBuffer.from_defaults()
 
+    # if no file is provided, use the default chat engine (not RAG based)
     if not file_path:
         ov_chat_engine = SimpleChatEngine.from_defaults(
             llm=ov_llm,
@@ -224,18 +232,21 @@ def load_context(file_path: Path) -> None:
         )
         return
 
+    # load the document
     document = load_file(file_path)
+
+    # create a splitter to split the document into chunks
     splitter = LangchainNodeParser(RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100))
+
+    # set the embedding model
     Settings.embed_model = ov_embedding
     
-    # Create index using LlamaIndex's default vector store (in-memory)
+    # Create index using LlamaIndex's default vector store (in-memory) and the splitter
     index = VectorStoreIndex.from_documents(
         [document], 
         transformations=[splitter], 
         embed_model=ov_embedding
     )
-
-    print(f"Vector index created with {len(index.docstore.docs)} documents")
 
     # Build RAG chat engine with reranker and memory
     ov_chat_engine = index.as_chat_engine(
