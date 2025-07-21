@@ -22,8 +22,6 @@ pyyaml==6.0.1
 pymupdf==1.24.10
 
 gradio==5.35.0
-nltk==3.8.1
-melotts==0.1.2
 
 # melotts dependencies
 cn2an==0.5.22
