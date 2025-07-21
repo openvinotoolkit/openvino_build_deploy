@@ -326,7 +326,7 @@ async function removeBackground(image, width, height) {
         })
         .resize(width, height, {
             fit: 'fill',
-            kernel: 'lanczos3'
+            kernel: 'nearest'
         })
         .removeAlpha()
         .raw()
