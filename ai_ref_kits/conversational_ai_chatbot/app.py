@@ -15,7 +15,7 @@ import torch
 import yaml
 import nltk
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from llama_index.core import Document, VectorStoreIndex, Settings, StorageContext
+from llama_index.core import Document, VectorStoreIndex, Settings
 from llama_index.core.chat_engine import SimpleChatEngine
 from llama_index.core.chat_engine.types import BaseChatEngine, ChatMode
 from llama_index.core.memory import ChatMemoryBuffer
@@ -23,12 +23,9 @@ from llama_index.core.node_parser import LangchainNodeParser
 from llama_index.embeddings.huggingface_openvino import OpenVINOEmbedding
 from llama_index.llms.openvino import OpenVINOLLM
 from llama_index.postprocessor.openvino_rerank import OpenVINORerank
-from llama_index.vector_stores.faiss import FaissVectorStore
 from optimum.intel import OVModelForSpeechSeq2Seq
 from transformers import AutoProcessor, TextIteratorStreamer
 from melo.api import TTS
-# it must be imported as the last one; otherwise, it causes a crash on macOS
-import faiss
 
 # Global variables initialization
 TARGET_AUDIO_SAMPLE_RATE = 16000
@@ -231,40 +228,14 @@ def load_context(file_path: Path) -> None:
     splitter = LangchainNodeParser(RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100))
     Settings.embed_model = ov_embedding
     
-    # Split document into chunks (nodes)
-    nodes = splitter.get_nodes_from_documents([document])
-    
-    # Get dimension of embedding vector
-    try:
-        dim = len(ov_embedding.embed_query("test"))
-    except (AttributeError, IndexError):
-        dummy_embedding = ov_embedding.get_text_embedding("test")
-        dim = len(dummy_embedding)
-    
-    # Create FAISS index with ID mapping
-    faiss_index = faiss.IndexFlatL2(dim)
+    # Create index using LlamaIndex's default vector store (in-memory)
+    index = VectorStoreIndex.from_documents(
+        [document], 
+        transformations=[splitter], 
+        embed_model=ov_embedding
+    )
 
-
-    # Prepare embedding vectors and IDs lists
-    embeddings = []
-    ids = []
-    uuid_to_int = {}
-
-    for i, node in enumerate(nodes):
-        # Get embedding vector for each node
-        emb = ov_embedding.get_text_embedding(node.get_text())
-        embeddings.append(emb)
-        ids.append(i)  # integer ID
-        uuid_to_int[node.node_id] = i
-
-    vector_store = FaissVectorStore(faiss_index=faiss_index)
-    storage_context = StorageContext.from_defaults(vector_store=vector_store)
-    index = VectorStoreIndex.from_documents([document], storage_context=storage_context,
-    transformations=[splitter], embed_model=ov_embedding)
-
-    print(f"FAISS index size: {faiss_index.ntotal}")
-    print(f"Number of indexed nodes: {len(nodes)}")
-    print(f"UUID to int mapping example: {list(uuid_to_int.items())[:3]}")
+    print(f"Vector index created with {len(index.docstore.docs)} documents")
 
     # Build RAG chat engine with reranker and memory
     ov_chat_engine = index.as_chat_engine(
