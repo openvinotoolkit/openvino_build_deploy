@@ -66,7 +66,7 @@ body {
   margin-right: 10px;
 }
 
-#webcamSelect, #deviceSelect {
+#webcamSelect, #deviceSelect, #backgroundModeSelect {
   font-size: 14pt;
 }
 

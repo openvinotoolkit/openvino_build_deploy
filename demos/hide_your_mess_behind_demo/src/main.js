@@ -1,7 +1,7 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 
-const { detectDevices, runModel, blurImage, addWatermark, clearWatermarkCache, initializeWatermark } = require('./ov-jobs')
+const { detectDevices, runModel, blurImage, removeBackground, addWatermark, clearWatermarkCache, initializeWatermark } = require('./ov-jobs')
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -50,6 +50,10 @@ ipcMain.handle('run-model', async (event, img, width, height, device) => {
 
 ipcMain.handle('blur-image', async (event, image, width, height) => {
   return blurImage(image, width, height);
+})
+
+ipcMain.handle('remove-background', async (event, image, width, height) => {
+  return removeBackground(image, width, height);
 })
 
 ipcMain.handle('detect-webcam', async () => {
