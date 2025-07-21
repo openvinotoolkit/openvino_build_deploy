@@ -342,7 +342,7 @@ async function removeBackground(image, width, height) {
             for (let c = 0; c < 4; c++) {
                 resultData[i * 4 + c] = isForeground
                     ? original[i * 4 + c]
-                    : (c === 3 ? 255 : 255);
+                    : (c === 3 ? 0: 0);
             }
         }
 
