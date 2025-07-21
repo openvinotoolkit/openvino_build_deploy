@@ -6,6 +6,7 @@ import time
 from pathlib import Path
 from typing import List, Optional, Set, Tuple
 
+import chromadb
 import fitz
 import gradio as gr
 import numpy as np
@@ -20,14 +21,12 @@ from llama_index.core.node_parser import LangchainNodeParser
 from llama_index.embeddings.huggingface_openvino import OpenVINOEmbedding
 from llama_index.llms.openvino_genai import OpenVINOGenAILLM
 from llama_index.postprocessor.openvino_rerank import OpenVINORerank
-from llama_index.vector_stores.faiss import FaissVectorStore
+from llama_index.vector_stores.chroma import ChromaVectorStore
 from openvino.runtime import opset10 as ops
 from openvino.runtime import passes
-from optimum.intel import OVModelForCausalLM, OVModelForFeatureExtraction, OVWeightQuantizationConfig, OVModelForSequenceClassification
 from optimum.exporters.openvino.convert import export_tokenizer
+from optimum.intel import OVModelForCausalLM, OVModelForFeatureExtraction, OVWeightQuantizationConfig, OVModelForSequenceClassification
 from transformers import AutoTokenizer
-# it must be imported as the last one; otherwise, it causes a crash on macOS
-import faiss
 
 # Global variables initialization
 MODEL_DIR = Path("model")
@@ -209,15 +208,13 @@ def load_context(file_paths: List[str]) -> None:
     # a splitter to divide document into chunks
     splitter = LangchainNodeParser(RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100))
 
-    dim = ov_embedding._model.request.outputs[0].get_partial_shape()[2].get_length()
-    # a memory database to store chunks
-    faiss_index = faiss.IndexFlatL2(dim)
-    vector_store = FaissVectorStore(faiss_index=faiss_index)
+    chroma_client = chromadb.EphemeralClient()
+    chroma_collection = chroma_client.create_collection("ai_assistant_collection")
+
+    vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
     storage_context = StorageContext.from_defaults(vector_store=vector_store)
 
-    # set embedding model
-    Settings.embed_model = ov_embedding
-    index = VectorStoreIndex.from_documents(documents, storage_context, transformations=[splitter])
+    index = VectorStoreIndex.from_documents(documents, storage_context, embed_model=ov_embedding, transformations=[splitter])
     # create a RAG pipeline
     ov_chat_engine = index.as_chat_engine(llm=ov_llm, chat_mode=ChatMode.CONTEXT, system_prompt=chatbot_config["system_configuration"],
                                           memory=memory, node_postprocessors=[ov_reranker])
