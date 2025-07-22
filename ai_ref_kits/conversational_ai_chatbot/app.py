@@ -238,7 +238,6 @@ def load_context(file_path: Path) -> None:
     splitter = LangchainNodeParser(RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100))
 
     # set the embedding model
-    Settings.embed_model = ov_embedding
     
     # Create index using LlamaIndex's default vector store (in-memory) and the splitter
     index = VectorStoreIndex.from_documents(
