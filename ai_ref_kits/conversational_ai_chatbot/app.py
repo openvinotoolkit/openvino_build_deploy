@@ -214,7 +214,6 @@ def load_file(file_path: Path) -> Document:
 def load_context(file_path: Path) -> None:
     """
     Load context (document) and create a RAG pipeline
-    
     Params:
         file_path: the path to the document
     """
