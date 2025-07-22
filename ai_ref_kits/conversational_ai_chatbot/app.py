@@ -217,7 +217,7 @@ def load_context(file_path: Path) -> None:
     
     Params:
         file_path: the path to the document
-     """
+    """
     global ov_chat_engine
 
     # Create memory buffer for chat history
