@@ -4,12 +4,10 @@ openvino==2025.2
 optimum-intel==1.24.0
 nncf==2.17.0
 
-llama-index==0.12.50
+llama-index==0.12.41
 llama-index-llms-openvino==0.4.0
 llama-index-embeddings-openvino==0.5.2
 llama-index-postprocessor-openvino-rerank==0.4.1
-llama-index-vector-stores-faiss==0.3.0
-faiss-cpu==1.11.0
 onnx==1.18.0
 onnxruntime==1.20.1
 torch==2.7.1
