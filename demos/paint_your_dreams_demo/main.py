@@ -168,6 +168,8 @@ async def generate_images(input_image_mask: np.ndarray, prompt: str, seed: int, 
     hf_model_name = model_name
     current_image_size = image_size
 
+    device = device.split(":")[0]  # Extract device type (e.g., "CPU", "GPU")
+
     input_image = None
     image_mask = None
     if input_image_mask["background"] is not None:
@@ -225,7 +227,8 @@ async def generate_images(input_image_mask: np.ndarray, prompt: str, seed: int, 
 
 def build_ui() -> gr.Interface:
     model_choices = list(MODEL_CONFIGS.keys())
-    
+    available_devices = [f"{k}: {v}" for k, v in utils.available_devices().items()]
+
     examples_t2i = [
         "A sail boat on a grass field with mountains in the morning and sunny day",
         "a portrait of a tall Valkyrie with long blonde hair, iron armor, and a crown sitting on a white horse. Depict them in the Nordic Vikings period",
@@ -270,7 +273,7 @@ def build_ui() -> gr.Interface:
                     with gr.Row():
                         model_dropdown = gr.Dropdown(choices=model_choices, value=model_choices[0], label="Model")
                     with gr.Row(equal_height=True):
-                        device_dropdown = gr.Dropdown(choices=utils.available_devices(), value="AUTO", label="Inference device", scale=4)
+                        device_dropdown = gr.Dropdown(choices=available_devices, value=available_devices[0], label="Inference device", scale=4)
                         endless_checkbox = gr.Checkbox(label="Generate endlessly", value=False)
                         with gr.Column(scale=1):
                             start_button = gr.Button("Start generation", variant="primary")
