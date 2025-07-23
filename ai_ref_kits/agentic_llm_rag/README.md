@@ -48,8 +48,14 @@ This project requires Python 3.10 or higher and a few libraries. If you don't al
 
 To install the Python libraries and tools, run this command:
 
+**For Linux users**
 ```shell
 sudo apt install git gcc python3-venv python3-dev
+```
+
+**For MacOS users**
+```shell
+brew install git gcc
 ```
 
 _NOTE: If you are using Windows, you might also have to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe)._
