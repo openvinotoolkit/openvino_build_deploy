@@ -20,7 +20,6 @@ jobs:
   find-subprojects:
     runs-on: ubuntu-latest
     outputs:
-      qt: ${{ steps.categorize-subprojects.outputs.qt }}
       gradio: ${{ steps.categorize-subprojects.outputs.gradio }}
       webcam: ${{ steps.categorize-subprojects.outputs.webcam }}
       python: ${{ steps.categorize-subprojects.outputs.python }}
@@ -42,37 +41,6 @@ jobs:
         with:
           subprojects: ${{ steps.find-updates.outputs.subproject_dirs }}
 
-  qt:
-    needs: find-subprojects
-    if: ${{ needs.find-subprojects.outputs.qt != '[]' }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python: ["3.10", "3.12"]
-        subproject: ${{ fromJson(needs.find-subprojects.outputs.qt) }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/reusable-steps/setup-os
-      - name: Set up Python ${{ matrix.python }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python }}
-      - uses: ./.github/reusable-steps/setup-python
-        with:
-          python: ${{ matrix.python }}
-          project: ${{ matrix.subproject }}
-      - name: Login to HF
-        shell: bash
-        run: |
-          huggingface-cli login --token ${{ secrets.HF_TOKEN }}
-      - uses: ./.github/reusable-steps/gradio-action
-        with:
-          script: main.py
-          project: ${{ matrix.subproject }}
-          timeout: 3600
-
   gradio:
     needs: find-subprojects
     if: ${{ needs.find-subprojects.outputs.gradio != '[]' }}
@@ -81,7 +49,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python: ["3.10", "3.12"]
+        python: ["3.10", "3.13"]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.gradio) }}
     steps:
       - uses: actions/checkout@v4
@@ -97,7 +65,11 @@ jobs:
       - name: Login to HF
         shell: bash
         run: |
-          huggingface-cli login --token ${{ secrets.HF_TOKEN }}
+          if [ -n "${{ secrets.HF_TOKEN }}" ]; then
+            huggingface-cli login --token ${{ secrets.HF_TOKEN }}
+          else
+            echo "HF_TOKEN not set, continuing without login."
+          fi
       - name: Check if test file exists
         id: determine-script
         shell: bash
@@ -121,7 +93,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python: ["3.9", "3.12"]
+        python: ["3.10", "3.13"]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.webcam) }}
     steps:
       - uses: actions/checkout@v4
@@ -144,7 +116,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python: ["3.9", "3.12"]
+        python: ["3.10", "3.13"]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.python) }}
     steps:
       - uses: actions/checkout@v4
@@ -167,7 +139,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python: ["3.10", "3.12"]
+        python: ["3.10", "3.13"]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.notebook) }}
     steps:
       - uses: actions/checkout@v4

@@ -1,177 +1,234 @@
-<div id="top" align="center">
-  <h1>AI Adventure Experience with OpenVINO™ GenAI</h1>
+
+<div align="center">
+
+# Multimodal AI Visual Generator with OpenVINO™ Toolkit  
+Transform a single creative prompt into a vivid illustrated story or artistic T-shirt design using optimized LLMs and text-to-image models.
+
   <h4>
     <a href="https://www.intel.com/content/www/us/en/developer/topic-technology/edge-5g/open-potential.html">🏠&nbsp;About&nbsp;the&nbsp;Kits&nbsp;·</a>
   </h4>
 </div>
 
-[![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/LICENSE.txt)
+[![Apache License](https://img.shields.io/badge/license-Apache_2.0-green.svg)](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/LICENSE.txt)
 
-The kit integrates image creation with generative AI, voice activity detection (VAD), automatic speech recognition (ASR), large language models (LLMs), and natural language processing (NLP). A live voice transcription pipeline is connected to an LLM, which makes intelligent decisions about whether the user is describing the scene to an adventure game. When the LLM detects a new scene, the LLM will produce a detailed text prompt suitable for stable diffusion, which the application uses to illustrate the image. Utilizing the OpenVINO™ GenAI framework, this kit demonstrates the use of text2image, LLM pipeline, and whisper speech2text APIs.
+---
+
+The Multimodal AI Visual Generator is a multimodal generative AI reference kit that demonstrates how large language models (LLMs) and diffusion-based image generation models can work together in a creative pipeline. It allows users to transform a single text prompt into detailed illustrated stories or stylized T-shirt design concepts, using optimized models for local deployment.
+
+By combining LLM-driven prompt generation with image synthesis, the application shows how OpenVINO™ can accelerate multimodal generative AI workflows across Intel® NPUs, CPUs, integrated GPUs, and discrete GPUs. Multimodal AI Visual Generator delivers a complete pipeline, covering prompt input, scene generation, visual rendering, and PDF export.
+
+This kit serves as a practical foundation for building real-world applications in storytelling, branding, education, and other creative domains powered by generative AI.
 
 This kit uses the following technology stack:
-- [OpenVINO Toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([docs](https://docs.openvino.ai/))
-- [OpenVINO GenAI](https://github.com/openvinotoolkit/openvino.genai)
-- [Whisper](https://github.com/openai/whisper)
-- [Llama3-8b-Instruct](https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct)
-- [Single Image Super Resolution](https://arxiv.org/abs/1807.06779)
-- [Latent Consistency Models](https://arxiv.org/abs/2310.04378)
-- [Depth Anything V2](https://github.com/DepthAnything/Depth-Anything-V2)
 
-Check out our [AI Reference Kits repository](/) for other kits.
+- [OpenVINO Toolkit](https://docs.openvino.ai/)
+- [OpenVINO™ GenAI](https://docs.openvino.ai/2025/openvino-workflow-generative/inference-with-genai.html)
+- [Optimum Intel](https://docs.openvino.ai/2025/openvino-workflow-generative/inference-with-optimum-intel.html)
+- [Qwen2.5-7B](https://huggingface.co/Qwen/Qwen2.5-7B-Instruct) (LLM)
+- [FLUX.1](https://github.com/black-forest-labs/flux) (text-to-image)
+- [Streamlit](https://docs.streamlit.io/) (frontend)
+- [FastAPI](https://fastapi.tiangolo.com/) (backend)
 
-![ai_adventure_experience_desert](https://github.com/user-attachments/assets/2144ae33-9e41-4e48-9992-ddec17ef5579)
+Check out our [AI Reference Kits repository](https://github.com/openvinotoolkit/openvino_build_deploy) for other kits.
 
-Contributors: Ryan Metcalfe, Garth Long, Arisha Kumar, Ria Cheruvu, Paula Ramos, Dmitriy Pastushenkov, Zhuo Wu, and Raymond Lo.
+![visual-gen-studio](https://github.com/user-attachments/assets/43d6e473-19c1-4047-aee1-07a484cd0dc1)
 
+---
+
+## What's Included
+
+This project includes:
+
+- **LLM-based prompt generation**
+- **Text-to-image rendering**
+- **Interactive web UI** built with Streamlit
+- **Conversion scripts** to optimize models using OpenVINO
+- **PDF output** generation
+
+---
 ### What's New
 
-New updates will be added here.
+New updates will be added to this contents list.
 
 <details open><summary><b>Table of Contents</b></summary>
   
 - [Getting Started](#getting-started)
-  - [Installing Prerequisites](#installing-prerequisites)
-  - [Setting Up Your Environment](#setting-up-your-environment)
-  - [Running the Application](#running-the-application)
+  - [Install Prerequisites](#install-prerequisites)
+  - [Set Up Your Environment](#set-up-your-environment)
+  - [Convert and Optimize the Model](#convert-and-optimize-the-model)
+  - [Run the Application](#run-the-application)
+-  [Try it Out](#try-it-out) 
 - [Additional Resources](#additional-resources)
 
 </details>
 
-# Getting Started
+## Getting Started
 
-Now, let's dive into the steps starting with installing Python. 
+Now, let's dive into the steps starting with installing Python. We recommend using Ubuntu to set up and run this project.
 
 ## Star the Repository
 
 Star the [repository](https://github.com/openvinotoolkit/openvino_build_deploy) (optional, but recommended :))
 
-## Installing Prerequisites
+### Install Prerequisites
 
-Now, let's dive into the steps starting with installing Python. This project requires Python 3.10 or higher and a few libraries. If you don't have Python installed on your machine, go to https://www.python.org/downloads/ and download the latest version for your operating system. Follow the prompts to install Python, making sure to check the option to add Python to your PATH environment variable.
+This project requires Python 3.10 or higher and a few libraries. If you don't have Python installed on your machine, go to https://www.python.org/downloads/ and download the latest version for your operating system. Follow the prompts to install Python, making sure to check the option to add Python to your PATH environment variable.
+
+- Python ≥ 3.10
+- Git and Git LFS
+- (Windows only) [VC++ Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe)
+
+Install dependencies:
 
 Install libraries and tools:
 
-If you're using Ubuntu, install required dependencies like this:
-```shell
-sudo apt install git git-lfs gcc python3-venv python3-dev portaudio19-dev
+```bash
+sudo apt update
+sudo apt install git git-lfs python3-venv python3-dev
+git lfs install
 ```
-_NOTE: If you are using Windows, you will probably need to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe) also._
+## Set Up Your Environment
 
-## Setting Up Your Environment
-### Cloning the Repository and Installing Dependencies
+To set up your environment, you first clone the repository, then create a virtual environment, activate the environment, and install the packages.
 
-To clone the repository, run the following command:
+### Clone the Repository
 
-```shell
+To clone the repository and navigate into the directory, run the following command:
+
+```bash
 git clone https://github.com/openvinotoolkit/openvino_build_deploy.git
-```
-
-The above will clone the repository into a directory named "openvino_build_deploy" in the current directory. Then, navigate into the directory using the following command:
-
-```shell
 cd openvino_build_deploy/ai_ref_kits/multimodal_ai_visual_generator
 ```
 
-Next the below will create a virtual environment, activate the environment, and install the required dependencies for the setup and execution of the project.
+### Create a Virtual Environment
 
-Linux:
-```shell
-python3 -m venv run_env
-source run_env/bin/activate
+To create a virtual environment, open your terminal or command prompt and navigate to the directory where you want to create the environment. Then, run the following command to create and activate the environment:
+
+```bash
+python3 -m venv venv
+source venv/bin/activate   # On Windows: venv\Scripts\activate
+```
+
+### Install Python Dependencies
+
+To install the required packages, run the following commands:
+
+```bash
+python -m pip install --upgrade pip 
 pip install -r requirements.txt
 ```
 
-Windows:
+---
+
+## Convert and Optimize the Model
+
+### Accessing Gated Models with Hugging Face
+
+
+Set Up a Hugging Face Account: If you don't have one, create a [Hugging Face account](https://huggingface.co/welcome).
+
+Authenticate gated models on Hugging Face. To authenticate, enter the same email address you used for the Hugging Face website. After authentication, you'll gain access to the model.
+
+To use the model, authenticate using the Hugging Face CLI:
+
 ```shell
-python -m venv run_env
-run_env/Scripts/activate
-pip install -r requirements.txt
-``` 
-
-### Downloading and Preparing Models
-Next, you’ll download and optimize the required models via the running of a download script. 
-
-- Whisper: Speech recognition
-- Llama3-8b-instruct: Intelligent LLM helper
-- Latent Consistency Models: Image generation
-- Super Resolution: Increase the resolution of the generated image
-- Depth Anything v2: Create 3d parallax animations
-
-To run the download script:
-```shell
-python3 download_and_prepare_models.py
-cd ..
+huggingface-cli login
 ```
-## Running the Application
+When prompted to add the token as a git credential, respond with 'n'. This step ensures that you are logged into the Hugging Face API and ready to download the model.
 
-To interact with the animated GIF outputs, host a simple web server on your system as the final output. To do so, please install Node.js via [its Download page](https://nodejs.org/en/download/package-manager) and [http-server](https://www.npmjs.com/package/http-server).
+Now, you're ready to download and optimize the models required to run the application.
 
-Run the following command to start an HTTP server within the repository. You can customize index.html with any additional elements you'd like.
+**Note**: Some demonstrated models can require at least 32GB RAM for conversion and running.
 
-```shell
-http-server -c10
-``` 
+Use the provided scripts to export and optimize the models. When you run them, by default, the scripts will prompt you with a numbered list of supported models to choose from interactively.
 
-Open a terminal or you can use the existing one with `run_env` environment activated and start the GUI - <br>
+### Convert the Chat LLM
 
 ```shell
-python app.py 
+python convert_and_optimize_llm.py
 ```
 
-![UI Drawing](https://github.com/user-attachments/assets/4f37f4d1-31c1-4534-82eb-d370fe29873a)
+### Convert the Image Generation Model
 
+```bash
+python convert_and_optimize_text2image.py
+```
 
-### ➕ Set the theme for your story
-This theme is passed as part of the system message to the LLM, and helps the LLM make more a more educated decision about whether you are describing the scene to a story, or not.
+The script will then handle download, export, and OpenVINO optimization automatically.
 
-### ➕ Click the Start Button
-The start button will activate the listening state (Voice Activity Detection & Whisper Transcription pipelines) on the system's default input device (microphone).
+Alternatively, you can also run the scripts non-interactively by directly specifying the model and precision as shown below:
 
-### 🗣 Describe a scene to your story
-Go ahead and describe a scene your story. For example, "You find yourself at the gates of a large, abandoned castle."
+```bash
+python convert_and_optimize_llm.py --chat_model_type qwen2-7B --precision int4
+python convert_and_optimize_text2image.py --image_model_type flux.1-schnell --precision int4
+```
 
-### 🖼️ Wait for your illustration
-The scene that you just described will be passed to the LLM, which should detect it as a new scene to your story. The detailed prompt that is generated by the LLM will show up in real-time in the UI caption box, followed soon after by the illustration generated from the stable diffusion pipeline.
+---
 
-### 🗣 Talk about something not relevant to your story
-You can test the intelligence of the LLM helper and say something not relevant to the story. For example, "Hey guys, do you think we should order a pizza?". You should find that the LLM will make the decision to disregard this, and not try to illustrate anything.
+## Run the Application
 
-### 🪄🖼️ Interact with the animated GIF
-To interact with the 3D hoverable animation created with depth maps, start an HTTP server as explained above, and you will be able to interact with the parallax.
+This app has two components: a FastAPI backend and a Streamlit frontend.
 
-## :bulb: Additional Tips
-* Feel free to modify `main.py` to select different OpenVINO devices for the llm, stable diffusion pipeline, whisper, etc.
-  Look toward the bottom of the script, for a section that looks like this:
-  ```
-  if __name__ == "__main__":
-    app = QApplication(sys.argv)
+### Step 1: Run FastAPI (in Terminal 1)
 
-    llm_device = 'GPU'
-    sd_device = 'GPU'
-    whisper_device = 'CPU'
-    super_res_device = 'GPU'
-    depth_anything_device = 'GPU'
-  ```
-  If you're running on an Intel Core Ultra Series 2 laptop, and you want to set ```llm_device = 'NPU'```, be sure to have latest NPU driver installed, from [here](https://www.intel.com/content/www/us/en/download/794734/intel-npu-driver-windows.html)
-  
-* Based on the resolution of your display, you may want to tweak the default resolution of the illustrated image, as well as caption font size.
-  To adjust the resolution of the illustrated image, look for and modify this line:
-  ```
-  self.image_label.setFixedSize(1216, 684)
-  ```
-  It's recommended to choose a 16:9 ratio resolution. You can find a convenient list [here](https://pacoup.com/2011/06/12/list-of-true-169-resolutions/).
-  
-  The caption font size can be adjusted by modifying this line:
-  ```
-  fantasy_font = QFont("Papyrus", 18, QFont.Bold)
-  ```
+The FastAPI backend can be configured using environment variables to specify which models to use:
 
-# Additional Resources
+- `IMAGE_MODEL_TYPE`: The type of image generation model to use (default: "flux.1-schnell")
+- `LLM_MODEL_TYPE`: The type of language model to use (default: "qwen2-7B")
+- `MODEL_PRECISION`: The precision to use for both models (default: "int4")
+
+You can set these variables when running the application:
+
+```bash
+cd openvino_build_deploy/ai_ref_kits/multimodal_ai_visual_generator
+source venv/bin/activate         # On Windows: venv\Scripts\activate
+
+# Run with default values
+uvicorn main:app --host 0.0.0.0 --port 8000
+
+# Or run with custom model configuration
+IMAGE_MODEL_TYPE="your-image-model" LLM_MODEL_TYPE="your-llm-model" MODEL_PRECISION="int4" uvicorn main:app --host 0.0.0.0 --port 8000
+```
+
+If no environment variables are set, the application will use the default values.
+
+### Step 2: Run Streamlit UI (in Terminal 2)
+
+```bash
+cd openvino_build_deploy/ai_ref_kits/multimodal_ai_visual_generator
+source venv/bin/activate         # On Windows: venv\Scripts\activate
+streamlit run streamlit_app.py
+```
+
+Once both servers are up, the browser will open to `http://localhost:8501`.
+
+---
+
+## Try it Out
+
+Illustration mode:
+- "A bunny explores a candy forest"
+- "A robot learns to bake cookies"
+
+Branding mode:
+- "A turtle with a magic wand"
+- "A happy robot with a party hat"
+
+---
+
+# Benchmark Results 
+
+<img width="1367" height="942" alt="image" src="https://github.com/user-attachments/assets/07efd67d-989f-459a-b8b9-7ecebf27abaa" />
+
+You can evaluate performance benchmarks for models like Qwen2.5-7B and FLUX.1-schnell across a range of Intel® platforms using the [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html). The Model Hub is a curated resource for developers to explore OpenVINO optimized models and assess their latency and throughput on Intel® CPUs, integrated GPUs, discrete GPUs, and NPUs.
+
+---
+## Additional Resources
+
 - Learn more about [OpenVINO](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html)
-- Explore [OpenVINO’s documentation](https://docs.openvino.ai/2023.0/home.html)
+- Explore [OpenVINO's documentation](https://docs.openvino.ai/2024/home.html)
+- Browse the [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html) for real-world model benchmarks
 
 <p align="right"><a href="#top">Back to top ⬆️</a></p>
 
-[//]: # (telemetry pixel)
 <img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca?project=ai_ref_kits/multimodal_ai_visual_generator?file=README.md" />

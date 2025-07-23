@@ -75,4 +75,4 @@ To turn on blurring you have to turn on inference using the _Inference_ switch. 
 You can change the inference device or video source, and turn on and off inference, and streaming anytime.
 
 [//]: # (telemetry pixel)
-<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca?project=demos/hide_your_mess_behind_demo?file=README.md" />
+<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca&project=demos/hide_your_mess_behind_demo&file=README.md" />

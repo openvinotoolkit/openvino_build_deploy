@@ -45,7 +45,7 @@ Star the [repository](https://github.com/openvinotoolkit/openvino_build_deploy) 
 
 ## Installing Prerequisites
 
-This project requires Python 3.9 or higher. If you don't have Python installed on your machine, go to https://www.python.org/downloads/ and download the latest version for your operating system. Follow the prompts to install Python, making sure to check the option to add Python to your PATH environment variable.
+This project requires Python 3.10 or higher. If you don't have Python installed on your machine, go to https://www.python.org/downloads/ and download the latest version for your operating system. Follow the prompts to install Python, making sure to check the option to add Python to your PATH environment variable.
 
 ## Setting up your Environment
 
@@ -133,4 +133,4 @@ Congratulations! You have successfully set up and run the Automatic Industrial M
 <p align="right"><a href="#top">Back to top ⬆️</a></p>
 
 [//]: # (telemetry pixel)
-<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca?project=ai_ref_kits/meter_reader?file=README.md" />
+<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca&project=ai_ref_kits/meter_reader&file=README.md" />

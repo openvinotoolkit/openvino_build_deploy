@@ -15,7 +15,7 @@ import torch
 import yaml
 import nltk
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from llama_index.core import Document, VectorStoreIndex, Settings, StorageContext
+from llama_index.core import Document, VectorStoreIndex, Settings
 from llama_index.core.chat_engine import SimpleChatEngine
 from llama_index.core.chat_engine.types import BaseChatEngine, ChatMode
 from llama_index.core.memory import ChatMemoryBuffer
@@ -23,12 +23,9 @@ from llama_index.core.node_parser import LangchainNodeParser
 from llama_index.embeddings.huggingface_openvino import OpenVINOEmbedding
 from llama_index.llms.openvino import OpenVINOLLM
 from llama_index.postprocessor.openvino_rerank import OpenVINORerank
-from llama_index.vector_stores.faiss import FaissVectorStore
 from optimum.intel import OVModelForSpeechSeq2Seq
 from transformers import AutoProcessor, TextIteratorStreamer
 from melo.api import TTS
-# it must be imported as the last one; otherwise, it causes a crash on macOS
-import faiss
 
 # Global variables initialization
 TARGET_AUDIO_SAMPLE_RATE = 16000
@@ -217,38 +214,46 @@ def load_file(file_path: Path) -> Document:
 def load_context(file_path: Path) -> None:
     """
     Load context (document) and create a RAG pipeline
-
     Params:
         file_path: the path to the document
     """
     global ov_chat_engine
 
-    # limit chat history
+    # Create memory buffer for chat history
     memory = ChatMemoryBuffer.from_defaults()
 
-    # when context removed, no longer RAG pipeline is needed
+    # if no file is provided, use the default chat engine (not RAG based)
     if not file_path:
-        ov_chat_engine = SimpleChatEngine.from_defaults(llm=ov_llm, system_prompt=chatbot_config["system_configuration"], memory=memory)
+        ov_chat_engine = SimpleChatEngine.from_defaults(
+            llm=ov_llm,
+            system_prompt=chatbot_config["system_configuration"],
+            memory=memory
+        )
         return
 
+    # load the document
     document = load_file(file_path)
 
-    # a splitter to divide document into chunks
+    # create a splitter to split the document into chunks
     splitter = LangchainNodeParser(RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100))
 
-    dim = ov_embedding._model.request.outputs[0].get_partial_shape()[2].get_length()
-    # a memory database to store chunks
-    faiss_index = faiss.IndexFlatL2(dim)
-    vector_store = FaissVectorStore(faiss_index=faiss_index)
-    storage_context = StorageContext.from_defaults(vector_store=vector_store)
+    # set the embedding model
+    
+    # Create index using LlamaIndex's default vector store (in-memory) and the splitter
+    index = VectorStoreIndex.from_documents(
+        [document], 
+        transformations=[splitter], 
+        embed_model=ov_embedding
+    )
 
-    # set embedding model
-    Settings.embed_model = ov_embedding
-    index = VectorStoreIndex.from_documents([document], storage_context, transformations=[splitter])
-    # create a RAG pipeline
-    ov_chat_engine = index.as_chat_engine(llm=ov_llm, chat_mode=ChatMode.CONTEXT, system_prompt=chatbot_config["system_configuration"],
-                                          memory=memory, node_postprocessors=[ov_reranker])
-
+    # Build RAG chat engine with reranker and memory
+    ov_chat_engine = index.as_chat_engine(
+        llm=ov_llm,
+        chat_mode=ChatMode.CONTEXT,
+        system_prompt=chatbot_config["system_configuration"],
+        memory=memory,
+        node_postprocessors=[ov_reranker]
+    )
 
 def generate_initial_greeting() -> str:
     """
@@ -457,7 +462,7 @@ def run(asr_model_dir: Path, chat_model_dir: Path, embedding_model_dir: Path, re
     # create user interface
     demo = create_UI(initial_message, example_pdf_path)
 
-    log.info("Demo is ready!")
+    print("Demo is ready!")
     # launch demo
     demo.queue().launch(share=public_interface)
 

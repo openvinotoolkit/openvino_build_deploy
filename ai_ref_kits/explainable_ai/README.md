@@ -16,6 +16,8 @@ This kit uses the following technology stack:
 - [OpenVINO Datumaro](https://docs.openvino.ai/2023.3/datumaro_documentation.html)
 - [Ultralytic YOLOv8](https://github.com/ultralytics/ultralytics)
 
+You can also explore [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html) to view performance benchmarks for models like YOLO.
+
 Check out our [AI Reference Kits repository](/) for other kits.
 
 ![explainable-ai](https://github.com/openvinotoolkit/openvino_notebooks/assets/138901786/14958589-433b-4617-b3ea-e2307fe6cb53)
@@ -43,7 +45,7 @@ Star the [repository](https://github.com/openvinotoolkit/openvino_build_deploy) 
 
 ## Installing Prerequisites
 
-Now, let's dive into the steps starting with installing Python. We recommend using Ubuntu to set up and run this project. This project requires Python 3.9 or higher and a few libraries. If you don't have Python installed on your machine, go to https://www.python.org/downloads/ and download the latest version for your operating system. Follow the prompts to install Python, making sure to check the option to add Python to your PATH environment variable.
+Now, let's dive into the steps starting with installing Python. We recommend using Ubuntu to set up and run this project. This project requires Python 3.10 or higher and a few libraries. If you don't have Python installed on your machine, go to https://www.python.org/downloads/ and download the latest version for your operating system. Follow the prompts to install Python, making sure to check the option to add Python to your PATH environment variable.
 
 Install libraries and tools:
 
@@ -135,6 +137,8 @@ Use the following command to run the benchmark:
 ```
 Replace `int8_model_det_path` with the path to your INT8 model and $device with the specific device you're using (CPU, GPU, etc.). This command performs inference on the model for 30 seconds. Run `benchmark_app --help` for additional command-line options.
 
+You can evaluate performance benchmarks for the YOLO model across a range of Intel® platforms using the [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html). The Model Hub is a curated resource for developers to explore OpenVINO-optimized models and assess their latency and throughput on Intel® CPUs, integrated GPUs, discrete GPUs, and NPUs.
+
 ### Appendix
 
 Platform Configurations for Performance Benchmarks for YOLOv8m Model
@@ -164,4 +168,4 @@ Platform Configurations for Performance Benchmarks for YOLOv8m Model
 <p align="right"><a href="#top">Back to top ⬆️</a></p>
 
 [//]: # (telemetry pixel)
-<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca?project=ai_ref_kits/explainable_ai?file=README.md" />
+<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca&project=ai_ref_kits/explainable_ai&file=README.md" />

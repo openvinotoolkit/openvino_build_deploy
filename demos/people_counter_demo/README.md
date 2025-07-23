@@ -13,7 +13,7 @@ If you want a **quick setup** without manually installing dependencies, use the 
 2. Double-click `install.bat` to install dependencies and set up the environment.
 3. After installation, double-click `run.bat` to start the demo.
 
-### **For Linux**
+### **For Linux and MacOS**
 1. Download the `install.sh` and `run.sh` files to your local directory.
 2. First, ensure the installer scripts have execute permissions:
 ```shell
@@ -47,7 +47,7 @@ Star the [repository](https://github.com/openvinotoolkit/openvino_build_deploy) 
 
 ## Step 1
 
-This project requires Python 3.10-3.12 and a few libraries. If you don't have Python installed on your machine, go to https://www.python.org/downloads/ and download the latest version for your operating system. Follow the prompts to install Python, making sure to check the option to add Python to your PATH environment variable.
+This project requires Python 3.10-3.13 and a few libraries. If you don't have Python installed on your machine, go to https://www.python.org/downloads/ and download the latest version for your operating system. Follow the prompts to install Python, making sure to check the option to add Python to your PATH environment variable.
 
 Install libraries and tools:
 
@@ -130,4 +130,4 @@ Run the following to see all available options.
 python main.py --help
 ```
 [//]: # (telemetry pixel)
-<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca?project=demos/people_counter_demo?file=README.md" />
+<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca&project=demos/people_counter_demo&file=README.md" />

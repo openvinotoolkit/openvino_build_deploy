@@ -199,6 +199,12 @@ Feel free to engage with the Custom AI Assistant, ask questions, or give command
 
 Enjoy exploring the capabilities of your Custom AI Assistant!
 
+# Benchmark Results 
+
+<img width="1229" height="982" alt="image" src="https://github.com/user-attachments/assets/5cd865c8-6f67-439f-bb31-d1dc5aa5727b" />
+
+You can evaluate performance benchmarks for models like Llama3.2-3B-Instruct and Qwen2-7B across a range of Intel® platforms using the [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html). The Model Hub is a curated resource for developers to explore OpenVINO optimized models and assess their latency and throughput on Intel® CPUs, integrated GPUs, discrete GPUs, and NPUs.
+
 # Additional Resources
 - Learn more about [OpenVINO](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html)
 - Explore [OpenVINO’s documentation](https://docs.openvino.ai/2024/home.html)
@@ -206,4 +212,4 @@ Enjoy exploring the capabilities of your Custom AI Assistant!
 <p align="right"><a href="#top">Back to top ⬆️</a></p>
 
 [//]: # (telemetry pixel)
-<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca?project=ai_ref_kits/custom_ai_assistant?file=README.md" />
+<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca&project=ai_ref_kits/custom_ai_assistant&file=README.md" />

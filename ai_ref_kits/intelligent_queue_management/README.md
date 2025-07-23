@@ -48,7 +48,7 @@ Star the [repository](https://github.com/openvinotoolkit/openvino_build_deploy) 
 
 ## Installing Prerequisites
 
-This project requires Python 3.9 or higher and a few libraries. If you don't have Python installed on your machine, go to https://www.python.org/downloads/ and download the latest version for your operating system. Follow the prompts to install Python, making sure to check the option to add Python to your PATH environment variable.
+This project requires Python 3.10 or higher and a few libraries. If you don't have Python installed on your machine, go to https://www.python.org/downloads/ and download the latest version for your operating system. Follow the prompts to install Python, making sure to check the option to add Python to your PATH environment variable.
 
 Install libraries and tools:
 
@@ -160,6 +160,8 @@ Replace `int8_model_det_path` with the path to your INT8 model and $device with 
 
 Congratulations! You have successfully set up and run the Intelligent Queue Management application with OpenVINO™.
 
+You can evaluate performance benchmarks for the YOLO model across a range of Intel® platforms using the [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html). The Model Hub is a curated resource for developers to explore OpenVINO-optimized models and assess their latency and throughput on Intel® CPUs, integrated GPUs, discrete GPUs, and NPUs.
+
 ### Appendix
 
 Platform Configurations for Performance Benchmarks for YOLOv8m Model
@@ -190,4 +192,4 @@ Platform Configurations for Performance Benchmarks for YOLOv8m Model
 <p align="right"><a href="#top">Back to top ⬆️</a></p>
 
 [//]: # (telemetry pixel)
-<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca?project=ai_ref_kits/intelligent_queue_management?file=README.md" />
+<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca&project=ai_ref_kits/intelligent_queue_management&file=README.md" />

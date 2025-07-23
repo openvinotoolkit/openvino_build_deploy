@@ -22,6 +22,8 @@ def load_theme(theme: str, device: str):
         return themes.HalloweenTheme(device)
     elif theme == "easter":
         return themes.EasterTheme(device)
+    elif theme == "wild":
+        return themes.WildTheme(device)
     else:
         raise ValueError(f"Unknown theme: {theme}")
 
@@ -104,7 +106,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--stream', default="0", type=str, help="Path to a video file or the webcam number")
     parser.add_argument('--device', default="CPU", type=str, help="Device to start inference on")
-    parser.add_argument("--theme", type=str, default="easter", choices=["christmas", "halloween", "easter"], help="Theme to be used")
+    parser.add_argument("--theme", type=str, default="wild", choices=["christmas", "halloween", "easter", "wild"], help="Theme to be used")
     parser.add_argument("--flip", type=bool, default=True, help="Mirror input video")
 
     args = parser.parse_args()

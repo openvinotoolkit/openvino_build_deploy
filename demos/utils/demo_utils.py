@@ -208,13 +208,17 @@ class VideoPlayer:
 logo_img = cv2.imread(os.path.join(os.path.dirname(__file__), "openvino-logo.png"), cv2.IMREAD_UNCHANGED)
 
 
-def available_devices() -> Dict[str, str]:
-    device_mapping = {"AUTO": "AUTO device"}
+def available_devices(exclude: list | tuple | None = None) -> Dict[str, str]:
+    exclude_devices = set()
+    if exclude is not None:
+        exclude_devices.update(exclude)
+
+    device_mapping = {"AUTO": "Automatic Device Selection"}
 
     core = ov.Core()
     for device in core.available_devices:
         device_name = core.get_property(device, "FULL_DEVICE_NAME")
-        if "nvidia" not in device_name.lower():
+        if "nvidia" not in device_name.lower() and device not in exclude_devices:
             device_mapping[device] = device_name
 
     return device_mapping

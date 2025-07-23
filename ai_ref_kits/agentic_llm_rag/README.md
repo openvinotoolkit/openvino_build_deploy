@@ -14,6 +14,8 @@
 
 The AI Insight Agent with RAG uses Large Language Models (LLMs) and Retrieval-Augmented Generation (RAG) to interpret user prompts, engage in meaningful dialogue, perform calculations, use RAG techniques to improve its knowledge and interact with the user to add items to a virtual shopping cart. This solution uses the OpenVINO™ toolkit to power the AI models at the edge. Designed for both consumers and employees, it functions as a smart, personalized retail assistant, offering an interactive and user-friendly experience similar to an advanced digital kiosk.
 
+📖 Learn more in our [Medium article](https://medium.com/openvino-toolkit/building-an-agentic-llm-with-rag-using-openvino-4d98bef28205) detailing the design, architecture, and key takeaways from building this AI agentic RAG kit.
+
 This kit uses the following technology stack:
 - [OpenVINO Toolkit](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) ([docs](https://docs.openvino.ai/))
 - [Qwen2-7B-Instruct](https://huggingface.co/Qwen/Qwen2-7B-Instruct)
@@ -42,12 +44,18 @@ To get started with the AI Insight Agent with RAG, you install Python, set up yo
 
 ## Installing Prerequisites
 
-This project requires Python 3.8 or higher and a few libraries. If you don't already have Python installed on your machine, go to [https://www.python.org/downloads/](https://www.python.org/downloads/) and download the latest version for your operating system. Follow the prompts to install Python, and make  sure to select the option to add Python to your PATH environment variable.
+This project requires Python 3.10 or higher and a few libraries. If you don't already have Python installed on your machine, go to [https://www.python.org/downloads/](https://www.python.org/downloads/) and download the latest version for your operating system. Follow the prompts to install Python, and make sure to select the option to add Python to your PATH environment variable.
 
 To install the Python libraries and tools, run this command:
 
+**For Linux users**
 ```shell
 sudo apt install git gcc python3-venv python3-dev
+```
+
+**For MacOS users**
+```shell
+brew install git gcc
 ```
 
 _NOTE: If you are using Windows, you might also have to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe)._
@@ -197,6 +205,13 @@ For further testing of the AI Insight Agent with RAG appplication, you can engag
 
 Enjoy exploring the capabilities of your AI Insight Agent with RAG appplication!
 
+
+# Benchmark Results 
+
+<img width="1229" height="982" alt="image" src="https://github.com/user-attachments/assets/5cd865c8-6f67-439f-bb31-d1dc5aa5727b" />
+
+You can evaluate performance benchmarks for models like Llama3.2-3B-Instruct and Qwen2-7B across a range of Intel® platforms using the [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html). The Model Hub is a curated resource for developers to explore OpenVINO optimized models and assess their latency and throughput on Intel® CPUs, integrated GPUs, discrete GPUs, and NPUs.
+
 # Additional Resources
 - Learn more about [OpenVINO](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html)
 - Explore [OpenVINO’s documentation](https://docs.openvino.ai/2024/home.html)
@@ -204,4 +219,4 @@ Enjoy exploring the capabilities of your AI Insight Agent with RAG appplication!
 <p align="right"><a href="#top">Back to top ⬆️</a></p>
 
 [//]: # (telemetry pixel)
-<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca?project=ai_ref_kits/agentic_llm_rag?file=README.md" />
+<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca&project=ai_ref_kits/agentic_llm_rag&file=README.md" />

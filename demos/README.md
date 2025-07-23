@@ -8,7 +8,7 @@ _Please note: even though you can find here a lot of useful OpenVINO code, educa
 
 ## Available Demos
 
-Currently, there are the following demos that work on Python :warning:3.10-3.12 :warning: only:
+Currently, the following demos are tested for Python :warning:3.10-3.13 :warning: only:
 
 ### 🎨 Paint Your Dreams
 
@@ -33,6 +33,16 @@ The demo works as a virtual AI assistant. The default personality is a healthcar
 | Related AI concepts                               | LLM, RAG, GenAI, Llama3, LLamaIndex                        |
 | Platforms                                         | Client (CPU, GPU, NPU), Cloud (CPU, GPU)                   |
 | Owner                                             | [@adrianboguszewski](https://github.com/adrianboguszewski) |
+
+### 💬 The Narrator
+
+[![image](https://github.com/user-attachments/assets/e2a3ed34-93ff-4aaa-87cd-e6ad61eaf421)](the_narrator_demo)
+
+| [The Narrator](the_narrator_demo) |                                                          |
+|-----------------------------------|----------------------------------------------------------|
+| Related AI concepts               | image captioning, video captioning, BLIP                 |
+| Platforms                         | Client (CPU, GPU), Edge (CPU)                         |
+| Owner                             | [@adrianboguszewski](https://github.com/adrianboguszewski) |
 
 ### 🚶 People Counter
 
@@ -107,4 +117,4 @@ Please follow the rules defined in the [contributing guide](CONTRIBUTING.md) to 
 - Explore [OpenVINO’s documentation](https://docs.openvino.ai/2024/home.html)
 
 [//]: # (telemetry pixel)
-<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca?project=demos?file=README.md" />
+<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca&project=demos&file=README.md" />
