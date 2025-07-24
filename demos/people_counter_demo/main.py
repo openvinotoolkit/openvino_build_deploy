@@ -32,7 +32,7 @@ CATEGORIES = [
 ]
 
 def convert(model_name: str, model_dir: Path) -> tuple[Path, Path]:
-    model_path = f"{model_name}.pt"
+    model_path = model_dir / f"{model_name}.pt"
     # create a YOLO object detection model
     yolo_model = YOLO(model_path)
 
@@ -48,7 +48,7 @@ def convert(model_name: str, model_dir: Path) -> tuple[Path, Path]:
 
 def get_model(model_path: Path, verbose: bool = False):
     # compile the model with YOLO
-    model = YOLO(model_path, verbose=False)
+    model = YOLO(model_path, verbose=verbose)
     return model
 
 
@@ -150,9 +150,6 @@ def draw_annotations(frame: np.array, detections: sv.Detections, tracker: DeepSo
 
 def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", category: str = "person", zones_config_file: str = "",
         object_limit: int = 3, flip: bool = True, tracker_frames: int = 1800, colorful: bool = False, last_frames: int = 50) -> None:
-    # Suppress Ultralytics verbose logs
-    log.getLogger("ultralytics").setLevel(log.ERROR)
-    log.basicConfig(level=log.INFO)
 
     model_mapping = {
         "FP16": model_paths[0],
@@ -165,12 +162,12 @@ def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", c
 
     # Device setup
     devices_mapping = utils.available_devices()  # e.g. {"cpu":"Intel CPU", "gpu":"Intel GPU", ...}
-    device_type = f"intel:{next(iter(devices_mapping.keys()))}"  # default to first available
+    device_type = next(iter(devices_mapping.keys()))  # default to first available
 
     # Video player
     if isinstance(video_path, str) and video_path.isnumeric():
         video_path = int(video_path)
-    player = utils.VideoPlayer(video_path, size=(1920,1080), fps=60, flip=flip)
+    player = utils.VideoPlayer(video_path, size=(1920, 1080), fps=60, flip=flip)
 
     # get zones, and zone and box annotators for zones
     zones, zone_annotators, box_annotators, masks_annotators, label_annotators = get_annotators(json_path=zones_config_file, resolution_wh=(player.width, player.height), colorful=colorful)
@@ -201,7 +198,7 @@ def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", c
 
         # inference + timing
         start_time  = time.time()
-        result = model(frame, device=device_type, verbose=False)[0]
+        result = model(frame, device=f"intel:{device_type}", verbose=False)[0]
         processing_times.append(time.time() - start_time)
 
         # convert to supervision detections
@@ -238,7 +235,7 @@ def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", c
             model_changed = True
         for i, dev in enumerate(devices_mapping.keys()):
             if key == ord('1') + i:
-                device_type   = f"intel:{dev}"
+                device_type = dev
                 model_changed = True
 
         if model_changed:
