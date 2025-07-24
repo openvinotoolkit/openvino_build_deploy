@@ -75,7 +75,7 @@ def get_annotators(json_path: str, resolution_wh: Tuple[int, int], colorful: boo
     label_annotators = []
     for index, polygon in enumerate(polygons, start=1):
         # a zone to count objects in
-        zone = sv.PolygonZone(polygon=polygon, frame_resolution_wh=resolution_wh)
+        zone = sv.PolygonZone(polygon=polygon)
         zones.append(zone)
         # the annotator - visual part of the zone
         zone_annotators.append(sv.PolygonZoneAnnotator(zone=zone, color=colors.by_idx(index), thickness=0))
@@ -197,9 +197,8 @@ def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", c
         f_height, f_width = frame.shape[:2]
 
         # inference + timing
-        start_time  = time.time()
         result = model(frame, device=f"intel:{device_type}", verbose=False)[0]
-        processing_times.append(time.time() - start_time)
+        processing_times.append(result.speed["inference"])
 
         # convert to supervision detections
         detections = sv.Detections.from_ultralytics(result)
@@ -210,7 +209,7 @@ def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", c
         draw_annotations(frame, detections, tracker, queue_count, object_limit, category, zones, zone_annotators, box_annotators, masks_annotators, label_annotators)
 
         # Mean processing time [ms].
-        processing_time = np.mean(processing_times) * 1000
+        processing_time = np.mean(processing_times)
 
         fps = 1000 / processing_time
         utils.draw_text(frame, text=f"Inference time: {processing_time:.0f}ms ({fps:.1f} FPS)", point=(f_width * 3 // 5, 10))
