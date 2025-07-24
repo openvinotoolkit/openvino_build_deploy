@@ -203,6 +203,8 @@ def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", c
 
         # convert to supervision detections
         detections = sv.Detections.from_ultralytics(result)
+        # filter out other predictions than selected category
+        detections = detections[detections.class_id == category_id]
 
         # draw results
         draw_annotations(frame, detections, tracker, queue_count, object_limit, category, zones, zone_annotators, box_annotators, masks_annotators, label_annotators)
