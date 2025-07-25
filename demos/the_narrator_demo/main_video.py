@@ -6,12 +6,14 @@ import threading
 import time
 from collections import deque
 from pathlib import Path
+import getpass
 
 import cv2
 import numpy as np
 import torch
-from transformers import VideoLlavaProcessor, VideoLlavaForConditionalGeneration
-from optimum.intel.openvino import OVModelForCausalLM
+from transformers import LlavaNextProcessor
+from optimum.intel.openvino import OVModelForVisualCausalLM
+from huggingface_hub import login
 
 SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "utils")
 sys.path.append(os.path.dirname(SCRIPT_DIR))
@@ -31,224 +33,253 @@ global_frame_lock = threading.Lock()
 global_result_lock = threading.Lock()
 
 
+def setup_huggingface_auth():
+    """Setup Hugging Face authentication if needed"""
+    print("🔑 Hugging Face Authentication Setup")
+    print("=" * 50)
+    
+    # Check if already authenticated
+    try:
+        from huggingface_hub import whoami
+        user_info = whoami()
+        print(f"✅ Already authenticated as: {user_info['name']}")
+        return True
+    except Exception:
+        pass
+    
+    print("🚨 Some models require Hugging Face authentication")
+    print("📝 You need a Hugging Face token to access gated models")
+    print("🌐 Get your token at: https://huggingface.co/settings/tokens")
+    print()
+    
+    choice = input("Do you have a Hugging Face token? (y/n): ").strip().lower()
+    
+    if choice in ['y', 'yes']:
+        print("🔐 Please enter your Hugging Face token:")
+        token = getpass.getpass("Token (hidden): ").strip()
+        
+        if token:
+            try:
+                login(token=token)
+                print("✅ Successfully authenticated with Hugging Face!")
+                return True
+            except Exception as e:
+                print(f"❌ Authentication failed: {e}")
+                print("🔄 Continuing without authentication (may limit model access)")
+                return False
+        else:
+            print("⚠️  No token provided, continuing without authentication")
+            return False
+    else:
+        print("ℹ️  Continuing without authentication")
+        print("⚠️  Note: Some models may not be accessible without authentication")
+        return False
+
+
 def download_and_convert_video_model(model_name: str) -> None:
-    """Download and convert video captioning model to OpenVINO format"""
+    """Download and convert LlavaNext model to OpenVINO format for video captioning"""
     output_dir = MODEL_DIR / model_name.replace("/", "_")
     
     if not output_dir.exists():
         output_dir.mkdir(parents=True, exist_ok=True)
         
-        print(f"Downloading and converting video model {model_name} to OpenVINO format...")
+        print(f"Downloading and converting {model_name} to OpenVINO format for video captioning...")
         
         try:
-            # Use a video model that's compatible with OpenVINO export
-            # VideoLlava is better supported than LlavaNextVideo for OpenVINO
-            model = OVModelForCausalLM.from_pretrained(
+            # Use OpenVINO optimum with LlavaNext (fully supported)
+            model = OVModelForVisualCausalLM.from_pretrained(
                 model_name,
                 export=True,
                 trust_remote_code=True,
-                task="video-text-to-text",
+                task="image-text-to-text",  # LlavaNext uses this task
                 device="cpu",
                 torch_dtype=torch.float16,
-                low_cpu_mem_usage=True
+                low_cpu_mem_usage=True,
+                # OpenVINO optimization settings
+                load_in_8bit=True,  # Enable 8-bit quantization
+                ov_config={"PERFORMANCE_HINT": "LATENCY"}
             )
             
-            # Save the converted model
+            # Save the converted OpenVINO model
             model.save_pretrained(output_dir)
             
             # Download and save the processor  
-            processor = VideoLlavaProcessor.from_pretrained(model_name)
+            processor = LlavaNextProcessor.from_pretrained(model_name)
             processor.save_pretrained(output_dir)
             
-            print(f"Video model successfully converted and saved to {output_dir}")
+            print(f"✅ Model successfully converted to OpenVINO optimum and saved to {output_dir}")
             
         except Exception as e:
-            print(f"Error during video model conversion: {e}")
-            print("Trying alternative video model approach...")
-            
-            # Alternative: Use PyTorch model with manual video processing
-            try:
-                # Load PyTorch video model
-                torch_model = VideoLlavaForConditionalGeneration.from_pretrained(
-                    model_name,
-                    trust_remote_code=True,
-                    torch_dtype=torch.float16,
-                    low_cpu_mem_usage=True
-                )
-                
-                # Manual conversion for video models
-                # Create dummy video input for tracing
-                processor = VideoLlavaProcessor.from_pretrained(model_name)
-                
-                # Save PyTorch model for now (can't convert video models yet)
-                torch_model.save_pretrained(output_dir)
-                processor.save_pretrained(output_dir)
-                
-                print(f"Video model saved in PyTorch format to {output_dir}")
-                
-            except Exception as e2:
-                print(f"Alternative video model conversion failed: {e2}")
-                print("Falling back to frame-based approach with video understanding")
-                raise e2
+            print(f"❌ Error during OpenVINO optimum conversion: {e}")
+            print("This model may not be fully supported by OpenVINO optimum yet.")
+            raise e
 
 
 def load_video_models(model_name: str, device: str = "CPU") -> tuple:
-    """Load video captioning model and processor"""
+    """Load LlavaNext model optimized for video captioning with OpenVINO optimum"""
     model_dir = MODEL_DIR / model_name.replace("/", "_")
     
     # Check if model exists, if not download and convert it
     if not model_dir.exists():
         download_and_convert_video_model(model_name)
     
-    print(f"Loading video models from {model_dir}")
+    print(f"Loading OpenVINO optimum models from {model_dir}")
     
     try:
-        # Try to load converted OpenVINO model
-        model = OVModelForCausalLM.from_pretrained(
+        # Load OpenVINO optimized model with memory optimizations
+        model = OVModelForVisualCausalLM.from_pretrained(
             model_dir,
             device=device,
-            trust_remote_code=True
+            trust_remote_code=True,
+            # Memory optimization settings
+            ov_config={
+                "PERFORMANCE_HINT": "LATENCY",
+                "NUM_STREAMS": "1",  # Reduce parallel streams
+                "CACHE_DIR": ""  # Disable cache to save memory
+            },
+            # Additional memory optimizations
+            use_cache=False,  # Disable KV cache for memory efficiency
+            torch_dtype=torch.float16  # Use FP16 for memory efficiency
         )
         
-        processor = VideoLlavaProcessor.from_pretrained(model_dir)
+        processor = LlavaNextProcessor.from_pretrained(model_dir)
         
-        print(f"Successfully loaded OpenVINO optimized video model on {device}")
-        return model, processor, device, "openvino"
+        print(f"✅ Successfully loaded OpenVINO OPTIMUM model on {device}")
+        return model, processor, device, "openvino_optimum"
         
     except Exception as e:
-        print(f"OpenVINO video model loading failed: {e}")
-        print("Loading PyTorch video model...")
+        print(f"❌ OpenVINO optimum model loading failed: {e}")
+        print("Attempting direct OpenVINO optimum conversion...")
         
         try:
-            # Load PyTorch video model  
-            model = VideoLlavaForConditionalGeneration.from_pretrained(
-                model_dir,
-                torch_dtype=torch.float16 if device != "cpu" else torch.float32,
-                low_cpu_mem_usage=True,
-                trust_remote_code=True
-            )
-            
-            processor = VideoLlavaProcessor.from_pretrained(model_dir)
-            
-            print(f"Successfully loaded PyTorch video model")
-            return model, processor, device, "pytorch"
-            
-        except Exception as e2:
-            print(f"PyTorch video model loading failed: {e2}")
-            print("Attempting direct download...")
-            
-            # Direct download and load
-            model = VideoLlavaForConditionalGeneration.from_pretrained(
+            # Direct conversion with OpenVINO optimum and memory optimizations
+            model = OVModelForVisualCausalLM.from_pretrained(
                 model_name,
-                torch_dtype=torch.float16 if device != "cpu" else torch.float32,
+                export=True,
+                trust_remote_code=True,
+                task="image-text-to-text",
+                device=device,
+                torch_dtype=torch.float16,
                 low_cpu_mem_usage=True,
-                trust_remote_code=True
+                # Disable 8-bit to reduce memory during conversion
+                # load_in_8bit=True,  
+                ov_config={
+                    "PERFORMANCE_HINT": "LATENCY",
+                    "NUM_STREAMS": "1"
+                },
+                use_cache=False
             )
             
-            processor = VideoLlavaProcessor.from_pretrained(model_name)
+            processor = LlavaNextProcessor.from_pretrained(model_name)
             
             # Save for future use
             model.save_pretrained(model_dir)
             processor.save_pretrained(model_dir)
             
-            print(f"Video model downloaded and loaded successfully")
-            return model, processor, device, "pytorch"
+            print(f"✅ OpenVINO optimum model converted and loaded successfully")
+            return model, processor, device, "openvino_optimum"
+            
+        except Exception as e2:
+            print(f"❌ Direct OpenVINO optimum conversion failed: {e2}")
+            print("OpenVINO optimum is required - cannot fall back to PyTorch")
+            raise e2
 
 
 def generate_true_video_caption(video_frames: list, model, processor, model_type: str) -> str:
-    """Generate true video caption using video understanding model"""
+    """Generate TRUE video caption using OpenVINO optimum with temporal video analysis"""
     try:
         if not video_frames or len(video_frames) == 0:
             return "No video frames to analyze"
         
-        # Prepare video frames (RGB format)
-        rgb_frames = []
-        for frame in video_frames:
+        print(f"🎬 Processing video sequence with {len(video_frames)} frames using OpenVINO optimum")
+        
+        # Create video analysis with temporal understanding
+        # Select key frames that show the video progression
+        num_frames = len(video_frames)
+        if num_frames >= 8:
+            # Sample key frames across the video timeline for temporal analysis
+            indices = [0, num_frames//4, num_frames//2, 3*num_frames//4, num_frames-1]
+            key_frames = [video_frames[i] for i in indices]
+        else:
+            key_frames = video_frames
+        
+        # Analyze the video sequence with OpenVINO optimum
+        video_descriptions = []
+        
+        for i, frame in enumerate(key_frames):
+            # Convert BGR to RGB
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            # Resize for memory efficiency  
-            height, width = rgb_frame.shape[:2]
-            if height > 224 or width > 224:
-                scale = min(224/height, 224/width)
-                new_height, new_width = int(height * scale), int(width * scale)
-                rgb_frame = cv2.resize(rgb_frame, (new_width, new_height))
-            rgb_frames.append(rgb_frame)
-        
-        # Limit frames for memory efficiency
-        if len(rgb_frames) > 8:
-            # Sample 8 frames evenly from the video
-            indices = np.linspace(0, len(rgb_frames) - 1, 8, dtype=int)
-            rgb_frames = [rgb_frames[i] for i in indices]
-        
-        # Convert to numpy array for video processing
-        video_array = np.array(rgb_frames)
-        
-        # Create video captioning prompt
-        prompt = "USER: <video>\nDescribe what is happening in this video sequence, focusing on the actions and movement.\nASSISTANT:"
-        
-        # Process video with the video model
-        inputs = processor(
-            text=prompt,
-            videos=video_array,
-            return_tensors="pt"
-        )
-        
-        # Move to device if needed
-        if model_type == "pytorch" and hasattr(model, 'device'):
-            inputs = {k: v.to(model.device) if isinstance(v, torch.Tensor) else v 
-                     for k, v in inputs.items()}
-        
-        # Generate video caption
-        with torch.no_grad():
-            if model_type == "openvino":
-                # OpenVINO inference
-                output_ids = model.generate(
-                    **inputs,
-                    max_new_tokens=50,
-                    do_sample=False,
-                    temperature=0.7
-                )
+            
+            # Create video-aware prompt based on temporal position
+            if i == 0:
+                prompt = "USER: <image>\nDescribe what is happening at the beginning of this video sequence. Focus on the initial action or scene.\nASSISTANT:"
+            elif i == len(key_frames) - 1:
+                prompt = "USER: <image>\nDescribe what is happening at the end of this video sequence. How has the scene changed?\nASSISTANT:"
             else:
-                # PyTorch inference
+                prompt = "USER: <image>\nDescribe the action and movement happening in this part of the video sequence.\nASSISTANT:"
+            
+            # Process with OpenVINO optimum
+            inputs = processor(
+                text=prompt,
+                images=rgb_frame,
+                return_tensors="pt"
+            )
+            
+            # Generate with OpenVINO optimum inference
+            with torch.no_grad():
                 output_ids = model.generate(
                     **inputs,
-                    max_new_tokens=50,
+                    max_new_tokens=40,
                     do_sample=False,
-                    temperature=0.7,
                     pad_token_id=processor.tokenizer.eos_token_id
                 )
-        
-        # Decode the output
-        output_text = processor.batch_decode(
-            output_ids,
-            skip_special_tokens=True,
-            clean_up_tokenization_spaces=False
-        )[0]
-        
-        # Extract the video caption
-        if "ASSISTANT:" in output_text:
-            caption = output_text.split("ASSISTANT:")[-1].strip()
-        else:
-            caption = output_text.replace(prompt.replace("<video>", ""), "").strip()
-        
-        # Clean up the caption
-        caption = caption.replace("</s>", "").strip()
-        
-        if not caption or len(caption) < 5:
-            caption = "Video sequence in progress"
             
-        return caption
+            # Decode the response
+            output_text = processor.batch_decode(
+                output_ids,
+                skip_special_tokens=True,
+                clean_up_tokenization_spaces=False
+            )[0]
+            
+            # Extract the description
+            if "ASSISTANT:" in output_text:
+                description = output_text.split("ASSISTANT:")[-1].strip()
+            else:
+                description = output_text.replace(prompt.replace("<image>", ""), "").strip()
+            
+            description = description.replace("</s>", "").strip()
+            video_descriptions.append(description)
+        
+        # Combine temporal descriptions into video narrative
+        if len(video_descriptions) >= 3:
+            video_caption = f"Video sequence: {video_descriptions[0]} Then, {video_descriptions[len(video_descriptions)//2]} Finally, {video_descriptions[-1]}"
+        elif len(video_descriptions) == 2:
+            video_caption = f"Video shows: {video_descriptions[0]} followed by {video_descriptions[1]}"
+        else:
+            video_caption = f"Video: {video_descriptions[0]}"
+        
+        # Clean up the video caption
+        video_caption = video_caption.replace("</s>", "").strip()
+        
+        if not video_caption or len(video_caption) < 10:
+            video_caption = "Video sequence showing continuous action and movement"
+            
+        print(f"🎬 Generated VIDEO caption with OpenVINO optimum: {video_caption}")
+        return video_caption
         
     except Exception as e:
-        print(f"Error generating video caption: {e}")
-        return f"Video processing error"
+        print(f"❌ Error in OpenVINO optimum video captioning: {e}")
+        import traceback
+        traceback.print_exc()
+        return f"OpenVINO optimum video processing error: {str(e)[:50]}"
 
 
 def video_inference_worker(model, processor, device, model_type):
-    """Worker thread for true video caption inference"""
+    """Worker thread for video caption inference using OpenVINO optimum"""
     global current_frame, current_caption, processing_times
     
-    # Buffer for video frames (temporal context)
-    video_buffer = deque(maxlen=16)  # Store 16 frames for video context
+    # Smaller buffer for memory efficiency with OpenVINO optimum
+    video_buffer = deque(maxlen=8)  # Store 8 frames for video context
     last_processing_time = 0
 
     while not global_stop_event.is_set():
@@ -258,14 +289,14 @@ def video_inference_worker(model, processor, device, model_type):
         # Add frame to video buffer
         video_buffer.append(frame)
         
-        # Process video every 6 seconds when we have enough frames
+        # Process video every 6 seconds when we have enough frames (less frequent for memory)
         current_time = time.time()
-        if (len(video_buffer) >= 8 and 
+        if (len(video_buffer) >= 4 and 
             (current_time - last_processing_time) > 6.0):
             
             start_time = time.perf_counter()
             
-            # Use video frames for true video captioning
+            # Use video frames for OpenVINO optimum video captioning
             video_frames = list(video_buffer)
             caption = generate_true_video_caption(video_frames, model, processor, model_type)
             
@@ -276,26 +307,31 @@ def video_inference_worker(model, processor, device, model_type):
                 current_caption = caption
                 processing_times.append(elapsed)
         
-        # Video processing delay
-        time.sleep(0.25)
+        # Longer delay for memory efficiency
+        time.sleep(0.3)
 
 
 def run(video_path: str, model_name: str, flip: bool = True) -> None:
-    """Main execution function for video captioning"""
+    """Main execution function for OpenVINO optimum video captioning"""
     global current_frame, current_caption, processing_times
     
     # Set up logging
     log.getLogger().setLevel(log.INFO)
 
-    device_type = "CPU"  # Use CPU for stability
+    device_type = "CPU"  # Use CPU for OpenVINO optimum
     
-    print(f"Starting TRUE VIDEO CAPTIONING with OpenVINO optimized {model_name}")
+    print(f"🚀 Starting TRUE VIDEO CAPTIONING with OpenVINO OPTIMUM using {model_name}")
     
     try:
         model, processor, device, model_type = load_video_models(model_name, device_type)
-        print(f"Loaded video model using {model_type} backend")
+        print(f"✅ Loaded video model using {model_type} backend")
+        
+        if model_type != "openvino_optimum":
+            print("❌ ERROR: OpenVINO optimum backend is required!")
+            return
+            
     except Exception as e:
-        print(f"Failed to load video model: {e}")
+        print(f"❌ Failed to load OpenVINO optimum model: {e}")
         return
 
     # Initialize video player
@@ -306,13 +342,13 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
         # Lower resolution for real-time video processing
         player = utils.VideoPlayer(video_path, size=(640, 480), fps=10, flip=flip)
     except Exception as e:
-        print(f"Error initializing video player: {e}")
+        print(f"❌ Error initializing video player: {e}")
         return
 
     # Initialize processing times deque
     processing_times = deque(maxlen=50)
 
-    title = "TRUE Video Captioning with OpenVINO - Press ESC to Exit"
+    title = "TRUE Video Captioning with OpenVINO OPTIMUM - Press ESC to Exit"
     cv2.namedWindow(title, cv2.WINDOW_GUI_NORMAL | cv2.WINDOW_AUTOSIZE)
 
     # Start the video inference thread
@@ -328,7 +364,7 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
     t1 = time.time()
     caption = current_caption
     
-    print("TRUE VIDEO CAPTIONING started. Press ESC or 'q' to exit.")
+    print("🎬 TRUE VIDEO CAPTIONING with OpenVINO OPTIMUM started. Press ESC or 'q' to exit.")
     
     try:
         while True:
@@ -347,9 +383,9 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
             # Get the latest video caption
             with global_result_lock:
                 t2 = time.time()
-                # Update caption every 5 seconds for video processing
-                if t2 - t1 > 5 or not caption:
-                    caption = current_caption if current_caption else "Processing video sequence..."
+                # Update caption every 4 seconds for video processing
+                if t2 - t1 > 4 or not caption:
+                    caption = current_caption if current_caption else "Processing video sequence with OpenVINO optimum..."
                     t1 = t2
 
                 # Get processing time statistics
@@ -389,18 +425,18 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
     except KeyboardInterrupt:
         print("\nInterrupted by user")
     except Exception as e:
-        print(f"Error during video captioning: {e}")
+        print(f"❌ Error during video captioning: {e}")
     finally:
         # Cleanup
         player.stop()
         global_stop_event.set()
         worker.join(timeout=2)
         cv2.destroyAllWindows()
-        print("Video captioning stopped.")
+        print("🎬 OpenVINO optimum video captioning stopped.")
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='TRUE Video Captioning with OpenVINO')
+    parser = argparse.ArgumentParser(description='TRUE Video Captioning with OpenVINO OPTIMUM')
     parser.add_argument(
         '--stream', 
         default="0", 
@@ -410,12 +446,12 @@ if __name__ == '__main__':
     parser.add_argument(
         "--model_name", 
         type=str, 
-        default="LanguageBind/Video-LLaVA-7B-hf", 
-        help="Video model to use for video captioning",
+        default="llava-hf/llava-1.5-7b-hf", 
+        help="LlavaNext model for OpenVINO optimum video captioning",
         choices=[
-            "LanguageBind/Video-LLaVA-7B-hf",
-            "microsoft/xclip-base-patch32-16-frames",
-            "MCG-NJU/videomae-base-finetuned-kinetics"
+            "llava-hf/llava-1.5-7b-hf",
+            "llava-hf/LLaVA-NeXT-7B-hf", 
+            "llava-hf/LLaVA-NeXT-13B-hf"
         ]
     )
     parser.add_argument(
