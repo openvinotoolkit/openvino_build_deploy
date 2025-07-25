@@ -97,20 +97,21 @@ def download_and_convert_video_model(model_name: str) -> None:
                 low_cpu_mem_usage=True,
                 # OpenVINO optimization settings
                 load_in_8bit=True,  # Enable 8-bit quantization
-                ov_config={"PERFORMANCE_HINT": "LATENCY"}
+                ov_config={"PERFORMANCE_HINT": "LATENCY"},
+                use_auth_token=True  # Use HF authentication
             )
             
             # Save the converted OpenVINO model
             model.save_pretrained(output_dir)
             
             # Download and save the processor  
-            processor = LlavaNextProcessor.from_pretrained(model_name)
+            processor = LlavaNextProcessor.from_pretrained(model_name, use_auth_token=True)
             processor.save_pretrained(output_dir)
             
-            print(f"✅ Model successfully converted to OpenVINO optimum and saved to {output_dir}")
+            print(f"Model successfully converted to OpenVINO optimum and saved to {output_dir}")
             
         except Exception as e:
-            print(f"❌ Error during OpenVINO optimum conversion: {e}")
+            print(f"Error during OpenVINO optimum conversion: {e}")
             print("This model may not be fully supported by OpenVINO optimum yet.")
             raise e
 
@@ -144,11 +145,11 @@ def load_video_models(model_name: str, device: str = "CPU") -> tuple:
         
         processor = LlavaNextProcessor.from_pretrained(model_dir)
         
-        print(f"✅ Successfully loaded OpenVINO OPTIMUM model on {device}")
+        print(f"Successfully loaded OpenVINO OPTIMUM model on {device}")
         return model, processor, device, "openvino_optimum"
         
     except Exception as e:
-        print(f"❌ OpenVINO optimum model loading failed: {e}")
+        print(f"OpenVINO optimum model loading failed: {e}")
         print("Attempting direct OpenVINO optimum conversion...")
         
         try:
@@ -167,20 +168,21 @@ def load_video_models(model_name: str, device: str = "CPU") -> tuple:
                     "PERFORMANCE_HINT": "LATENCY",
                     "NUM_STREAMS": "1"
                 },
-                use_cache=False
+                use_cache=False,
+                use_auth_token=True  # Use HF authentication
             )
             
-            processor = LlavaNextProcessor.from_pretrained(model_name)
+            processor = LlavaNextProcessor.from_pretrained(model_name, use_auth_token=True)
             
             # Save for future use
             model.save_pretrained(model_dir)
             processor.save_pretrained(model_dir)
             
-            print(f"✅ OpenVINO optimum model converted and loaded successfully")
+            print(f"OpenVINO optimum model converted and loaded successfully")
             return model, processor, device, "openvino_optimum"
             
         except Exception as e2:
-            print(f"❌ Direct OpenVINO optimum conversion failed: {e2}")
+            print(f"Direct OpenVINO optimum conversion failed: {e2}")
             print("OpenVINO optimum is required - cannot fall back to PyTorch")
             raise e2
 
