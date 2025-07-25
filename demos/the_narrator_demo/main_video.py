@@ -35,44 +35,44 @@ global_result_lock = threading.Lock()
 
 def setup_huggingface_auth():
     """Setup Hugging Face authentication if needed"""
-    print("🔑 Hugging Face Authentication Setup")
+    print("Hugging Face Authentication Setup")
     print("=" * 50)
     
     # Check if already authenticated
     try:
         from huggingface_hub import whoami
         user_info = whoami()
-        print(f"✅ Already authenticated as: {user_info['name']}")
+        print(f"Already authenticated as: {user_info['name']}")
         return True
     except Exception:
         pass
     
-    print("🚨 Some models require Hugging Face authentication")
-    print("📝 You need a Hugging Face token to access gated models")
-    print("🌐 Get your token at: https://huggingface.co/settings/tokens")
+    print("Some models require Hugging Face authentication")
+    print("You need a Hugging Face token to access gated models")
+    print("Get your token at: https://huggingface.co/settings/tokens")
     print()
     
     choice = input("Do you have a Hugging Face token? (y/n): ").strip().lower()
     
     if choice in ['y', 'yes']:
-        print("🔐 Please enter your Hugging Face token:")
+        print("Please enter your Hugging Face token:")
         token = getpass.getpass("Token (hidden): ").strip()
         
         if token:
             try:
                 login(token=token)
-                print("✅ Successfully authenticated with Hugging Face!")
+                print("Successfully authenticated with Hugging Face!")
                 return True
             except Exception as e:
-                print(f"❌ Authentication failed: {e}")
-                print("🔄 Continuing without authentication (may limit model access)")
+                print(f"Authentication failed: {e}")
+                print("Continuing without authentication (may limit model access)")
                 return False
         else:
-            print("⚠️  No token provided, continuing without authentication")
+            print("No token provided, continuing without authentication")
             return False
     else:
-        print("ℹ️  Continuing without authentication")
-        print("⚠️  Note: Some models may not be accessible without authentication")
+        print("Continuing without authentication")
+        print("Note: Some models may not be accessible without authentication")
         return False
 
 
@@ -193,7 +193,7 @@ def generate_true_video_caption(video_frames: list, model, processor, model_type
         if not video_frames or len(video_frames) == 0:
             return "No video frames to analyze"
         
-        print(f"🎬 Processing video sequence with {len(video_frames)} frames using OpenVINO optimum")
+        print(f"Processing video sequence with {len(video_frames)} frames using OpenVINO optimum")
         
         # Create video analysis with temporal understanding
         # Select key frames that show the video progression
@@ -220,12 +220,32 @@ def generate_true_video_caption(video_frames: list, model, processor, model_type
             else:
                 prompt = "USER: <image>\nDescribe the action and movement happening in this part of the video sequence.\nASSISTANT:"
             
-            # Process with OpenVINO optimum
-            inputs = processor(
-                text=prompt,
-                images=rgb_frame,
-                return_tensors="pt"
-            )
+            # Process with OpenVINO optimum - fix image_sizes error
+            try:
+                inputs = processor(
+                    text=prompt,
+                    images=rgb_frame,
+                    return_tensors="pt"
+                )
+            except Exception as e:
+                if "image_sizes" in str(e):
+                    # Handle image_sizes parameter issue
+                    try:
+                        # Alternative processing without problematic parameters
+                        from PIL import Image
+                        pil_image = Image.fromarray(rgb_frame)
+                        inputs = processor(
+                            text=prompt,
+                            images=pil_image,
+                            return_tensors="pt",
+                            padding=True
+                        )
+                    except Exception as e2:
+                        print(f"Processor compatibility issue: {e2}")
+                        # Skip this frame if processing fails
+                        continue
+                else:
+                    raise e
             
             # Generate with OpenVINO optimum inference
             with torch.no_grad():
@@ -250,15 +270,18 @@ def generate_true_video_caption(video_frames: list, model, processor, model_type
                 description = output_text.replace(prompt.replace("<image>", ""), "").strip()
             
             description = description.replace("</s>", "").strip()
-            video_descriptions.append(description)
+            if description:
+                video_descriptions.append(description)
         
         # Combine temporal descriptions into video narrative
         if len(video_descriptions) >= 3:
             video_caption = f"Video sequence: {video_descriptions[0]} Then, {video_descriptions[len(video_descriptions)//2]} Finally, {video_descriptions[-1]}"
         elif len(video_descriptions) == 2:
             video_caption = f"Video shows: {video_descriptions[0]} followed by {video_descriptions[1]}"
-        else:
+        elif len(video_descriptions) == 1:
             video_caption = f"Video: {video_descriptions[0]}"
+        else:
+            video_caption = "Video sequence showing continuous action and movement"
         
         # Clean up the video caption
         video_caption = video_caption.replace("</s>", "").strip()
@@ -266,11 +289,11 @@ def generate_true_video_caption(video_frames: list, model, processor, model_type
         if not video_caption or len(video_caption) < 10:
             video_caption = "Video sequence showing continuous action and movement"
             
-        print(f"🎬 Generated VIDEO caption with OpenVINO optimum: {video_caption}")
+        print(f"Generated VIDEO caption with OpenVINO optimum: {video_caption}")
         return video_caption
         
     except Exception as e:
-        print(f"❌ Error in OpenVINO optimum video captioning: {e}")
+        print(f"Error in OpenVINO optimum video captioning: {e}")
         import traceback
         traceback.print_exc()
         return f"OpenVINO optimum video processing error: {str(e)[:50]}"
