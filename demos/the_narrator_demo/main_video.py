@@ -322,18 +322,22 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
 
     device_type = "CPU"  # Use CPU for OpenVINO optimum
     
-    print(f"🚀 Starting TRUE VIDEO CAPTIONING with OpenVINO OPTIMUM using {model_name}")
+    print(f"Starting TRUE VIDEO CAPTIONING with OpenVINO OPTIMUM using {model_name}")
+    
+    # Setup Hugging Face authentication
+    print("Setting up authentication...")
+    setup_huggingface_auth()
     
     try:
         model, processor, device, model_type = load_video_models(model_name, device_type)
-        print(f"✅ Loaded video model using {model_type} backend")
+        print(f"Loaded video model using {model_type} backend")
         
         if model_type != "openvino_optimum":
-            print("❌ ERROR: OpenVINO optimum backend is required!")
+            print("ERROR: OpenVINO optimum backend is required!")
             return
             
     except Exception as e:
-        print(f"❌ Failed to load OpenVINO optimum model: {e}")
+        print(f"Failed to load OpenVINO optimum model: {e}")
         return
 
     # Initialize video player
@@ -344,7 +348,7 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
         # Lower resolution for real-time video processing
         player = utils.VideoPlayer(video_path, size=(640, 480), fps=10, flip=flip)
     except Exception as e:
-        print(f"❌ Error initializing video player: {e}")
+        print(f"Error initializing video player: {e}")
         return
 
     # Initialize processing times deque
@@ -366,7 +370,7 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
     t1 = time.time()
     caption = current_caption
     
-    print("🎬 TRUE VIDEO CAPTIONING with OpenVINO OPTIMUM started. Press ESC or 'q' to exit.")
+    print("TRUE VIDEO CAPTIONING with OpenVINO OPTIMUM started. Press ESC or 'q' to exit.")
     
     try:
         while True:
@@ -427,14 +431,14 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
     except KeyboardInterrupt:
         print("\nInterrupted by user")
     except Exception as e:
-        print(f"❌ Error during video captioning: {e}")
+        print(f"Error during video captioning: {e}")
     finally:
         # Cleanup
         player.stop()
         global_stop_event.set()
         worker.join(timeout=2)
         cv2.destroyAllWindows()
-        print("🎬 OpenVINO optimum video captioning stopped.")
+        print("OpenVINO optimum video captioning stopped.")
 
 
 if __name__ == '__main__':
