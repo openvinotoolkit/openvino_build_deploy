@@ -64,6 +64,8 @@ Hello, we're the AI Evangelist team at Intel! We’re a group of experts in AI s
 |**[Raymond Lo](https://www.linkedin.com/in/raymondlo84/)** <br> Global Lead <br> (Santa Clara – HQ, California) <br><br> PhD in Computer Engineering <br> 9+ Years as Entrepreneur Executive & Evangelist|**[Adrian Boguszewski](https://www.linkedin.com/in/adrianboguszewski/)** <br> Deep Learning Expert <br> (Gdansk, Poland) <br><br> MSc in Computer Science <br> 5+ years as DL Engineer|
 |[![anisha](https://github.com/openvinotoolkit/openvino_notebooks/assets/138901786/d3641d44-f6b4-410d-96ce-4c401e99b35c)](https://www.linkedin.com/in/anisha-uday/)|[![zhuo](https://github.com/openvinotoolkit/openvino_notebooks/assets/138901786/be02c0af-182a-4504-bac5-4780849f9e47)](https://www.linkedin.com/in/wuzhuo/)|
 |**[Anisha Udayakumar](https://www.linkedin.com/in/anisha-uday/)** <br> AI Innovation Consultant <br> (Bengaluru, India) <br><br> BTech in Civil Engineering <br> 5+ years as a Innovation Consultant|**[Zhuo Wu](https://www.linkedin.com/in/wuzhuo/)** <br> Professor and Research Scientist <br> (Shanghai, China) <br><br> PhD in Electronics <br> 15+ Years as a Researcher and Professor|
+|[![eze](https://github.com/user-attachments/assets/a2f239c4-ac6f-400b-8aba-18b21df84e35)](https://www.linkedin.com/in/ezelanza/)||
+|**[Ezequiel (Eze) Lanza](https://www.linkedin.com/in/ezelanza/)** <br> Open Source AI Evangelist <br> (Toronto, Canada) <br><br> MSc in Data Science <br> 10+ years as AI/ML Engineer and  Open Source Evangelist||
 
 [//]: # (telemetry pixel)
 <img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca&project=root&file=README.md" />

@@ -243,6 +243,8 @@ Replace `int8_model_det_path` with the path to your INT8 model and $device with 
 
 Congratulations! You have successfully set up and run the Detection and Tracking for Automated Self-Checkout application with OpenVINO.
 
+You can evaluate performance benchmarks for the YOLO model across a range of Intel® platforms using the [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html). The Model Hub is a curated resource for developers to explore OpenVINO-optimized models and assess their latency and throughput on Intel® CPUs, integrated GPUs, discrete GPUs, and NPUs.
+
 ### Appendix
 
 Platform Configurations for Performance Benchmarks for YOLOv8m Model

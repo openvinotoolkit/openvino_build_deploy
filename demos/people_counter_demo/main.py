@@ -11,11 +11,8 @@ from typing import Tuple, List, Dict
 import cv2
 import numpy as np
 import supervision as sv
-import torch
-from openvino import runtime as ov
 from supervision import ColorLookup
 from ultralytics import YOLO
-from ultralytics.utils import ops
 
 SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "utils")
 sys.path.append(os.path.dirname(SCRIPT_DIR))
@@ -34,7 +31,6 @@ CATEGORIES = [
     "book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush"
 ]
 
-
 def convert(model_name: str, model_dir: Path) -> tuple[Path, Path]:
     model_path = model_dir / f"{model_name}.pt"
     # create a YOLO object detection model
@@ -47,79 +43,12 @@ def convert(model_name: str, model_dir: Path) -> tuple[Path, Path]:
         ov_model_path = yolo_model.export(format="openvino", dynamic=False, half=True)
     if not ov_int8_model_path.exists():
         ov_int8_model_path = yolo_model.export(format="openvino", dynamic=False, half=True, int8=True, data="coco128.yaml")
-    return Path(ov_model_path) / f"{model_name}.xml", Path(ov_int8_model_path) / f"{model_name}.xml"
+    return Path(ov_model_path), Path(ov_int8_model_path)
 
 
-def letterbox(img: np.ndarray, new_shape: Tuple[int, int]) -> Tuple[np.ndarray, Tuple[float, float], Tuple[int, int]]:
-    # Resize and pad image while meeting stride-multiple constraints
-    shape = img.shape[1::-1]  # current shape [width, height]
-
-    # Scale ratio (new / old)
-    r = min(new_shape[0] / shape[0], new_shape[1] / shape[1])
-
-    # Compute padding
-    ratio = r, r  # width, height ratios
-    new_unpad = int(round(shape[0] * r)), int(round(shape[1] * r))
-    dw, dh = new_shape[0] - new_unpad[0], new_shape[1] - new_unpad[1]  # wh padding
-
-    dw /= 2  # divide padding into 2 sides
-    dh /= 2
-
-    if shape != new_unpad:  # resize
-        img = cv2.resize(img, dsize=new_unpad, interpolation=cv2.INTER_AREA)
-    top, bottom = int(round(dh - 0.1)), int(round(dh + 0.1))
-    left, right = int(round(dw - 0.1)), int(round(dw + 0.1))
-    img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=(128, 128, 128))  # add border
-    return img, ratio, (int(dw), int(dh))
-
-
-def preprocess(image: np.ndarray, input_size: Tuple[int, int]) -> Tuple[np.ndarray, Tuple[int, int]]:
-    # add padding to the image
-    image, _, padding = letterbox(image, new_shape=input_size)
-    # convert to float32
-    image = image.astype(np.float32)
-    # normalize to (0, 1)
-    image /= 255.0
-    # changes data layout from HWC to CHW
-    image = image.transpose((2, 0, 1))
-    # add one more dimension
-    image = np.expand_dims(image, axis=0)
-    return image, padding
-
-
-def postprocess(pred_boxes: np.ndarray, pred_masks: np.ndarray, input_size: Tuple[int, int], orig_img: np.ndarray, padding: Tuple[int, int], category_id: int,
-                min_conf_threshold: float = 0.25, nms_iou_threshold: float = 0.75, agnostic_nms: bool = False, max_detections: int = 100) -> sv.Detections:
-    nms_kwargs = {"agnostic": agnostic_nms, "max_det": max_detections}
-    # non-maximum suppression
-    pred = ops.non_max_suppression(torch.from_numpy(pred_boxes), min_conf_threshold, nms_iou_threshold, nc=80, **nms_kwargs)[0]
-
-    # no predictions in the image
-    if not len(pred):
-        return sv.Detections.empty()
-
-    masks = pred_masks
-    if pred_masks is not None:
-        # upscale masks
-        masks = np.array(ops.process_mask(torch.from_numpy(pred_masks[0]), pred[:, 6:], pred[:, :4], input_size, upsample=True))
-        masks = np.array([cv2.resize(mask[padding[1]:-padding[1] - 1, padding[0]:-padding[0] - 1], orig_img.shape[:2][::-1], interpolation=cv2.INTER_AREA) for mask in masks])
-        masks = masks.astype(np.bool_)
-    # transform boxes to pixel coordinates
-    pred[:, :4] = ops.scale_boxes(input_size, pred[:, :4], orig_img.shape).round()
-    # numpy array from torch tensor
-    pred = np.array(pred)
-    # create detections in supervision format
-    det = sv.Detections(xyxy=pred[:, :4], mask=masks, confidence=pred[:, 4], class_id=pred[:, 5])
-    # filter out other predictions than selected category
-    return det[det.class_id == category_id]
-
-def get_model(model_path: Path, device: str = "AUTO") -> ov.CompiledModel:
-    # initialize OpenVINO
-    core = ov.Core()
-    # read the model from file
-    model = core.read_model(model_path)
-    # compile the model for latency mode
-    model = core.compile_model(model, device_name=device, config={"PERFORMANCE_HINT": "LATENCY", "CACHE_DIR": "cache"})
-
+def get_model(model_path: Path, verbose: bool = False):
+    # compile the model with YOLO
+    model = YOLO(model_path, verbose=verbose)
     return model
 
 
@@ -146,7 +75,7 @@ def get_annotators(json_path: str, resolution_wh: Tuple[int, int], colorful: boo
     label_annotators = []
     for index, polygon in enumerate(polygons, start=1):
         # a zone to count objects in
-        zone = sv.PolygonZone(polygon=polygon, frame_resolution_wh=resolution_wh)
+        zone = sv.PolygonZone(polygon=polygon)
         zones.append(zone)
         # the annotator - visual part of the zone
         zone_annotators.append(sv.PolygonZoneAnnotator(zone=zone, color=colors.by_idx(index), thickness=0))
@@ -221,27 +150,21 @@ def draw_annotations(frame: np.array, detections: sv.Detections, tracker: DeepSo
 
 def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", category: str = "person", zones_config_file: str = "",
         object_limit: int = 3, flip: bool = True, tracker_frames: int = 1800, colorful: bool = False, last_frames: int = 50) -> None:
-    # set up logging
-    log.getLogger().setLevel(log.INFO)
 
     model_mapping = {
         "FP16": model_paths[0],
         "INT8": model_paths[1],
     }
 
-    device_mapping = utils.available_devices()
-
+    # Start with INT8
     model_type = "INT8"
-    device_type = "AUTO"
+    model = get_model(model_mapping[model_type], verbose=False)
 
-    core = ov.Core()
-    core.set_property({"CACHE_DIR": "cache"})
-    # initialize and load model
-    model = get_model(model_mapping[model_type], device_type)
-    # input shape of the model (w, h, d)
-    input_shape = tuple(model.inputs[0].shape)[:0:-1]
+    # Device setup
+    devices_mapping = utils.available_devices()  # e.g. {"cpu":"Intel CPU", "gpu":"Intel GPU", ...}
+    device_type = next(iter(devices_mapping.keys()))  # default to first available
 
-    # initialize video player to deliver frames
+    # Video player
     if isinstance(video_path, str) and video_path.isnumeric():
         video_path = int(video_path)
     player = utils.VideoPlayer(video_path, size=(1920, 1080), fps=60, flip=flip)
@@ -265,7 +188,6 @@ def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", c
     # start a video stream
     player.start()
     while True:
-        # Grab the frame.
         frame = player.next()
         if frame is None:
             print("Source ended")
@@ -274,56 +196,55 @@ def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", c
         frame = np.array(frame)
         f_height, f_width = frame.shape[:2]
 
-        # preprocessing
-        input_image, padding = preprocess(image=frame, input_size=input_shape[:2])
-        # prediction
-        start_time = time.time()
-        results = model(input_image)
-        processing_times.append(time.time() - start_time)
-        boxes = results[model.outputs[0]]
-        masks = results[model.outputs[1]] if len(model.outputs) > 1 else None
-        # postprocessing
-        detections = postprocess(pred_boxes=boxes, pred_masks=masks, input_size=input_shape[:2], orig_img=frame, padding=padding, category_id=category_id)
+        # inference + timing
+        result = model(frame, device=f"intel:{device_type}", verbose=False)[0]
+        processing_times.append(result.speed["inference"])
+
+        # convert to supervision detections
+        detections = sv.Detections.from_ultralytics(result)
+        # filter out other predictions than selected category
+        detections = detections[detections.class_id == category_id]
 
         # draw results
         draw_annotations(frame, detections, tracker, queue_count, object_limit, category, zones, zone_annotators, box_annotators, masks_annotators, label_annotators)
 
         # Mean processing time [ms].
-        processing_time = np.mean(processing_times) * 1000
+        processing_time = np.mean(processing_times)
 
         fps = 1000 / processing_time
         utils.draw_text(frame, text=f"Inference time: {processing_time:.0f}ms ({fps:.1f} FPS)", point=(f_width * 3 // 5, 10))
         utils.draw_text(frame, text=f"Currently running {model_name} ({model_type}) on {device_type}", point=(f_width * 3 // 5, 50))
 
-        utils.draw_control_panel(frame, device_mapping)
+        # Draw control panel & watermark
+        utils.draw_control_panel(frame, devices_mapping)
         utils.draw_ov_watermark(frame)
-        # show the output live
+
         cv2.imshow(title, frame)
         key = cv2.waitKey(1)
         # escape = 27 or 'q' to close the app
-        if key == 27 or key == ord('q'):
+        if key in (27, ord('q')):
             break
 
+        # handle keypress for precision/device
         model_changed = False
+
         if key == ord('f'):
             model_type = "FP16"
             model_changed = True
-        if key == ord('i'):
+        elif key == ord('i'):
             model_type = "INT8"
             model_changed = True
-        for i, dev in enumerate(device_mapping.keys()):
+        for i, dev in enumerate(devices_mapping.keys()):
             if key == ord('1') + i:
                 device_type = dev
                 model_changed = True
 
         if model_changed:
             del model
-            model = get_model(model_mapping[model_type], device_type)
+            model = get_model(model_mapping[model_type], verbose=False)
             processing_times.clear()
 
-    # stop the stream
     player.stop()
-    # clean-up windows
     cv2.destroyAllWindows()
 
 

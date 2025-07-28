@@ -48,8 +48,14 @@ This project requires Python 3.10 or higher and a few libraries. If you don't al
 
 To install the Python libraries and tools, run this command:
 
+**For Linux users**
 ```shell
 sudo apt install git gcc python3-venv python3-dev
+```
+
+**For MacOS users**
+```shell
+brew install git gcc
 ```
 
 _NOTE: If you are using Windows, you might also have to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe)._
@@ -198,6 +204,13 @@ When you test the AI Insight Agent with RAG application, you can test both the i
 For further testing of the AI Insight Agent with RAG appplication, you can engage with the chatbot assistant by asking it questions, or giving it commands that align with the assistant's capabilities. This hands-on experience can help you to understand the assistant's interactive quality and performance.
 
 Enjoy exploring the capabilities of your AI Insight Agent with RAG appplication!
+
+
+# Benchmark Results 
+
+<img width="1229" height="982" alt="image" src="https://github.com/user-attachments/assets/5cd865c8-6f67-439f-bb31-d1dc5aa5727b" />
+
+You can evaluate performance benchmarks for models like Llama3.2-3B-Instruct and Qwen2-7B across a range of Intel® platforms using the [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html). The Model Hub is a curated resource for developers to explore OpenVINO optimized models and assess their latency and throughput on Intel® CPUs, integrated GPUs, discrete GPUs, and NPUs.
 
 # Additional Resources
 - Learn more about [OpenVINO](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html)
