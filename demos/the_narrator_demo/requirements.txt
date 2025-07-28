@@ -3,11 +3,9 @@
 #Added for the narrator demo NEW
 
 
-openvino>=2025.0.0
+openvino>=2025.2.0
 optimum[openvino]>=1.18.0
 numpy>=2.0.0
 opencv-python>=4.8.0
 pillow>=10.0.0
 transformers>=4.36.0,<4.47.0
-torch>=2.0.0
-torchvision>=0.15.0
