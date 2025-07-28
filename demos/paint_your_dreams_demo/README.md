@@ -161,10 +161,12 @@ sudo usermod -aG video,render $USER
 newgrp video   # or log out/in
 ```
 
-## Build with latest OpenVINO
+## Build container
+
+From the repository root run:
 
 ```shell
-docker build -t paint-your-dreams -f Dockerfile .
+docker build -f demos/paint_your_dreams_demo/Dockerfile -t paint_your_dreams .
 ```
 
 ## Run with GPU and NPU support
@@ -176,7 +178,7 @@ docker run --rm -it \
   --device=/dev/dri \
   --group-add=${RGID} \
   -p 7860:7860 \
-  paint-your-dreams
+  paint_your_dreams
 ```
 
 ## Troubleshooting
