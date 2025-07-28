@@ -65,7 +65,7 @@ jobs:
         shell: bash
         run: |
           if [ -n "${{ secrets.HF_TOKEN }}" ]; then
-            hf auth login --token ${{ secrets.HF_TOKEN }}
+            huggingface-cli auth login --token ${{ secrets.HF_TOKEN }}
           else
             echo "HF_TOKEN not set, continuing without login."
           fi
