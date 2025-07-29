@@ -20,7 +20,7 @@ sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 from utils import demo_utils as utils
 
-MODEL_DIR = Path("model")
+MODEL_DIR = Path(__file__).parent / "model"
 
 current_frame = np.zeros((1080, 1920, 3), dtype=np.uint8)  # Placeholder for the current frame
 current_caption = ""
@@ -90,7 +90,11 @@ def download_and_convert_llava_video(model_name: str) -> None:
     print("Step 1: Downloading pre-converted OpenVINO model...")
     
     try:
-        model = OVModelForVisualCausalLM.from_pretrained(openvino_model_id)
+        model = OVModelForVisualCausalLM.from_pretrained(
+            openvino_model_id,
+            trust_remote_code=False,
+            library_name="transformers"
+        )
         print("Step 2: Saving OpenVINO model locally...")
         model.save_pretrained(output_dir)
         print("OpenVINO model saved successfully")
@@ -109,48 +113,97 @@ def download_and_convert_llava_video(model_name: str) -> None:
         # Fallback to local conversion if download fails
         print("Step 1: Loading LLaVA-NeXT-Video model...")
         
-        model = OVModelForVisualCausalLM.from_pretrained(
-                    model_name,
-                    export=True,
-                    trust_remote_code=True,
-                    library_name="transformers"
-                    )
-        
-        print("Step 2: Saving OpenVINO model...")
-        model.save_pretrained(output_dir)
+        try:
+            model = OVModelForVisualCausalLM.from_pretrained(
+                        model_name,
+                        export=True,
+                        trust_remote_code=False,
+                        library_name="transformers"
+                        )
+            
+            print("Step 2: Saving OpenVINO model...")
+            model.save_pretrained(output_dir)
 
-        print("OpenVINO model saved successfully")
-            
-        print("Step 3: Loading processor...")
-            
-        processor = LlavaNextVideoProcessor.from_pretrained(model_name)
-        processor.save_pretrained(output_dir)
+            print("OpenVINO model saved successfully")
+                
+            print("Step 3: Loading processor...")
+                
+            processor = LlavaNextVideoProcessor.from_pretrained(model_name)
+            processor.save_pretrained(output_dir)
 
-        print("Processor loaded and saved successfully")
+            print("Processor loaded and saved successfully")
+                
+            print(f"LLaVA-NeXT-Video model successfully converted to OpenVINO Optimum and saved to {output_dir}")
             
-        print(f"LLaVA-NeXT-Video model successfully converted to OpenVINO Optimum and saved to {output_dir}")
+        except Exception as e2:
+            print(f"Local conversion also failed: {e2}")
+            print("Please check your internet connection and Hugging Face authentication")
+            raise e2
 
 
 def load_llava_video_models(model_name: str, device: str = "CPU") -> tuple:
     """Load LLaVA-NeXT-Video model with Intel HF Optimum (OpenVINO)"""
     model_dir = MODEL_DIR / model_name.replace("/", "_")
     
+    # Ensure MODEL_DIR exists
+    MODEL_DIR.mkdir(parents=True, exist_ok=True)
+    
+    print(f"Model directory: {model_dir}")
+    print(f"Model directory exists: {model_dir.exists()}")
+    
     # Download and convert if not exists
     if not model_dir.exists():
+        print("Model directory does not exist, downloading and converting...")
         download_and_convert_llava_video(model_name)
+    else:
+        print("Model directory exists, checking contents...")
+        if model_dir.exists():
+            contents = list(model_dir.iterdir())
+            print(f"Model directory contents: {[item.name for item in contents]}")
+            
+            # Check if we have the necessary files for OpenVINO model
+            required_files = ["openvino_model.xml", "openvino_model.bin", "config.json"]
+            missing_files = [f for f in required_files if not (model_dir / f).exists()]
+            
+            if missing_files:
+                print(f"Missing required files: {missing_files}")
+                print("Re-downloading and converting model...")
+                download_and_convert_llava_video(model_name)
     
     print(f"Loading LLaVA-NeXT-Video Intel HF Optimum (OpenVINO) models from {model_dir}")
     
-    # Load from the saved local directory, not from model_name
-    model = OVModelForVisualCausalLM.from_pretrained(
-        str(model_dir),
-        trust_remote_code=True
-    )
+    try:
+        # Load from the saved local directory, not from model_name
+        model = OVModelForVisualCausalLM.from_pretrained(
+            str(model_dir),
+            trust_remote_code=False,
+            library_name="transformers"
+        )
+        print("Model loaded successfully")
 
-    processor = LlavaNextVideoProcessor.from_pretrained(str(model_dir))
-    
-    print(f"Successfully loaded LLaVA-NeXT-Video Intel HF Optimum (OpenVINO) model on {device}")
-    return model, processor, device, "intel_optimum_openvino"
+        processor = LlavaNextVideoProcessor.from_pretrained(str(model_dir))
+        print("Processor loaded successfully")
+        
+        print(f"Successfully loaded LLaVA-NeXT-Video Intel HF Optimum (OpenVINO) model on {device}")
+        return model, processor, device, "intel_optimum_openvino"
+        
+    except Exception as e:
+        print(f"Error loading model from {model_dir}: {e}")
+        print("Attempting to load from original model name...")
+        
+        # Fallback: try loading from original model name
+        try:
+            model = OVModelForVisualCausalLM.from_pretrained(
+                model_name,
+                trust_remote_code=False,
+                library_name="transformers"
+            )
+            processor = LlavaNextVideoProcessor.from_pretrained(model_name)
+            print(f"Successfully loaded LLaVA-NeXT-Video Intel HF Optimum (OpenVINO) model on {device}")
+            return model, processor, device, "intel_optimum_openvino"
+        except Exception as e2:
+            print(f"Error loading from original model name: {e2}")
+            raise e2
     
 
 
@@ -364,6 +417,9 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
     print("Using Video-LLaVA model specifically designed for video understanding with Intel optimizations")
     print("=" * 80)
     
+    # Setup Hugging Face authentication if needed
+    setup_huggingface_auth()
+    
     # Initialize models
     model, processor, device, model_type = None, None, None, None
     
@@ -554,7 +610,7 @@ if __name__ == '__main__':
     )
 
     args = parser.parse_args()
-    run(args.stream, args.model_name, args.flip) 
+    run(args.stream, args.model_name) 
 
 
 
