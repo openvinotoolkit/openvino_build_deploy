@@ -7,10 +7,10 @@ import time
 from collections import deque
 from pathlib import Path
 import getpass
-
+from PIL import Image
 import cv2
 import numpy as np
-import torch
+import re
 from transformers import LlavaNextVideoProcessor
 from optimum.intel.openvino import OVModelForVisualCausalLM
 from huggingface_hub import login
@@ -141,237 +141,169 @@ def load_llava_video_models(model_name: str, device: str = "CPU") -> tuple:
     
     print(f"Loading LLaVA-NeXT-Video Intel HF Optimum (OpenVINO) models from {model_dir}")
     
-    try:
-        # Load Intel HF Optimum OpenVINO model with error handling
-        print("Loading OpenVINO model...")
-        try:
-            model = OVModelForVisualCausalLM.from_pretrained(
-                model_dir,
-                device=device,
-                ov_config={
-                    "INFERENCE_PRECISION_HINT": "FP16",
-                    "PERFORMANCE_HINT": "LATENCY",
-                }
-            )
-            print("Model loaded with FP16 configuration")
-        except Exception as e1:
-            print(f"FP16 loading failed: {e1}")
-            try:
-                model = OVModelForVisualCausalLM.from_pretrained(
-                    model_dir,
-                    device=device,
-                    ov_config={
-                        "INFERENCE_PRECISION_HINT": "FP32",
-                        "PERFORMANCE_HINT": "LATENCY",
-                    }
-                )
-                print("Model loaded with FP32 configuration")
-            except Exception as e2:
-                print(f"FP32 loading failed: {e2}")
-                model = OVModelForVisualCausalLM.from_pretrained(
-                    model_dir,
-                    device=device
-                )
-                print("Model loaded with default configuration")
-        
-        # Load processor with error handling
-        print("Loading processor...")
-        try:
-            from transformers import LlavaNextVideoProcessor
-            processor = LlavaNextVideoProcessor.from_pretrained(model_dir)
-            print("LlavaNextVideoProcessor loaded successfully")
-        except Exception as proc_error:
-            print(f"LlavaNextVideoProcessor failed: {proc_error}")
-            try:
-                from transformers import LlavaNextProcessor
-                processor = LlavaNextProcessor.from_pretrained(model_dir)
-                print("LlavaNextProcessor loaded successfully")
-            except Exception as proc_error2:
-                print(f"LlavaNextProcessor failed: {proc_error2}")
-                try:
-                    from transformers import AutoProcessor
-                    processor = AutoProcessor.from_pretrained(model_dir)
-                    print("AutoProcessor loaded successfully")
-                except Exception as proc_error3:
-                    print(f"AutoProcessor failed: {proc_error3}")
-                    # Try loading from original model
-                    try:
-                        from transformers import LlavaNextVideoProcessor
-                        processor = LlavaNextVideoProcessor.from_pretrained(model_name)
-                        print("Processor loaded from original model")
-                    except Exception as proc_error4:
-                        print(f"Original model processor failed: {proc_error4}")
-                        raise Exception("Could not load any processor for Video-LLaVA")
-        
-        print(f"Successfully loaded LLaVA-NeXT-Video Intel HF Optimum (OpenVINO) model on {device}")
-        return model, processor, device, "intel_optimum_openvino"
-        
-    except Exception as e:
-        print(f"LLaVA-NeXT-Video Intel HF Optimum (OpenVINO) model loading failed: {e}")
-        import traceback
-        traceback.print_exc()
-        print("Model may be corrupted, attempting fresh conversion...")
-        
-        # Clean up corrupted model and retry
-        if model_dir.exists():
-            import shutil
-            try:
-                shutil.rmtree(model_dir)
-                print(f"Cleaned up corrupted model directory: {model_dir}")
-            except:
-                pass
-        
-        try:
-            # Retry with fresh conversion
-            download_and_convert_llava_video(model_name)
-            return load_llava_video_models(model_name, device)
-            
-        except Exception as e2:
-            print(f"Fresh LLaVA-NeXT-Video Intel HF Optimum (OpenVINO) conversion failed: {e2}")
-            print("Intel HF Optimum is required - cannot fall back to PyTorch")
-            raise e2
+    # Load from the saved local directory, not from model_name
+    model = OVModelForVisualCausalLM.from_pretrained(
+        str(model_dir),
+        trust_remote_code=True
+    )
+
+    processor = LlavaNextVideoProcessor.from_pretrained(str(model_dir))
+    
+    print(f"Successfully loaded LLaVA-NeXT-Video Intel HF Optimum (OpenVINO) model on {device}")
+    return model, processor, device, "intel_optimum_openvino"
+    
 
 
 def caption_video_content(video_frames: list, model, processor, model_type: str) -> str:
     """Generate video captions using Video-LLaVA with Intel HF Optimum (OpenVINO)"""
-    try:
-        if not video_frames or len(video_frames) == 0:
+
+    if not video_frames or len(video_frames) == 0:
             return "No video content to analyze"
         
-        print(f"PROCESSING: Generating video caption with {len(video_frames)} frames using Video-LLaVA Intel HF Optimum (OpenVINO)")
+    print(f"PROCESSING: Generating video caption with {len(video_frames)} frames using Video-LLaVA Intel HF Optimum (OpenVINO)")
         
         # For Video-LLaVA, process multiple frames as a video sequence
         # Select key frames from the video sequence for temporal understanding
-        num_frames = len(video_frames)
-        if num_frames >= 8:
-            # Sample 8 frames evenly across the video sequence for Video-LLaVA
-            indices = [int(i * (num_frames - 1) / 7) for i in range(8)]
-            selected_frames = [video_frames[i] for i in indices]
-        elif num_frames >= 4:
-            # Sample 4 frames for shorter sequences
-            indices = [int(i * (num_frames - 1) / 3) for i in range(4)]
-            selected_frames = [video_frames[i] for i in indices]
-        else:
-            # Use all available frames
-            selected_frames = video_frames
-        
-        # Convert frames to PIL Images for Video-LLaVA processing
-        from PIL import Image
-        pil_images = []
-        for frame in selected_frames:
-            # Convert BGR to RGB
-            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            # Resize for Video-LLaVA (standard size)
-            rgb_frame = cv2.resize(rgb_frame, (336, 336))
-            pil_image = Image.fromarray(rgb_frame)
-            pil_images.append(pil_image)
-        
-        # Create video-specific prompt for Video-LLaVA using conversation format (matching working notebook)
-        conversation = [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": "What is happening in this video?"},
-                    {"type": "video", "images": pil_images},
-                ],
-            },
-        ]
-        
-        try:
-            if model_type == "intel_optimum_openvino":
-                # Intel HF Optimum OpenVINO Video-LLaVA processing
-                print("Using Intel HF Optimum OpenVINO Video-LLaVA inference")
+
+
+    num_frames = len(video_frames)
+
+    # Select 8 frames for better video context
+    if num_frames >= 8:
+        step = (num_frames - 1) / 7
+        indices = [int(i * step) for i in range(8)]
+    elif num_frames >= 4:
+        step = (num_frames - 1) / 3
+        indices = [int(i * step) for i in range(4)]
+    else:
+        indices = list(range(num_frames))
+
+    selected_frames = [video_frames[i] for i in indices]
+
+    # Convert to resized PIL images
+    pil_images = [
+        Image.fromarray(cv2.resize(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), (336, 336)))
+        for frame in selected_frames
+    ]
+
+    # Intel HF Optimum OpenVINO Video-LLaVA processing
+    print("Using Intel HF Optimum OpenVINO Video-LLaVA inference")
                 
-                # Use processor with proper video format for Intel optimized OpenVINO model
-                # Use apply_chat_template method (matching working notebook)
-                conversation = [
+    # Create video-specific prompt for Video-LLaVA using conversation format
+    conversation = [
                     {
                         "role": "user",
                         "content": [
-                            {"type": "text", "text": "What is happening in this video?"},
+                            {"type": "text", "text": "Describe what you see happening in this video in detail. What objects, actions, and events are visible?"},
                             {"type": "video", "images": pil_images},
                         ],
                     },
                 ]
-                
-                # Try direct processing approach
-                inputs = processor(
-                    text="What is happening in this video?",
-                    images=pil_images,
-                    return_tensors="pt"
-                )
-                
-                # Convert lists to tensors and add batch dimension
-                import torch
-                for key in inputs:
-                    if isinstance(inputs[key], list):
-                        tensor = torch.tensor(inputs[key])
-                        if tensor.dim() == 1:
-                            tensor = tensor.unsqueeze(0)  # Add batch dimension
-                        inputs[key] = tensor
-                
-                # Add pixel_values to inputs
-                pixel_values = processor.image_processor(pil_images, return_tensors="pt")["pixel_values"]
-                inputs["pixel_values"] = pixel_values
-                # Add image_sizes to inputs (required by OpenVINO model)
-                image_sizes = torch.tensor([[img.height, img.width] for img in pil_images])  # (height, width)
-                inputs["image_sizes"] = image_sizes
-                
-                print(f"Successfully processed video sequence with {len(pil_images)} frames for Video-LLaVA Intel HF Optimum OpenVINO")
-                print(f"Input keys: {list(inputs.keys())}")
-                
-                # Generate video caption with Intel optimized OpenVINO inference (matching working notebook)
-                print(f"Input shapes: {[(k, v.shape if hasattr(v, 'shape') else type(v)) for k, v in inputs.items()]}")
-                
-                with torch.no_grad():
-                    output_ids = model.generate(
-                        **inputs,
-                        max_new_tokens=150,
-                        do_sample=True,
-                        temperature=0.7,
-                        top_p=0.9
-                    )[0]
-                
-                # Decode the output using processor (matching working notebook)
-                response = processor.batch_decode(
-                    [output_ids],
+
+    try:
+        inputs = processor.apply_chat_template(
+                        conversation,
+                        num_frames=len(pil_images),
+                        add_generation_prompt=True,
+                        tokenize=True,
+                        return_dict=True
+                    )
+        
+        print(f"Input shape: {inputs['input_ids'].shape if 'input_ids' in inputs else 'No input_ids'}")
+        
+        out = model.generate(
+            **inputs, 
+            max_new_tokens=100,
+            temperature=0.7,
+            do_sample=True,
+            top_p=0.9,
+            repetition_penalty=1.1
+        )
+        
+        print(f"Output shape: {out.shape}")
+        
+    except Exception as e:
+        print(f"Error during generation: {e}")
+        return None
+
+    response = processor.batch_decode(
+                    out,
                     skip_special_tokens=True,
                     clean_up_tokenization_spaces=True
                 )[0]
-                print(f"MODEL OUTPUT: {response}")
+    print(f"MODEL OUTPUT: {response}")
                 
                 # Extract the video caption from the response
-                if "ASSISTANT:" in response:
+    if "ASSISTANT:" in response:
                     description = response.split("ASSISTANT:")[-1].strip()
-                else:
+    else:
                     # If no ASSISTANT marker, use the full response
                     description = response.strip()
+
+    print(f"CAPTION GENERATED: {description}")
                 
                 # Clean up the description - remove any non-English characters or very short responses
-                import re
-                # Remove Chinese characters and other non-ASCII characters
-                description = re.sub(r'[^\x00-\x7F]+', '', description)
-                description = description.strip()
+    # Remove Chinese characters and other non-ASCII characters
+    description = re.sub(r'[^\x00-\x7F]+', '', description)
+    description = description.strip()
                 
                 # Only return caption if we have a meaningful description
-                if description and len(description) > 10 and not description.isdigit():
-                    print(f"CAPTION GENERATED: {description}")
-                    return description
-                else:
-                    print(f"No meaningful caption generated (length: {len(description) if description else 0}), skipping display")
-                    return None
-                
-        except Exception as vision_error:
-            print(f"ERROR: Video captioning processing error: {vision_error}")
-            import traceback
-            traceback.print_exc()
-            return None
+    if description and len(description) > 10 and not description.isdigit():
+        print(f"CAPTION GENERATED: {description}")
+        return description
+    else:
+        print(f"No meaningful caption generated (length: {len(description) if description else 0}), trying fallback prompt")
         
-    except Exception as e:
-        print(f"ERROR: Error generating video caption: {e}")
-        import traceback
-        traceback.print_exc()
+        # Try a simpler fallback prompt
+        try:
+            fallback_conversation = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "What do you see in this video?"},
+                        {"type": "video", "images": pil_images},
+                    ],
+                },
+            ]
+            
+            fallback_inputs = processor.apply_chat_template(
+                fallback_conversation,
+                num_frames=len(pil_images),
+                add_generation_prompt=True,
+                tokenize=True,
+                return_dict=True
+            )
+            
+            fallback_out = model.generate(
+                **fallback_inputs, 
+                max_new_tokens=50,
+                temperature=0.8,
+                do_sample=True
+            )
+            
+            fallback_response = processor.batch_decode(
+                fallback_out,
+                skip_special_tokens=True,
+                clean_up_tokenization_spaces=True
+            )[0]
+            
+            if "ASSISTANT:" in fallback_response:
+                fallback_description = fallback_response.split("ASSISTANT:")[-1].strip()
+            else:
+                fallback_description = fallback_response.strip()
+            
+            fallback_description = re.sub(r'[^\x00-\x7F]+', '', fallback_description)
+            fallback_description = fallback_description.strip()
+            
+            if fallback_description and len(fallback_description) > 5:
+                print(f"FALLBACK CAPTION: {fallback_description}")
+                return fallback_description
+                
+        except Exception as e:
+            print(f"Fallback prompt also failed: {e}")
+        
         return None
+                
 
 
 def video_captioning_worker(model, processor, device, model_type):
@@ -441,7 +373,6 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
         
         if model_type not in ["intel_optimum_openvino"]:
             print("ERROR: Supported backend is Intel HF Optimum (OpenVINO)!")
-            print("This demo is designed to showcase Video-LLaVA performance with Intel optimizations")
             return
             
     except Exception as e:
@@ -620,11 +551,6 @@ if __name__ == '__main__':
         type=str, 
         default="llava-hf/LLaVA-NeXT-Video-7B-hf", 
         help="LLaVA-NeXT-Video model for Intel HF Optimum OpenVINO video captioning"
-    )
-    parser.add_argument(
-        "--flip", 
-        action='store_true',
-        help="Mirror input video"
     )
 
     args = parser.parse_args()
