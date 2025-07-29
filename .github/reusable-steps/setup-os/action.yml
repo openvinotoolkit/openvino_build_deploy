@@ -3,7 +3,7 @@ name: OS setup
 runs:
   using: 'composite'
   steps:
-    - name: Free space (Ubuntu only)
+    - name: Free space (Ubuntu)
       if: runner.os == 'Linux'
       uses: jlumbroso/free-disk-space@v1.3.1
       with:
@@ -15,19 +15,24 @@ runs:
         dotnet: true
         haskell: true
         docker-images: true
-    - name: Install OpenCL, EGL and uv (Ubuntu only)
+    - name: Free space (macOS)
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        xcrun simctl delete all
+    - name: Install OpenCL, EGL and uv (Ubuntu)
       if: runner.os == 'Linux'
       shell: bash
       run: |
         sudo apt-get update
         sudo apt-get install -y ocl-icd-opencl-dev libegl1 libgles2 mesa-utils libxcb-cursor0 libxcb-xinerama0 libxcb-util1 libxcb-keysyms1 libxcb-randr0 libxkbcommon-x11-0 libegl1-mesa-dev cargo
         wget -qO- https://astral.sh/uv/install.sh | sh && mv "$HOME/.local/bin/uv" /usr/local/bin/uv
-    - name: Install coreutils and uv (macOS only)
+    - name: Install coreutils and uv (macOS)
       if: runner.os == 'macOS'
       shell: bash
       run: |
         brew install coreutils uv
-    - name: Install uv (Windows only)
+    - name: Install uv (Windows)
       if: runner.os == 'Windows'
       shell: pwsh
       run: |
