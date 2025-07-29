@@ -35,7 +35,7 @@ Explore Jupyter notebooks that demonstrate how to use OpenVINO to build and depl
 Explored guided content our team created and demonstrated at events.
 
 ### [Wiki](https://github.com/openvinotoolkit/openvino_build_deploy/wiki): Step-by-step Instructions
-Explore instructions on setup for the AI PC, including [performance monitoring](https://github.com/openvinotoolkit/openvino_build_deploy/wiki/Steps-to-Setup-Performance-Monitor-for-AI-PC-(Windows)) and more.
+Explore instructions on setup for the AI PC, including [setting up your AI PC](https://github.com/openvinotoolkit/openvino_build_deploy/wiki/AI-PC-Setup), [performance monitoring](https://github.com/openvinotoolkit/openvino_build_deploy/wiki/Steps-to-Setup-Performance-Monitor-for-AI-PC-(Windows)) and more.
 
 ## Additional Resources
 
