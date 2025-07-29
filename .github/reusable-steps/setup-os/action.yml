@@ -20,6 +20,13 @@ runs:
       shell: bash
       run: |
         xcrun simctl delete all
+        sudo rm -rf /Applications/Xcode.app
+        sudo rm -rf ~/Library/Developer/
+        sudo rm -rf ~/Library/Caches/com.apple.dt.Xcode
+        sudo rm -rf ~/Library/Application\ Support/Xcode
+        sudo rm -rf ~/Library/Preferences/com.apple.dt.Xcode.plist
+        sudo rm -rf ~/Library/Preferences/com.apple.dt.xcodebuild.plist
+        sudo rm -rf ~/Library/Logs/DiagnosticReports
     - name: Install OpenCL, EGL and uv (Ubuntu)
       if: runner.os == 'Linux'
       shell: bash
