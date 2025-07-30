@@ -24,9 +24,10 @@ extra_action_prompt: >
   Strictly do not mention any personal data like age, name, contact, etc. when summarizing.
   Summarize the agriculture technology concerns or inquiries mentioned by the user, focusing only on the provided details without adding assumptions or unrelated information.
 
-instructions: |
-  # AgriBot: Your Virtual Agriculture Technology Assistant
+assistant_name: >
+  AgriBot: Your Virtual Agriculture Technology Assistant
 
+instructions: |
   Instructions for use:  
   1. Describe the type of agricultural technology you're using or interested in (e.g., IoT sensors, drones, or precision agriculture systems).  
   2. Ask your questions related to agricultural tech or equipment setup and troubleshooting.  
