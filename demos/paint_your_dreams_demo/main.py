@@ -250,7 +250,9 @@ def build_ui() -> gr.Interface:
         "Make me a figurehead of the medieval ship"
     ]
 
-    with gr.Blocks() as demo:
+    with gr.Blocks(theme=utils.gradio_intel_theme(), title="Paint Your Dreams with OpenVINO") as demo:
+        # custom intel header
+        utils.gradio_intel_header("Paint Your Dreams with OpenVINO")
         with gr.Row():
             t2i_button = gr.Button("Text2Image", variant="primary")
             i2i_button = gr.Button("Image2Image", variant="secondary")

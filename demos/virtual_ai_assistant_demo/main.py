@@ -1,6 +1,7 @@
 import argparse
 import logging as log
 import os
+import sys
 import threading
 import time
 from pathlib import Path
@@ -27,6 +28,11 @@ from openvino.runtime import passes
 from optimum.exporters.openvino.convert import export_tokenizer
 from optimum.intel import OVModelForCausalLM, OVModelForFeatureExtraction, OVWeightQuantizationConfig, OVModelForSequenceClassification
 from transformers import AutoTokenizer
+
+SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "utils")
+sys.path.append(os.path.dirname(SCRIPT_DIR))
+
+from utils import demo_utils as utils
 
 # Global variables initialization
 MODEL_DIR = Path("model")
@@ -272,13 +278,15 @@ def extra_action(conversation: List) -> Tuple[str, float]:
 
 
 def create_UI(initial_message: str, action_name: str) -> gr.Blocks:
-    with gr.Blocks(title="Your Virtual AI Assistant") as demo:
+    with gr.Blocks(theme=utils.gradio_intel_theme(), title="Your Virtual AI Assistant") as demo:
+        utils.gradio_intel_header(chatbot_config["assistant_name"])
         gr.Markdown(chatbot_config["instructions"])
 
         with gr.Row():
             file_uploader_ui = gr.Files(label="Additional context", file_types=[".pdf", ".txt"], scale=1)
             with gr.Column(scale=4):
-                chatbot_ui = gr.Chatbot(value=[[None, initial_message]], label="Chatbot", sanitize_html=False)
+                chatbot_ui = gr.Chatbot(value=[[None, initial_message]], label="Chatbot", sanitize_html=False,
+                                        avatar_images=(None, "https://docs.openvino.ai/2025/_static/favicon.ico"))
                 with gr.Row():
                     input_text_ui = gr.Textbox(label="Your text input", scale=6)
                     submit_btn = gr.Button("Submit", variant="primary", interactive=False, scale=1)

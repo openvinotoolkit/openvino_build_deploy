@@ -22,9 +22,10 @@ extra_action_prompt: >
   Summarize the student's progress, focusing on key learnings and areas covered during the session.
   Do not mention any personal details like name, age, or contact information. Keep the summary concise and focused on the learning points.
 
-instructions: |
-  # Stephan: Your Virtual Tutor Assistant
+assistant_name: >
+  Stephan: Your Virtual Tutor Assistant
 
+instructions: |
   Instructions for use:
   1. Describe the topic or problem you need help with.
   2. Collaborate with Stephan by answering questions and thinking through problems.
