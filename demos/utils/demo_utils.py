@@ -7,8 +7,6 @@ from os import PathLike
 from pathlib import Path
 from typing import Tuple, Dict
 
-import cv2
-import openvino as ov
 from numpy import ndarray
 
 
@@ -109,6 +107,8 @@ class VideoPlayer:
     """
 
     def __init__(self, source, size=None, flip=False, fps=None, skip_first_frames=0):
+        import cv2
+
         self.__cap = cv2.VideoCapture(source)
         if not self.__cap.isOpened():
             raise RuntimeError(
@@ -193,6 +193,7 @@ class VideoPlayer:
     """
 
     def next(self):
+        import cv2
         with self.__lock:
             if self.__frame is None:
                 return None
@@ -205,10 +206,9 @@ class VideoPlayer:
         return frame
 
 
-logo_img = cv2.imread(os.path.join(os.path.dirname(__file__), "openvino-logo.png"), cv2.IMREAD_UNCHANGED)
-
-
 def available_devices(exclude: list | tuple | None = None) -> Dict[str, str]:
+    import openvino as ov
+
     exclude_devices = set()
     if exclude is not None:
         exclude_devices.update(exclude)
@@ -239,8 +239,15 @@ def draw_control_panel(frame: ndarray, device_mapping: Dict[str, str], include_p
             draw_text(frame, f"{i}: {device_name} - {device_info}", (10, next_y))
             next_y += line_space
 
+logo_img = None
 
 def draw_ov_watermark(frame: ndarray, alpha: float = 0.35, size: float = 0.2) -> None:
+    import cv2
+
+    global logo_img
+    if logo_img is None:
+        logo_img = cv2.imread(os.path.join(os.path.dirname(__file__), "assets", "openvino-logo.png"), cv2.IMREAD_UNCHANGED)
+
     scale = size * frame.shape[1] / logo_img.shape[1]
     watermark = cv2.resize(logo_img, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
 
@@ -252,6 +259,8 @@ def draw_ov_watermark(frame: ndarray, alpha: float = 0.35, size: float = 0.2) ->
 
 
 def draw_text(image: ndarray, text: str, point: Tuple[int, int], center: bool = False, font_scale: float = 1.0, font_color: Tuple[int, int, int] = (255, 255, 255), with_background: bool = False) -> None:
+    import cv2
+
     _, f_width = image.shape[:2]
     text_size, _ = cv2.getTextSize(text, fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=font_scale * f_width / 2000, thickness=2)
 
@@ -274,3 +283,34 @@ def crop_center(image: ndarray) -> ndarray:
     start_x = (image.shape[1] - size) // 2
     start_y = (image.shape[0] - size) // 2
     return image[start_y:start_y + size, start_x:start_x + size]
+
+
+def get_gradio_intel_color(name: str) -> "gr.themes.Color":
+    import gradio as gr
+
+    if name == "classic_blue":
+        return gr.themes.Color(name="intel_classic_blue", c50="#e4f5ff", c100="#76ceff", c200="#36befe", c300="#00a4f6", c400="#008dd7", c500="#006abb", c600="#005fa7", c700="#004986", c800="#003c6b", c900="#002e54", c950="#001d34")
+    elif name == "energy_blue":
+        return gr.themes.Color(name="intel_energy_blue", c50="#e2faff",  c100="#b8f3ff", c200="#7bddff", c300="#41d4fb", c400="#11c5f9", c500="#00c7fd", c600="#00addc", c700="#0096ca", c800="#0077a4", c900="#005b85", c950="#003b54")
+    else:
+        raise ValueError("Unsupported color name")
+
+
+def gradio_intel_theme() -> "gr.themes.ThemeClass":
+    import gradio as gr
+
+    return gr.themes.Base(primary_hue=get_gradio_intel_color("energy_blue"))
+
+
+def gradio_intel_header(name: str = "") -> "gr.HTML":
+    import gradio as gr
+
+    return gr.HTML(
+            "<div style='width:100%;max-width:100%;margin-left:0;position:relative;padding:0;box-sizing:border-box;'>"
+            "  <div style='margin:0;padding:0 15px;background:#0068bb;height:60px;width:100%;display:flex;align-items:center;position:relative;box-sizing:border-box;margin-bottom:15px;'>"
+            f"    <div style='height:60px;line-height:60px;color:white;font-size:24px;'>{name}</div>"
+            "    <img src='https://www.intel.com/content/dam/logos/intel-header-logo.svg' style='margin-left:auto;width:60px;height:60px;' />"
+            "  </div>"
+            "</div>",
+        padding=False
+    )
