@@ -83,7 +83,7 @@ try:
     assert response2.status_code == 200, f"Image generation failed: {response2.text}"
     image = response2.json()["image"]
     logger.info("Image generation test passed. Base64 (truncated): %s", image[:100])
-    print("Demo is ready!")
+    print("Demo is ready!", flush=True) # Required for the CI to detect readiness
 
 finally:
     logger.info("Shutting down FastAPI server...")

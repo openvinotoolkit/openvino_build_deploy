@@ -487,9 +487,9 @@ def run_app(agent: ReActAgent, public_interface: bool = False) -> None:
             )
             clear.click(_reset_chat, None, [message, chat_window, log_window, cart_display])
 
-            gr.Markdown("------------------------------")            
+            gr.Markdown("------------------------------")
 
-        print("Demo is ready!")
+        print("Demo is ready!", flush=True)  # Required for the CI to detect readiness
         demo.queue().launch(share=public_interface)
 
     run()
@@ -557,6 +557,7 @@ def run(chat_model: Path, embedding_model: Path, rag_pdf: Path, device: str, pub
     agent.update_prompts({"agent_worker:system_prompt": react_system_prompt})  
     agent.reset()                     
     run_app(agent, public_interface)
+
 
 if __name__ == "__main__":
     # Define the argument parser at the end
