@@ -4,15 +4,15 @@ openvino==2025.2
 optimum-intel==1.24.0
 nncf==2.17.0
 
-llama-index==0.13.0
-llama-index-llms-openvino==0.5.0
-llama-index-embeddings-openvino==0.6.0
-llama-index-postprocessor-openvino-rerank==0.5.0
+llama-index
+llama-index-llms-openvino
+llama-index-embeddings-openvino
+llama-index-postprocessor-openvino-rerank
 onnx==1.18.0
 onnxruntime==1.20.1
 torch==2.7.1
 
-transformers==4.54.1
+transformers>=4.52.1
 librosa==0.10.2
 pyyaml==6.0.1
 PyMuPDF==1.24.10
