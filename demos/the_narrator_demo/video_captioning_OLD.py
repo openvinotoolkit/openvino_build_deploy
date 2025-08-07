@@ -7,11 +7,11 @@ import time
 from collections import deque
 from pathlib import Path
 import getpass
-
+from PIL import Image
 import cv2
 import numpy as np
 import re
-from transformers import AutoProcessor
+from transformers import LlavaNextVideoProcessor
 from optimum.intel.openvino import OVModelForVisualCausalLM
 from huggingface_hub import login
 
@@ -20,9 +20,9 @@ sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 from utils import demo_utils as utils
 
-MODEL_DIR = Path("model")
+MODEL_DIR = Path(__file__).parent / "model"
 
-current_frame = None  # Will be set when video starts
+current_frame = np.zeros((1080, 1920, 3), dtype=np.uint8)  # Placeholder for the current frame
 current_caption = ""
 
 processing_times = deque(maxlen=100)
@@ -90,13 +90,17 @@ def download_and_convert_llava_video(model_name: str) -> None:
     print("Step 1: Downloading pre-converted OpenVINO model...")
     
     try:
-        model = OVModelForVisualCausalLM.from_pretrained(openvino_model_id)
+        model = OVModelForVisualCausalLM.from_pretrained(
+            openvino_model_id,
+            trust_remote_code=False,
+            library_name="transformers"
+        )
         print("Step 2: Saving OpenVINO model locally...")
         model.save_pretrained(output_dir)
         print("OpenVINO model saved successfully")
         
         print("Step 3: Loading processor...")
-        processor = AutoProcessor.from_pretrained(model_name)
+        processor = LlavaNextVideoProcessor.from_pretrained(model_name)
         processor.save_pretrained(output_dir)
         print("Processor loaded and saved successfully")
         
@@ -109,115 +113,98 @@ def download_and_convert_llava_video(model_name: str) -> None:
         # Fallback to local conversion if download fails
         print("Step 1: Loading LLaVA-NeXT-Video model...")
         
-        model = OVModelForVisualCausalLM.from_pretrained(
-                    model_name,
-                    export=True,
-                    trust_remote_code=True,
-                    library_name="transformers"
-                    )
-        
-        print("Step 2: Saving OpenVINO model...")
-        model.save_pretrained(output_dir)
+        try:
+            model = OVModelForVisualCausalLM.from_pretrained(
+                        model_name,
+                        export=True,
+                        trust_remote_code=False,
+                        library_name="transformers"
+                        )
+            
+            print("Step 2: Saving OpenVINO model...")
+            model.save_pretrained(output_dir)
 
-        print("OpenVINO model saved successfully")
-            
-        print("Step 3: Loading processor...")
-            
-        processor = AutoProcessor.from_pretrained(model_name)
-        processor.save_pretrained(output_dir)
+            print("OpenVINO model saved successfully")
+                
+            print("Step 3: Loading processor...")
+                
+            processor = LlavaNextVideoProcessor.from_pretrained(model_name)
+            processor.save_pretrained(output_dir)
 
-        print("Processor loaded and saved successfully")
+            print("Processor loaded and saved successfully")
+                
+            print(f"LLaVA-NeXT-Video model successfully converted to OpenVINO Optimum and saved to {output_dir}")
             
-        print(f"LLaVA-NeXT-Video model successfully converted to OpenVINO Optimum and saved to {output_dir}")
+        except Exception as e2:
+            print(f"Local conversion also failed: {e2}")
+            print("Please check your internet connection and Hugging Face authentication")
+            raise e2
 
 
 def load_llava_video_models(model_name: str, device: str = "CPU") -> tuple:
     """Load LLaVA-NeXT-Video model with Intel HF Optimum (OpenVINO)"""
     model_dir = MODEL_DIR / model_name.replace("/", "_")
     
+    # Ensure MODEL_DIR exists
+    MODEL_DIR.mkdir(parents=True, exist_ok=True)
+    
+    print(f"Model directory: {model_dir}")
+    print(f"Model directory exists: {model_dir.exists()}")
+    
     # Download and convert if not exists
     if not model_dir.exists():
+        print("Model directory does not exist, downloading and converting...")
         download_and_convert_llava_video(model_name)
+    else:
+        print("Model directory exists, checking contents...")
+        if model_dir.exists():
+            contents = list(model_dir.iterdir())
+            print(f"Model directory contents: {[item.name for item in contents]}")
+            
+            # Check if we have the necessary files for OpenVINO model
+            required_files = ["openvino_model.xml", "openvino_model.bin", "config.json"]
+            missing_files = [f for f in required_files if not (model_dir / f).exists()]
+            
+            if missing_files:
+                print(f"Missing required files: {missing_files}")
+                print("Re-downloading and converting model...")
+                download_and_convert_llava_video(model_name)
     
     print(f"Loading LLaVA-NeXT-Video Intel HF Optimum (OpenVINO) models from {model_dir}")
     
-    # Load from the saved local directory, not from model_name
-    model = OVModelForVisualCausalLM.from_pretrained(
-        str(model_dir),
-        trust_remote_code=True
-    )
+    try:
+        # Load from the saved local directory, not from model_name
+        model = OVModelForVisualCausalLM.from_pretrained(
+            str(model_dir),
+            trust_remote_code=False,
+            library_name="transformers"
+        )
+        print("Model loaded successfully")
 
-    processor = AutoProcessor.from_pretrained(str(model_dir))
-    
-    print(f"Successfully loaded LLaVA-NeXT-Video Intel HF Optimum (OpenVINO) model on {device}")
-    return model, processor, device, "intel_optimum_openvino"
-    
-
-def capture_webcam_to_mp4(output_path="output.mp4", duration_seconds=3, fps=4, width=36, height=36):
-    """Capture frames from webcam and save as an MP4 video."""
-    cap = cv2.VideoCapture(0)
-    
-    if not cap.isOpened():
-        print("Error: Could not open webcam")
-        return False
-    
-    # Set resolution to reduce processing time
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-    
-    # Ensure color capture
-    cap.set(cv2.CAP_PROP_CONVERT_RGB, 1.0)
-    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
-    
-    # Verify the resolution was set
-    actual_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    actual_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    print(f"Webcam resolution set to: {actual_width}x{actual_height}")
-
-    # Define the codec and create VideoWriter object
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # Codec for .mp4
-    out = cv2.VideoWriter(output_path, fourcc, fps, (actual_width, actual_height))
-    
-    total_frames = int(duration_seconds * fps)
-    frame_interval = 1.4 / fps  # Time between frames
-    
-    print(f"Capturing {total_frames} frames over {duration_seconds} seconds...")
-    print("Starting in 3 seconds...")
-    
-    # Countdown
-    for i in range(3, 0, -1):
-        print(f"{i}...")
-        time.sleep(1)
-    
-    print("Starting frame capture...")
-    start_time = time.time()
-    
-    for i in range(total_frames):
-        ret, frame = cap.read()
-        if not ret:
-            print(f"Warning: Frame {i} not captured correctly.")
-            break
+        processor = LlavaNextVideoProcessor.from_pretrained(str(model_dir))
+        print("Processor loaded successfully")
         
-        # Ensure frame is in BGR color format
-        if len(frame.shape) == 3:
-            frame_resized = cv2.resize(frame, (actual_width, actual_height))
-        else:
-            # Convert grayscale to BGR
-            frame_resized = cv2.cvtColor(cv2.resize(frame, (actual_width, actual_height)), cv2.COLOR_GRAY2BGR)
+        print(f"Successfully loaded LLaVA-NeXT-Video Intel HF Optimum (OpenVINO) model on {device}")
+        return model, processor, device, "intel_optimum_openvino"
         
-        out.write(frame_resized)  # Write frame to video file
+    except Exception as e:
+        print(f"Error loading model from {model_dir}: {e}")
+        print("Attempting to load from original model name...")
         
-        elapsed_time = time.time() - start_time
-        print(f"Captured frame {i+1}/{total_frames} at {elapsed_time:.1f}s")
-        
-        # Wait to maintain fps timing
-        if i < total_frames - 1:
-            time.sleep(frame_interval)
+        # Fallback: try loading from original model name
+        try:
+            model = OVModelForVisualCausalLM.from_pretrained(
+                model_name,
+                trust_remote_code=False,
+                library_name="transformers"
+            )
+            processor = LlavaNextVideoProcessor.from_pretrained(model_name)
+            print(f"Successfully loaded LLaVA-NeXT-Video Intel HF Optimum (OpenVINO) model on {device}")
+            return model, processor, device, "intel_optimum_openvino"
+        except Exception as e2:
+            print(f"Error loading from original model name: {e2}")
+            raise e2
     
-    cap.release()
-    out.release()
-    print(f"Capture complete! Video saved to: {output_path}")
-    return True
 
 
 def caption_video_content(video_frames: list, model, processor, model_type: str) -> str:
@@ -227,62 +214,64 @@ def caption_video_content(video_frames: list, model, processor, model_type: str)
             return "No video content to analyze"
         
     print(f"PROCESSING: Generating video caption with {len(video_frames)} frames using Video-LLaVA Intel HF Optimum (OpenVINO)")
+        
+        # For Video-LLaVA, process multiple frames as a video sequence
+        # Select key frames from the video sequence for temporal understanding
 
-    output_path="inference.mp4"
-    capture_webcam_to_mp4(output_path,duration_seconds=5,fps=10)
-    
 
+    num_frames = len(video_frames)
+
+    # Select 8 frames for better video context
+    if num_frames >= 8:
+        step = (num_frames - 1) / 7
+        indices = [int(i * step) for i in range(8)]
+    elif num_frames >= 4:
+        step = (num_frames - 1) / 3
+        indices = [int(i * step) for i in range(4)]
+    else:
+        indices = list(range(num_frames))
+
+    selected_frames = [video_frames[i] for i in indices]
+
+    # Convert to resized PIL images
+    pil_images = [
+        Image.fromarray(cv2.resize(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), (336, 336)))
+        for frame in selected_frames
+    ]
+
+    # Intel HF Optimum OpenVINO Video-LLaVA processing
+    print("Using Intel HF Optimum OpenVINO Video-LLaVA inference")
+                
+    # Create video-specific prompt for Video-LLaVA using conversation format
+    conversation = [
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": "Describe what you see happening in this video in detail. What objects, actions, and events are visible?"},
+                            {"type": "video", "images": pil_images},
+                        ],
+                    },
+                ]
 
     try:
-        # Use the processor's tokenizer directly
-        text = "Describe this video in one short sentence. What do you see happening?"
-        inputs = processor.tokenizer(
-            text,
-            return_tensors="pt",
-            padding=True,
-            truncation=True
-        )
+        inputs = processor.apply_chat_template(
+                        conversation,
+                        num_frames=len(pil_images),
+                        add_generation_prompt=True,
+                        tokenize=True,
+                        return_dict=True
+                    )
         
         print(f"Input shape: {inputs['input_ids'].shape if 'input_ids' in inputs else 'No input_ids'}")
         
-        # Use threading timeout instead of signal for worker threads
-        import threading
-        import queue
-        
-        result_queue = queue.Queue()
-        
-        def generate_with_timeout():
-            try:
-                # Pass inputs directly to model.generate
-                out = model.generate(
-                    **inputs, 
-                    max_new_tokens=30,  # Further reduced for faster processing
-                    temperature=0.2,    # Lower temperature for more focused output
-                    do_sample=True,
-                    top_p=0.7,          # Lower top_p for more focused sampling
-                    repetition_penalty=1.3,  # Higher repetition penalty
-                    pad_token_id=processor.tokenizer.eos_token_id,
-                    use_cache=False
-                )
-                result_queue.put(("success", out))
-            except Exception as e:
-                result_queue.put(("error", e))
-        
-        # Start generation in a separate thread with timeout
-        generation_thread = threading.Thread(target=generate_with_timeout)
-        generation_thread.daemon = True
-        generation_thread.start()
-        
-        # Wait for result with timeout
-        try:
-            result_type, result = result_queue.get(timeout=60)
-            if result_type == "success":
-                out = result
-            else:
-                raise result
-        except queue.Empty:
-            print("Generation timed out after 60 seconds")
-            return None
+        out = model.generate(
+            **inputs, 
+            max_new_tokens=100,
+            temperature=0.7,
+            do_sample=True,
+            top_p=0.9,
+            repetition_penalty=1.1
+        )
         
         print(f"Output shape: {out.shape}")
         
@@ -297,70 +286,117 @@ def caption_video_content(video_frames: list, model, processor, model_type: str)
                 )[0]
     print(f"MODEL OUTPUT: {response}")
                 
-    # Extract only the actual caption, removing the prompt
-    prompt = "Describe this video in one short sentence. What do you see happening?"
-    if prompt in response:
-        description = response.split(prompt)[-1].strip()
+                # Extract the video caption from the response
+    if "ASSISTANT:" in response:
+                    description = response.split("ASSISTANT:")[-1].strip()
     else:
-        # If no prompt found, use the full response
-        description = response.strip()
+                    # If no ASSISTANT marker, use the full response
+                    description = response.strip()
 
     print(f"CAPTION GENERATED: {description}")
-    
-
                 
-    # Only return caption if we have a meaningful description
+                # Clean up the description - remove any non-English characters or very short responses
+    # Remove Chinese characters and other non-ASCII characters
+    description = re.sub(r'[^\x00-\x7F]+', '', description)
+    description = description.strip()
+                
+                # Only return caption if we have a meaningful description
     if description and len(description) > 10 and not description.isdigit():
         print(f"CAPTION GENERATED: {description}")
-        
         return description
+    else:
+        print(f"No meaningful caption generated (length: {len(description) if description else 0}), trying fallback prompt")
+        
+        # Try a simpler fallback prompt
+        try:
+            fallback_conversation = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "What do you see in this video?"},
+                        {"type": "video", "images": pil_images},
+                    ],
+                },
+            ]
+            
+            fallback_inputs = processor.apply_chat_template(
+                fallback_conversation,
+                num_frames=len(pil_images),
+                add_generation_prompt=True,
+                tokenize=True,
+                return_dict=True
+            )
+            
+            fallback_out = model.generate(
+                **fallback_inputs, 
+                max_new_tokens=50,
+                temperature=0.8,
+                do_sample=True
+            )
+            
+            fallback_response = processor.batch_decode(
+                fallback_out,
+                skip_special_tokens=True,
+                clean_up_tokenization_spaces=True
+            )[0]
+            
+            if "ASSISTANT:" in fallback_response:
+                fallback_description = fallback_response.split("ASSISTANT:")[-1].strip()
+            else:
+                fallback_description = fallback_response.strip()
+            
+            fallback_description = re.sub(r'[^\x00-\x7F]+', '', fallback_description)
+            fallback_description = fallback_description.strip()
+            
+            if fallback_description and len(fallback_description) > 5:
+                print(f"FALLBACK CAPTION: {fallback_description}")
+                return fallback_description
+                
+        except Exception as e:
+            print(f"Fallback prompt also failed: {e}")
+        
+        return None
+                
 
 
 def video_captioning_worker(model, processor, device, model_type):
     """Worker thread for continuous video captioning using Video-LLaVA Intel HF Optimum (OpenVINO)"""
     global current_frame, current_caption, processing_times
     
-    # Video buffer for Video-LLaVA analysis - increased for better video analysis
-    video_buffer = deque(maxlen=5)  # Increased to 5 frames for better video understanding
+    # Video buffer for Video-LLaVA analysis - larger buffer for video sequences
+    video_buffer = deque(maxlen=12)  # Store 12 frames for better video context
     last_processing_time = 0
 
     while not global_stop_event.is_set():
         with global_frame_lock:
-            frame = current_frame.copy() if current_frame is not None else None
+            frame = current_frame.copy()
         
-        # Check if frame is valid (not empty)
-        if frame is not None and frame.size > 0:
-            # Add frame to video buffer
-            video_buffer.append(frame)
+        # Add frame to video buffer
+        video_buffer.append(frame)
         
-        # Generate video captions every 15 seconds when we have enough frames for Video-LLaVA
+        # Generate video captions every 5 seconds when we have enough frames for Video-LLaVA
         current_time = time.time()
-        if current_time - last_processing_time >= 15 and len(video_buffer) >= 3:  # Require at least 3 frames, increased delay
+        if current_time - last_processing_time >= 5 and len(video_buffer) >= 4:
             start_time = time.time()
             
             # Create a copy of the video buffer for processing
             frames_to_process = list(video_buffer)
             
-            try:
-                caption = caption_video_content(frames_to_process, model, processor, model_type)
+            caption = caption_video_content(frames_to_process, model, processor, model_type)
+            
+            elapsed = time.time() - start_time
+            last_processing_time = current_time
+            
+            # Only update caption if we got a meaningful description
+            if caption is not None:
+                with global_result_lock:
+                    current_caption = caption
+                    processing_times.append(elapsed)
                 
-                elapsed = time.time() - start_time
-                last_processing_time = current_time
-                
-                # Only update caption if we got a meaningful description
-                if caption is not None:
-                    with global_result_lock:
-                        current_caption = caption
-                        processing_times.append(elapsed)
-                    
-                    print(f"CAPTION UPDATE: {caption}")
-                    print("Caption now available for display on video")
-                else:
-                    print("No meaningful caption generated, keeping previous caption")
-                    
-            except Exception as e:
-                print(f"Error in video captioning worker: {e}")
-                last_processing_time = current_time  # Reset timer to avoid rapid retries
+                print(f"CAPTION UPDATE: {caption}")
+                print("Caption now available for display on video")
+            else:
+                print("No meaningful caption generated, keeping previous caption")
         
         # Very short delay for continuous responsiveness
         time.sleep(0.05)
@@ -381,6 +417,9 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
     print("Using Video-LLaVA model specifically designed for video understanding with Intel optimizations")
     print("=" * 80)
     
+    # Setup Hugging Face authentication if needed
+    setup_huggingface_auth()
+    
     # Initialize models
     model, processor, device, model_type = None, None, None, None
     
@@ -390,7 +429,6 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
         
         if model_type not in ["intel_optimum_openvino"]:
             print("ERROR: Supported backend is Intel HF Optimum (OpenVINO)!")
-            print("This demo is designed to showcase Video-LLaVA performance with Intel optimizations")
             return
             
     except Exception as e:
@@ -415,23 +453,6 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
     title = "Continuous Video-LLaVA Video Captioning with OpenVINO Optimum - Press ESC to Exit"
     cv2.namedWindow(title, cv2.WINDOW_GUI_NORMAL | cv2.WINDOW_AUTOSIZE)
 
-    # Start video stream first to ensure it's working
-    player.start()
-    
-    # Wait a moment for video to initialize
-    time.sleep(1)
-    
-    # Check if video is working by getting first frame
-    test_frame = player.next()
-    if test_frame is None:
-        print("Error: Could not get video frames. Please check your webcam connection.")
-        player.stop()
-        return
-    
-    # Initialize current_frame with first frame
-    global current_frame
-    current_frame = test_frame
-
     # Start the video captioning inference thread
     worker = threading.Thread(
         target=video_captioning_worker,
@@ -439,6 +460,9 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
         daemon=True
     )
     worker.start()
+
+    # Start video stream
+    player.start()
     t1 = time.time()
     caption = current_caption
     
@@ -584,14 +608,9 @@ if __name__ == '__main__':
         default="llava-hf/LLaVA-NeXT-Video-7B-hf", 
         help="LLaVA-NeXT-Video model for Intel HF Optimum OpenVINO video captioning"
     )
-    parser.add_argument(
-        "--flip", 
-        action='store_true',
-        help="Mirror input video"
-    )
 
     args = parser.parse_args()
-    run(args.stream, args.model_name, args.flip) 
+    run(args.stream, args.model_name) 
 
 
 

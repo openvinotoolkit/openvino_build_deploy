@@ -3,6 +3,12 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+demos/the_narrator_demo/model/
+demos/the_narrator_demo/data/ 
+ai_ref_kits/agentic_llm_rag/models/
+ai_ref_kits/agentic_llm_rag/data/
+
+
 # C extensions
 *.so
 

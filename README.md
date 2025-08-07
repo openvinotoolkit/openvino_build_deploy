@@ -67,7 +67,7 @@ Hello, we're the AI Evangelist team at Intel! We’re a group of experts in AI s
 
 | |
 |---|
-|[![eze](https://media.licdn.com/dms/image/v2/D5603AQFc-mfVglvGvQ/profile-displayphoto-scale_200_200/B56Zg9NOZmHkAY-/0/1753373534303?e=1756339200&v=beta&t=GKXF2Qk9IiqLje648fWIJFm8k6PTTH97ifO2uxx-wWI)](https://www.linkedin.com/in/ezelanza/)|
+|[![eze](https://private-user-images.githubusercontent.com/40643766/470428718-7bb5db44-36ba-456d-848c-9f6937f70449.jpg?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3NTMzNzY2NTgsIm5iZiI6MTc1MzM3NjM1OCwicGF0aCI6Ii80MDY0Mzc2Ni80NzA0Mjg3MTgtN2JiNWRiNDQtMzZiYS00NTZkLTg0OGMtOWY2OTM3ZjcwNDQ5LmpwZz9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNTA3MjQlMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjUwNzI0VDE2NTkxOFomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPTBmOGZmN2MyOTFkOGFjODBiYzhmZjQxYmVjMzkzNjA3Mzc1YjE2MjhjMDc4NDk5MmI1NzRlODdlNjZhNzFlNmEmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.67lhGSjHRhocBQ1gOo8UG-oXPc0sulb2lv5efF0fRGo)](https://www.linkedin.com/in/ezelanza/)|
 |**[Ezequiel (Eze) Lanza](https://www.linkedin.com/in/ezelanza/)** <br> Open Source AI Evangelist <br> (Toronto, Canada) <br><br> MSc in Data Science <br> 10+ years as AI/ML Engineer <br> and  Open Source Evangelist|
 
 [//]: # (telemetry pixel)
