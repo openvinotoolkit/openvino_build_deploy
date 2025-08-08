@@ -1,0 +1,14 @@
+name: Hugging Face setup
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Login to HF
+      shell: bash
+      run: |
+        if [ -n "${{ secrets.HF_TOKEN }}" ]; then  
+          export PYTHONIOENCODING=utf-8
+          huggingface-cli login --token ${{ secrets.HF_TOKEN }}
+        else
+          echo "HF_TOKEN not set, continuing without login."
+        fi
