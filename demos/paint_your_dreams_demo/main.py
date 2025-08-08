@@ -64,6 +64,7 @@ flux_config = {
     "num_inference_steps": 4,
     "strength_value": 0.2,
     "lora_adapters": [
+        "prithivMLmods/Canopus-LoRA-Flux-FaceRealism"
     ]
 }
 
@@ -113,8 +114,7 @@ def load_lora_adapter(adapter_model_name: str, adapter_alpha: float) -> genai.Ad
     safetensors_file = next(adapter_model_dir.glob("*.safetensors"))
 
     adapter = genai.Adapter(safetensors_file)
-    adapter_config = genai.AdapterConfig()
-    adapter_config.add(adapter, adapter_alpha)
+    adapter_config = genai.AdapterConfig(adapter, adapter_alpha)
     return adapter_config
 
 
@@ -141,10 +141,10 @@ async def create_pipeline(model_name: str, device: str, size: int, adapter_model
 
     ov_pipeline.reshape(1, size, size, ov_pipeline.get_generation_config().guidance_scale)
     # todo improve the below
-    if adapter is None:
-        ov_pipeline.compile(device, config=ov_config)
-    else:
-        ov_pipeline.compile(device, config=ov_config, adapters=adapter)
+    if adapter is not None:
+        ov_config["adapters"] = adapter
+
+    ov_pipeline.compile(device, config=ov_config)
 
     return ov_pipeline
 
