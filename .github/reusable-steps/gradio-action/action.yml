@@ -65,7 +65,6 @@ runs:
         $psi.FileName = "python"
         $psi.Arguments = "${{ inputs.script }}"
         $psi.RedirectStandardOutput = $true
-        $psi.RedirectStandardError = $true
         $psi.UseShellExecute = $false
         $psi.CreateNoWindow = $true
         $psi.WorkingDirectory = "${{ inputs.project }}"
@@ -76,20 +75,15 @@ runs:
         $null = $proc.Start()
     
         $stdoutReader = $proc.StandardOutput
-        $stderrReader = $proc.StandardError
     
         while (-not $proc.HasExited) {
-            # Read all available lines from stdout without blocking
             while ($stdoutReader.Peek() -ge 0) {
                 $line = $stdoutReader.ReadLine()
                 $line | Tee-Object -FilePath gradio_stdout.txt -Append | Write-Output
-                if ($line -match "Demo is ready!") { $success = $true }
-            }
-            
-            while ($stderrReader.Peek() -ge 0) {
-                $line = $stderrReader.ReadLine()
-                $line | Tee-Object -FilePath gradio_stderr.txt -Append | Write-Output
-                if ($line -match "Demo is ready!") { $success = $true }
+                if ($line -match "Demo is ready!") {
+                    $success = $true
+                    break
+                }
             }
         
             if ($success) { break }
