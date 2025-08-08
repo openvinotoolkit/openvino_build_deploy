@@ -79,21 +79,26 @@ runs:
         $stderrReader = $proc.StandardError
     
         while (-not $proc.HasExited) {
-            while (-not $stdoutReader.EndOfStream) {
+            # Read all available lines from stdout without blocking
+            while ($stdoutReader.Peek() -ge 0) {
                 $line = $stdoutReader.ReadLine()
-                $line | Tee-Object -FilePath gradio_stdout.txt -Append
+                $line | Tee-Object -FilePath gradio_stdout.txt -Append | Write-Output
                 if ($line -match "Demo is ready!") { $success = $true }
             }
-            while (-not $stderrReader.EndOfStream) {
+            
+            while ($stderrReader.Peek() -ge 0) {
                 $line = $stderrReader.ReadLine()
-                $line | Tee-Object -FilePath gradio_stderr.txt -Append
+                $line | Tee-Object -FilePath gradio_stderr.txt -Append | Write-Output
                 if ($line -match "Demo is ready!") { $success = $true }
             }
+        
             if ($success) { break }
+        
             if (((Get-Date) - $start_time).TotalSeconds -ge $timeout) {
                 Write-Output "==> Timeout waiting for readiness."
                 break
             }
+        
             Start-Sleep -Milliseconds 200
         }
     
