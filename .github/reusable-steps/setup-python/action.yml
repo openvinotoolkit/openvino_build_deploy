@@ -33,6 +33,10 @@ runs:
         uv pip install unidic --system
         uv pip install git+https://github.com/myshell-ai/MeloTTS.git@5b538481e24e0d578955be32a95d88fcbde26dc8 --no-deps --system
         python -m unidic download
+    - name: Enable fast Hugging Face downloads
+      run: |
+        uv pip install hf_transfer
+        echo "HF_HUB_ENABLE_HF_TRANSFER=1" >> $GITHUB_ENV
     - name: Install dependencies
       shell: bash
       run: |
