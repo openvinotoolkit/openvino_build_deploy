@@ -12,48 +12,98 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Run Gradio App
+    - name: Run Gradio App (Linux/Mac)
+      if: ${{ runner.os != 'Windows' }}
       shell: bash
       run: |
         cd ${{ inputs.project }}
 
         if [ "${{ runner.os }}" == "Linux" ]; then
+          # Start the Gradio app in the background
           xvfb-run python ${{ inputs.script }} 2>&1 | tee gradio_log.txt &
         else
           python ${{ inputs.script }} 2>&1 | tee gradio_log.txt &
         fi
-        
-        # Give the app a moment to start
-        sleep 1
-        
-        # Debug: list python processes running your script
-        echo "Listing python processes running the script:"
-        ps aux | grep "[p]ython .*${{ inputs.script }}" || echo "No matching python processes found."
-        
-        # Find the PID of the python process running your script
-        app_pid=$(pgrep -f "python .*${{ inputs.script }}" | head -n1)
-        echo "App PID: $app_pid"
-        
-        # Wait for the specific log message or timeout
+
+        # Assign process ID
+        app_pid=$(ps aux | grep -i '[p]ython ${{ inputs.script }}' | awk '{print $2}')
+
+        # Wait for the specific log message
         timeout ${{ inputs.timeout }} bash -c "
           (tail -f gradio_log.txt &) | awk '/Demo is ready!/ {exit}'
         "
-        
+
+        # Capture the readiness status
         status=$?
-        echo "Timeout exit code: $status"
-        
-        # Show last lines of the log for debugging
-        echo "Last 20 lines of log:"
-        tail -n 20 gradio_log.txt
-        
-        # Stop the Gradio app if still running
-        if kill -0 $app_pid 2>/dev/null; then
-          echo "Stopping the Gradio app..."
-          pkill -P $app_pid || echo "No child processes to kill."
-          kill $app_pid || echo "App process already terminated."
-          wait $app_pid || echo "App process cleanup complete."
-        else
-          echo "App process $app_pid already stopped."
-        fi
-        
+
+        # Stop the Gradio app process
+        echo "Stopping the Gradio app..."
+        pkill -P $app_pid || echo "No child processes to kill."
+        kill $app_pid || echo "App process already terminated."
+        wait $app_pid || echo "App process cleanup complete."
+
+        # Exit with the readiness check status
         exit $status
+
+    - name: Run Gradio App (Windows)
+      if: ${{ runner.os == 'Windows' }}
+      shell: powershell
+      run: |
+        cd ${{ inputs.project }}
+        Write-Output "==> Running script: ${{ inputs.script }}"
+
+        $timeout = [int]${{ inputs.timeout }}
+        $start_time = Get-Date
+        $success = $false
+    
+        # Prepare log files
+        New-Item -Path gradio_stdout.txt -ItemType File -Force | Out-Null
+        New-Item -Path gradio_stderr.txt -ItemType File -Force | Out-Null
+    
+        # Setup process info
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = "python"
+        $psi.Arguments = "${{ inputs.script }}"
+        $psi.RedirectStandardOutput = $true
+        $psi.RedirectStandardError = $true
+        $psi.UseShellExecute = $false
+        $psi.CreateNoWindow = $true
+        $psi.WorkingDirectory = "${{ inputs.project }}"
+    
+        # Start the process
+        $proc = New-Object System.Diagnostics.Process
+        $proc.StartInfo = $psi
+        $null = $proc.Start()
+    
+        $stdoutReader = $proc.StandardOutput
+        $stderrReader = $proc.StandardError
+    
+        while (-not $proc.HasExited) {
+            while (-not $stdoutReader.EndOfStream) {
+                $line = $stdoutReader.ReadLine()
+                $line | Tee-Object -FilePath gradio_stdout.txt -Append
+                if ($line -match "Demo is ready!") { $success = $true }
+            }
+            while (-not $stderrReader.EndOfStream) {
+                $line = $stderrReader.ReadLine()
+                $line | Tee-Object -FilePath gradio_stderr.txt -Append
+                if ($line -match "Demo is ready!") { $success = $true }
+            }
+            if ($success) { break }
+            if (((Get-Date) - $start_time).TotalSeconds -ge $timeout) {
+                Write-Output "==> Timeout waiting for readiness."
+                break
+            }
+            Start-Sleep -Milliseconds 200
+        }
+    
+        if (-not $proc.HasExited) {
+            Write-Output "==> Stopping background process..."
+            $proc.Kill()
+        }
+    
+        Write-Output "==> Gradio Log Output:"
+        if (Test-Path gradio_stdout.txt) { Get-Content gradio_stdout.txt }
+        if (Test-Path gradio_stderr.txt) { Get-Content gradio_stderr.txt }
+    
+        if (-not $success) { exit 1 }
