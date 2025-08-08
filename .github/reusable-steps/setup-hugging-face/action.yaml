@@ -28,7 +28,7 @@ runs:
     - name: Enable fast Hugging Face downloads
       shell: bash
       run: |
-        uv pip install hf_transfer --system
+        uv pip install hf_transfer hf_xet --system
         echo "HF_HUB_ENABLE_HF_TRANSFER=1" >> $GITHUB_ENV
         echo "HF_HUB_DOWNLOAD_TIMEOUT=600" >> $GITHUB_ENV
     - name: Pre-download some HF models
