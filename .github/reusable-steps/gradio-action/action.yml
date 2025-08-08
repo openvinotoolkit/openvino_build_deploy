@@ -52,63 +52,66 @@ runs:
         cd ${{ inputs.project }}
         Write-Output "==> Running script: ${{ inputs.script }}"
 
-        $timeout = ${{ inputs.timeout }}
+        $timeout = [int]${{ inputs.timeout }}
         $start_time = Get-Date
         $success = $false
 
-        if ("${{ inputs.script }}" -like "*test.py") {
-          Write-Output "==> test.py detected. Running in foreground..."
+        # Prepare log files
+        New-Item -Path gradio_stdout.txt -ItemType File -Force | Out-Null
+        New-Item -Path gradio_stderr.txt -ItemType File -Force | Out-Null
 
-          $output = python "${{ inputs.script }}"
-          $output | Out-File -FilePath gradio_log.txt -Encoding utf8
-          Get-Content -Path gradio_log.txt
+        # Set up process start info
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = "python"
+        $psi.Arguments = "${{ inputs.script }}"
+        $psi.RedirectStandardOutput = $true
+        $psi.RedirectStandardError = $true
+        $psi.UseShellExecute = $false
+        $psi.CreateNoWindow = $true
 
-          if ($LASTEXITCODE -eq 0) {
-            $success = $true
-          } else {
-            Write-Error "Script exited with code $LASTEXITCODE"
-          }
+        # Start process
+        $proc = New-Object System.Diagnostics.Process
+        $proc.StartInfo = $psi
+        $null = $proc.Start()
 
-        } else {
-          Write-Output "==> Long-running app detected. Launching in background..."
-          $proc = Start-Process -NoNewWindow -FilePath "python" -ArgumentList "${{ inputs.script }}" `
-                   -RedirectStandardOutput gradio_stdout.txt `
-                   -RedirectStandardError gradio_stderr.txt `
-                   -PassThru
-          $app_pid = $proc.Id
-          Write-Output "==> App PID: $app_pid"
+        $stdoutReader = $proc.StandardOutput
+        $stderrReader = $proc.StandardError
 
-          while ($true) {
-            if (Test-Path gradio_stdout.txt) {
-              $content = Get-Content gradio_stdout.txt -Raw
-              if ($content -match "Demo is ready!") {
-                $success = $true
-                break
-              }
+        while (-not $proc.HasExited) {
+            while (-not $stdoutReader.EndOfStream) {
+                $line = $stdoutReader.ReadLine()
+                $line | Tee-Object -FilePath gradio_stdout.txt -Append
+                if ($line -match "Demo is ready!") {
+                    $success = $true
+                }
             }
-            if (Test-Path gradio_stderr.txt) {
-              $content = Get-Content gradio_stderr.txt -Raw
-              if ($content -match "Demo is ready!") {
-                $success = $true
-                break
-              }
+            while (-not $stderrReader.EndOfStream) {
+                $line = $stderrReader.ReadLine()
+                $line | Tee-Object -FilePath gradio_stderr.txt -Append
+                if ($line -match "Demo is ready!") {
+                    $success = $true
+                }
             }
+
+            if ($success) { break }
             if (((Get-Date) - $start_time).TotalSeconds -ge $timeout) {
-              Write-Output "==> Timeout waiting for readiness."
-              break
+                Write-Output "==> Timeout waiting for readiness."
+                break
             }
-            Start-Sleep -Seconds 2
-          }
+            Start-Sleep -Milliseconds 200
+        }
 
-          Write-Output "==> Stopping background process..."
-          Stop-Process -Id $app_pid -Force -ErrorAction SilentlyContinue
+        # Stop process if still running
+        if (-not $proc.HasExited) {
+            Write-Output "==> Stopping background process..."
+            $proc.Kill()
         }
 
         Write-Output "==> Gradio Log Output:"
-        if (Test-Path gradio_log.txt) { Get-Content gradio_log.txt }
         if (Test-Path gradio_stdout.txt) { Get-Content gradio_stdout.txt }
         if (Test-Path gradio_stderr.txt) { Get-Content gradio_stderr.txt }
 
         if (-not $success) {
           exit 1
         }
+
