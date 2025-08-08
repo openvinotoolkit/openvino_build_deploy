@@ -62,6 +62,8 @@ jobs:
           python: ${{ matrix.python }}
           project: ${{ matrix.subproject }}
       - uses: ./.github/reusable-steps/setup-hugging-face
+        with:
+          hf_token: ${{ secrets.HF_TOKEN }}
       - uses: ./.github/reusable-steps/gradio-action
         with:
           script: main.py
