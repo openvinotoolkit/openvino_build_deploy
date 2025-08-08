@@ -39,6 +39,9 @@ jobs:
         uses: ./.github/reusable-steps/categorize-projects
         with:
           subprojects: ${{ steps.find-updates.outputs.subproject_dirs }}
+          
+  download-hf-models:
+    uses: ./.github/workflows/hf-download-job.yml
 
   gradio:
     needs: find-subprojects
