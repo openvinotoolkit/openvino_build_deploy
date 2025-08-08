@@ -45,7 +45,7 @@ runs:
         # Exit with the readiness check status
         exit $status
 
-     - name: Run Gradio App (Windows)
+   - name: Run Gradio App (Windows)
       if: ${{ runner.os == 'Windows' }}
       shell: powershell
       run: |
