@@ -51,7 +51,7 @@ runs:
       run: |
         cd ${{ inputs.project }}
         Write-Output "==> Running script: ${{ inputs.script }}"
-    
+
         $timeout = [int]${{ inputs.timeout }}
         $start_time = Get-Date
         $success = $false
