@@ -283,6 +283,7 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
                     with global_result_lock:
                         processing_times.clear()
 
+    print("Finishing")
     # stop the stream
     player.stop()
     global_stop_event.set()
