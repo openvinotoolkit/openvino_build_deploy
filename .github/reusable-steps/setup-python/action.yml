@@ -36,7 +36,7 @@ runs:
     - name: Enable fast Hugging Face downloads
       shell: bash
       run: |
-        uv pip install hf_transfer
+        uv pip install hf_transfer --system
         echo "HF_HUB_ENABLE_HF_TRANSFER=1" >> $GITHUB_ENV
     - name: Install dependencies
       shell: bash
