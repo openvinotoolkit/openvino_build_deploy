@@ -28,7 +28,7 @@ runs:
         
         # Debug: list python processes running your script
         echo "Listing python processes running the script:"
-        ps aux | grep "[p]ython .*${{ inputs.script }}"
+        ps aux | grep "[p]ython .*${{ inputs.script }}" || echo "No matching python processes found."
         
         # Find the PID of the python process running your script
         app_pid=$(pgrep -f "python .*${{ inputs.script }}" | head -n1)
