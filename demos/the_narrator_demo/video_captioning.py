@@ -10,10 +10,11 @@ import getpass
 
 import cv2
 import numpy as np
-import re
 from transformers import AutoProcessor
 from optimum.intel.openvino import OVModelForVisualCausalLM
+from transformers import LlavaNextVideoProcessor
 from huggingface_hub import login
+from optimum.intel import OVQuantizationConfig, OVWeightQuantizationConfig, OVPipelineQuantizationConfig
 
 SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "utils")
 sys.path.append(os.path.dirname(SCRIPT_DIR))
@@ -82,53 +83,37 @@ def download_and_convert_llava_video(model_name: str) -> None:
     output_dir = model_dir
     output_dir.mkdir(parents=True, exist_ok=True)
     
-    print(f"Downloading pre-converted LLaVA-NeXT-Video OpenVINO model...")
-    
-    # Use the pre-converted OpenVINO model from Hugging Face
-    openvino_model_id = "ezelanza/llava-next-video-openvino-int8"
-    
-    print("Step 1: Downloading pre-converted OpenVINO model...")
-    
-    try:
-        model = OVModelForVisualCausalLM.from_pretrained(openvino_model_id)
-        print("Step 2: Saving OpenVINO model locally...")
-        model.save_pretrained(output_dir)
-        print("OpenVINO model saved successfully")
-        
-        print("Step 3: Loading processor...")
-        processor = AutoProcessor.from_pretrained(model_name)
-        processor.save_pretrained(output_dir)
-        print("Processor loaded and saved successfully")
-        
-        print(f"LLaVA-NeXT-Video model successfully downloaded and saved to {output_dir}")
-        
-    except Exception as e:
-        print(f"Failed to download pre-converted model: {e}")
-        print("Falling back to local conversion...")
-        
-        # Fallback to local conversion if download fails
-        print("Step 1: Loading LLaVA-NeXT-Video model...")
-        
-        model = OVModelForVisualCausalLM.from_pretrained(
-                    model_name,
-                    export=True,
-                    trust_remote_code=True,
-                    library_name="transformers"
-                    )
-        
-        print("Step 2: Saving OpenVINO model...")
-        model.save_pretrained(output_dir)
+    print(f"Downloading LLaVA-NeXT-Video OpenVINO model...")
 
-        print("OpenVINO model saved successfully")
-            
-        print("Step 3: Loading processor...")
-            
-        processor = AutoProcessor.from_pretrained(model_name)
-        processor.save_pretrained(output_dir)
+    # pipeline quantization: applying different quantization on each component
+    # dataset, num_samples = "contextual", 50
+    
+    #ppl_q = OVPipelineQuantizationConfig(
+    #    quantization_configs={
+    #        "lm_model": OVQuantizationConfig(bits=8),
+    #        "multimodal_model": OVWeightQuantizationConfig(bits=8),
+    #        "text_embeddings_model": OVWeightQuantizationConfig(bits=8),
+    #        "vision_embeddings_model": OVWeightQuantizationConfig(bits=8),
+    #        "vision_model": OVWeightQuantizationConfig(bits=8)
+    #    },
+    #    dataset=dataset,
+    #    num_samples=num_samples,
+    #)
 
-        print("Processor loaded and saved successfully")
-            
-        print(f"LLaVA-NeXT-Video model successfully converted to OpenVINO Optimum and saved to {output_dir}")
+    # Quantize and export directly from the model id
+    q_model = OVModelForVisualCausalLM.from_pretrained(
+        model_name,
+        export=True,
+        trust_remote_code=True,
+        quantization_config=OVWeightQuantizationConfig(bits=8),
+    )
+    q_model.save_pretrained(output_dir)
+
+    # Save processor
+    processor = LlavaNextVideoProcessor.from_pretrained(model_name)
+    processor.save_pretrained(output_dir)
+
+    print(f"LLaVA-NeXT-Video model successfully downloaded and saved to {output_dir}")
 
 
 def load_llava_video_models(model_name: str, device: str = "CPU") -> tuple:
@@ -153,71 +138,54 @@ def load_llava_video_models(model_name: str, device: str = "CPU") -> tuple:
     return model, processor, device, "intel_optimum_openvino"
     
 
-def capture_webcam_to_mp4(output_path="output.mp4", duration_seconds=3, fps=4, width=36, height=36):
-    """Capture frames from webcam and save as an MP4 video."""
-    cap = cv2.VideoCapture(0)
-    
-    if not cap.isOpened():
-        print("Error: Could not open webcam")
-        return False
-    
-    # Set resolution to reduce processing time
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-    
-    # Ensure color capture
-    cap.set(cv2.CAP_PROP_CONVERT_RGB, 1.0)
-    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
-    
-    # Verify the resolution was set
-    actual_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    actual_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    print(f"Webcam resolution set to: {actual_width}x{actual_height}")
+def capture_webcam_to_mp4(output_path: str = "output.mp4", duration_seconds: int = 4, fps: int = 2, use_existing: bool = False) -> bool:
 
-    # Define the codec and create VideoWriter object
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # Codec for .mp4
-    out = cv2.VideoWriter(output_path, fourcc, fps, (actual_width, actual_height))
-    
-    total_frames = int(duration_seconds * fps)
-    frame_interval = 1.4 / fps  # Time between frames
-    
-    print(f"Capturing {total_frames} frames over {duration_seconds} seconds...")
-    print("Starting in 3 seconds...")
-    
-    # Countdown
-    for i in range(3, 0, -1):
-        print(f"{i}...")
-        time.sleep(1)
-    
-    print("Starting frame capture...")
-    start_time = time.time()
-    
-    for i in range(total_frames):
-        ret, frame = cap.read()
-        if not ret:
-            print(f"Warning: Frame {i} not captured correctly.")
-            break
-        
-        # Ensure frame is in BGR color format
-        if len(frame.shape) == 3:
-            frame_resized = cv2.resize(frame, (actual_width, actual_height))
-        else:
-            # Convert grayscale to BGR
-            frame_resized = cv2.cvtColor(cv2.resize(frame, (actual_width, actual_height)), cv2.COLOR_GRAY2BGR)
-        
-        out.write(frame_resized)  # Write frame to video file
-        
-        elapsed_time = time.time() - start_time
-        print(f"Captured frame {i+1}/{total_frames} at {elapsed_time:.1f}s")
-        
-        # Wait to maintain fps timing
-        if i < total_frames - 1:
+    def _ensure_bgr(img):
+        if img is None:
+            return None
+        if img.ndim == 2 or (img.ndim == 3 and img.shape[2] == 1):
+            return cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+        return img
+
+    # Reuse already-open webcam stream via globals
+    if use_existing:
+        print("Reusing existing webcam stream")
+        global current_frame, global_frame_lock
+        # Wait briefly for a valid frame
+        t0 = time.time()
+        initial = None
+        while time.time() - t0 < 2.0 and initial is None:
+            with global_frame_lock:
+                initial = current_frame.copy() if current_frame is not None else None
+            if initial is None:
+                time.sleep(0.02)
+        if initial is None:
+            print("Error: No frames available from existing stream")
+            return False
+
+        initial = _ensure_bgr(initial)
+        h, w = initial.shape[:2]
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        out = cv2.VideoWriter(output_path, fourcc, fps, (w, h))
+
+        total_frames = int(duration_seconds * fps)
+        frame_interval = 1.0 / max(fps, 1)
+        start_time = time.time()
+        print(f"Capturing {total_frames} frames over {duration_seconds} seconds...")
+        for i in range(total_frames):
+            with global_frame_lock:
+                frame = current_frame.copy() if current_frame is not None else None
+            if frame is not None:
+                frame = _ensure_bgr(frame)
+                if frame.shape[1] != w or frame.shape[0] != h:
+                    frame = cv2.resize(frame, (w, h))
+                out.write(frame)
+                elapsed = time.time() - start_time
+                print(f"Captured frame {i+1}/{total_frames} at {elapsed:.1f}s (existing stream)")
             time.sleep(frame_interval)
-    
-    cap.release()
-    out.release()
-    print(f"Capture complete! Video saved to: {output_path}")
-    return True
+        out.release()
+        print(f"Capture complete! Video saved to: {output_path}")
+        return True
 
 
 def caption_video_content(video_frames: list, model, processor, model_type: str) -> str:
@@ -229,90 +197,50 @@ def caption_video_content(video_frames: list, model, processor, model_type: str)
     print(f"PROCESSING: Generating video caption with {len(video_frames)} frames using Video-LLaVA Intel HF Optimum (OpenVINO)")
 
     output_path="inference.mp4"
-    capture_webcam_to_mp4(output_path,duration_seconds=5,fps=10)
+    capture_webcam_to_mp4(output_path, duration_seconds=3, fps=8, use_existing=True)
     
-
+    conversation_webcam = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "Describe what you see in the video,describe any actions or objects you see in no more than 10 words please!!"},
+                {"type": "video", "path": output_path},
+            ],
+        },
+    ]
 
     try:
-        # Use the processor's tokenizer directly
-        text = "Describe this video in one short sentence. What do you see happening?"
-        inputs = processor.tokenizer(
-            text,
-            return_tensors="pt",
-            padding=True,
-            truncation=True
-        )
-        
-        print(f"Input shape: {inputs['input_ids'].shape if 'input_ids' in inputs else 'No input_ids'}")
-        
-        # Use threading timeout instead of signal for worker threads
-        import threading
-        import queue
-        
-        result_queue = queue.Queue()
-        
-        def generate_with_timeout():
-            try:
-                # Pass inputs directly to model.generate
-                out = model.generate(
-                    **inputs, 
-                    max_new_tokens=30,  # Further reduced for faster processing
-                    temperature=0.2,    # Lower temperature for more focused output
-                    do_sample=True,
-                    top_p=0.7,          # Lower top_p for more focused sampling
-                    repetition_penalty=1.3,  # Higher repetition penalty
-                    pad_token_id=processor.tokenizer.eos_token_id,
-                    use_cache=False
-                )
-                result_queue.put(("success", out))
-            except Exception as e:
-                result_queue.put(("error", e))
-        
-        # Start generation in a separate thread with timeout
-        generation_thread = threading.Thread(target=generate_with_timeout)
-        generation_thread.daemon = True
-        generation_thread.start()
-        
-        # Wait for result with timeout
-        try:
-            result_type, result = result_queue.get(timeout=60)
-            if result_type == "success":
-                out = result
-            else:
-                raise result
-        except queue.Empty:
-            print("Generation timed out after 60 seconds")
-            return None
-        
-        print(f"Output shape: {out.shape}")
-        
-    except Exception as e:
-        print(f"Error during generation: {e}")
-        return None
+        inputs_webcam = processor.apply_chat_template(
+            conversation_webcam,
+            num_frames=len(video_frames),
+            add_generation_prompt=True,
+            tokenize=True,
+            return_dict=True
+            )
 
-    response = processor.batch_decode(
-                    out,
+        out_webcam = model.generate(**inputs_webcam, max_new_tokens=60)
+
+        response = processor.batch_decode(
+                    out_webcam,
                     skip_special_tokens=True,
                     clean_up_tokenization_spaces=True
                 )[0]
+    except Exception as e:
+        print(f"Error during generation: {e}")
+        return None
+ 
     print(f"MODEL OUTPUT: {response}")
                 
-    # Extract only the actual caption, removing the prompt
-    prompt = "Describe this video in one short sentence. What do you see happening?"
-    if prompt in response:
-        description = response.split(prompt)[-1].strip()
+    # Extract assistant text only if marker is present
+    if "ASSISTANT:" in response:
+        description = response.split("ASSISTANT:")[-1].strip()
     else:
-        # If no prompt found, use the full response
         description = response.strip()
 
     print(f"CAPTION GENERATED: {description}")
     
-
-                
     # Only return caption if we have a meaningful description
     if description and len(description) > 10 and not description.isdigit():
-        print(f"CAPTION GENERATED: {description}")
-        
         return description
 
 
@@ -321,7 +249,7 @@ def video_captioning_worker(model, processor, device, model_type):
     global current_frame, current_caption, processing_times
     
     # Video buffer for Video-LLaVA analysis - increased for better video analysis
-    video_buffer = deque(maxlen=5)  # Increased to 5 frames for better video understanding
+    video_buffer = deque(maxlen=3)  # Increased to 5 frames for better video understanding
     last_processing_time = 0
 
     while not global_stop_event.is_set():
@@ -519,15 +447,19 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
 
             # Draw video subtitles with better fitting (only if we have a caption)
             if display_caption:
-                utils.draw_text(
-                    frame, 
-                    text=display_caption, 
-                    point=(f_width // 2, subtitle_y), 
-                    center=True, 
-                    font_scale=adaptive_font_scale,  # Smaller adaptive font scale
-                    font_color=(255, 255, 255),  # White text
-                    with_background=True  # Black background for readability
-                )
+                lines = display_caption.split("\n")
+                line_step = max(28, int(36 * adaptive_font_scale))
+                start_y = subtitle_y - (len(lines) - 1) * line_step // 2
+                for i, line in enumerate(lines):
+                    utils.draw_text(
+                        frame,
+                        text=line,
+                        point=(f_width // 2, start_y + i * line_step),
+                        center=True,
+                        font_scale=adaptive_font_scale,
+                        font_color=(255, 255, 255),
+                        with_background=True,
+                    )
             
             # Draw compact status information - smaller and positioned better
             utils.draw_text(
