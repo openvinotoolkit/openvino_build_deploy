@@ -34,20 +34,21 @@ global_frame_lock = threading.Lock()
 global_result_lock = threading.Lock()
 
 
- print("Entering function: convert_vision_model")
+
 def convert_vision_model(vision_model: BlipVisionModel, processor: BlipProcessor, output_dir: Path) -> None:
+    print("Entering function: convert_vision_model")
     vision_model.eval()
 
     inputs = processor(np.zeros((512, 512, 3), dtype=np.uint8), "sample string", return_tensors="pt")
 
     with torch.no_grad():
-         print("Converting model with ov.convert_model")
+        print("Converting model with ov.convert_model")
         ov_vision_model = ov.convert_model(vision_model, example_input=inputs["pixel_values"])
     ov.save_model(ov_vision_model, output_dir / "blip_vision_model.xml")
 
 
- print("Entering function: convert_decoder_model")
 def convert_decoder_model(text_decoder: BlipTextLMHeadModel, output_dir: Path) -> None:
+    print("Entering function: convert_decoder_model")
     text_decoder.eval()
 
     # prepare example inputs
@@ -68,14 +69,14 @@ def convert_decoder_model(text_decoder: BlipTextLMHeadModel, output_dir: Path) -
 
     text_decoder.config.torchscript = True
     with torch.no_grad():
-         print("Converting model with ov.convert_model")
+        print("Converting model with ov.convert_model")
         ov_text_decoder = ov.convert_model(text_decoder, example_input=input_dict)
     ov.save_model(ov_text_decoder, output_dir / "blip_text_decoder_with_past.xml")
 
 
- print("Entering function: download_and_convert_model")
- print("Converting model with ov.convert_model")
 def download_and_convert_model(model_name: str) -> None:
+    print("Entering function: download_and_convert_model")
+    print("Converting model with ov.convert_model")
     output_dir = MODEL_DIR / model_name
 
     processor = BlipProcessor.from_pretrained(model_name, use_fast=True)
@@ -88,15 +89,16 @@ def download_and_convert_model(model_name: str) -> None:
     convert_decoder_model(blip_model.text_decoder, output_dir)
 
 
- print("Entering function: load_models")
- print("Calling load_models")
+
 def load_models(model_name: str, device: str = "AUTO") -> tuple[ov.CompiledModel, BlipTextLMHeadModel, BlipProcessor]:
+    print("Entering function: load_models")
+    print("Calling load_models")
     model_dir = MODEL_DIR / model_name
     vision_model_path = model_dir / "blip_vision_model.xml"
     text_decoder_path = model_dir / "blip_text_decoder_with_past.xml"
 
     if not vision_model_path.exists() or not text_decoder_path.exists():
-         print("Converting model with ov.convert_model")
+        print("Converting model with ov.convert_model")
         download_and_convert_model(model_name)
 
     core = ov.Core()
@@ -113,8 +115,9 @@ def load_models(model_name: str, device: str = "AUTO") -> tuple[ov.CompiledModel
     return vision_model, text_model, processor
 
 
- print("Entering function: init_past_inputs")
+
 def init_past_inputs(model_inputs: list) -> list[ov.Tensor]:
+    print("Entering function: init_past_inputs")
     past_inputs = []
     for input_tensor in model_inputs[4:]:
         partial_shape = input_tensor.partial_shape
@@ -124,10 +127,11 @@ def init_past_inputs(model_inputs: list) -> list[ov.Tensor]:
     return past_inputs
 
 
- print("Entering function: text_decoder_forward")
 def text_decoder_forward(ov_text_decoder_with_past: ov.CompiledModel, input_ids: torch.Tensor, attention_mask: torch.Tensor,
                          past_key_values: list[ov.Tensor], encoder_hidden_states: torch.Tensor, encoder_attention_mask: torch.Tensor,
                          **kwargs) -> CausalLMOutputWithCrossAttentions:
+                          
+    print("Entering function: text_decoder_forward")
     inputs = [input_ids, attention_mask, encoder_hidden_states, encoder_attention_mask]
     if past_key_values is None:
         inputs.extend(init_past_inputs(ov_text_decoder_with_past.inputs))
@@ -142,9 +146,10 @@ def text_decoder_forward(ov_text_decoder_with_past: ov.CompiledModel, input_ids:
                                              attentions=None, cross_attentions=None)
 
 
- print("Entering function: generate_caption")
- print("Calling generate_caption")
+ 
 def generate_caption(image: np.array, vision_model: ov.CompiledModel, text_decoder: BlipTextLMHeadModel, processor: BlipProcessor) -> str:
+    print("Entering function: generate_caption")
+    print("Calling generate_caption")
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     pixel_values = np.array(processor(image).pixel_values)
     image_embeds = vision_model(np.array(pixel_values))[vision_model.output(0)]
@@ -162,8 +167,9 @@ def generate_caption(image: np.array, vision_model: ov.CompiledModel, text_decod
     return processor.decode(outputs[0], skip_special_tokens=True)
 
 
- print("Entering function: inference_worker")
+
 def inference_worker(vision_model, text_decoder, processor):
+    print("Entering function: inference_worker")
     global current_frame, current_caption, processing_times
 
     while not global_stop_event.is_set():
@@ -171,7 +177,7 @@ def inference_worker(vision_model, text_decoder, processor):
             frame = current_frame.copy()
 
         start_time = time.perf_counter()
-         print("Calling generate_caption")
+        print("Calling generate_caption")
         caption = generate_caption(frame, vision_model, text_decoder, processor)
         elapsed = time.perf_counter() - start_time
 
@@ -180,8 +186,9 @@ def inference_worker(vision_model, text_decoder, processor):
             processing_times.append(elapsed)
 
 
- print("Entering function: run")
+
 def run(video_path: str, model_name: str, flip: bool = True) -> None:
+    print("Entering function: run")
     global current_frame, current_caption, processing_times
     # set up logging
     log.getLogger().setLevel(log.INFO)
@@ -190,7 +197,7 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
     device_mapping = utils.available_devices(exclude=["NPU"])
     device_type = "AUTO"
 
-     print("Calling load_models")
+    print("Calling load_models")
     vision_model, text_decoder, processor = load_models(model_name, device_type)
 
     # initialize video player to deliver frames
@@ -206,7 +213,7 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
     cv2.setWindowProperty(title, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
     # Start the inference thread
-     print("Starting inference thread")
+    print("Starting inference thread")
     worker = threading.Thread(
         target=inference_worker,
         args=(vision_model, text_decoder, processor),
@@ -215,13 +222,13 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
     worker.start()
 
     # start a video stream
-     print("Starting video player")
+    print("Starting video player")
     player.start()
     t1 = time.time()
     caption = current_caption
     while True:
         # Grab the frame.
-         print("Fetching next frame")
+        print("Fetching next frame")
         frame = player.next()
         if frame is None:
             print("Source ended")
@@ -252,7 +259,7 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
 
         utils.draw_ov_watermark(frame)
         # show the output live
-         print("Displaying frame")
+        print("Displaying frame")
         cv2.imshow(title, frame)
         key = cv2.waitKey(1)
         # escape = 27 or 'q' to close the app
@@ -269,10 +276,10 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
                     global_stop_event.clear()
 
                     # Recompile models for the new device
-                     print("Calling load_models")
+                    print("Calling load_models")
                     vision_model, text_decoder, processor = load_models(model_name, device_type)
                     # Start a new inference worker
-                     print("Starting inference thread")
+                    print("Starting inference thread")
                     worker = threading.Thread(
                         target=inference_worker,
                         args=(vision_model, text_decoder, processor),
