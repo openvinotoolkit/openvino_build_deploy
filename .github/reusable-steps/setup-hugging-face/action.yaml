@@ -1,5 +1,11 @@
 name: Hugging Face setup
 
+inputs:
+  hf_token:
+    description: 'Hugging Face token'
+    required: true
+    default: ''
+
 runs:
   using: 'composite'
   steps:
@@ -10,10 +16,12 @@ runs:
         key: hf-model-${{ runner.os }}-${{ hashFiles('**/requirements.txt') }}
     - name: Login to HF
       shell: bash
+      env:
+        HF_TOKEN: ${{ inputs.hf_token }}
       run: |
-        if [ -n "${{ secrets.HF_TOKEN }}" ]; then  
+        if [ -n "$HF_TOKEN" ]; then  
           export PYTHONIOENCODING=utf-8
-          huggingface-cli login --token ${{ secrets.HF_TOKEN }}
+          huggingface-cli login --token "$HF_TOKEN"
         else
           echo "HF_TOKEN not set, continuing without login."
         fi
