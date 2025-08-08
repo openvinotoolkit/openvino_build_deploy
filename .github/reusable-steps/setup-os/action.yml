@@ -19,11 +19,15 @@ runs:
       if: runner.os == 'macOS'
       shell: bash
       run: |
-        xcrun simctl delete all
-        sudo rm -rf /Applications/Xcode.app
-        sudo rm -rf /Applications/Xcode_*
-        rm -rf ~/Library/Developer/Xcode/DerivedData
-        rm -rf ~/Library/Caches/com.apple.dt.Xcode
+        df -h /
+        sudo rm -rf ~/Library/Developer/Xcode/DerivedData
+        sudo rm -rf ~/Library/Developer/CoreSimulator
+        sudo rm -rf /Applications/Xcode*.app
+        brew cleanup -s
+        rm -rf "$(brew --cache)"
+        docker system prune -af || true
+        rm -rf ~/.npm ~/.cache/yarn ~/Library/Caches/pip
+        df -h /
     - name: Install OpenCL, EGL and uv (Ubuntu)
       if: runner.os == 'Linux'
       shell: bash
