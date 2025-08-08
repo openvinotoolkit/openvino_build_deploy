@@ -18,28 +18,42 @@ runs:
         cd ${{ inputs.project }}
 
         if [ "${{ runner.os }}" == "Linux" ]; then
-          # Start the Gradio app in the background
           xvfb-run python ${{ inputs.script }} 2>&1 | tee gradio_log.txt &
         else
           python ${{ inputs.script }} 2>&1 | tee gradio_log.txt &
         fi
-
-        # Assign process ID
-        app_pid=$(ps aux | grep -i '[p]ython ${{ inputs.script }}' | awk '{print $2}')
-
-        # Wait for the specific log message
+        
+        # Give the app a moment to start
+        sleep 1
+        
+        # Debug: list python processes running your script
+        echo "Listing python processes running the script:"
+        ps aux | grep "[p]ython .*${{ inputs.script }}"
+        
+        # Find the PID of the python process running your script
+        app_pid=$(pgrep -f "python .*${{ inputs.script }}" | head -n1)
+        echo "App PID: $app_pid"
+        
+        # Wait for the specific log message or timeout
         timeout ${{ inputs.timeout }} bash -c "
           (tail -f gradio_log.txt &) | awk '/Demo is ready!/ {exit}'
         "
-
-        # Capture the readiness status
+        
         status=$?
-
-        # Stop the Gradio app process
-        echo "Stopping the Gradio app..."
-        pkill -P $app_pid || echo "No child processes to kill."
-        kill $app_pid || echo "App process already terminated."
-        wait $app_pid || echo "App process cleanup complete."
-
-        # Exit with the readiness check status
+        echo "Timeout exit code: $status"
+        
+        # Show last lines of the log for debugging
+        echo "Last 20 lines of log:"
+        tail -n 20 gradio_log.txt
+        
+        # Stop the Gradio app if still running
+        if kill -0 $app_pid 2>/dev/null; then
+          echo "Stopping the Gradio app..."
+          pkill -P $app_pid || echo "No child processes to kill."
+          kill $app_pid || echo "App process already terminated."
+          wait $app_pid || echo "App process cleanup complete."
+        else
+          echo "App process $app_pid already stopped."
+        fi
+        
         exit $status
