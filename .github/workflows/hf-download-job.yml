@@ -1,38 +1,36 @@
-name: Hugging Face setup
+name: Hugging Face model pre downloading
 
-inputs:
-  hf_token:
-    description: 'Hugging Face token'
-    required: true
-    default: ''
+on:
+  workflow_call:
 
-runs:
-  using: 'composite'
-  steps:
-    - name: Cache Hugging Face models
-      uses: actions/cache@v4
-      with:
-        path: ~/.cache/huggingface
-        key: hf-model-${{ runner.os }}-${{ hashFiles('**/requirements.txt') }}
-    - name: Login to HF
-      shell: bash
-      env:
-        HF_TOKEN: ${{ inputs.hf_token }}
-      run: |
-        if [ -n "$HF_TOKEN" ]; then  
-          export PYTHONIOENCODING=utf-8
-          huggingface-cli login --token "$HF_TOKEN"
-        else
-          echo "HF_TOKEN not set, continuing without login."
-        fi
-    - name: Enable fast Hugging Face downloads
-      shell: bash
-      run: |
-        uv pip install hf_transfer hf_xet --system
-        echo "HF_HUB_ENABLE_HF_TRANSFER=1" >> $GITHUB_ENV
-        echo "HF_HUB_DOWNLOAD_TIMEOUT=600" >> $GITHUB_ENV
-    - name: Pre-download some HF models
-      shell: bash
-      run: |
-        uv pip install huggingface_hub --system
-        python -c "from huggingface_hub import snapshot_download; snapshot_download('meta-llama/Llama-3.2-3B-Instruct', resume_download=True)"
+jobs:
+  download-models:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cache Hugging Face models
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-model-${{ runner.os }}-${{ hashFiles('**/requirements.txt') }}
+      - name: Login to HF
+        shell: bash
+        env:
+          HF_TOKEN: ${{ inputs.hf_token }}
+        run: |
+          if [ -n ${{ secrets.HF_TOKEN }} ]; then  
+            export PYTHONIOENCODING=utf-8
+            huggingface-cli login --token ${{ secrets.HF_TOKEN }}
+          else
+            echo "HF_TOKEN not set, continuing without login."
+          fi
+      - name: Enable fast Hugging Face downloads
+        shell: bash
+        run: |
+          uv pip install hf_transfer hf_xet --system
+          echo "HF_HUB_ENABLE_HF_TRANSFER=1" >> $GITHUB_ENV
+          echo "HF_HUB_DOWNLOAD_TIMEOUT=600" >> $GITHUB_ENV
+      - name: Pre-download some HF models
+        shell: bash
+        run: |
+          uv pip install huggingface_hub --system
+          python -c "from huggingface_hub import snapshot_download; snapshot_download('meta-llama/Llama-3.2-3B-Instruct', resume_download=True)"
