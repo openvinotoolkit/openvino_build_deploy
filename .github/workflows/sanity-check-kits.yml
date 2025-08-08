@@ -41,8 +41,15 @@ jobs:
         with:
           subprojects: ${{ steps.find-updates.outputs.subproject_dirs }}
 
-  gradio:
+  download-hf-models:
+    uses: ./.github/workflows/hf-download-job.yml
     needs: find-subprojects
+    if: ${{ needs.find-subprojects.outputs.gradio != '[]' }}
+
+  gradio:
+    needs: 
+      - find-subprojects
+      - download-hf-models
     if: ${{ needs.find-subprojects.outputs.gradio != '[]' }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -62,15 +69,9 @@ jobs:
         with:
           python: ${{ matrix.python }}
           project: ${{ matrix.subproject }}
-      - name: Login to HF
-        shell: bash
-        run: |
-          if [ -n "${{ secrets.HF_TOKEN }}" ]; then
-            export PYTHONIOENCODING=utf-8
-            huggingface-cli login --token ${{ secrets.HF_TOKEN }}
-          else
-            echo "HF_TOKEN not set, continuing without login."
-          fi
+      - uses: ./.github/reusable-steps/setup-hugging-face
+        with:
+          hf_token: ${{ secrets.HF_TOKEN }}
       - name: Check if test file exists
         id: determine-script
         shell: bash
