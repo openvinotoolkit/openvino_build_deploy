@@ -49,10 +49,8 @@ runs:
       if: ${{ runner.os == 'Windows' }}
       shell: powershell
       run: |
-        Write-Output "$PWD"
         cd ${{ inputs.project }}
         Write-Output "==> Running script: ${{ inputs.script }}"
-        Write-Output "$PWD"
     
         $timeout = [int]${{ inputs.timeout }}
         $start_time = Get-Date
@@ -70,6 +68,7 @@ runs:
         $psi.RedirectStandardError = $true
         $psi.UseShellExecute = $false
         $psi.CreateNoWindow = $true
+        $psi.WorkingDirectory = "${{ inputs.project }}"
     
         # Start the process
         $proc = New-Object System.Diagnostics.Process
