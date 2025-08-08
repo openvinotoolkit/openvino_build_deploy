@@ -47,11 +47,11 @@ runs:
 
     - name: Run Gradio App (Windows)
       if: ${{ runner.os == 'Windows' }}
-      shell: powershell
+      shell: pwsh
       run: |
         cd ${{ inputs.project }}
         Write-Output "==> Running script: ${{ inputs.script }}"
-
+    
         $timeout = [int]${{ inputs.timeout }}
         $start_time = Get-Date
         $success = $false
@@ -65,44 +65,59 @@ runs:
         $psi.FileName = "python"
         $psi.Arguments = "${{ inputs.script }}"
         $psi.RedirectStandardOutput = $true
+        $psi.RedirectStandardError = $true
         $psi.UseShellExecute = $false
         $psi.CreateNoWindow = $true
-        $psi.WorkingDirectory = "${{ inputs.project }}"
+        $psi.WorkingDirectory = (Get-Location).Path
     
-        # Start the process
         $proc = New-Object System.Diagnostics.Process
         $proc.StartInfo = $psi
-        $null = $proc.Start()
     
-        $stdoutReader = $proc.StandardOutput
+        # Event handlers for async output reading
+        $stdOutBuilder = New-Object System.Text.StringBuilder
+        $stdErrBuilder = New-Object System.Text.StringBuilder
     
-        while (-not $proc.HasExited) {
-            while ($stdoutReader.Peek() -ge 0) {
-                $line = $stdoutReader.ReadLine()
+        $outputEvent = [System.Diagnostics.DataReceivedEventHandler]{
+            param($sender, $args)
+            if ($args.Data) {
+                $line = $args.Data
                 $line | Tee-Object -FilePath gradio_stdout.txt -Append | Write-Output
                 if ($line -match "Demo is ready!") {
-                    $success = $true
-                    break
+                    $global:success = $true
+                    $proc.Kill()
                 }
             }
-        
-            if ($success) { break }
-        
+        }
+    
+        $errorEvent = [System.Diagnostics.DataReceivedEventHandler]{
+            param($sender, $args)
+            if ($args.Data) {
+                $line = $args.Data
+                $line | Tee-Object -FilePath gradio_stderr.txt -Append | Write-Error
+            }
+        }
+    
+        $proc.add_OutputDataReceived($outputEvent)
+        $proc.add_ErrorDataReceived($errorEvent)
+    
+        $proc.Start() | Out-Null
+        $proc.BeginOutputReadLine()
+        $proc.BeginErrorReadLine()
+    
+        # Poll for timeout or process exit
+        while (-not $proc.HasExited) {
             if (((Get-Date) - $start_time).TotalSeconds -ge $timeout) {
                 Write-Output "==> Timeout waiting for readiness."
+                $proc.Kill()
                 break
             }
-        
             Start-Sleep -Milliseconds 200
         }
     
-        if (-not $proc.HasExited) {
-            Write-Output "==> Stopping background process..."
-            $proc.Kill()
-        }
+        $proc.WaitForExit()
     
         Write-Output "==> Gradio Log Output:"
         if (Test-Path gradio_stdout.txt) { Get-Content gradio_stdout.txt }
         if (Test-Path gradio_stderr.txt) { Get-Content gradio_stderr.txt }
     
-        if (-not $success) { exit 1 }
+        if (-not $global:success) { exit 1 }
