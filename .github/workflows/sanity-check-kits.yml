@@ -41,8 +41,15 @@ jobs:
         with:
           subprojects: ${{ steps.find-updates.outputs.subproject_dirs }}
 
-  gradio:
+  download-hf-models:
+    uses: ./.github/workflows/hf-download-job.yml
     needs: find-subprojects
+    if: ${{ needs.find-subprojects.outputs.gradio != '[]' }}
+
+  gradio:
+    needs: 
+      - find-subprojects
+      - download-hf-models
     if: ${{ needs.find-subprojects.outputs.gradio != '[]' }}
     runs-on: ${{ matrix.os }}
     strategy:
