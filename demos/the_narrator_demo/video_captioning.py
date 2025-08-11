@@ -21,7 +21,8 @@ sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 from utils import demo_utils as utils
 
-MODEL_DIR = Path("model")
+# Store and load models relative to this script's directory to avoid CWD issues
+MODEL_DIR = Path(__file__).resolve().parent / "model"
 
 current_frame = None  # Will be set when video starts
 current_caption = ""
@@ -84,22 +85,16 @@ def download_and_convert_llava_video(model_name: str) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     
     print(f"Downloading LLaVA-NeXT-Video OpenVINO model...")
-
-    # pipeline quantization: applying different quantization on each component
-    # dataset, num_samples = "contextual", 50
     
-    #ppl_q = OVPipelineQuantizationConfig(
-    #    quantization_configs={
-    #        "lm_model": OVQuantizationConfig(bits=8),
-    #        "multimodal_model": OVWeightQuantizationConfig(bits=8),
-    #        "text_embeddings_model": OVWeightQuantizationConfig(bits=8),
-    #        "vision_embeddings_model": OVWeightQuantizationConfig(bits=8),
-    #        "vision_model": OVWeightQuantizationConfig(bits=8)
-    #    },
-    #    dataset=dataset,
-    #    num_samples=num_samples,
-    #)
-
+    model = OVModelForVisualCausalLM.from_pretrained(
+        model_name,
+        export=True,
+        trust_remote_code=True
+    )
+    model.save_pretrained(output_dir)
+    processor = LlavaNextVideoProcessor.from_pretrained(model_name)
+    processor.save_pretrained(output_dir)
+    
     # Quantize and export directly from the model id
     q_model = OVModelForVisualCausalLM.from_pretrained(
         model_name,
