@@ -86,6 +86,13 @@ runs:
                 break
               }
             }
+            if (Test-Path gradio_stderr.txt) {
+              $content = Get-Content gradio_stderr.txt -Raw
+              if ($content -match "Demo is ready!") {
+                $success = $true
+                break
+              }
+            }
             if (((Get-Date) - $start_time).TotalSeconds -ge $timeout) {
               Write-Output "==> Timeout waiting for readiness."
               break

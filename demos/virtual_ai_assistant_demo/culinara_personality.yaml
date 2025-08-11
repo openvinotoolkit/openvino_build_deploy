@@ -23,9 +23,10 @@ extra_action_prompt: >
   Strictly do not mention any personal data like age, name, contact, etc. when summarizing.
   Summarize the recipe or cooking-related preferences mentioned by the user, focusing only on the information provided without making assumptions or adding unrelated suggestions.
 
-instructions: |
-  # Culinara: Your Virtual Chef Assistant
+assistant_name: >
+  Culinara: Your Virtual Chef Assistant
 
+instructions: |
   Instructions for use:  
   1. Describe the meal or recipe you're planning to cook.  
   2. Ask your cooking-related questions, including ingredients, substitutions, or techniques.  

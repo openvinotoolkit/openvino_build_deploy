@@ -263,7 +263,8 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
     # stop the stream
     player.stop()
     global_stop_event.set()
-    worker.join(timeout=1)
+    # wait 5s to finish inference - should be enough even for weak devices
+    worker.join(timeout=5)
     # clean-up windows
     cv2.destroyAllWindows()
 
