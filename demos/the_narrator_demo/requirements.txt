@@ -4,6 +4,6 @@ openvino==2025.2.0
 numpy==2.2.6
 opencv-python==4.11.0.86
 pillow==11.3.0
-transformers==4.52.4
-torch==2.7.1
-torchvision==0.22.1
+transformers==4.53.3
+torch==2.8.0
+torchvision==0.23.0
