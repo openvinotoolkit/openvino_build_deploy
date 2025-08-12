@@ -15,12 +15,10 @@ runs:
         uv pip install huggingface_hub hf_transfer hf_xet --system
     - name: Login to HF
       shell: bash
-      env:
-        HF_TOKEN: ${{ inputs.hf_token }}
       run: |
-        if [ -n "$HF_TOKEN" ]; then  
+        if [ -n ${{ inputs.hf_token }} ]; then  
           export PYTHONIOENCODING=utf-8
-          huggingface-cli login --token "$HF_TOKEN"
+          huggingface-cli login --token ${{ inputs.hf_token }}
         else
           echo "HF_TOKEN not set, continuing without login."
         fi
