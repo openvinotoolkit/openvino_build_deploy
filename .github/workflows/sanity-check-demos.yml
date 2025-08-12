@@ -73,6 +73,11 @@ jobs:
       - uses: ./.github/reusable-steps/setup-hugging-face
         with:
           hf_token: ${{ secrets.HF_TOKEN }}
+      - name: Restore Hugging Face models
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-model-${{ github.event.pull_request.number || github.run_id }}
       - uses: ./.github/reusable-steps/gradio-action
         with:
           script: main.py
