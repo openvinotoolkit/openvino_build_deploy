@@ -59,6 +59,10 @@ jobs:
         subproject: ${{ fromJson(needs.find-subprojects.outputs.gradio) }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v5
+        with:
+          name: hf-models
+          path: ~/.cache/huggingface
       - uses: ./.github/reusable-steps/setup-os
       - name: Set up Python ${{ matrix.python }}
         uses: actions/setup-python@v5
