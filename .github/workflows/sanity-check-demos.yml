@@ -44,6 +44,8 @@ jobs:
     uses: ./.github/workflows/hf-download-job.yml
     needs: find-subprojects
     if: ${{ needs.find-subprojects.outputs.gradio != '[]' }}
+    secrets:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
 
   gradio:
     needs: 
