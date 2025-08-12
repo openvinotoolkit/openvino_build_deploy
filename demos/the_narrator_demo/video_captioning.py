@@ -86,15 +86,6 @@ def download_and_convert_llava_video(model_name: str) -> None:
     
     print(f"Downloading LLaVA-NeXT-Video OpenVINO model...")
     
-    model = OVModelForVisualCausalLM.from_pretrained(
-        model_name,
-        export=True,
-        trust_remote_code=True
-    )
-    model.save_pretrained(output_dir)
-    processor = LlavaNextVideoProcessor.from_pretrained(model_name)
-    processor.save_pretrained(output_dir)
-    
     # Quantize and export directly from the model id
     q_model = OVModelForVisualCausalLM.from_pretrained(
         model_name,
@@ -297,7 +288,7 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
     log.getLogger().setLevel(log.INFO)
 
     device_type = "CPU"  # Use CPU for Intel HF Optimum (OpenVINO)
-    
+    setup_huggingface_auth()
     print(f"Starting continuous Video-LLaVA video captioning with Intel HF Optimum (OpenVINO) using {model_name}")
     print("=" * 80)
     print("This will generate continuous video captions describing what's happening")
