@@ -19,7 +19,7 @@ numpy==2.2.6
 transformers==4.53.3
 librosa==0.10.2
 pyyaml==6.0.1
-pymupdf==1.24.10
+pymupdf==1.26.3
 
 gradio==5.35.0
 
