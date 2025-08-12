@@ -14,10 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install uv
-        shell: bash
-        run: |
-          wget -qO- https://astral.sh/uv/install.sh | sh && mv "$HOME/.local/bin/uv" /usr/local/bin/uv
+      - uses: ./.github/reusable-steps/setup-os
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
