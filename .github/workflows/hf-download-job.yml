@@ -13,7 +13,11 @@ jobs:
         shell: bash
         run: |
           wget -qO- https://astral.sh/uv/install.sh | sh && mv "$HOME/.local/bin/uv" /usr/local/bin/uv
-      - uses: ../reusable-steps/setup-hugging-face
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+      - uses: ./.github/reusable-steps/setup-hugging-face
         with:
           hf_token: ${{ secrets.HF_TOKEN }}
       - name: Cache Hugging Face models
