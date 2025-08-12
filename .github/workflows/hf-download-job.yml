@@ -4,6 +4,10 @@ name: Hugging Face model pre downloading
 
 on:
   workflow_call:
+    secrets:
+      HF_TOKEN:
+        required: true
+        description: Hugging Face token
 
 jobs:
   download-models:
