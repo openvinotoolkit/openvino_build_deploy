@@ -311,7 +311,8 @@ def get_qr_code(text: str, size: int = 256, with_embedded_image: bool = False) -
     if with_embedded_image:
         get_code_img = Image.new("RGB", (100, 100), (255, 255, 255))
         draw_context = ImageDraw.Draw(get_code_img)
-        draw_context.multiline_text((8, 0), "Get\nDemo\nCode", font=ImageFont.truetype("FreeMono.ttf", 35), fill=(0, 0, 0), align="center")
+        font = ImageFont.truetype(os.path.join(os.path.dirname(__file__), "assets", "FreeMono.ttf"), 35)
+        draw_context.multiline_text((8, 0), "Get\nDemo\nCode", font=font, fill=(0, 0, 0), align="center")
 
     # Create the QR code
     error_correction = qrcode.constants.ERROR_CORRECT_H if with_embedded_image else qrcode.constants.ERROR_CORRECT_L
