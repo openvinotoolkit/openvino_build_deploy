@@ -164,6 +164,8 @@ def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", c
     devices_mapping = utils.available_devices()  # e.g. {"cpu":"Intel CPU", "gpu":"Intel GPU", ...}
     device_type = next(iter(devices_mapping.keys()))  # default to first available
 
+    qr_code = utils.get_qr_code("https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/demos/people_counter_demo", with_embedded_image=True)
+
     # Video player
     if isinstance(video_path, str) and video_path.isnumeric():
         video_path = int(video_path)
@@ -185,7 +187,6 @@ def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", c
     cv2.namedWindow(title, cv2.WINDOW_GUI_NORMAL)
     cv2.setWindowProperty(title, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
-    qr_code = utils.get_qr_code("https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/demos/people_counter_demo", with_embedded_image=True)
     # start a video stream
     player.start()
     while True:

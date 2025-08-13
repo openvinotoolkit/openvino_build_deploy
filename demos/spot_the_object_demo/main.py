@@ -119,6 +119,8 @@ def draw_results(frame: np.ndarray, annotators: list[BaseAnnotator], line_zone: 
 def run(video_path: str, det_model_name: str, device: str, main_class: str, aux_classes: list[str], flip: bool):
     det_model = load_yolo_model(det_model_name, main_class, aux_classes)
 
+    qr_code = utils.get_qr_code("https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/demos/spot_the_object_demo", with_embedded_image=True)
+
     video_size = (1920, 1080)
     # initialize video player to deliver frames
     if isinstance(video_path, str) and video_path.isnumeric():
@@ -132,7 +134,6 @@ def run(video_path: str, det_model_name: str, device: str, main_class: str, aux_
     cv2.namedWindow(title, cv2.WINDOW_GUI_NORMAL)
     cv2.setWindowProperty(title, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
-    qr_code = utils.get_qr_code("https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/demos/spot_the_object_demo", with_embedded_image=True)
     # start a video stream
     player.start()
     while True:

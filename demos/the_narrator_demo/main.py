@@ -170,6 +170,8 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
     # set up logging
     log.getLogger().setLevel(log.INFO)
 
+    qr_code = utils.get_qr_code("https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/demos/the_narrator_demo", with_embedded_image=True)
+
     # NPU won't work with the dynamic shape models, so we exclude it
     device_mapping = utils.available_devices(exclude=["NPU"])
     device_type = "AUTO"
@@ -195,8 +197,6 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
         daemon=True
     )
     worker.start()
-
-    qr_code = utils.get_qr_code("https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/demos/the_narrator_demo", with_embedded_image=True)
 
     # start a video stream
     player.start()

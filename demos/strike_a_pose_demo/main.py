@@ -81,11 +81,12 @@ def draw_poses(img: np.ndarray, detections: Results, point_score_threshold: floa
 def run_pose_estimation(source: str, model_name: str, device: str, flip: bool = True) -> None:
     device_mapping = utils.available_devices()
 
+    qr_code = utils.get_qr_code("https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/demos/strike_a_pose_demo", with_embedded_image=True)
+
     model_path = export_model(model_name)
     pose_model = load_and_compile_model(model_path, device)
 
     player = None
-    qr_code = utils.get_qr_code("https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/demos/strike_a_pose_demo", with_embedded_image=True)
     try:
         if isinstance(source, str) and source.isnumeric():
             source = int(source)

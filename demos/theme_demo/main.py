@@ -31,6 +31,8 @@ def load_theme(theme: str, device: str):
 def run_demo(source: str, theme: str, device: str, flip: bool = True):
     device_mapping = utils.available_devices()
 
+    qr_code = utils.get_qr_code("https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/demos/theme_demo", with_embedded_image=True)
+
     theme_obj = load_theme(theme, device)
 
     player = None
@@ -60,9 +62,6 @@ def run_demo(source: str, theme: str, device: str, flip: bool = True):
 
             stop_time = time.time()
 
-            # Draw watermark
-            utils.draw_ov_watermark(frame)
-
             # Draw boxes on a frame.
             frame = theme_obj.draw_results(frame, detections)
 
@@ -77,6 +76,10 @@ def run_demo(source: str, theme: str, device: str, flip: bool = True):
             fps = 1000 / processing_time
             utils.draw_text(frame, text=f"Currently running models ({theme_obj.model_precision}) on {theme_obj.device}", point=(10, 10))
             utils.draw_text(frame, f"Inference time: {processing_time:.1f}ms ({fps:.1f} FPS)", (10, 50))
+
+            # Draw watermark
+            utils.draw_ov_watermark(frame)
+            utils.draw_qr_code(frame, qr_code)
 
             cv2.imshow(winname=title, mat=frame)
             key = cv2.waitKey(1)
