@@ -16,3 +16,4 @@ opencv-python==4.10.0.84
 numpy==2.2.6
 gradio==5.35.0
 tqdm==4.67.1
+qrcode[pil]==8.2
