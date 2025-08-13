@@ -132,6 +132,7 @@ def run(video_path: str, det_model_name: str, device: str, main_class: str, aux_
     cv2.namedWindow(title, cv2.WINDOW_GUI_NORMAL)
     cv2.setWindowProperty(title, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
+    qr_code = utils.get_qr_code("https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/demos/spot_the_object_demo", with_embedded_image=True)
     # start a video stream
     player.start()
     while True:
@@ -157,9 +158,11 @@ def run(video_path: str, det_model_name: str, device: str, main_class: str, aux_
         processing_time = np.mean(processing_times) * 1000
 
         fps = 1000 / processing_time
-        utils.draw_text(frame, text=f"Inference time: {processing_time:.0f}ms ({fps:.1f} FPS)", point=(f_width * 7 // 10, 10))
+        utils.draw_text(frame, text=f"Inference time: {processing_time:.0f}ms ({fps:.1f} FPS)", point=(10, 10))
 
         utils.draw_ov_watermark(frame)
+        utils.draw_qr_code(frame, qr_code)
+
         # show the output live
         cv2.imshow(title, frame)
         key = cv2.waitKey(1)
