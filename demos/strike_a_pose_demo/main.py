@@ -85,6 +85,7 @@ def run_pose_estimation(source: str, model_name: str, device: str, flip: bool = 
     pose_model = load_and_compile_model(model_path, device)
 
     player = None
+    qr_code = utils.get_qr_code("https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/demos/strike_a_pose_demo", with_embedded_image=True)
     try:
         if isinstance(source, str) and source.isnumeric():
             source = int(source)
@@ -111,9 +112,6 @@ def run_pose_estimation(source: str, model_name: str, device: str, flip: bool = 
             results = pose_model(frame, verbose=False)[0]
             stop_time = time.time()
 
-            # Draw watermark
-            utils.draw_ov_watermark(frame)
-
             # Draw poses on a frame.
             frame = draw_poses(frame, results)
 
@@ -128,6 +126,10 @@ def run_pose_estimation(source: str, model_name: str, device: str, flip: bool = 
             fps = 1000 / processing_time
             utils.draw_text(frame, text=f"Currently running {model_name} (INT8) on {device}", point=(10, 10))
             utils.draw_text(frame, f"Inference time: {processing_time:.1f}ms ({fps:.1f} FPS)", (10, 50))
+
+            # Draw watermark
+            utils.draw_ov_watermark(frame)
+            utils.draw_qr_code(frame, qr_code)
 
             cv2.imshow(title, frame)
             key = cv2.waitKey(1)
