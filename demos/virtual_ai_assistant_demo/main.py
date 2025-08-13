@@ -278,9 +278,14 @@ def extra_action(conversation: List) -> Tuple[str, float]:
 
 
 def create_UI(initial_message: str, action_name: str) -> gr.Blocks:
+    qr_code = utils.get_qr_code("https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/demos/virtual_ai_assistant_demo", size=200)
+
     with gr.Blocks(theme=utils.gradio_intel_theme(), title="Your Virtual AI Assistant") as demo:
         utils.gradio_intel_header(chatbot_config["assistant_name"])
-        gr.Markdown(chatbot_config["instructions"])
+        with gr.Row():
+            with gr.Column(scale=7):
+                gr.Markdown(chatbot_config["instructions"])
+            gr.Image(qr_code, interactive=False, label="Get Demo Code", scale=1)
 
         with gr.Row():
             file_uploader_ui = gr.Files(label="Additional context", file_types=[".pdf", ".txt"], scale=1)
