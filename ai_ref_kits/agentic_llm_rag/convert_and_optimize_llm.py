@@ -5,6 +5,7 @@ import numpy as np
 import openvino as ov
 from openvino.runtime import opset10 as ops
 from openvino.runtime import passes
+from optimum.exporters.openvino.convert import export_tokenizer
 from optimum.intel import OVModelForCausalLM, OVModelForFeatureExtraction, OVWeightQuantizationConfig, OVConfig, OVQuantizer
 from transformers import AutoTokenizer
 
@@ -97,6 +98,7 @@ def convert_chat_model(model_type: str, precision: str, model_dir: Path, access_
     # export also tokenizer
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     tokenizer.save_pretrained(output_dir)
+    export_tokenizer(tokenizer, output_dir)
 
     return Path(output_dir) / "openvino_model.xml"
 
