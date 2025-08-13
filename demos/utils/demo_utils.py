@@ -247,7 +247,7 @@ def draw_qr_code(frame: np.ndarray, qr_code: np.ndarray) -> None:
     if qr_code.shape[2] != 4:
         qr_code = cv2.cvtColor(qr_code, cv2.COLOR_BGR2BGRA)
 
-    draw_img(frame, qr_code, (frame.shape[1] - qr_code.shape[1], 0))
+    draw_img(frame, qr_code, (frame.shape[1] - qr_code.shape[1], 0), alpha=0.8)
 
 
 def draw_ov_watermark(frame: np.ndarray, alpha: float = 0.35, size: float = 0.2) -> None:

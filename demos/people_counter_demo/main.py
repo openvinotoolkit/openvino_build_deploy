@@ -48,7 +48,7 @@ def convert(model_name: str, model_dir: Path) -> tuple[Path, Path]:
 
 def get_model(model_path: Path, verbose: bool = False):
     # compile the model with YOLO
-    model = YOLO(model_path, verbose=verbose)
+    model = YOLO(model_path, task="detect", verbose=verbose)
     return model
 
 
@@ -138,14 +138,14 @@ def draw_annotations(frame: np.array, detections: sv.Detections, tracker: DeepSo
             # calculate the mean number of customers in the queue
             mean_customer_count = np.mean(queue_count[zone_id], dtype=np.int32)
 
+            cat = "people" if category == "person" else "objects"
             # add alert text to the frame if necessary, flash every second
             if mean_customer_count > object_limit and time.time() % 2 > 1:
-                utils.draw_text(frame, text=f"Intel employee required in zone {zone_id}!", point=(20, 20),
-                                font_color=(0, 0, 255))
+                utils.draw_text(frame, text=f"Too many {cat} in zone {zone_id}!", point=(frame.shape[1] // 2, frame.shape[0] // 2), center=True, font_color=(0, 0, 255))
 
             # print an info about number of customers in the queue, ask for the more assistants if required
             log.info(
-                f"Zone {zone_id}, avg {category} count: {mean_customer_count} {'Intel employee required!' if mean_customer_count > object_limit else ''}")
+                f"Zone {zone_id}, avg {category} count: {mean_customer_count} {f'Too many {cat}!' if mean_customer_count > object_limit else ''}")
 
 
 def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", category: str = "person", zones_config_file: str = "",
@@ -185,6 +185,7 @@ def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", c
     cv2.namedWindow(title, cv2.WINDOW_GUI_NORMAL)
     cv2.setWindowProperty(title, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
+    qr_code = utils.get_qr_code("https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/demos/people_counter_demo", with_embedded_image=True)
     # start a video stream
     player.start()
     while True:
@@ -212,12 +213,13 @@ def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", c
         processing_time = np.mean(processing_times)
 
         fps = 1000 / processing_time
-        utils.draw_text(frame, text=f"Inference time: {processing_time:.0f}ms ({fps:.1f} FPS)", point=(f_width * 3 // 5, 10))
-        utils.draw_text(frame, text=f"Currently running {model_name} ({model_type}) on {device_type}", point=(f_width * 3 // 5, 50))
+        utils.draw_text(frame, text=f"Inference time: {processing_time:.0f}ms ({fps:.1f} FPS)", point=(10, 10))
+        utils.draw_text(frame, text=f"Currently running {model_name} ({model_type}) on {device_type}", point=(10, 50))
 
         # Draw control panel & watermark
         utils.draw_control_panel(frame, devices_mapping)
         utils.draw_ov_watermark(frame)
+        utils.draw_qr_code(frame, qr_code)
 
         cv2.imshow(title, frame)
         key = cv2.waitKey(1)
