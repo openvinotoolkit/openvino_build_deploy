@@ -6,6 +6,28 @@ This directory contains interactive demos aimed at demonstrating how OpenVINO pe
 
 _Please note: even though you can find here a lot of useful OpenVINO code, education is not the main purpose of this directory. If you are interested in educational content visit [ai_ref_kits](../ai_ref_kits/README.md)._
 
+## Running Demos with Docker
+A Dockerfile and run_container.sh script is provided to run the demos as a container if needed.
+### Build Container
+```bash
+docker build -f Dockerfile --build-arg DEMO=<demo folder> -t <image_name> .
+```
+Example:
+```bash
+docker build -f Dockerfile --build-arg DEMO=paint_your_dreams_demo -t paint_your_dreams_demo:latest .
+```
+Note: Demo folder needs to be the exact folder name, e.g. paint_your_dreams_demo
+
+### Run Container 
+```bash
+run_container.sh <image_name> <flags>
+```
+Example:
+```bash
+run_container.sh paint_your_dreams_demo --model_name OpenVINO/LCM_Dreamshaper_v7-fp16-ov
+```
+
+
 ## Available Demos
 
 Currently, the following demos are tested for Python :warning:3.10-3.13 :warning: only:
