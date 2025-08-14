@@ -230,6 +230,60 @@ def caption_video_content(video_frames: list, model, processor, model_type: str)
         return description
 
 
+def caption_video_file(video_path: str, model, processor, prompt_text: str, num_frames: int = 16) -> str:
+    """Generate a single caption for a provided video file path using Video-LLaVA.
+
+    Args:
+        video_path: Path to an existing video file on disk.
+        model: Loaded OVModelForVisualCausalLM model.
+        processor: Associated processor.
+        prompt_text: Text prompt to drive the captioning.
+        num_frames: Number of frames to sample from the video.
+
+    Returns:
+        The generated caption string, or None on failure.
+    """
+    if not os.path.isfile(video_path):
+        print(f"Error: Video file not found: {video_path}")
+        return None
+
+    conversation_file = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": prompt_text},
+                {"type": "video", "path": video_path},
+            ],
+        },
+    ]
+
+    try:
+        inputs_file = processor.apply_chat_template(
+            conversation_file,
+            num_frames=num_frames,
+            add_generation_prompt=True,
+            tokenize=True,
+            return_dict=True,
+        )
+
+        out_file = model.generate(**inputs_file, max_new_tokens=60)
+        response = processor.batch_decode(
+            out_file,
+            skip_special_tokens=True,
+            clean_up_tokenization_spaces=True,
+        )[0]
+    except Exception as e:
+        print(f"Error during generation from file: {e}")
+        return None
+
+    if "ASSISTANT:" in response:
+        description = response.split("ASSISTANT:")[-1].strip()
+    else:
+        description = response.strip()
+
+    return description if description else None
+
+
 def video_captioning_worker(model, processor, device, model_type):
     """Worker thread for continuous video captioning using Video-LLaVA Intel HF Optimum (OpenVINO)"""
     global current_frame, current_caption, processing_times
@@ -497,6 +551,24 @@ if __name__ == '__main__':
         help="Path to video file or webcam number (0, 1, etc.)"
     )
     parser.add_argument(
+        '--video_input',
+        type=str,
+        default=None,
+        help="Optional: path to a video file to caption once and exit"
+    )
+    parser.add_argument(
+        '--prompt',
+        type=str,
+        default="Describe what you see in the video in no more than 20 words.",
+        help="Prompt to guide the captioning when using --video_input"
+    )
+    parser.add_argument(
+        '--num_frames',
+        type=int,
+        default=16,
+        help="Number of frames to sample for captioning when using --video_input"
+    )
+    parser.add_argument(
         "--model_name", 
         type=str, 
         default="llava-hf/LLaVA-NeXT-Video-7B-hf", 
@@ -509,6 +581,30 @@ if __name__ == '__main__':
     )
 
     args = parser.parse_args()
+    
+    # Non-interactive single video captioning path
+    if args.video_input is not None:
+        log.getLogger().setLevel(log.INFO)
+        device_type = "CPU"
+        setup_huggingface_auth()
+        try:
+            model, processor, device, model_type = load_llava_video_models(args.model_name, device_type)
+        except Exception as e:
+            print(f"Failed to load model: {e}")
+            sys.exit(1)
+
+        if model_type not in ["intel_optimum_openvino"]:
+            print("ERROR: Supported backend is Intel HF Optimum (OpenVINO)!")
+            sys.exit(1)
+
+        caption = caption_video_file(args.video_input, model, processor, args.prompt, args.num_frames)
+        if caption is None:
+            print("No caption produced.")
+            sys.exit(2)
+        print(caption)
+        sys.exit(0)
+
+    # Interactive/live mode
     run(args.stream, args.model_name, args.flip) 
 
 
