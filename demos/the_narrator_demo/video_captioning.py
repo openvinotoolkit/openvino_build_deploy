@@ -284,6 +284,125 @@ def caption_video_file(video_path: str, model, processor, prompt_text: str, num_
     return description if description else None
 
 
+def caption_video_file_in_batches(
+    video_path: str,
+    model,
+    processor,
+    prompt_text: str,
+    batch_seconds: int = 9,
+    max_new_tokens: int = 60,
+    num_frames_per_batch: int = 16,
+) -> None:
+    """Process a video file in fixed-length batches and print a caption for each batch.
+
+    The function reads the source video, segments it into windows of `batch_seconds`,
+    writes each segment to a temporary mp4, and runs captioning on that segment.
+    """
+    if not os.path.isfile(video_path):
+        print(f"Error: Video file not found: {video_path}")
+        return
+
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print(f"Error: Could not open video: {video_path}")
+        return
+
+    fps = cap.get(cv2.CAP_PROP_FPS) or 0.0
+    if fps <= 0:
+        fps = 30.0
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
+
+    frames_per_batch = max(1, int(round(fps * batch_seconds)))
+    batch_index = 0
+    frame_index = 0
+
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+
+    print(f"Batch captioning: fps={fps:.2f}, total_frames={total_frames}, size=({width}x{height}), frames_per_batch={frames_per_batch}")
+
+    while True:
+        # Prepare temp writer for this batch
+        import tempfile
+        fd, temp_path = tempfile.mkstemp(suffix=".mp4")
+        os.close(fd)
+
+        writer = cv2.VideoWriter(temp_path, fourcc, fps, (max(1, width), max(1, height)))
+        if not writer.isOpened():
+            print("Error: Could not open temporary writer for batch")
+            os.remove(temp_path)
+            break
+
+        written = 0
+        while written < frames_per_batch:
+            ret, frame = cap.read()
+            if not ret or frame is None:
+                break
+            if frame.shape[1] != width or frame.shape[0] != height:
+                frame = cv2.resize(frame, (width, height))
+            writer.write(frame)
+            written += 1
+            frame_index += 1
+
+        writer.release()
+
+        if written == 0:
+            # No more frames
+            os.remove(temp_path)
+            break
+
+        # Caption this batch
+        start_sec = (batch_index * frames_per_batch) / fps
+        end_sec = ((batch_index * frames_per_batch) + written) / fps
+        print(f"\n[Batch {batch_index+1}] {start_sec:.1f}s to {end_sec:.1f}s")
+
+        try:
+            conversation = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt_text},
+                        {"type": "video", "path": temp_path},
+                    ],
+                },
+            ]
+
+            inputs = processor.apply_chat_template(
+                conversation,
+                num_frames=num_frames_per_batch,
+                add_generation_prompt=True,
+                tokenize=True,
+                return_dict=True,
+            )
+
+            out = model.generate(**inputs, max_new_tokens=max_new_tokens)
+            response = processor.batch_decode(
+                out,
+                skip_special_tokens=True,
+                clean_up_tokenization_spaces=True,
+            )[0]
+
+            if "ASSISTANT:" in response:
+                caption = response.split("ASSISTANT:")[-1].strip()
+            else:
+                caption = response.strip()
+
+            print(caption if caption else "<no caption>")
+        except Exception as e:
+            print(f"Error during batch generation: {e}")
+        finally:
+            # Cleanup temp file
+            try:
+                os.remove(temp_path)
+            except Exception:
+                pass
+
+        batch_index += 1
+
+    cap.release()
+
+
 def video_captioning_worker(model, processor, device, model_type):
     """Worker thread for continuous video captioning using Video-LLaVA Intel HF Optimum (OpenVINO)"""
     global current_frame, current_caption, processing_times
@@ -557,6 +676,18 @@ if __name__ == '__main__':
         help="Optional: path to a video file to caption once and exit"
     )
     parser.add_argument(
+        '--batch_seconds',
+        type=int,
+        default=None,
+        help="If set, process --video_input in fixed-size batches of this many seconds"
+    )
+    parser.add_argument(
+        '--batch_num_frames',
+        type=int,
+        default=16,
+        help="Number of frames to sample per batch when using --batch_seconds"
+    )
+    parser.add_argument(
         '--prompt',
         type=str,
         default="Describe what you see in the video in no more than 20 words.",
@@ -597,6 +728,20 @@ if __name__ == '__main__':
             print("ERROR: Supported backend is Intel HF Optimum (OpenVINO)!")
             sys.exit(1)
 
+        # Batch mode
+        if args.batch_seconds is not None and args.batch_seconds > 0:
+            caption_video_file_in_batches(
+                args.video_input,
+                model,
+                processor,
+                args.prompt,
+                batch_seconds=args.batch_seconds,
+                max_new_tokens=60,
+                num_frames_per_batch=args.batch_num_frames,
+            )
+            sys.exit(0)
+
+        # Single caption mode
         caption = caption_video_file(args.video_input, model, processor, args.prompt, args.num_frames)
         if caption is None:
             print("No caption produced.")
