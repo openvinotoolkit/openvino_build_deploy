@@ -323,6 +323,8 @@ def caption_video_file_in_batches(
     print(f"Batch captioning: fps={fps:.2f}, total_frames={total_frames}, size=({width}x{height}), frames_per_batch={frames_per_batch}")
 
     while True:
+        batch_start_time = time.time()
+        
         # Prepare temp writer for this batch
         import tempfile
         fd, temp_path = tempfile.mkstemp(suffix=".mp4")
@@ -346,6 +348,7 @@ def caption_video_file_in_batches(
             frame_index += 1
 
         writer.release()
+        capture_time = time.time() - batch_start_time
 
         if written == 0:
             # No more frames
@@ -355,9 +358,11 @@ def caption_video_file_in_batches(
         # Caption this batch
         start_sec = (batch_index * frames_per_batch) / fps
         end_sec = ((batch_index * frames_per_batch) + written) / fps
-        print(f"\n[Batch {batch_index+1}] {start_sec:.1f}s to {end_sec:.1f}s")
+        print(f"\n[Batch {batch_index+1}] {start_sec:.1f}s to {end_sec:.1f}s (capture: {capture_time:.2f}s)")
 
         try:
+            inference_start_time = time.time()
+            
             conversation = [
                 {
                     "role": "user",
@@ -383,12 +388,15 @@ def caption_video_file_in_batches(
                 clean_up_tokenization_spaces=True,
             )[0]
 
+            inference_time = time.time() - inference_start_time
+
             if "ASSISTANT:" in response:
                 caption = response.split("ASSISTANT:")[-1].strip()
             else:
                 caption = response.strip()
 
-            print(caption if caption else "<no caption>")
+            print(f"Caption: {caption if caption else '<no caption>'}")
+            print(f"Inference time: {inference_time:.2f}s")
         except Exception as e:
             print(f"Error during batch generation: {e}")
         finally:
