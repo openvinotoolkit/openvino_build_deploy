@@ -7,7 +7,7 @@ from os import PathLike
 from pathlib import Path
 from typing import Tuple, Dict
 
-from numpy import ndarray
+import numpy as np
 
 
 def download_file(
@@ -224,7 +224,7 @@ def available_devices(exclude: list | tuple | None = None) -> Dict[str, str]:
     return device_mapping
 
 
-def draw_control_panel(frame: ndarray, device_mapping: Dict[str, str], include_precisions: bool = True, include_devices: bool = True) -> None:
+def draw_control_panel(frame: np.ndarray, device_mapping: Dict[str, str], include_precisions: bool = True, include_devices: bool = True) -> None:
     h, w = frame.shape[:2]
     line_space = 40
     start_y = h - (include_devices * len(device_mapping) + include_precisions * 2 + 1) * line_space - 20
@@ -241,7 +241,16 @@ def draw_control_panel(frame: ndarray, device_mapping: Dict[str, str], include_p
 
 logo_img = None
 
-def draw_ov_watermark(frame: ndarray, alpha: float = 0.35, size: float = 0.2) -> None:
+def draw_qr_code(frame: np.ndarray, qr_code: np.ndarray) -> None:
+    import cv2
+
+    if qr_code.shape[2] != 4:
+        qr_code = cv2.cvtColor(qr_code, cv2.COLOR_BGR2BGRA)
+
+    draw_img(frame, qr_code, (frame.shape[1] - qr_code.shape[1], 0), alpha=0.8)
+
+
+def draw_ov_watermark(frame: np.ndarray, alpha: float = 0.35, size: float = 0.2) -> None:
     import cv2
 
     global logo_img
@@ -251,14 +260,18 @@ def draw_ov_watermark(frame: ndarray, alpha: float = 0.35, size: float = 0.2) ->
     scale = size * frame.shape[1] / logo_img.shape[1]
     watermark = cv2.resize(logo_img, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
 
-    alpha_channel = watermark[:, :, 3:].astype(float) / 255
+    draw_img(frame, watermark, (frame.shape[1] - watermark.shape[1], frame.shape[0] - watermark.shape[0]), alpha)
+
+
+def draw_img(frame: np.ndarray, img: np.ndarray, point: Tuple[int, int], alpha: float = 1.0) -> None:
+    alpha_channel = img[:, :, 3:].astype(float) / 255
     alpha_channel *= alpha
-    patch = frame[frame.shape[0] - watermark.shape[0]:, frame.shape[1] - watermark.shape[1]:]
+    patch = frame[point[1]:point[1] + img.shape[0], point[0]:point[0] + img.shape[1]]
 
-    patch[:] = alpha_channel * watermark[:, :, :3] + ((1.0 - alpha_channel) * patch)
+    patch[:] = alpha_channel * img[:, :, :3] + ((1.0 - alpha_channel) * patch)
 
 
-def draw_text(image: ndarray, text: str, point: Tuple[int, int], center: bool = False, font_scale: float = 1.0, font_color: Tuple[int, int, int] = (255, 255, 255), with_background: bool = False) -> None:
+def draw_text(image: np.ndarray, text: str, point: Tuple[int, int], center: bool = False, font_scale: float = 1.0, font_color: Tuple[int, int, int] = (255, 255, 255), with_background: bool = False) -> None:
     import cv2
 
     _, f_width = image.shape[:2]
@@ -278,11 +291,38 @@ def draw_text(image: ndarray, text: str, point: Tuple[int, int], center: bool = 
     cv2.putText(image, text=text, org=(text_x, text_y), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=font_scale * f_width / 2000, color=font_color, thickness=1, lineType=cv2.LINE_AA)
 
 
-def crop_center(image: ndarray) -> ndarray:
+def crop_center(image: np.ndarray) -> np.ndarray:
     size = min(image.shape[:2])
     start_x = (image.shape[1] - size) // 2
     start_y = (image.shape[0] - size) // 2
     return image[start_y:start_y + size, start_x:start_x + size]
+
+
+def get_qr_code(text: str, size: int = 256, with_embedded_image: bool = False) -> np.ndarray:
+    import qrcode
+    from qrcode.image.styledpil import StyledPilImage
+    from qrcode.image.styles.moduledrawers import GappedSquareModuleDrawer
+    import PIL.Image
+
+    from PIL import Image, ImageDraw, ImageFont
+
+    get_code_img = None
+    # Create a custom image to embed in the QR code
+    if with_embedded_image:
+        get_code_img = Image.new("RGB", (100, 100), (255, 255, 255))
+        draw_context = ImageDraw.Draw(get_code_img)
+        font = ImageFont.truetype(os.path.join(os.path.dirname(__file__), "assets", "FreeMono.ttf"), 35)
+        draw_context.multiline_text((8, 0), "Get\nDemo\nCode", font=font, fill=(0, 0, 0), align="center")
+
+    # Create the QR code
+    error_correction = qrcode.constants.ERROR_CORRECT_H if with_embedded_image else qrcode.constants.ERROR_CORRECT_L
+    qr = qrcode.QRCode(box_size=10, border=2, error_correction=error_correction)
+
+    qr.add_data(text)
+    img = qr.make_image(image_factory=StyledPilImage, module_drawer=GappedSquareModuleDrawer(), embedded_image=get_code_img)
+
+    img = img.resize((size, size), resample=PIL.Image.LANCZOS)
+    return np.array(img)
 
 
 def get_gradio_intel_color(name: str) -> "gr.themes.Color":
