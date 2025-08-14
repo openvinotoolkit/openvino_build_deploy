@@ -229,61 +229,6 @@ def caption_video_content(video_frames: list, model, processor, model_type: str)
     if description and len(description) > 10 and not description.isdigit():
         return description
 
-
-def caption_video_file(video_path: str, model, processor, prompt_text: str, num_frames: int = 16) -> str:
-    """Generate a single caption for a provided video file path using Video-LLaVA.
-
-    Args:
-        video_path: Path to an existing video file on disk.
-        model: Loaded OVModelForVisualCausalLM model.
-        processor: Associated processor.
-        prompt_text: Text prompt to drive the captioning.
-        num_frames: Number of frames to sample from the video.
-
-    Returns:
-        The generated caption string, or None on failure.
-    """
-    if not os.path.isfile(video_path):
-        print(f"Error: Video file not found: {video_path}")
-        return None
-
-    conversation_file = [
-        {
-            "role": "user",
-            "content": [
-                {"type": "text", "text": prompt_text},
-                {"type": "video", "path": video_path},
-            ],
-        },
-    ]
-
-    try:
-        inputs_file = processor.apply_chat_template(
-            conversation_file,
-            num_frames=num_frames,
-            add_generation_prompt=True,
-            tokenize=True,
-            return_dict=True,
-        )
-
-        out_file = model.generate(**inputs_file, max_new_tokens=60)
-        response = processor.batch_decode(
-            out_file,
-            skip_special_tokens=True,
-            clean_up_tokenization_spaces=True,
-        )[0]
-    except Exception as e:
-        print(f"Error during generation from file: {e}")
-        return None
-
-    if "ASSISTANT:" in response:
-        description = response.split("ASSISTANT:")[-1].strip()
-    else:
-        description = response.strip()
-
-    return description if description else None
-
-
 def caption_video_file_in_batches(
     video_path: str,
     model,
@@ -348,6 +293,8 @@ def caption_video_file_in_batches(
             frame_index += 1
 
         writer.release()
+        # Calculate actual video duration processed
+        video_duration = written / fps if fps > 0 else 0
         capture_time = time.time() - batch_start_time
 
         if written == 0:
@@ -358,7 +305,7 @@ def caption_video_file_in_batches(
         # Caption this batch
         start_sec = (batch_index * frames_per_batch) / fps
         end_sec = ((batch_index * frames_per_batch) + written) / fps
-        print(f"\n[Batch {batch_index+1}] {start_sec:.1f}s to {end_sec:.1f}s (capture: {capture_time:.2f}s)")
+        print(f"\n[Batch {batch_index+1}] {start_sec:.1f}s to {end_sec:.1f}s (video: {video_duration:.1f}s, processing: {capture_time:.2f}s)")
 
         try:
             inference_start_time = time.time()
@@ -749,13 +696,7 @@ if __name__ == '__main__':
             )
             sys.exit(0)
 
-        # Single caption mode
-        caption = caption_video_file(args.video_input, model, processor, args.prompt, args.num_frames)
-        if caption is None:
-            print("No caption produced.")
-            sys.exit(2)
-        print(caption)
-        sys.exit(0)
+
 
     # Interactive/live mode
     run(args.stream, args.model_name, args.flip) 
