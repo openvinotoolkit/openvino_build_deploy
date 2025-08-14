@@ -1,0 +1,84 @@
+name: Sanity Check Dockerfiles, build, and publish 
+
+on:
+  # run every night at 02:00 UTC
+  schedule:
+    - cron: '0 2 * * *'
+
+  # run when Dockerfiles or other files inside any demo folder change
+  push:
+    branches: [master]
+    paths:
+      - 'demos/**'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'demos/**'
+
+  workflow_dispatch:
+
+permissions:
+  contents: read        
+  packages: write       
+
+concurrency:
+  group: ${{ github.workflow }}‑${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  list-demos:
+    runs-on: ubuntu-latest
+    outputs:
+      demos: ${{ steps.set-matrix.outputs.demos }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: set-matrix
+        shell: bash
+        run: |
+          # Find every Dockerfile directly under demos/<demo_name>/Dockerfile
+          mapfile -t DEMO_DIRS < <(find demos -maxdepth 2 -name Dockerfile -print0 | xargs -0 -n1 dirname | sort -u)
+          # Convert bash array -> JSON list for the matrix
+          JSON=$(printf '%s\n' "${DEMO_DIRS[@]}" | jq -R . | jq -s .)
+          echo "demos=$JSON" >> "$GITHUB_OUTPUT"
+
+  build-and-push:
+    needs: list-demos
+    if: ${{ needs.list-demos.outputs.demos != '[]' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        demo: ${{ fromJson(needs.list-demos.outputs.demos) }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Derive image name
+        id: meta
+        shell: bash
+        run: |
+          IMAGE_NAME=$(basename "${{ matrix.demo }}")
+          echo "image=$IMAGE_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Build container
+        run: |
+          docker build \
+            -f "${{ matrix.demo }}/Dockerfile" \
+            -t "ghcr.io/${{ github.repository_owner }}/${{ steps.meta.outputs.image }}:latest" \
+            .
+
+      - name: Log‑in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push image
+        run: |
+          docker push "ghcr.io/${{ github.repository_owner }}/${{ steps.meta.outputs.image }}:latest"

@@ -143,5 +143,53 @@ Run the following to see all available options.
 ```shell
 python main.py --help
 ```
+
+# Dockerized Deployment 
+
+A Dockerfile is provided to run Paint Your Dreams in an isolated environment with OpenVINO preinstalled. It supports CPU by default and can access an Intel® integrated GPU `/dev/dri` and, where available (Intel® Core™ Ultra w/ integrated NPU driver), an NPU device `/dev/accel`. 
+
+## Prerequisites:
+1) Intel GPU support: Ensure kernel i915 (or xe on newer stacks) is loaded and `/dev/dri/*` nodes are present. Your user should belong to the video (and typically render) groups, or you must pass the host render GID into the container (see run commands below). 
+
+2) Intel NPU (optional, Core Ultra only): Install the Intel® NPU driver packages (intel-level-zero-npu, etc.), ensure `/dev/accel/accel0` exists, set its group to render, and add your user to that group (udev rule recommended). If your CPU is not a Core Ultra part, skip NPU. 
+
+3) Docker Engine installed
+
+## Ensure proper user groups
+```shell
+sudo usermod -aG video,render $USER
+newgrp video   # or log out/in
+```
+
+## Build container
+
+From the repository root run:
+
+```shell
+docker build -f demos/paint_your_dreams_demo/Dockerfile -t paint_your_dreams .
+```
+
+## Run with GPU and NPU support
+
+```shell
+RGID=$(stat -c '%g' /dev/dri/renderD128)
+
+docker run --rm -it \
+  --device=/dev/dri \
+  --group-add=${RGID} \
+  -p 7860:7860 \
+  paint_your_dreams
+```
+
+## Troubleshooting
+
+- 403 / no external access: Did you map the port and include --local_network (image does this by default)? The demo binds localhost unless that flag is used. 
+
+- GPU not visible: Confirm host /dev/dri permissions and that container user is in a group mapped to the render node GID (use `--group-add=$(stat -c '%g' /dev/dri/render*)`). 
+
+- NPU missing: Only Intel® Core™ Ultra parts expose the integrated NPU; verify driver install and `/dev/accel/accel0` permissions. 
+
+- NumPy / OpenCV import errors: Current OpenVINO dev images ship OpenCV components built against older NumPy; upgrading to NumPy 2.x can break cv2 imports. The Dockerfile pins a compatible NumPy to avoid version mismatch
+
 [//]: # (telemetry pixel)
 <img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca&project=demos/paint_your_dreams_demo&file=README.md" />
