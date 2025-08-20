@@ -229,6 +229,8 @@ def build_ui() -> gr.Interface:
     model_choices = list(MODEL_CONFIGS.keys())
     available_devices = [f"{k}: {v}" for k, v in utils.available_devices().items()]
 
+    qr_code = utils.get_qr_code("https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/demos/paint_your_dreams_demo", size=384, with_embedded_image=True)
+
     examples_t2i = [
         "A sail boat on a grass field with mountains in the morning and sunny day",
         "a portrait of a tall Valkyrie with long blonde hair, iron armor, and a crown sitting on a white horse. Depict them in the Nordic Vikings period",
@@ -296,8 +298,11 @@ def build_ui() -> gr.Interface:
                     num_inference_steps_slider = gr.Slider(label="Number of inference steps for base", minimum=1,
                                                            maximum=32, step=1, value=MODEL_CONFIGS[model_choices[0]]["num_inference_steps"])
 
-        gr.Examples(label="Examples for Text2Image", examples=examples_t2i, inputs=prompt_text, outputs=result_img, cache_examples=False)
-        gr.Examples(label="Examples for Image2Image", examples=examples_i2i, inputs=prompt_text, outputs=result_img, cache_examples=False)
+        with gr.Row():
+            with gr.Column(scale=3):
+                gr.Examples(label="Examples for Text2Image", examples=examples_t2i, inputs=prompt_text, outputs=result_img, cache_examples=False)
+                gr.Examples(label="Examples for Image2Image", examples=examples_i2i, inputs=prompt_text, outputs=result_img, cache_examples=False)
+            gr.Image(qr_code, interactive=False, show_label=False, scale=1)
 
         def swap_buttons_highlighting():
             return gr.Button(variant="primary"), gr.Button(variant="secondary")

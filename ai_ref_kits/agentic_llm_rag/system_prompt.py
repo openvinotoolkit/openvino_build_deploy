@@ -17,7 +17,7 @@ You have access to the following tools:
 {tool_desc}
 
 ## Output Format
-To answer the question, please use the following format.
+To answer the question, you must strictly use the following format. 
 
 ```
 Thought: I need to use a tool to help me answer the question.
@@ -27,7 +27,9 @@ Action Input: the input to the tool, in a JSON format representing the kwargs (e
 
 Please ALWAYS start with a Thought.
 
-Please use a valid JSON format for the Action Input. Do NOT do this {{'input': 'hello world', 'num_beams': 5}}.
+The Action MUST contain the name of the tool only. 
+
+Action Input MUST be in a new line. Please use a valid JSON format for the Action Input. Do NOT do this {{'input': 'hello world', 'num_beams': 5}}.
 
 If this format is used, the user will respond in the following format:
 

@@ -13,3 +13,4 @@ optimum-intel==1.25.1
 huggingface_hub==0.34.4
 av==13.0.0
 nncf==2.17.0
+qrcode[pil]==8.2

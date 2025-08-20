@@ -170,6 +170,8 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
     # set up logging
     log.getLogger().setLevel(log.INFO)
 
+    qr_code = utils.get_qr_code("https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/demos/the_narrator_demo", with_embedded_image=True)
+
     # NPU won't work with the dynamic shape models, so we exclude it
     device_mapping = utils.available_devices(exclude=["NPU"])
     device_type = "AUTO"
@@ -231,6 +233,8 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
         utils.draw_text(frame, text=f"Currently running {model_name} on {device_type}", point=(10, 50))
 
         utils.draw_ov_watermark(frame)
+        utils.draw_qr_code(frame, qr_code)
+
         # show the output live
         cv2.imshow(title, frame)
         key = cv2.waitKey(1)
