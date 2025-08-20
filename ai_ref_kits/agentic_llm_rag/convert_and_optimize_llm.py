@@ -10,7 +10,7 @@ from optimum.intel import OVModelForCausalLM, OVModelForFeatureExtraction, OVWei
 from transformers import AutoTokenizer
 
 MODEL_MAPPING = {
-    "llama3.2-1B": "meta-llama/Llama-3.2-1B",
+    "llama3.2-1B": "meta-llama/Llama-3.2-1B-Instruct",
     "llama3.2-3B": "meta-llama/Llama-3.2-3B-Instruct",
     "qwen2-7B": "Qwen/Qwen2-7B-Instruct",
     "bge-large": "BAAI/bge-large-en-v1.5",

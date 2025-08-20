@@ -411,7 +411,7 @@ def run_app(agent: ReActAgent, public_interface: bool = False) -> None:
             font=[gr.themes.GoogleFont("Montserrat"), "ui-sans-serif", "sans-serif"],
         )
 
-        with gr.Blocks(theme=theme, css=custom_css) as demo:
+        with gr.Blocks(theme=theme, css=custom_css, title="Smart Retail Assistant: Agentic LLMs with RAG") as demo:
 
             header = gr.HTML(
                         "<div class='intel-header-wrapper'>"
