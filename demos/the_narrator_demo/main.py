@@ -23,8 +23,8 @@ from utils import demo_utils as utils
 MODEL_DIR = Path("model")
 TEXT_CONFIG = BlipTextConfig()
 
-current_frame = np.zeros((1080, 1920, 3), dtype=np.uint8)  # Placeholder for the current frame
-current_caption = ""
+current_frames = deque(maxlen=1)
+captions = deque(maxlen=1)
 
 processing_times = deque(maxlen=100)
 
@@ -150,23 +150,23 @@ def generate_caption(image: np.array, vision_model: ov.CompiledModel, text_decod
 
 
 def inference_worker(vision_model, text_decoder, processor):
-    global current_frame, current_caption, processing_times
+    global current_frames, captions, processing_times
 
     while not global_stop_event.is_set():
         with global_frame_lock:
-            frame = current_frame.copy()
+            frame = current_frames.pop() if len(current_frames) > 0 else np.zeros((1080, 1920, 3), dtype=np.uint8)
 
         start_time = time.perf_counter()
         caption = generate_caption(frame, vision_model, text_decoder, processor)
         elapsed = time.perf_counter() - start_time
 
         with global_result_lock:
-            current_caption = caption
+            captions.append(caption)
             processing_times.append(elapsed)
 
 
 def run(video_path: str, model_name: str, flip: bool = True) -> None:
-    global current_frame, current_caption, processing_times
+    global current_frames, captions, processing_times
     # set up logging
     log.getLogger().setLevel(log.INFO)
 
@@ -201,7 +201,7 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
     # start a video stream
     player.start()
     t1 = time.time()
-    caption = current_caption
+    caption = ""
     while True:
         # Grab the frame.
         frame = player.next()
@@ -211,7 +211,7 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
 
         # Update the latest frame for inference
         with global_frame_lock:
-            current_frame = frame
+            current_frames.append(frame)
 
         f_height, f_width = frame.shape[:2]
 
@@ -220,7 +220,7 @@ def run(video_path: str, model_name: str, flip: bool = True) -> None:
             t2 = time.time()
             # update the caption only if the time difference is significant, otherwise it will be flickering
             if t2 - t1 > 1 or not caption:
-                caption = current_caption
+                caption = captions.pop() if len(captions) > 0 else ""
                 t1 = t2
 
             # Get the mean processing time
