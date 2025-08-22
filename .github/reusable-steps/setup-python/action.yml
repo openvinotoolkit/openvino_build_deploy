@@ -17,7 +17,7 @@ runs:
       shell: bash
       run: |
         cd ${{ inputs.project }}
-        curl -L -k -o sample_video.mov https://file-examples.com/storage/fef6248bef689f7bb9c274f/2018/04/file_example_MOV_1920_2_2MB.mov
+        curl -L -k -o sample_video.avi https://file-examples.com/storage/fef6248bef689f7bb9c274f/2018/04/file_example_AVI_1920_2_3MG.avi
     - name: Set up Python ${{ inputs.python }}
       uses: actions/setup-python@v5
       with:
