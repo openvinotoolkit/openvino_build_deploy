@@ -89,7 +89,7 @@ jobs:
       - uses: ./.github/reusable-steps/timeouted-action
         name: Run Webcam Demo
         with:
-          command: python main.py --stream sample_video.mp4
+          command: python main.py --stream sample_video.mov
           project: ${{ matrix.subproject }}
 
   js:
