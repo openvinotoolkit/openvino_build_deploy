@@ -9,24 +9,32 @@ The demo detects, tracks and counts defined objects in front of the webcam. The 
 If you want a **quick setup** without manually installing dependencies, use the provided installer scripts. These scripts will **automatically configure** everything needed to run the Spot the Object Demo.
 
 ### **For Windows**
+
 1. Download the `install.bat` and `run.bat` files to your local directory.
 2. Double-click `install.bat` to install dependencies and set up the environment.
 3. After installation, double-click `run.bat` to start the demo.
 
 ### **For Linux and MacOS**
+
 1. Download the `install.sh` and `run.sh` files to your local directory.
 2. First, ensure the installer scripts have execute permissions:
+
 ```shell
 chmod +x install.sh run.sh
 ```
+
 3. Run the installer to set up everything:
+
 ```shell
 ./install.sh
 ```
+
 4. After installation, start the demo by running:
+
 ```shell
 ./run.sh
 ```
+
 These scripts will handle cloning the repository, creating the virtual environment, and installing dependencies automatically. If you prefer a manual setup, follow Steps 1-3 below.
 
 ## Manual Environment Setup
