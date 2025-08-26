@@ -23,7 +23,7 @@ llama-index-readers-llama-parse==0.4.0
 llama-index-vector-stores-qdrant==0.6.1
 llama-index-workflows==1.1.0
 llama-parse==0.6.43
-transformers==4.51.3
+transformers==4.53.0
 moviepy==2.2.1
 librosa==0.11.0
 python-ffmpeg==1.0.16
@@ -36,6 +36,6 @@ openvino-genai==2025.2.0.0
 ffmpeg==1.4
 langchain==0.3.26
 llama-index-tools-mcp==0.2.6
-torch==2.7.1 
+torch==2.8.0 
 langchain_community==0.3.27 
 lancedb==0.24.1 
