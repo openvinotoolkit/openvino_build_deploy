@@ -168,8 +168,8 @@ async def create_pipeline(model_name: str, device: str, size: int, adapter_model
 
 
 async def load_pipeline(model_name: str, device: str, size: int, adapter_model_name: str, adapter_alpha: float, pipeline_type: str) -> genai.Text2ImagePipeline | genai.Image2ImagePipeline | genai.InpaintingPipeline:
-    if (device, pipeline) not in ov_pipelines:
-        ov_pipelines[(device, pipeline)] = await create_pipeline(model_name, device, size, adapter_model_name, adapter_alpha, pipeline)
+    if (device, pipeline_type) not in ov_pipelines:
+        ov_pipelines[(device, pipeline_type)] = await create_pipeline(model_name, device, size, adapter_model_name, adapter_alpha, pipeline_type)
 
     return ov_pipelines[(device, pipeline_type)]
 
