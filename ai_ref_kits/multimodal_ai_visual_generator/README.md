@@ -24,7 +24,7 @@ This kit uses the following technology stack:
 - [OpenVINO Toolkit](https://docs.openvino.ai/)
 - [OpenVINO™ GenAI](https://docs.openvino.ai/2025/openvino-workflow-generative/inference-with-genai.html)
 - [Optimum Intel](https://docs.openvino.ai/2025/openvino-workflow-generative/inference-with-optimum-intel.html)
-- [Qwen2-7B](https://huggingface.co/Qwen/Qwen2.5-7B-Instruct) (LLM)
+- [Qwen2.5-7B](https://huggingface.co/Qwen/Qwen2.5-7B-Instruct) (LLM)
 - [FLUX.1](https://github.com/black-forest-labs/flux) (text-to-image)
 - [Streamlit](https://docs.streamlit.io/) (frontend)
 - [FastAPI](https://fastapi.tiangolo.com/) (backend)
@@ -96,7 +96,7 @@ To set up your environment, you first clone the repository, then create a virtua
 To clone the repository and navigate into the directory, run the following command:
 
 ```bash
-git clone https://github.com/AnishaUdayakumar/openvino_build_deploy.git
+git clone https://github.com/openvinotoolkit/openvino_build_deploy.git
 cd openvino_build_deploy/ai_ref_kits/multimodal_ai_visual_generator
 ```
 
@@ -171,12 +171,26 @@ This app has two components: a FastAPI backend and a Streamlit frontend.
 
 ### Step 1: Run FastAPI (in Terminal 1)
 
+The FastAPI backend can be configured using environment variables to specify which models to use:
+
+- `IMAGE_MODEL_TYPE`: The type of image generation model to use (default: "flux.1-schnell")
+- `LLM_MODEL_TYPE`: The type of language model to use (default: "qwen2-7B")
+- `MODEL_PRECISION`: The precision to use for both models (default: "int4")
+
+You can set these variables when running the application:
+
 ```bash
 cd openvino_build_deploy/ai_ref_kits/multimodal_ai_visual_generator
 source venv/bin/activate         # On Windows: venv\Scripts\activate
+
+# Run with default values
 uvicorn main:app --host 0.0.0.0 --port 8000
+
+# Or run with custom model configuration
+IMAGE_MODEL_TYPE="your-image-model" LLM_MODEL_TYPE="your-llm-model" MODEL_PRECISION="int4" uvicorn main:app --host 0.0.0.0 --port 8000
 ```
-> **Note:** If you're using different models, update the paths in `main.py` accordingly.
+
+If no environment variables are set, the application will use the default values.
 
 ### Step 2: Run Streamlit UI (in Terminal 2)
 
@@ -202,10 +216,18 @@ Branding mode:
 
 ---
 
+# Benchmark Results 
+
+<img width="1367" height="942" alt="image" src="https://github.com/user-attachments/assets/07efd67d-989f-459a-b8b9-7ecebf27abaa" />
+
+You can evaluate performance benchmarks for models like Qwen2.5-7B and FLUX.1-schnell across a range of Intel® platforms using the [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html). The Model Hub is a curated resource for developers to explore OpenVINO optimized models and assess their latency and throughput on Intel® CPUs, integrated GPUs, discrete GPUs, and NPUs.
+
+---
 ## Additional Resources
 
 - Learn more about [OpenVINO](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html)
-- Explore [OpenVINO’s documentation](https://docs.openvino.ai/2024/home.html)
+- Explore [OpenVINO's documentation](https://docs.openvino.ai/2024/home.html)
+- Browse the [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html) for real-world model benchmarks
 
 <p align="right"><a href="#top">Back to top ⬆️</a></p>
 

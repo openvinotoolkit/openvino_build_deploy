@@ -3,7 +3,7 @@ name: OS setup
 runs:
   using: 'composite'
   steps:
-    - name: Free space (Ubuntu only)
+    - name: Free disk space (Ubuntu)
       if: runner.os == 'Linux'
       uses: jlumbroso/free-disk-space@v1.3.1
       with:
@@ -15,14 +15,33 @@ runs:
         dotnet: true
         haskell: true
         docker-images: true
-    - name: Install OpenCL and EGL (Ubuntu only)
+    - name: Free disk space (macOS)
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        df -h /
+        sudo rm -rf ~/Library/Developer/Xcode/DerivedData
+        sudo rm -rf ~/Library/Developer/CoreSimulator
+        sudo rm -rf /Applications/Xcode*.app
+        brew cleanup -s
+        rm -rf "$(brew --cache)"
+        docker system prune -af || true
+        rm -rf ~/.npm ~/.cache/yarn ~/Library/Caches/pip
+        df -h /
+    - name: Install OpenCL, EGL and uv (Ubuntu)
       if: runner.os == 'Linux'
       shell: bash
       run: |
         sudo apt-get update
-        sudo apt-get install -y ocl-icd-opencl-dev libegl1 libgles2 mesa-utils libxcb-cursor0 libxcb-xinerama0 libxcb-util1 libxcb-keysyms1 libxcb-randr0 libxkbcommon-x11-0 libegl1-mesa-dev
-    - name: Install coreutils (macOS only)
+        sudo apt-get install -y ocl-icd-opencl-dev libegl1 libgles2 mesa-utils libxcb-cursor0 libxcb-xinerama0 libxcb-util1 libxcb-keysyms1 libxcb-randr0 libxkbcommon-x11-0 libegl1-mesa-dev cargo
+        wget -qO- https://astral.sh/uv/install.sh | sh && mv "$HOME/.local/bin/uv" /usr/local/bin/uv
+    - name: Install coreutils and uv (macOS)
       if: runner.os == 'macOS'
       shell: bash
       run: |
-        brew install coreutils
+        brew install coreutils uv
+    - name: Install uv (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"

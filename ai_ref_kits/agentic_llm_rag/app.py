@@ -7,7 +7,7 @@ import time
 import warnings
 from io import StringIO
 from pathlib import Path
-from typing import Tuple, Callable
+from typing import Tuple
 
 import gradio as gr
 import nest_asyncio
@@ -15,21 +15,21 @@ import openvino.properties as props
 import openvino.properties.hint as hints
 import openvino.properties.streams as streams
 import requests
-import yaml
 from llama_index.core import PromptTemplate
 from llama_index.core import SimpleDirectoryReader
 from llama_index.core import VectorStoreIndex, Settings
 from llama_index.core.agent import ReActAgent
+from llama_index.core.agent import ReActChatFormatter
+from llama_index.core.callbacks import CallbackManager
+from llama_index.core.llms import MessageRole
 from llama_index.core.tools import FunctionTool
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from llama_index.embeddings.huggingface_openvino import OpenVINOEmbedding
-from llama_index.llms.openvino import OpenVINOLLM
-from llama_index.core.agent import ReActChatFormatter
-from llama_index.core.llms import MessageRole
-from llama_index.core.callbacks import CallbackManager
+from llama_index.llms.openvino_genai import OpenVINOGenAILLM
+
+from system_prompt import react_system_header_str
 # Agent tools
 from tools import PaintCalculator, ShoppingCart
-from system_prompt import react_system_header_str
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO)
@@ -47,7 +47,7 @@ ov_config = {
 def setup_models(
     llm_model_path: Path,
     embedding_model_path: Path,
-    device: str) -> Tuple[OpenVINOLLM, OpenVINOEmbedding]:
+    device: str) -> Tuple[OpenVINOGenAILLM, OpenVINOEmbedding]:
     """
     Sets up LLM and embedding models using OpenVINO.
     
@@ -70,14 +70,18 @@ def setup_models(
         sys.exit(1)
 
     # Load LLM model locally    
-    llm = OpenVINOLLM(
-        model_id_or_path=str(llm_model_path),
-        context_window=8192,
-        max_new_tokens=500,
-        model_kwargs={"ov_config": ov_config},
-        generate_kwargs={"do_sample": False, "temperature": 0.1, "top_p": 0.8},        
-        device_map=device,
+    llm = OpenVINOGenAILLM(
+        model_path=str(llm_model_path),
+        config=ov_config,
+        device=device
     )
+    # change number of tokens to be generated in one step
+    llm._streamer.tokens_len = 1
+
+    llm.config.max_new_tokens = 500
+    llm.config.do_sample = False
+    llm.config.temperature = 0.1
+    llm.config.top_p = 0.8
 
     # Load the embedding model locally
     embedding = OpenVINOEmbedding(model_id_or_path=str(embedding_model_path), device=device)
@@ -407,7 +411,7 @@ def run_app(agent: ReActAgent, public_interface: bool = False) -> None:
             font=[gr.themes.GoogleFont("Montserrat"), "ui-sans-serif", "sans-serif"],
         )
 
-        with gr.Blocks(theme=theme, css=custom_css) as demo:
+        with gr.Blocks(theme=theme, css=custom_css, title="Smart Retail Assistant: Agentic LLMs with RAG") as demo:
 
             header = gr.HTML(
                         "<div class='intel-header-wrapper'>"
@@ -487,9 +491,9 @@ def run_app(agent: ReActAgent, public_interface: bool = False) -> None:
             )
             clear.click(_reset_chat, None, [message, chat_window, log_window, cart_display])
 
-            gr.Markdown("------------------------------")            
+            gr.Markdown("------------------------------")
 
-        log.info("Demo is ready!")
+        print("Demo is ready!", flush=True)  # Required for the CI to detect readiness
         demo.queue().launch(share=public_interface)
 
     run()
@@ -557,6 +561,7 @@ def run(chat_model: Path, embedding_model: Path, rag_pdf: Path, device: str, pub
     agent.update_prompts({"agent_worker:system_prompt": react_system_prompt})  
     agent.reset()                     
     run_app(agent, public_interface)
+
 
 if __name__ == "__main__":
     # Define the argument parser at the end

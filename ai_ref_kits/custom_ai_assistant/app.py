@@ -255,7 +255,7 @@ def create_UI(initial_message: str) -> gr.Blocks:
     Returns:
         Demo UI
     """
-    with gr.Blocks(title="Talk to Adrishuo - a custom AI assistant working as a healthcare assistant") as demo:
+    with gr.Blocks(theme="base", title="Adrishuo - a custom AI assistant working as a healthcare assistant") as demo:
         gr.Markdown("""
         # Talk to Adrishuo - a custom AI assistant working today as a healthcare assistant
 
@@ -324,7 +324,7 @@ def run(asr_model_dir: Path, chat_model_dir: Path, public_interface: bool = Fals
     # create user interface
     demo = create_UI(initial_message)
 
-    log.info("Demo is ready!")
+    print("Demo is ready!", flush=True) # Required for the CI to detect readiness
     # launch demo
     demo.queue().launch(share=public_interface)
 
@@ -336,4 +336,4 @@ if __name__ == '__main__':
     parser.add_argument('--public', default=False, action="store_true", help="Whether interface should be available publicly")
 
     args = parser.parse_args()
-    run(Path(args.asr_model_dir), Path(args.chat_model_dir), args.public_interface)
+    run(Path(args.asr_model_dir), Path(args.chat_model_dir), args.public)

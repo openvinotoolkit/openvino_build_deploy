@@ -1,11 +1,13 @@
 import argparse
 import logging as log
 import os
+import sys
 import threading
 import time
 from pathlib import Path
 from typing import List, Optional, Set, Tuple
 
+import chromadb
 import fitz
 import gradio as gr
 import numpy as np
@@ -20,14 +22,17 @@ from llama_index.core.node_parser import LangchainNodeParser
 from llama_index.embeddings.huggingface_openvino import OpenVINOEmbedding
 from llama_index.llms.openvino_genai import OpenVINOGenAILLM
 from llama_index.postprocessor.openvino_rerank import OpenVINORerank
-from llama_index.vector_stores.faiss import FaissVectorStore
+from llama_index.vector_stores.chroma import ChromaVectorStore
 from openvino.runtime import opset10 as ops
 from openvino.runtime import passes
-from optimum.intel import OVModelForCausalLM, OVModelForFeatureExtraction, OVWeightQuantizationConfig, OVModelForSequenceClassification
 from optimum.exporters.openvino.convert import export_tokenizer
+from optimum.intel import OVModelForCausalLM, OVModelForFeatureExtraction, OVWeightQuantizationConfig, OVModelForSequenceClassification
 from transformers import AutoTokenizer
-# it must be imported as the last one; otherwise, it causes a crash on macOS
-import faiss
+
+SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "utils")
+sys.path.append(os.path.dirname(SCRIPT_DIR))
+
+from utils import demo_utils as utils
 
 # Global variables initialization
 MODEL_DIR = Path("model")
@@ -60,7 +65,7 @@ def load_chat_model(model_name: str, token: str = None) -> OpenVINOGenAILLM:
     if not model_path.exists():
         log.info(f"Downloading {model_name}... It may take up to 1h depending on your Internet connection and model size.")     
         
-        chat_tokenizer = AutoTokenizer.from_pretrained(model_name, token=token)
+        chat_tokenizer = AutoTokenizer.from_pretrained(model_name, token=token, use_fast=True)
         chat_tokenizer.save_pretrained(model_path)
         export_tokenizer(chat_tokenizer, model_path)
 
@@ -132,7 +137,7 @@ def load_embedding_model(model_name: str) -> OpenVINOEmbedding:
         embedding_model = OVModelForFeatureExtraction.from_pretrained(model_name, export=True, compile=False)
         optimize_model_for_npu(embedding_model)
         embedding_model.save_pretrained(model_path)
-        embedding_tokenizer = AutoTokenizer.from_pretrained(model_name)
+        embedding_tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True)
         embedding_tokenizer.save_pretrained(model_path)
 
     device = "NPU" if "NPU" in get_available_devices() else "CPU"
@@ -145,7 +150,7 @@ def load_reranker_model(model_name: str) -> OpenVINORerank:
     if not model_path.exists():
         reranker_model = OVModelForSequenceClassification.from_pretrained(model_name, export=True, compile=False)
         reranker_model.save_pretrained(model_path)
-        reranker_tokenizer = AutoTokenizer.from_pretrained(model_name)
+        reranker_tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True)
         reranker_tokenizer.save_pretrained(model_path)
 
     return OpenVINORerank(model_id_or_path=str(model_path), device="CPU", top_n=3)
@@ -209,15 +214,13 @@ def load_context(file_paths: List[str]) -> None:
     # a splitter to divide document into chunks
     splitter = LangchainNodeParser(RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100))
 
-    dim = ov_embedding._model.request.outputs[0].get_partial_shape()[2].get_length()
-    # a memory database to store chunks
-    faiss_index = faiss.IndexFlatL2(dim)
-    vector_store = FaissVectorStore(faiss_index=faiss_index)
+    chroma_client = chromadb.EphemeralClient()
+    chroma_collection = chroma_client.create_collection("ai_assistant_collection")
+
+    vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
     storage_context = StorageContext.from_defaults(vector_store=vector_store)
 
-    # set embedding model
-    Settings.embed_model = ov_embedding
-    index = VectorStoreIndex.from_documents(documents, storage_context, transformations=[splitter])
+    index = VectorStoreIndex.from_documents(documents, storage_context, embed_model=ov_embedding, transformations=[splitter])
     # create a RAG pipeline
     ov_chat_engine = index.as_chat_engine(llm=ov_llm, chat_mode=ChatMode.CONTEXT, system_prompt=chatbot_config["system_configuration"],
                                           memory=memory, node_postprocessors=[ov_reranker])
@@ -275,13 +278,20 @@ def extra_action(conversation: List) -> Tuple[str, float]:
 
 
 def create_UI(initial_message: str, action_name: str) -> gr.Blocks:
-    with gr.Blocks(title="Your Virtual AI Assistant") as demo:
-        gr.Markdown(chatbot_config["instructions"])
+    qr_code = utils.get_qr_code("https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/demos/virtual_ai_assistant_demo", size=200)
+
+    with gr.Blocks(theme=utils.gradio_intel_theme(), title="Your Virtual AI Assistant") as demo:
+        utils.gradio_intel_header(chatbot_config["assistant_name"])
+        with gr.Row():
+            with gr.Column(scale=7):
+                gr.Markdown(chatbot_config["instructions"])
+            gr.Image(qr_code, interactive=False, label="Get Demo Code", scale=1)
 
         with gr.Row():
             file_uploader_ui = gr.Files(label="Additional context", file_types=[".pdf", ".txt"], scale=1)
             with gr.Column(scale=4):
-                chatbot_ui = gr.Chatbot(value=[[None, initial_message]], label="Chatbot", sanitize_html=False)
+                chatbot_ui = gr.Chatbot(value=[[None, initial_message]], label="Chatbot", sanitize_html=False,
+                                        avatar_images=(None, "https://docs.openvino.ai/2025/_static/favicon.ico"))
                 with gr.Row():
                     input_text_ui = gr.Textbox(label="Your text input", scale=6)
                     submit_btn = gr.Button("Submit", variant="primary", interactive=False, scale=1)
@@ -336,7 +346,7 @@ def run(chat_model_name: str, embedding_model_name: str, reranker_model_name: st
     # create user interface
     demo = create_UI(initial_message, chatbot_config["extra_action_name"])
     # launch demo
-    log.info("Demo is ready!")
+    print("Demo is ready!", flush=True) # Required for the CI to detect readiness
     demo.queue().launch(server_name=server_name, share=public_interface)
 
 

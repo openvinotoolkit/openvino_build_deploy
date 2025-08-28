@@ -29,9 +29,10 @@ extra_action_prompt: >
   Summarize the health-related concerns mentioned by the patient in this conversation or in the provided context.
   You must include information from the context if it's provided.
 
-instructions: |
-  # Adrishuo: A Virtual AI assistant running with OpenVINO
+assistant_name: >
+  Adrishuo: A Virtual AI assistant running with OpenVINO
 
+instructions: |
   Instructions for use:  
   
   1. Attach the PDF or TXT file with an additional context (e.g prior examination report - optional; see \"Sample LLM Patient Records.pdf\" as an example) 

@@ -1,12 +1,13 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 
-openvino==2025.1.0
-nncf==2.14.1
+openvino==2025.2.0
+nncf==2.17.0
 ultralytics==8.3.38
-onnx==1.17.0
+onnx==1.18.0
 supervision==0.17.1
+numpy==1.26.4
 jupyterlab==4.2.5
 pycocotools==2.0.6
 lapx==0.5.11
-spaces>=0.3.2
-gradio>=5.16.0
+spaces==0.37.1
+gradio==5.35.0

@@ -17,7 +17,7 @@ import tqdm
 from PIL import Image
 from huggingface_hub import snapshot_download
 from optimum.exporters.openvino.convert import export_tokenizer
-from optimum.intel.openvino import OVModelForImageClassification, OVStableDiffusionPipeline
+from optimum.intel import OVPipelineForText2Image, OVModelForImageClassification
 from transformers import Pipeline, pipeline, AutoProcessor
 
 SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "utils")
@@ -67,6 +67,20 @@ flux_config = {
         "prithivMLmods/Canopus-LoRA-Flux-FaceRealism"
     ]
 }
+flux_lite_config = {
+    "guidance_scale_value": 3.5,
+    "num_inference_steps": 12,
+    "strength_value": 0.5,
+    "lora_adapters": [
+    ]
+}
+sdxl_config = {
+    "guidance_scale_value": 1.1,
+    "num_inference_steps": 2,
+    "strength_value": 0.5,
+    "lora_adapters": [
+    ]
+}
 
 MODEL_CONFIGS = {
     "OpenVINO/LCM_Dreamshaper_v7-int8-ov": dreamshaper_config,
@@ -74,6 +88,8 @@ MODEL_CONFIGS = {
     "OpenVINO/FLUX.1-schnell-int4-ov": flux_config,
     "OpenVINO/FLUX.1-schnell-int8-ov": flux_config,
     "OpenVINO/FLUX.1-schnell-fp16-ov": flux_config,
+    "Freepik/flux.1-lite-8B": flux_lite_config,
+    "stabilityai/sdxl-turbo": sdxl_config,
     "dreamlike-art/dreamlike-anime-1.0": dreamlike_anime_config,
 }
 
@@ -84,11 +100,11 @@ def download_and_load_safety_checker(model_name: str) -> None:
     if not safety_checker_dir.exists():
         model = OVModelForImageClassification.from_pretrained(model_name, export=True, compile=False)
         model.save_pretrained(safety_checker_dir)
-        processor = AutoProcessor.from_pretrained(model_name)
+        processor = AutoProcessor.from_pretrained(model_name, use_fast=True)
         processor.save_pretrained(safety_checker_dir)
 
     safety_checker = pipeline("image-classification", model=OVModelForImageClassification.from_pretrained(safety_checker_dir),
-                            image_processor=AutoProcessor.from_pretrained(safety_checker_dir))
+                            image_processor=AutoProcessor.from_pretrained(safety_checker_dir, use_fast=True))
 
 
 def download_model(model_name: str, is_lora_adapter: bool = False) -> None:
@@ -100,10 +116,12 @@ def download_model(model_name: str, is_lora_adapter: bool = False) -> None:
         else:
             output_dir = MODEL_DIR / model_name
             if not output_dir.exists():
-                pipeline = OVStableDiffusionPipeline.from_pretrained(model_name, export=True)
-                pipeline.save_pretrained(str(output_dir))
-                export_tokenizer(pipeline.tokenizer, str(output_dir / "tokenizer"))
-
+                ov_pipeline = OVPipelineForText2Image.from_pretrained(model_name, export=True)
+                ov_pipeline.save_pretrained(str(output_dir))
+                for tokenizer_name in ("tokenizer", "tokenizer_2", "tokenizer_3"):
+                    tokenizer = getattr(ov_pipeline, tokenizer_name, None)
+                    if tokenizer:
+                        export_tokenizer(tokenizer, output_dir / tokenizer_name)
 
 def load_lora_adapter(adapter_model_name: str, adapter_alpha: float) -> genai.AdapterConfig:
     adapter_model_dir = MODEL_DIR / adapter_model_name
@@ -118,7 +136,7 @@ def load_lora_adapter(adapter_model_name: str, adapter_alpha: float) -> genai.Ad
     return adapter_config
 
 
-async def create_pipeline(model_name: str, device: str, size: int, adapter_model_name: str, adapter_alpha: float, pipeline: str) -> genai.Text2ImagePipeline | genai.Image2ImagePipeline | genai.InpaintingPipeline:
+async def create_pipeline(model_name: str, device: str, size: int, adapter_model_name: str, adapter_alpha: float, pipeline_type: str) -> genai.Text2ImagePipeline | genai.Image2ImagePipeline | genai.InpaintingPipeline:
     ov_config = {"CACHE_DIR": "cache"}
 
     # Download model if it hasn't been downloaded yet
@@ -130,14 +148,14 @@ async def create_pipeline(model_name: str, device: str, size: int, adapter_model
     if adapter_model_name is not None and adapter_model_name != "None":
         adapter = load_lora_adapter(adapter_model_name, adapter_alpha)
 
-    if pipeline == "text2image":
+    if pipeline_type == "text2image":
         ov_pipeline = genai.Text2ImagePipeline(model_dir)
-    elif pipeline == "image2image":
+    elif pipeline_type == "image2image":
         ov_pipeline = genai.Image2ImagePipeline(model_dir)
-    elif pipeline == "inpainting":
+    elif pipeline_type == "inpainting":
         ov_pipeline = genai.InpaintingPipeline(model_dir)
     else:
-        raise ValueError(f"Unknown pipeline: {pipeline}")
+        raise ValueError(f"Unknown pipeline: {pipeline_type}")
 
     ov_pipeline.reshape(1, size, size, ov_pipeline.get_generation_config().guidance_scale)
     # todo improve the below
@@ -149,11 +167,11 @@ async def create_pipeline(model_name: str, device: str, size: int, adapter_model
     return ov_pipeline
 
 
-async def load_pipeline(model_name: str, device: str, size: int, adapter_model_name: str, adapter_alpha: float, pipeline: str) -> genai.Text2ImagePipeline | genai.Image2ImagePipeline | genai.InpaintingPipeline:
+async def load_pipeline(model_name: str, device: str, size: int, adapter_model_name: str, adapter_alpha: float, pipeline_type: str) -> genai.Text2ImagePipeline | genai.Image2ImagePipeline | genai.InpaintingPipeline:
     if (device, pipeline) not in ov_pipelines:
         ov_pipelines[(device, pipeline)] = await create_pipeline(model_name, device, size, adapter_model_name, adapter_alpha, pipeline)
 
-    return ov_pipelines[(device, pipeline)]
+    return ov_pipelines[(device, pipeline_type)]
 
 
 async def stop():
@@ -192,6 +210,8 @@ async def generate_images(model_name: str, device: str, image_size: int, adapter
         ov_pipelines.clear()
 
     current_pipeline_configuration = pipeline_config
+
+    device = device.split(":")[0]  # Extract device type (e.g., "CPU", "GPU")
 
     input_image = None
     image_mask = None
@@ -254,6 +274,10 @@ def build_ui() -> gr.Interface:
     initial_config = MODEL_CONFIGS[initial_model]
     adapter_choices = ["None"] + initial_config["lora_adapters"]
 
+    available_devices = [f"{k}: {v}" for k, v in utils.available_devices().items()]
+
+    qr_code = utils.get_qr_code("https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/demos/paint_your_dreams_demo", size=384, with_embedded_image=True)
+
     examples_t2i = [
         "A sail boat on a grass field with mountains in the morning and sunny day",
         "a portrait of a tall Valkyrie with long blonde hair, iron armor, and a crown sitting on a white horse. Depict them in the Nordic Vikings period",
@@ -275,7 +299,9 @@ def build_ui() -> gr.Interface:
         "Make me a figurehead of the medieval ship"
     ]
 
-    with gr.Blocks() as demo:
+    with gr.Blocks(theme=utils.gradio_intel_theme(), title="Paint Your Dreams with OpenVINO") as demo:
+        # custom intel header
+        utils.gradio_intel_header("Paint Your Dreams with OpenVINO")
         with gr.Row():
             t2i_button = gr.Button("Text2Image", variant="primary")
             i2i_button = gr.Button("Image2Image", variant="secondary")
@@ -300,7 +326,7 @@ def build_ui() -> gr.Interface:
                         adapter_dropdown = gr.Dropdown(choices=adapter_choices, value="None", label="LoRA Adapter")
                         adapter_alpha_slider = gr.Slider(label="LoRA Alpha", minimum=0.0, maximum=1.0, step=0.05, value=0.5, visible=False)
                     with gr.Row(equal_height=True):
-                        device_dropdown = gr.Dropdown(choices=utils.available_devices(), value="AUTO", label="Inference device", scale=4)
+                        device_dropdown = gr.Dropdown(choices=available_devices, value=available_devices[0], label="Inference device", scale=4)
                         endless_checkbox = gr.Checkbox(label="Generate endlessly", value=False)
                         with gr.Column(scale=1):
                             start_button = gr.Button("Start generation", variant="primary")
@@ -313,16 +339,19 @@ def build_ui() -> gr.Interface:
                     randomize_seed_button = gr.Button("Randomize seed", scale=0)
                 with gr.Row():
                     strength_slider = gr.Slider(label="Input image influence strength", minimum=0.0, maximum=1.0,
-                                                step=0.01, value=initial_config["strength_value"])
-                    guidance_scale_slider = gr.Slider(label="Guidance scale for base", minimum=2, maximum=14, step=0.1,
-                                                      value=initial_config["guidance_scale_value"])
+                                                step=0.01, value=MODEL_CONFIGS[model_choices[0]]["strength_value"])
+                    guidance_scale_slider = gr.Slider(label="Guidance scale for base", minimum=1.1, maximum=15, step=0.1,
+                                                      value=MODEL_CONFIGS[model_choices[0]]["guidance_scale_value"])
                     image_size_slider = gr.Slider(label="Image size", minimum=256, maximum=1024, step=64,
                                                 value=512)
                     num_inference_steps_slider = gr.Slider(label="Number of inference steps for base", minimum=1,
                                                            maximum=32, step=1, value=initial_config["num_inference_steps"])
 
-        gr.Examples(label="Examples for Text2Image", examples=examples_t2i, inputs=prompt_text, outputs=result_img, cache_examples=False)
-        gr.Examples(label="Examples for Image2Image", examples=examples_i2i, inputs=prompt_text, outputs=result_img, cache_examples=False)
+        with gr.Row():
+            with gr.Column(scale=3):
+                gr.Examples(label="Examples for Text2Image", examples=examples_t2i, inputs=prompt_text, outputs=result_img, cache_examples=False)
+                gr.Examples(label="Examples for Image2Image", examples=examples_i2i, inputs=prompt_text, outputs=result_img, cache_examples=False)
+            gr.Image(qr_code, interactive=False, show_label=False, scale=1)
 
         def swap_buttons_highlighting():
             return gr.Button(variant="primary"), gr.Button(variant="secondary")
@@ -385,7 +414,7 @@ def run_demo(local_network: bool = False, public_interface: bool = False) -> Non
     download_and_load_safety_checker(SAFETY_CHECKER_MODEL_NAME)
 
     demo = build_ui()
-    log.info("Demo is ready!")
+    print("Demo is ready!", flush=True) # Required for the CI to detect readiness
     demo.launch(server_name=server_name, share=public_interface)
 
 

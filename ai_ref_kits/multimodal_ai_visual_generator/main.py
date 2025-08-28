@@ -10,8 +10,8 @@ import os
 import base64
 import sys
 import yaml
-import subprocess
 import openvino_genai as ov_genai
+import openvino as ov
 import logging
 import random
 
@@ -47,10 +47,14 @@ app.add_middleware(
 PROJECT_ROOT = Path(__file__).resolve().parent
 CONFIG_PATH = PROJECT_ROOT / "config" / "illustration.yaml"
 
+# Get model types from environment variables with defaults
+IMAGE_MODEL_TYPE = os.getenv("IMAGE_MODEL_TYPE", "flux.1-schnell")
+LLM_MODEL_TYPE = os.getenv("LLM_MODEL_TYPE", "qwen2-7B")
+PRECISION = os.getenv("MODEL_PRECISION", "int4")
 
-IMAGE_MODEL_TYPE = "flux.1-schnell"
-LLM_MODEL_TYPE = "qwen2-7B"
-PRECISION = "int4"
+logger.info(f"Using Image Model Type: {IMAGE_MODEL_TYPE}")
+logger.info(f"Using LLM Model Type: {LLM_MODEL_TYPE}")
+logger.info(f"Using Model Precision: {PRECISION}")
 
 image_model_dir = PROJECT_ROOT / "models" / f"{IMAGE_MODEL_TYPE}-{PRECISION.upper()}"
 llm_model_dir = PROJECT_ROOT / "models" / f"{LLM_MODEL_TYPE}-{PRECISION.upper()}"
@@ -58,29 +62,34 @@ llm_model_dir = PROJECT_ROOT / "models" / f"{LLM_MODEL_TYPE}-{PRECISION.upper()}
 # ---------- Load Config ----------
 with open(CONFIG_PATH, "r") as f:
     config = yaml.safe_load(f)
+    
+# ---------- Determine Device (GPU if available, else fallback) ----------
+core = ov.Core()
+preferred_device = "GPU" if "GPU" in core.available_devices else "CPU"
+print(f"Using OpenVINO device: {preferred_device}")
 
-# ---------- Lazy load models if available ----------
+# ---------- Load models ----------
 image_pipe = None
 llm_pipe = None
 
 if image_model_dir.exists():
     try:
-        image_pipe = ov_genai.Text2ImagePipeline(image_model_dir, device="GPU")
-        logger.info("Image model loaded.")
+        image_pipe = ov_genai.Text2ImagePipeline(image_model_dir, device=preferred_device)
+        logger.info("Image model loaded successfully.")
     except Exception as e:
-        logger.error(f"Failed to load Image model: {e}")
+        logger.error(f"Failed to load image model: {e}")
 else:
     logger.warning(f"Image model not found at {image_model_dir}")
 
 if llm_model_dir.exists():
     try:
-        llm_pipe = ov_genai.LLMPipeline(str(llm_model_dir), device="GPU")
-        logger.info("LLM model loaded.")
+        llm_pipe = ov_genai.LLMPipeline(str(llm_model_dir), device=preferred_device)
+        logger.info("LLM model loaded successfully.")
     except Exception as e:
         logger.error(f"Failed to load LLM model: {e}")
 else:
     logger.warning(f"LLM model not found at {llm_model_dir}")
-    
+
 llm_config = ov_genai.GenerationConfig()
 llm_config.max_new_tokens = 256
 llm_config.apply_chat_template = False
@@ -206,9 +215,8 @@ def generate_image(request: PromptRequest):
 
 # ---------- Server Start Print ----------
 if image_pipe or llm_pipe:
-    print("FastAPI backend is running.")
-    print("In a separate terminal, start the Streamlit app using:")
-    print("streamlit run streamlit_app.py")
+    logger.info("FastAPI backend is running.")
+    logger.info("In a separate terminal, start the Streamlit app using: streamlit run streamlit_app.py")
 else:
-    print("FastAPI backend is running, but no models were loaded.")
-    print("Please export models before running the Streamlit app.")
+    logger.warning("FastAPI backend is running, but no models were loaded.")
+    logger.warning("Please export models before running the Streamlit app.")
