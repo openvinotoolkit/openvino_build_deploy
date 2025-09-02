@@ -221,9 +221,8 @@ def extract_transcript_from_audio_with_openvino(
         path_to_audio (str): Path to the audio file.
         path_to_save_transcript (str): Path to save the transcript file.
     """
-    # Use environment variable for device configuration, fallback to CPU
-    import os
-    device = os.getenv("OPENVINO_WHISPER_MODEL_DEVICE", "CPU")
+    # Use CPU device by default for server environment
+    device = "CPU"
     print(f"[WHISPER MODEL] Initializing OpenVINO Whisper model...")
     print(f"[WHISPER MODEL] Model directory: {model_dir}")
     print(f"[WHISPER MODEL] Device: {device}")
