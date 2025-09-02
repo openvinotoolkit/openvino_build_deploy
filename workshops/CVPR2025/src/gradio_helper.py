@@ -45,10 +45,7 @@ app = FastAPI()
 
 # Use the actual demo video from the workspace data directory
 project_root = Path(__file__).parent.parent  # Go up to CVPR2025 directory
-example_path = project_root / "data" / "friends.mp4"
-
-# Check if the example video exists, otherwise use None
-default_video = str(example_path) if example_path.exists() else None
+example_path = project_root / "data" / "input_vid.mp4"
 # examples = [
 #     ["What dessert is included in this video?"],
 #     ["Tell me how to make a trifle. I want to make one myself"],
@@ -460,20 +457,10 @@ async def run_agent_workflow(query: str):
 
 # Set Gradio temporary directory to avoid Windows path issues
 import tempfile
-import os
-import stat
-
-# Use a dedicated gradio_tmp directory in the project root
-gradio_temp_dir = Path(__file__).parent.parent / "gradio_tmp"
+gradio_temp_dir = Path(__file__).parent.parent / "temp"
 gradio_temp_dir.mkdir(exist_ok=True)
-
-# Set full permissions for the temp directory
-try:
-    os.chmod(str(gradio_temp_dir), stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
-except:
-    pass  # Ignore permission errors on Windows
-
 # Set environment variable for Gradio temp directory
+import os
 os.environ["GRADIO_TEMP_DIR"] = str(gradio_temp_dir)
 print("✅ Gradio temp directory set")
 
@@ -487,7 +474,7 @@ with gr.Blocks(theme=gr.themes.Soft(), css=".disclaimer{font-variant-caps:all-sm
     with gr.Row():
         # === Left Column: Video + Log/Cart Below ===
         with gr.Column(scale=2):
-            video_file = gr.Video(value=default_video, label="1) Upload or choose a video", interactive=True)
+            video_file = gr.Video(value=str(example_path), label="1) Upload or choose a video", interactive=True)
             build_btn  = gr.Button("2) Build Vector Store", variant="primary")
             status     = gr.Textbox("Vector store is already pre-built", interactive=False, show_label=False)
 
