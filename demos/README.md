@@ -26,7 +26,14 @@ Example:
 ```bash
 run_container.sh paint_your_dreams_demo --model_name OpenVINO/LCM_Dreamshaper_v7-fp16-ov
 ```
-
+### Proxy Settings
+If you are building and running the container behind a proxy please pass the environmental variables to the build command and run_container script:
+```bash
+docker build -f Dockerfile --build-arg DEMO=paint_your_dreams_demo --build-arg http_proxy=$http_proxy --build-arg https_proxy=$https_proxy --build-arg no_proxy="$no_proxy" -t paint_your_dreams_demo:latest .
+```
+```bash
+run_container.sh -e no_proxy=$NO_PROXY -e http_proxy=$http_proxy -e https_proxy=$https_proxy paint_your_dreams_demo
+```
 
 ## Available Demos
 
