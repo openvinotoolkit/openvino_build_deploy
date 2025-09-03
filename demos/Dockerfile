@@ -50,11 +50,7 @@ COPY --chown=openvino:openvino ${DEMO}/requirements.txt .
 # Optional: remove OpenVINO’s bundled cv2 wheel so the venv’s opencv gets used when/if imported via system path
 RUN rm -rf /opt/intel/openvino/extras/opencv/python/cv2* || true
 
-# Install project deps into the venv
-ENV UV_INDEX_URL=https://pypi.org/simple \
-    UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu \
-    UV_INDEX_STRATEGY=unsafe-best-match
-RUN uv pip install --no-cache -r requirements.txt
+RUN uv pip install -r requirements.txt --index-strategy unsafe-best-match
 
 # 4) Copy app code
 COPY --chown=openvino:openvino utils   /workspace/utils

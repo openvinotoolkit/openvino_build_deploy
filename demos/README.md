@@ -26,6 +26,9 @@ Example:
 ```bash
 run_container.sh paint_your_dreams_demo --model_name OpenVINO/LCM_Dreamshaper_v7-fp16-ov
 ```
+
+### Performance Note:
+Running the containerized workloads will reduce performance of the application in terms of througput - a 30% drop in FPS vs bare metal is common
 ### Proxy Settings
 If you are building and running the container behind a proxy please pass the environmental variables to the build command and run_container script:
 ```bash
