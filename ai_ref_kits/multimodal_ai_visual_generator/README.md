@@ -144,7 +144,7 @@ Use the provided scripts to export and optimize the models. When you run them, b
 
 Download the pre-optimized LLMs model
 ```shell
-huggingface-cli download OpenVINO/DeepSeek-R1-Distill-Qwen-1.5B-int4-ov --local-dir models/DeepSeek-R1-Distill-Qwen-1.5B-int4
+huggingface-cli download OpenVINO/Qwen2.5-7B-Instruct-int4-ov --local-dir models/Qwen2.5-7B-Instruct-int4
 ```
 Download the pre-optimized image generation model
 ```shell
@@ -198,7 +198,7 @@ source venv/bin/activate         # On Windows: venv\Scripts\activate
 uvicorn main:app --host 0.0.0.0 --port 8000
 
 # Or run with custom model configuration. e.g., using the pre-optimized models above 
-IMAGE_MODEL_TYPE="models/FLUX.1-schnell" LLM_MODEL_TYPE="models/DeepSeek-R1-Distill-Qwen-1.5B" MODEL_PRECISION="int4" uvicorn main:app --host 0.0.0.0 --port 8000
+IMAGE_MODEL_TYPE="FLUX.1-schnell" LLM_MODEL_TYPE="Qwen2.5-7B-Instruct" MODEL_PRECISION="int4" uvicorn main:app --host 0.0.0.0 --port 8000
 #On Windows PowerShell
 $env:IMAGE_MODEL_TYPE="FLUX.1-schnell" 
 $env:LLM_MODEL_TYPE="DeepSeek-R1-Distill-Qwen-1.5B" 
@@ -249,5 +249,6 @@ You can evaluate performance benchmarks for models like Qwen2.5-7B and FLUX.1-sc
 <p align="right"><a href="#top">Back to top ⬆️</a></p>
 
 <img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca?project=ai_ref_kits/multimodal_ai_visual_generator?file=README.md" />
+
 
 
