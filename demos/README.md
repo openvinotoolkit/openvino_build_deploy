@@ -24,7 +24,7 @@ run_container.sh <image_name> <flags>
 ```
 Example:
 ```bash
-run_container.sh paint_your_dreams_demo --model_name OpenVINO/LCM_Dreamshaper_v7-fp16-ov
+run_container.sh virtual_ai_assistant_demo --personality use_your_personality.yaml
 ```
 
 ### Performance Note:
