@@ -199,12 +199,15 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 
 # Or run with custom model configuration. e.g., using the pre-optimized models above 
 IMAGE_MODEL_TYPE="FLUX.1-schnell" LLM_MODEL_TYPE="Qwen2.5-7B-Instruct" MODEL_PRECISION="int4" uvicorn main:app --host 0.0.0.0 --port 8000
-#On Windows PowerShell
+```
+
+On Windows powershell:
+
+```pwsh
 $env:IMAGE_MODEL_TYPE="FLUX.1-schnell" 
 $env:LLM_MODEL_TYPE="Qwen2.5-7B-Instruct" 
 $env:MODEL_PRECISION="int4" 
 uvicorn main:app --host 0.0.0.0 --port 8000
-
 ```
 
 If no environment variables are set, the application will use the default values.
@@ -249,7 +252,3 @@ You can evaluate performance benchmarks for models like Qwen2.5-7B and FLUX.1-sc
 <p align="right"><a href="#top">Back to top ⬆️</a></p>
 
 <img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca?project=ai_ref_kits/multimodal_ai_visual_generator?file=README.md" />
-
-
-
-
