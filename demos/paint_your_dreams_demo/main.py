@@ -106,7 +106,7 @@ def download_and_load_safety_checker(model_name: str) -> None:
                             image_processor=AutoProcessor.from_pretrained(safety_checker_dir, use_fast=True))
 
 
-def download_model(model_name: str, is_lora_adapter: bool = False) -> None:
+async def download_model(model_name: str, is_lora_adapter: bool = False) -> None:
     is_openvino_model = model_name.split("/")[0] == "OpenVINO"
     output_dir = MODEL_DIR / model_name
     if not output_dir.exists():
@@ -122,10 +122,11 @@ def download_model(model_name: str, is_lora_adapter: bool = False) -> None:
                     if tokenizer:
                         export_tokenizer(tokenizer, output_dir / tokenizer_name)
 
-def load_lora_adapter(adapter_model_name: str, adapter_alpha: float) -> genai.AdapterConfig:
+
+async def load_lora_adapter(adapter_model_name: str, adapter_alpha: float) -> genai.AdapterConfig:
     adapter_model_dir = MODEL_DIR / adapter_model_name
     if not adapter_model_dir.exists():
-        download_model(adapter_model_name, is_lora_adapter=True)
+        await download_model(adapter_model_name, is_lora_adapter=True)
 
     # find a file with lora weights
     safetensors_files = list(adapter_model_dir.glob("*.safetensors"))
@@ -144,7 +145,7 @@ async def create_pipeline(model_name: str, device: str, size: int, adapter_model
     # Download model if it hasn't been downloaded yet
     model_dir = MODEL_DIR / model_name
     if not model_dir.exists():
-        download_model(model_name)
+        await download_model(model_name)
 
     if pipeline_type == "text2image":
         ov_pipeline = genai.Text2ImagePipeline(model_dir)
@@ -159,7 +160,7 @@ async def create_pipeline(model_name: str, device: str, size: int, adapter_model
 
     # Load LoRA adapter if specified
     if adapter_model_name is not None and adapter_model_name != "None":
-        ov_config["adapters"] = load_lora_adapter(adapter_model_name, adapter_alpha)
+        ov_config["adapters"] = await load_lora_adapter(adapter_model_name, adapter_alpha)
 
     ov_pipeline.compile(device, config=ov_config)
 
