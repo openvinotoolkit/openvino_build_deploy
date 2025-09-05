@@ -2,6 +2,8 @@
 
 This demo generates natural language captions for images or video streams using the BLIP (Bootstrapped Language Image Pretraining) model, accelerated by OpenVINO™. The application can process live webcam feeds or video files, displaying the generated captions in real time. You can switch between different devices (CPU, GPU, etc.) on the fly to compare performance.
 
+In addition, this demo now supports LLM-powered summarization: when you press ESC, the app will instantly close the video window and stream a concise summary of the entire session into your terminal, using OpenVINO GenAI for the LLM inferencing.
+
 ![the_narrator_demo](https://github.com/user-attachments/assets/8fe98025-34ac-44a7-ad46-6f71327c9cdc)
 
 ## Quick Launch using Setup Scripts
@@ -72,7 +74,15 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-## Step 5: Run the Application
+### Step 5: Download Pre-optimized LLM model
+
+Download the pre-optimized LLM model:
+
+```shell
+huggingface-cli download OpenVINO/Qwen2.5-1.5B-Instruct-int4-ov --local-dir models/Qwen2.5-1.5B-Instruct-int4
+```
+
+### Step 6: Run the Application
 
 To run the application on your webcam (default):
 
@@ -93,6 +103,12 @@ python main.py --stream 0 --model_name Salesforce/blip-image-captioning-large
 ```
 
 The first run will automatically download and convert the required BLIP model to OpenVINO IR format. The converted models will be stored in the `model` directory for future runs.
+
+You can also select which LLM model to use (by replacing model id in the downloading cli) and the maximum number of tokens for generating the summarization:
+
+```shell
+python main.py --stream 0 --summary_ov_model models/Qwen2.5-7B-Instruct-int4 --summary_max_new_tokens 160
+```
 
 To see all available options:
 
