@@ -10,7 +10,7 @@ import numpy as np
 from supervision import BoxCornerAnnotator, LabelAnnotator, TraceAnnotator, LineZoneAnnotator, LineZone, ByteTrack, \
     Point, Detections, Color, ColorLookup, DetectionsSmoother
 from supervision.annotators.base import BaseAnnotator
-from ultralytics import YOLOE, YOLO
+from ultralytics import YOLOE, YOLO, YOLOWorld
 from ultralytics.engine.results import Results
 
 SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "utils")
@@ -28,12 +28,17 @@ PROBABILITY_COEFFICIENT = 15
 
 
 def load_yolo_model(model_name: str, main_class: str, aux_classes: list[str]) -> YOLO:
-    model_path = MODEL_DIR / f"{model_name}.pt"
-    model = YOLOE(model_path)
-
     # set classes to detect
     classes = [main_class] + aux_classes + NULL_CLASSES
-    model.set_classes(classes, model.get_text_pe(classes))
+
+    model_path = MODEL_DIR / f"{model_name}.pt"
+
+    if "world" in model_name:
+        model = YOLOWorld(model_path)
+        model.set_classes(classes)
+    else:
+        model = YOLOE(model_path)
+        model.set_classes(classes, model.get_text_pe(classes))
 
     model_path = model.export(format="openvino", dynamic=False, half=True)
 
@@ -181,8 +186,9 @@ if __name__ == '__main__':
     parser.add_argument('--class_name', default="hazelnut", type=str, help="The class name to detect")
     parser.add_argument('--aux_classes', nargs='+', default=["nut", "brown ball"], type=str, help="Auxiliary classes supporting the detection of the main class")
     parser.add_argument('--device', default="AUTO", type=str, help="Device to run inference on")
-    parser.add_argument("--detection_model", type=str, default="yoloe-11m-seg", help="Model for object detection",
-                        choices=["yoloe-11s-seg", "yoloe-11m-seg", "yoloe-11l-seg", "yoloe-v8s-seg", "yoloe-v8m-seg", "yoloe-v8l-seg"])
+    parser.add_argument("--detection_model", type=str, default="yolov8m-worldv2", help="Model for object detection",
+                        choices=["yolov8s-world", "yolov8s-worldv2", "yolov8m-world", "yolov8m-worldv2", "yolov8l-world", "yolov8l-worldv2", "yolov8x-world", "yolov8x-worldv2",
+                                 "yoloe-11s-seg", "yoloe-11m-seg", "yoloe-11l-seg", "yoloe-v8s-seg", "yoloe-v8m-seg", "yoloe-v8l-seg"])
     parser.add_argument("--flip", type=bool, default=True, help="Mirror input video")
 
     args = parser.parse_args()

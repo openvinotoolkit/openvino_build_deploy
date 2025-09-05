@@ -11,7 +11,6 @@ from transformers import AutoTokenizer
 
 MODEL_MAPPING = {
     "llama3.2-1B": "meta-llama/Llama-3.2-1B-Instruct",
-    "llama3.2-3B": "meta-llama/Llama-3.2-3B-Instruct",
     "qwen2-7B": "Qwen/Qwen2-7B-Instruct",
     "bge-large": "BAAI/bge-large-en-v1.5",
     "bge-small": "BAAI/bge-small-en-v1.5",    
@@ -131,7 +130,7 @@ def convert_embedding_model(model_type: str, model_dir: Path) -> Path:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--chat_model_type", type=str, choices=["qwen2-7B", "llama3.2-3B", "llama3.2-1B"],
+    parser.add_argument("--chat_model_type", type=str, choices=["qwen2-7B"],
                         default="qwen2-7B", help="Chat model to be converted")
     parser.add_argument("--embedding_model_type", type=str, choices=["bge-small", "bge-large", "bge-m3"],
                         default="bge-large", help="Embedding model to be converted")

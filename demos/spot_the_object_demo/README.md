@@ -128,7 +128,7 @@ python main.py --stream 0 --class_name hazelnut --aux_classes nut "brown ball"
 By default, the YOLOE-11M model is used. To change this, select another model from the family:
 
 ```shell
-python main.py --stream 0 --model_name yoloe-11s-seg
+python main.py --stream 0 --detection_model yoloe-11s-seg
 ```
 
 To change the inference device use the `--device` option. By default, AUTO is used.
