@@ -213,7 +213,9 @@ def available_devices(exclude: list | tuple | None = None) -> Dict[str, str]:
     if exclude is not None:
         exclude_devices.update(exclude)
 
-    device_mapping = {"AUTO": "Automatic Device Selection"}
+    device_mapping = {}
+    if "AUTO" not in exclude_devices:
+        device_mapping["AUTO"] = "Automatic Device Selection"
 
     core = ov.Core()
     for device in core.available_devices:
