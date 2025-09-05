@@ -146,10 +146,6 @@ async def create_pipeline(model_name: str, device: str, size: int, adapter_model
     if not model_dir.exists():
         download_model(model_name)
 
-    adapter = None
-    if adapter_model_name is not None and adapter_model_name != "None":
-        adapter = load_lora_adapter(adapter_model_name, adapter_alpha)
-
     if pipeline_type == "text2image":
         ov_pipeline = genai.Text2ImagePipeline(model_dir)
     elif pipeline_type == "image2image":
@@ -160,8 +156,10 @@ async def create_pipeline(model_name: str, device: str, size: int, adapter_model
         raise ValueError(f"Unknown pipeline: {pipeline_type}")
 
     ov_pipeline.reshape(1, size, size, ov_pipeline.get_generation_config().guidance_scale)
-    if adapter is not None:
-        ov_config["adapters"] = adapter
+
+    # Load LoRA adapter if specified
+    if adapter_model_name is not None and adapter_model_name != "None":
+        ov_config["adapters"] = load_lora_adapter(adapter_model_name, adapter_alpha)
 
     ov_pipeline.compile(device, config=ov_config)
 
