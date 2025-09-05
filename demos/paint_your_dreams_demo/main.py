@@ -128,7 +128,10 @@ def load_lora_adapter(adapter_model_name: str, adapter_alpha: float) -> genai.Ad
         download_model(adapter_model_name, is_lora_adapter=True)
 
     # find a file with lora weights
-    safetensors_file = next(adapter_model_dir.glob("*.safetensors"))
+    safetensors_files = list(adapter_model_dir.glob("*.safetensors"))
+    if not safetensors_files:
+        raise FileNotFoundError(f"No .safetensors files found in {adapter_model_dir}")
+    safetensors_file = safetensors_files[0]
 
     adapter = genai.Adapter(safetensors_file)
     adapter_config = genai.AdapterConfig(adapter, adapter_alpha)
