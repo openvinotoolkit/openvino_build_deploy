@@ -79,7 +79,7 @@ pip install -r requirements.txt
 Download the pre-optimized LLM model:
 
 ```shell
-huggingface-cli download OpenVINO/Qwen2.5-1.5B-Instruct-int4-ov --local-dir models/Qwen2.5-1.5B-Instruct-int4
+huggingface-cli download OpenVINO/Qwen2.5-1.5B-Instruct-int4-ov --local-dir model/Qwen2.5-1.5B-Instruct-int4
 ```
 
 ### Step 6: Run the Application
