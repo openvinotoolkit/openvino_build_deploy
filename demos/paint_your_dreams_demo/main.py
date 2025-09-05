@@ -64,7 +64,6 @@ flux_config = {
     "num_inference_steps": 4,
     "strength_value": 0.2,
     "lora_adapters": [
-        "prithivMLmods/Canopus-LoRA-Flux-FaceRealism"
     ]
 }
 flux_lite_config = {
@@ -132,7 +131,7 @@ def load_lora_adapter(adapter_model_name: str, adapter_alpha: float) -> genai.Ad
     safetensors_file = next(adapter_model_dir.glob("*.safetensors"))
 
     adapter = genai.Adapter(safetensors_file)
-    adapter_config = genai.AdapterConfig(adapter, adapter_alpha)
+    adapter_config = genai.AdapterConfig(adapter, adapter_alpha, mode=genai.AdapterConfig.Mode.MODE_DYNAMIC)
     return adapter_config
 
 
@@ -323,7 +322,7 @@ def build_ui() -> gr.Interface:
                         result_time_label = gr.Text("", label="Inference time", type="text")
                     with gr.Row():
                         model_dropdown = gr.Dropdown(choices=model_choices, value=initial_model, label="Model")
-                        adapter_dropdown = gr.Dropdown(choices=adapter_choices, value="None", label="LoRA Adapter")
+                        adapter_dropdown = gr.Dropdown(choices=adapter_choices, value="None", label="LoRA Adapter", visible=len(adapter_choices) > 1)
                         adapter_alpha_slider = gr.Slider(label="LoRA Alpha", minimum=0.0, maximum=1.0, step=0.05, value=0.5, visible=False)
                     with gr.Row(equal_height=True):
                         device_dropdown = gr.Dropdown(choices=available_devices, value=available_devices[0], label="Inference device", scale=4)
@@ -361,7 +360,7 @@ def build_ui() -> gr.Interface:
             # Add "None" as the first choice followed by available adapters
             adapter_choices = ["None"] + list(config["lora_adapters"])
             return gr.Slider(value=config["strength_value"]), gr.Slider(value=config["guidance_scale_value"]), gr.Slider(value=config["num_inference_steps"]), \
-                gr.Dropdown(choices=adapter_choices, value="None"), gr.Slider(value=0.5, visible=False)
+                gr.Dropdown(choices=adapter_choices, value="None", visible=len(adapter_choices) > 1), gr.Slider(value=0.5, visible=False)
 
         def on_adapter_change(adapter_name):
             # Update visibility of alpha slider
