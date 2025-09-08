@@ -6,6 +6,38 @@ This directory contains interactive demos aimed at demonstrating how OpenVINO pe
 
 _Please note: even though you can find here a lot of useful OpenVINO code, education is not the main purpose of this directory. If you are interested in educational content visit [ai_ref_kits](../ai_ref_kits/README.md)._
 
+## Running Demos with Docker
+A Dockerfile and run_container.sh script is provided to run the demos as a container if needed.
+### Build Container
+```bash
+docker build -f Dockerfile --build-arg DEMO=<demo folder> -t <image_name> .
+```
+Example:
+```bash
+docker build -f Dockerfile --build-arg DEMO=paint_your_dreams_demo -t paint_your_dreams_demo:latest .
+```
+Note: Demo folder needs to be the exact folder name, e.g. paint_your_dreams_demo
+
+### Run Container 
+```bash
+run_container.sh <image_name> <flags>
+```
+Example:
+```bash
+run_container.sh virtual_ai_assistant_demo --personality use_your_personality.yaml
+```
+
+### Performance Note:
+Running the containerized workloads will reduce performance of the application in terms of througput - a 30% drop in FPS vs bare metal is common
+### Proxy Settings
+If you are building and running the container behind a proxy please pass the environmental variables to the build command and run_container script:
+```bash
+docker build -f Dockerfile --build-arg DEMO=paint_your_dreams_demo --build-arg http_proxy=$http_proxy --build-arg https_proxy=$https_proxy --build-arg no_proxy="$no_proxy" -t paint_your_dreams_demo:latest .
+```
+```bash
+run_container.sh -e no_proxy=$NO_PROXY -e http_proxy=$http_proxy -e https_proxy=$https_proxy paint_your_dreams_demo
+```
+
 ## Available Demos
 
 Currently, the following demos are tested for Python :warning:3.10-3.13 :warning: only:
