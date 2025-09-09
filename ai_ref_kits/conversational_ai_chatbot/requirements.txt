@@ -17,6 +17,7 @@ torchaudio==2.8.0
 numpy==2.2.6
 
 transformers==4.53.3
+datasets==4.0.0
 librosa==0.10.2
 pyyaml==6.0.1
 pymupdf==1.26.3
