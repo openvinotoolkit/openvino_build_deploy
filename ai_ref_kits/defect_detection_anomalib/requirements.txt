@@ -4,6 +4,9 @@ jupyterlab==4.2.5
 ipywidgets==8.1.5
 
 anomalib[core,openvino]==1.2.0
+openvino==2025.3.0
+nncf==2.18.0
+onnx==1.18.0
 scikit-learn==1.6.1
 python-dotenv==1.0.1
 matplotlib==3.9.4
