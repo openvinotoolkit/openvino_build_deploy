@@ -113,27 +113,8 @@ def load_llava_video_models(model_name: str, device: str = "CPU") -> tuple:
     """Load LLaVA-NeXT-Video model with Intel HF Optimum (OpenVINO)"""
     model_dir = MODEL_DIR / model_name.replace("/", "_")
     
-    # Define imoportant files that should be present for a complete model
-    model_files = [
-        "openvino_model.xml",
-        "openvino_model.bin", 
-        "config.json",
-        "tokenizer_config.json",
-        "special_tokens_map.json"
-    ]
-    
-    # Check if model directory exists and has all critical files
-    model_exists = model_dir.exists()
-    if model_exists:
-        missing_files = [f for f in model_files if not (model_dir / f).exists()]
-        if missing_files:
-            print(f"Model directory exists but missing critical files: {missing_files}")
-            print("Re-downloading and converting model...")
-            download_and_convert_llava_video(model_name)
-        else:
-            print(f"All model files found in {model_dir}")
-    else:
-        print(f"Model directory not found. Downloading and converting model...")
+    # Download and convert if not exists
+    if not model_dir.exists():
         download_and_convert_llava_video(model_name)
     
     print(f"Loading LLaVA-NeXT-Video Intel HF Optimum (OpenVINO) models from {model_dir}")
