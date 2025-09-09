@@ -147,7 +147,7 @@ def load_llava_video_models(model_name: str, device: str = "CPU") -> tuple:
     processor = AutoProcessor.from_pretrained(str(model_dir))
     
     print(f"Successfully loaded LLaVA-NeXT-Video Intel HF Optimum (OpenVINO) model on {device}")
-    return model, processor, device, "intel_optimum_openvino"
+    return model, processor
 
 def download_and_convert_llava_video(model_name: str) -> None:
     """Download pre-converted LLaVA-NeXT-Video OpenVINO model from Hugging Face"""
@@ -199,31 +199,36 @@ def text_decoder_forward(ov_text_decoder_with_past: ov.CompiledModel, input_ids:
     return CausalLMOutputWithCrossAttentions(logits=logits, past_key_values=past_kv, hidden_states=None,
                                              attentions=None, cross_attentions=None)
 
-def generate_caption_video(video_input: bool,model, current_frames, processor):
- pil_images =[]
- frames_copy=current_frames.copy()
+def generate_caption_video(model,processor,current_frames):
+    if not current_frames:
+        return "No frames to generate caption"
+
+    pil_frames =[]
+    frames_copy=current_frames.copy()
  
- for frame in frames_copy:
-    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    pil_image = Image.fromarray(rgb_frame)
+    for frame in frames_copy:
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        pil_image = Image.fromarray(rgb_frame)
     
     #Resize
-    pil_image = pil_image.resize((128, 96)),Image.Resampling.LANCZOS
-    pil_frames.append(pil_image)
+        pil_image = pil_image.resize((128, 96)),Image.Resampling.LANCZOS
+        pil_frames.append(pil_image)
 
+    numpy_frames = [np.array(frame) for frame in pil_frames]
+    video_array = np.array(numpy_frames)
     conversation_with_frames=[ 
         {
             "role": "user",
             "content": [
                 {"type": "text", "text": "Describe what you see in the video in no more than 20 words."},
-                {"type": "video", "path": pil_frames}for frame in pil_frames],
+                {"type": "video", "path": video_array},
             ],
         },
     ]
 
     inputs_with_frames = processor.apply_chat_template(
         conversation_with_frames,
-        num_frames=len(pil_frames),
+        num_frames=len(numpy_frames),
         add_generation_prompt=True,
         tokenize=True,
         return_dict=True,
@@ -270,7 +275,7 @@ def inference_worker(video_input: bool = False,model=None, vision_model=None, te
 
         start_time = time.perf_counter()
         if video_input == True:
-            caption = generate_caption_video(current_frames, model, processor,video_input)
+            caption = generate_caption_video(model, processor,current_frames)
         else:
             caption = generate_caption(frame, vision_model, text_decoder, processor)
         elapsed = time.perf_counter() - start_time
@@ -293,7 +298,7 @@ def run(video_path: str, model_name: str, flip: bool = True, video_input: str = 
     
     if video_input == True:
         model_name = "llava-hf/LLaVA-NeXT-Video-7B-hf"
-        model, processor, device, model_type = load_llava_video_models(model_name, device_type)
+        model, processor = load_llava_video_models(model_name, device_type)
     else:
         vision_model, text_decoder, processor = load_models(model_name, device_type)
 
@@ -380,18 +385,11 @@ def run(video_path: str, model_name: str, flip: bool = True, video_input: str = 
 
                     # Recompile models for the new device
                     vision_model, text_decoder, processor = load_models(model_name, device_type)
-                    # Start a new inference worker
-                    if video_input == True:
-                        worker = threading.Thread(
-                            target=inference_worker,
-                            args=(model, current_frames, processor),
-                            daemon=True
-                    )
-                    else:
-                        worker = threading.Thread(
-                            target=inference_worker,
-                            args=(vision_model, text_decoder, processor),
-                            daemon=True
+
+                    worker = threading.Thread(
+                        target=inference_worker,
+                        args=(vision_model, text_decoder, processor),
+                        daemon=True
                     )
                     worker.start()
                     # Clear the processing times
