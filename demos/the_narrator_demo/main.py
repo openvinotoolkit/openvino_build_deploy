@@ -30,8 +30,9 @@ from utils import demo_utils as utils
 MODEL_DIR = Path("model")
 TEXT_CONFIG = BlipTextConfig()
 
-current_frames = deque(maxlen=6)
-captions = deque(maxlen=6)
+max_caption_length = 6
+current_frames = deque(maxlen=max_caption_length)
+captions = deque(maxlen=max_caption_length)
 
 processing_times = deque(maxlen=100)
 
@@ -183,6 +184,7 @@ def text_decoder_forward(ov_text_decoder_with_past: ov.CompiledModel, input_ids:
 
 def generate_caption_video(current_frames,model, processor) -> str:
     print("Generating caption for video frames...")
+
     if not current_frames:
         return "No frames available"
     
@@ -243,7 +245,6 @@ def generate_caption_video(current_frames,model, processor) -> str:
             description = response.split("ASSISTANT:")[-1].strip()
         else:
             description = response.strip()
-        print("Generated caption:", description)
         return description
     
     finally:
@@ -251,16 +252,15 @@ def generate_caption_video(current_frames,model, processor) -> str:
         if os.path.exists(temp_video_path):
             os.remove(temp_video_path)
 
-
-
 def generate_caption(image: np.array, vision_model: ov.CompiledModel, text_decoder: BlipTextLMHeadModel, processor: BlipProcessor) -> str:
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     pixel_values = np.array(processor(image).pixel_values)
+    print("Extracting image features...")
     image_embeds = vision_model(np.array(pixel_values))[vision_model.output(0)]
 
     image_attention_mask = np.ones(image_embeds.shape[:-1], dtype=np.int64)
     input_ids = np.array([[TEXT_CONFIG.bos_token_id, TEXT_CONFIG.eos_token_id]], dtype=np.int64)
-
+    print("Generating caption for image...")
     outputs = text_decoder.generate(
         input_ids=torch.LongTensor(input_ids[:, :-1]),
         eos_token_id=TEXT_CONFIG.sep_token_id,
@@ -271,22 +271,25 @@ def generate_caption(image: np.array, vision_model: ov.CompiledModel, text_decod
     return processor.decode(outputs[0], skip_special_tokens=True)
 
 
-def inference_worker(video_input: bool =False,model=None,processor = None,text_decoder=None):
+def inference_worker(model,processor,vision_model, text_decoder,video_input: bool = False) -> None:
     global current_frames, captions, processing_times
-    
+    if video_input == True:
+        frames = max_caption_length
+    else:
+        frames = 0
     while not global_stop_event.is_set():
         with global_frame_lock:
-            frame = current_frames.pop() if len(current_frames) > 8 else np.zeros((1080, 1920, 3), dtype=np.uint8)
+            frame = current_frames.pop() if len(current_frames) > frames else np.zeros((1080, 1920, 3), dtype=np.uint8)
 
         start_time = time.perf_counter()
-        
+
         if video_input ==True :
             if len(current_frames) >= 6:
                 caption = generate_caption_video(current_frames, model, processor)
             else :
-                caption = "No frames available"
+                caption = "Waiting.."
         else:
-            caption = generate_caption(frame,model, text_decoder, processor)
+            caption = generate_caption(frame,vision_model,text_decoder, processor)
         
         elapsed = time.perf_counter() - start_time
 
@@ -305,6 +308,7 @@ def run(video_path: str, model_name: str, flip: bool = True, video_input: bool =
     # NPU won't work with the dynamic shape models, so we exclude it
     device_mapping = utils.available_devices(exclude=["NPU"])
     device_type = "AUTO"
+
     vision_model, text_decoder, processor = load_models(model_name, device_type)
     
     # initialize video player to deliver frames
@@ -322,9 +326,15 @@ def run(video_path: str, model_name: str, flip: bool = True, video_input: bool =
     # Start the inference thread
     worker = threading.Thread(
             target=inference_worker,
-            args=(video_input,vision_model, processor,text_decoder),
+            kwargs={
+                "video_input": False,
+                "model": None,
+                "processor": processor,
+                "vision_model": vision_model,
+                "text_decoder": text_decoder
+            },
             daemon=True
-            )
+    )
     worker.start()
 
     # start a video stream
@@ -350,8 +360,11 @@ def run(video_path: str, model_name: str, flip: bool = True, video_input: bool =
             t2 = time.time()
             # update the caption only if the time difference is significant, otherwise it will be flickering
             if t2 - t1 > 1 or not caption:
-                if len(captions) > 0:
-                    caption=captions[-1]
+                if video_input == True:
+                    if len(captions) > 0:
+                        caption=captions[-1]
+                else:
+                    caption = captions.pop() if len(captions) > 0 else ""
                 t1 = t2
 
             # Get the mean processing time
@@ -411,6 +424,7 @@ def run(video_path: str, model_name: str, flip: bool = True, video_input: bool =
 
             if video_input == False:
                 print("Switching to image_input mode...")
+
                 model_name = "Salesforce/blip-image-captioning-base"
                 device_type = "AUTO"
         
@@ -421,11 +435,17 @@ def run(video_path: str, model_name: str, flip: bool = True, video_input: bool =
         
                 # Load image input models and processor
                 vision_model, text_decoder, processor = load_models(model_name, device_type)
-        
+                
                 # Start new inference worker with video_input=False
                 worker = threading.Thread(
                     target=inference_worker,
-                    args=(video_input,vision_model, processor,text_decoder),
+                    kwargs={
+                        "video_input": False,
+                        "model": None,
+                        "processor": processor,
+                        "vision_model": vision_model,
+                        "text_decoder": text_decoder
+                    },
                     daemon=True
                 )
                 worker.start()
@@ -455,9 +475,15 @@ def run(video_path: str, model_name: str, flip: bool = True, video_input: bool =
                # Start new inference worker with video_input=True
                 worker = threading.Thread(
                     target=inference_worker,
-                    args=(video_input, model, processor),
+                    kwargs={
+                        "video_input": True,
+                        "model": model,
+                        "processor": processor,
+                        "vision_model": None,
+                        "text_decoder": None
+                    },
                     daemon=True
-                 )
+                )
                 worker.start()
     
                 # Clear frames, captions, processing times to avoid mix-up
