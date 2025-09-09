@@ -186,20 +186,22 @@ def generate_caption_video(video_input: bool,model, current_frames, processor):
  
  for frame in frames_copy:
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    pil_image.fromarray(rgb_frame)
+    pil_image = Image.fromarray(rgb_frame)
     
     #Resize
     pil_image = pil_image.resize((128, 96)),Image.Resampling.LANCZOS
     pil_frames.append(pil_image)
 
-    conversation_with_frames=[
-    {
-        "role": "user",
-        "content": [
-            {"type": "text", "text": "Describe what you see in the video in no more than 20 words."},
-            {"type": "video", "path": pil_frames}for frame in pil_frames,
-        ],
-    },
+    conversation_with_frames=[ 
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "Describe what you see in the video in no more than 20 words."},
+                {"type": "video", "path": pil_frames}for frame in pil_frames],
+            ],
+        },
+    ]
+
     inputs_with_frames = processor.apply_chat_template(
         conversation_with_frames,
         num_frames=len(pil_frames),
@@ -240,7 +242,7 @@ def generate_caption(video_input: bool,model, image: np.array, vision_model: ov.
     return processor.decode(outputs[0], skip_special_tokens=True)
 
 
-def inference_worker(video_input: bool = False,model, video_input=vision_model, text_decoder, processor):
+def inference_worker(video_input: bool = False,model=None, vision_model=None, text_decoder=None, processor=None):
     global current_frames, captions, processing_times
 
     while not global_stop_event.is_set():
@@ -249,7 +251,7 @@ def inference_worker(video_input: bool = False,model, video_input=vision_model, 
 
         start_time = time.perf_counter()
         if video_input == True:
-            caption = generate_caption_video(current_frames, model, processor,video_input=True)
+            caption = generate_caption_video(current_frames, model, processor,video_input)
         else:
             caption = generate_caption(frame, vision_model, text_decoder, processor)
         elapsed = time.perf_counter() - start_time
@@ -289,13 +291,13 @@ def run(video_path: str, model_name: str, flip: bool = True, video_input: str = 
     cv2.setWindowProperty(title, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
     # Start the inference thread
-    if video_input = True:
+    if video_input == True:
             worker = threading.Thread(
             target=inference_worker,
             args=(model, current_frames, processor),
             daemon=True
         )    
-    else    
+    else:    
         worker = threading.Thread(
             target=inference_worker,
             args=(vision_model, text_decoder, processor),
@@ -361,16 +363,16 @@ def run(video_path: str, model_name: str, flip: bool = True, video_input: str = 
                     vision_model, text_decoder, processor = load_models(model_name, device_type)
                     # Start a new inference worker
                     if video_input == True:
-                    worker = threading.Thread(
-                        target=inference_worker,
-                        args=(model, current_frames, processor),
-                        daemon=True
+                        worker = threading.Thread(
+                            target=inference_worker,
+                            args=(model, current_frames, processor),
+                            daemon=True
                     )
                     else:
                         worker = threading.Thread(
                             target=inference_worker,
                             args=(vision_model, text_decoder, processor),
-                        daemon=True
+                            daemon=True
                     )
                     worker.start()
                     # Clear the processing times
@@ -392,7 +394,7 @@ if __name__ == '__main__':
     parser.add_argument("--model_name", type=str, default="Salesforce/blip-image-captioning-base", help="Model to be used for captioning",
                         choices=["Salesforce/blip-image-captioning-base", "Salesforce/blip-image-captioning-large"])
     parser.add_argument("--flip", type=bool, default=True, help="Mirror input video")
-    parser.add_argument("--video_input", type=bool, default=False, help="Specify "True" for video captioning")
+    parser.add_argument("--video_input", type=bool, default=False, help="Specify True for video captioning")
 
     args = parser.parse_args()
     run(args.stream, args.model_name, args.flip, args.video_input)
