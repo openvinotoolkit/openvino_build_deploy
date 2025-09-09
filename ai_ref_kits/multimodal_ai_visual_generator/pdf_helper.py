@@ -146,7 +146,6 @@ def draw_image_grid(pdf: FPDF, start_x: float, start_y: float, width: float, hei
         pdf.multi_cell(cell_width, 5, caption, align='C')
 
 
-
 def get_qr_code(text: str) -> Image:
     qr = qrcode.QRCode(box_size=10, border=2, error_correction=qrcode.constants.ERROR_CORRECT_L)
     qr.add_data(text)
