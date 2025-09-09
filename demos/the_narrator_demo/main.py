@@ -18,8 +18,9 @@ from transformers import AutoProcessor
 from optimum.intel.openvino import OVModelForVisualCausalLM
 from transformers import LlavaNextVideoProcessor
 from huggingface_hub import login
-from optimum.intel import OVQuantizationConfig, OVWeightQuantizationConfig, OVPipelineQuantizationConfig
+from optimum.intel import OVWeightQuantizationConfig, OVPipelineQuantizationConfig
 from PIL import Image
+import tempfile
 
 SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "utils")
 sys.path.append(os.path.dirname(SCRIPT_DIR))
@@ -30,7 +31,7 @@ MODEL_DIR = Path("model")
 TEXT_CONFIG = BlipTextConfig()
 
 current_frames = deque(maxlen=6)
-captions = deque(maxlen=1)
+captions = deque(maxlen=6)
 
 processing_times = deque(maxlen=100)
 
@@ -113,27 +114,8 @@ def load_llava_video_models(model_name: str, device: str = "CPU") -> tuple:
     """Load LLaVA-NeXT-Video model with Intel HF Optimum (OpenVINO)"""
     model_dir = MODEL_DIR / model_name.replace("/", "_")
     
-    # Define imoportant files that should be present for a complete model
-    model_files = [
-        "openvino_model.xml",
-        "openvino_model.bin", 
-        "config.json",
-        "tokenizer_config.json",
-        "special_tokens_map.json"
-    ]
-    
-    # Check if model directory exists and has all critical files
-    model_exists = model_dir.exists()
-    if model_exists:
-        missing_files = [f for f in model_files if not (model_dir / f).exists()]
-        if missing_files:
-            print(f"Model directory exists but missing critical files: {missing_files}")
-            print("Re-downloading and converting model...")
-            download_and_convert_llava_video(model_name)
-        else:
-            print(f"All model files found in {model_dir}")
-    else:
-        print(f"Model directory not found. Downloading and converting model...")
+    # Download and convert if not exists
+    if not model_dir.exists():
         download_and_convert_llava_video(model_name)
     
     print(f"Loading LLaVA-NeXT-Video Intel HF Optimum (OpenVINO) models from {model_dir}")
@@ -199,56 +181,79 @@ def text_decoder_forward(ov_text_decoder_with_past: ov.CompiledModel, input_ids:
     return CausalLMOutputWithCrossAttentions(logits=logits, past_key_values=past_kv, hidden_states=None,
                                              attentions=None, cross_attentions=None)
 
-def generate_caption_video(model,processor,current_frames):
+def generate_caption_video(current_frames,model, processor) -> str:
+    print("Generating caption for video frames...")
     if not current_frames:
-        return "No frames to generate caption"
-
-    pil_frames =[]
+        return "No frames available"
+    
+    pil_frames=[]
     frames_copy=current_frames.copy()
- 
+
     for frame in frames_copy:
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         pil_image = Image.fromarray(rgb_frame)
     
-    #Resize
-        pil_image = pil_image.resize((128, 96)),Image.Resampling.LANCZOS
+        #Resize
+        pil_image = pil_image.resize((128, 96),Image.Resampling.LANCZOS)
         pil_frames.append(pil_image)
 
-    numpy_frames = [np.array(frame) for frame in pil_frames]
-    video_array = np.array(numpy_frames)
-    conversation_with_frames=[ 
-        {
-            "role": "user",
-            "content": [
-                {"type": "text", "text": "Describe what you see in the video in no more than 20 words."},
-                {"type": "video", "path": video_array},
-            ],
-        },
-    ]
+    bgr_frames = [cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR) for img in pil_frames]
 
-    inputs_with_frames = processor.apply_chat_template(
-        conversation_with_frames,
-        num_frames=len(numpy_frames),
-        add_generation_prompt=True,
-        tokenize=True,
-        return_dict=True,
-    )
+    # Write to temporary video file
+    height, width = bgr_frames[0].shape[:2]
+    temp_video = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+    temp_video_path = temp_video.name
+    temp_video.close()
+    
+    try:
+        # OpenCV VideoWriter
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        out = cv2.VideoWriter(temp_video_path, fourcc, 5.0, (width, height))
+        for frame in bgr_frames:
+            out.write(frame)
+        out.release()
 
-    out_with_frames = model.generate(**inputs_with_frames, max_new_tokens=60)
-    response = processor.batch_decode(
-        out_with_frames,
-        skip_special_tokens=True,
-        clean_up_tokenization_spaces=True,
-    )[0]
-    if "ASSISTANT:" in response:
-        description = response.split("ASSISTANT:")[-1].strip()
-    else:
-        description = response.strip()
-    return description
+        conversation_with_frames = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "Describe what you see in the video in no more than 20 words."},
+                    {"type": "video", "path": temp_video_path},
+                ],
+            },
+        ]
+
+        inputs_with_frames = processor.apply_chat_template(
+            conversation_with_frames,
+            num_frames=len(bgr_frames),
+            add_generation_prompt=True,
+            tokenize=True,
+            return_dict=True,
+        )
+
+        out_with_frames = model.generate(**inputs_with_frames, max_new_tokens=60)
+    
+        response = processor.batch_decode(
+            out_with_frames,
+            skip_special_tokens=True,
+            clean_up_tokenization_spaces=True,
+        )[0]
+        
+        if "ASSISTANT:" in response:
+            description = response.split("ASSISTANT:")[-1].strip()
+        else:
+            description = response.strip()
+        print("Generated caption:", description)
+        return description
+    
+    finally:
+        # Clean up the temporary video file
+        if os.path.exists(temp_video_path):
+            os.remove(temp_video_path)
 
 
 
-def generate_caption(video_input: bool,model, image: np.array, vision_model: ov.CompiledModel, text_decoder: BlipTextLMHeadModel, processor: BlipProcessor) -> str:
+def generate_caption(image: np.array, vision_model: ov.CompiledModel, text_decoder: BlipTextLMHeadModel, processor: BlipProcessor) -> str:
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     pixel_values = np.array(processor(image).pixel_values)
     image_embeds = vision_model(np.array(pixel_values))[vision_model.output(0)]
@@ -266,18 +271,23 @@ def generate_caption(video_input: bool,model, image: np.array, vision_model: ov.
     return processor.decode(outputs[0], skip_special_tokens=True)
 
 
-def inference_worker(video_input: bool = False,model=None, vision_model=None, text_decoder=None, processor=None):
+def inference_worker(video_input: bool =False,model=None,processor = None,text_decoder=None):
     global current_frames, captions, processing_times
-
+    
     while not global_stop_event.is_set():
         with global_frame_lock:
-            frame = current_frames.pop() if len(current_frames) > 0 else np.zeros((1080, 1920, 3), dtype=np.uint8)
+            frame = current_frames.pop() if len(current_frames) > 8 else np.zeros((1080, 1920, 3), dtype=np.uint8)
 
         start_time = time.perf_counter()
-        if video_input == True:
-            caption = generate_caption_video(model, processor,current_frames)
+        
+        if video_input ==True :
+            if len(current_frames) >= 6:
+                caption = generate_caption_video(current_frames, model, processor)
+            else :
+                caption = "No frames available"
         else:
-            caption = generate_caption(frame, vision_model, text_decoder, processor)
+            caption = generate_caption(frame,model, text_decoder, processor)
+        
         elapsed = time.perf_counter() - start_time
 
         with global_result_lock:
@@ -285,7 +295,7 @@ def inference_worker(video_input: bool = False,model=None, vision_model=None, te
             processing_times.append(elapsed)
 
 
-def run(video_path: str, model_name: str, flip: bool = True, video_input: str = False) -> None:
+def run(video_path: str, model_name: str, flip: bool = True, video_input: bool = False) -> None:
     global current_frames, captions, processing_times
     # set up logging
     log.getLogger().setLevel(log.INFO)
@@ -295,13 +305,8 @@ def run(video_path: str, model_name: str, flip: bool = True, video_input: str = 
     # NPU won't work with the dynamic shape models, so we exclude it
     device_mapping = utils.available_devices(exclude=["NPU"])
     device_type = "AUTO"
+    vision_model, text_decoder, processor = load_models(model_name, device_type)
     
-    if video_input == True:
-        model_name = "llava-hf/LLaVA-NeXT-Video-7B-hf"
-        model, processor = load_llava_video_models(model_name, device_type)
-    else:
-        vision_model, text_decoder, processor = load_models(model_name, device_type)
-
     # initialize video player to deliver frames
     if isinstance(video_path, str) and video_path.isnumeric():
         video_path = int(video_path)
@@ -315,18 +320,11 @@ def run(video_path: str, model_name: str, flip: bool = True, video_input: str = 
     cv2.setWindowProperty(title, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
     # Start the inference thread
-    if video_input == True:
-            worker = threading.Thread(
+    worker = threading.Thread(
             target=inference_worker,
-            args=(model, current_frames, processor),
+            args=(video_input,vision_model, processor,text_decoder),
             daemon=True
-        )    
-    else:    
-        worker = threading.Thread(
-            target=inference_worker,
-            args=(vision_model, text_decoder, processor),
-            daemon=True
-        )
+            )
     worker.start()
 
     # start a video stream
@@ -352,7 +350,8 @@ def run(video_path: str, model_name: str, flip: bool = True, video_input: str = 
             t2 = time.time()
             # update the caption only if the time difference is significant, otherwise it will be flickering
             if t2 - t1 > 1 or not caption:
-                caption = captions.pop() if len(captions) > 0 else ""
+                if len(captions) > 0:
+                    caption=captions[-1]
                 t1 = t2
 
             # Get the mean processing time
@@ -363,6 +362,8 @@ def run(video_path: str, model_name: str, flip: bool = True, video_input: str = 
         utils.draw_text(frame, text=caption, point=(f_width // 2, f_height - 50), center=True, font_scale=1.5, with_background=True)
         utils.draw_text(frame, text=f"Inference time: {processing_time:.0f}ms ({fps:.1f} FPS)", point=(10, 10))
         utils.draw_text(frame, text=f"Currently running {model_name} on {device_type}", point=(10, 50))
+        utils.draw_text(frame, text=f"Press 2 to switch between Video and Image Captioning", point=(10, 90))
+
 
         utils.draw_ov_watermark(frame)
         utils.draw_qr_code(frame, qr_code)
@@ -385,16 +386,90 @@ def run(video_path: str, model_name: str, flip: bool = True, video_input: str = 
 
                     # Recompile models for the new device
                     vision_model, text_decoder, processor = load_models(model_name, device_type)
-
-                    worker = threading.Thread(
-                        target=inference_worker,
-                        args=(vision_model, text_decoder, processor),
-                        daemon=True
+                    
+                    # Start a new inference worker
+                    if video_input == True:
+                        worker = threading.Thread(
+                            target=inference_worker,
+                            args=(video_input,model, processor),
+                            daemon=True
+                    )
+                    else:
+                        worker = threading.Thread(
+                            target=inference_worker,
+                            args=(video_input,vision_model, text_decoder, processor),
+                            daemon=True
                     )
                     worker.start()
                     # Clear the processing times
                     with global_result_lock:
                         processing_times.clear()
+        
+        # For video captioning, allow switching back to image captioning with key '2'
+        if key == ord('2'):
+            video_input = not video_input
+
+            if video_input == False:
+                print("Switching to image_input mode...")
+                model_name = "Salesforce/blip-image-captioning-base"
+                device_type = "AUTO"
+        
+                # Stop current worker
+                global_stop_event.set()
+                worker.join(timeout=1)
+                global_stop_event.clear()
+        
+                # Load image input models and processor
+                vision_model, text_decoder, processor = load_models(model_name, device_type)
+        
+                # Start new inference worker with video_input=False
+                worker = threading.Thread(
+                    target=inference_worker,
+                    args=(video_input,vision_model, processor,text_decoder),
+                    daemon=True
+                )
+                worker.start()
+        
+                # Clear frames, captions, processing times to avoid mix-up
+                with global_frame_lock:
+                    current_frames.clear()
+                with global_result_lock:
+                    captions.clear()
+                    processing_times.clear()
+        
+                # Set caption so it shows on screen immediately
+                caption = "Switching to image_input mode..."
+            else: 
+                print("Switching to video_input mode...")
+                model_name = "llava-hf/LLaVA-NeXT-Video-7B-hf"
+                device_type = "AUTO"
+    
+              # Stop current worker
+                global_stop_event.set()
+                worker.join(timeout=1)
+                global_stop_event.clear()
+    
+                # Load video input model and processor
+                model, processor = load_llava_video_models(model_name, device_type)
+
+               # Start new inference worker with video_input=True
+                worker = threading.Thread(
+                    target=inference_worker,
+                    args=(video_input, model, processor),
+                    daemon=True
+                 )
+                worker.start()
+    
+                # Clear frames, captions, processing times to avoid mix-up
+                with global_frame_lock:
+                    current_frames.clear()
+                with global_result_lock:
+                    captions.clear()
+                    processing_times.clear()
+    
+                # Set caption so it shows on screen immediately
+                caption = "Switching to video_input mode..."
+
 
     # stop the stream
     player.stop()
@@ -411,7 +486,6 @@ if __name__ == '__main__':
     parser.add_argument("--model_name", type=str, default="Salesforce/blip-image-captioning-base", help="Model to be used for captioning",
                         choices=["Salesforce/blip-image-captioning-base", "Salesforce/blip-image-captioning-large"])
     parser.add_argument("--flip", type=bool, default=True, help="Mirror input video")
-    parser.add_argument("--video_input", type=bool, default=False, help="Specify True for video captioning")
 
     args = parser.parse_args()
-    run(args.stream, args.model_name, args.flip, args.video_input)
+    run(args.stream, args.model_name, args.flip)
