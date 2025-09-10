@@ -116,9 +116,6 @@ python main.py --help
 - The `model` directory will contain the OpenVINO IR models after conversion.
 - For best performance, use a machine with an Intel CPU, GPU or NPU.
 
----
 
 [//]: # (telemetry pixel)
 <img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca&project=demos/the_narrator_demo&file=README.md" />
-
----

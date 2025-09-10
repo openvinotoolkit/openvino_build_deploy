@@ -22,7 +22,6 @@ jobs:
     outputs:
       gradio: ${{ steps.categorize-subprojects.outputs.gradio }}
       webcam: ${{ steps.categorize-subprojects.outputs.webcam }}
-      js: ${{ steps.categorize-subprojects.outputs.js }}
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -91,30 +90,3 @@ jobs:
         with:
           command: python main.py --stream sample_video.mp4
           project: ${{ matrix.subproject }}
-
-  js:
-    needs: find-subprojects
-    if: ${{ needs.find-subprojects.outputs.js != '[]' }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        subproject: ${{ fromJson(needs.find-subprojects.outputs.js) }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/reusable-steps/setup-os
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - name: Install dependencies
-        run: |
-          cd ${{ matrix.subproject }}
-          npm install
-      - uses: ./.github/reusable-steps/timeouted-action
-        name: Run JS Project
-        with:
-          command: npm start
-          project: ${{ matrix.subproject }}
-          timeout: 1m
