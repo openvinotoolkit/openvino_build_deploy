@@ -28,6 +28,9 @@ Each AI Reference Kit includes:
 ### [Interactive Demos](demos): End-to-end Examples with Simple Setup
 This directory contains interactive demos aimed at demonstrating how OpenVINO performs as an AI optimization and inference engine (cloud, client, and edge).
 
+### [Desktop Applications](apps): User-Friendly AI Applications with OpenVINO
+Discover interactive desktop applications using OpenVINO as an engine for AI inference.
+
 ### [Notebooks](notebooks): Jupyter Notebooks with OpenVINO code
 Explore Jupyter notebooks that demonstrate how to use OpenVINO to build and deploy AI solutions.
 
