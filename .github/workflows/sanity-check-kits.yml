@@ -48,7 +48,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025]
         python: ["3.10", "3.13"]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.gradio) }}
     steps:
@@ -87,7 +87,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025]
         python: ["3.10", "3.13"]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.webcam) }}
     steps:
@@ -110,7 +110,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025]
         python: ["3.10", "3.13"]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.python) }}
     steps:
@@ -133,7 +133,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025]
         python: ["3.10", "3.13"]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.notebook) }}
     steps:
