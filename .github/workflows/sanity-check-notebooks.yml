@@ -46,7 +46,7 @@ jobs:
       fail-fast: false
       matrix:
         # onnxruntime-openvino is not available on mac
-        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025]
+        os: [ubuntu-24.04, windows-2025]
         python: ["3.10", "3.13"]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.notebook) }}
     steps:
