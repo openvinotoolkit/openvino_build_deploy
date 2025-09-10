@@ -45,7 +45,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.js) }}
     steps:
       - uses: actions/checkout@v4
