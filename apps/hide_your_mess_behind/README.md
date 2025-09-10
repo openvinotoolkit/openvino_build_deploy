@@ -2,11 +2,11 @@
 
 ## Description
 
-This demo demonstrates how to use the OpenVINO toolkit in NodeJS to blur the background of video. 
+This app demonstrates how to use the OpenVINO toolkit in NodeJS to blur the background of video. 
 
-There are 2 possible ways to run the demo - using executable or source code in NodeJS.
+There are 2 possible ways to run the app - using executable or source code in NodeJS.
 
-## Running the demo using executable file
+## Running the app using executable file
 
 ### Installers
 
@@ -14,8 +14,8 @@ Download installers of the compiled app. They are available for Windows and Linu
 
 | OS | Installer |
 |---|---|
-| Linux | [DEB](https://github.com/openvinotoolkit/openvino_build_deploy/releases/download/hide_your_mess_behind_v1.1/hide-your-mess-behind_1.1.0_amd64.deb) [RPM](https://github.com/openvinotoolkit/openvino_build_deploy/releases/download/hide_your_mess_behind_v1.1/hide-your-mess-behind-1.1.0.x86_64.rpm) |
-| Windows | [EXE](https://github.com/openvinotoolkit/openvino_build_deploy/releases/download/hide_your_mess_behind_v1.1/hide-your-mess-behind.Setup.1.1.0.exe) |
+| Linux | [DEB](https://github.com/openvinotoolkit/openvino_build_deploy/releases/download/hide_your_mess_behind_v1.2/hide-your-mess-behind_1.2.0_amd64.deb) [RPM](https://github.com/openvinotoolkit/openvino_build_deploy/releases/download/hide_your_mess_behind_v1.2/hide-your-mess-behind-1.2.0.x86_64.rpm) |
+| Windows | [EXE](https://github.com/openvinotoolkit/openvino_build_deploy/releases/download/hide_your_mess_behind_v1.2/hide-your-mess-behind.Setup.1.2.0.exe) |
 
 #### Windows
 
@@ -28,7 +28,7 @@ sudo dpkg -i hide-your-mess-behind_1.1.0_amd64.deb
 hide-your-mess-behind
 ```
 
-## Running the demo using source code and NodeJS
+## Running the app using source code and NodeJS
 
 ### Requirements
 
@@ -43,7 +43,7 @@ npm init -y
 npm install
 ```
 
-### Running the demo
+### Running the app
 
 Once you've completed the initial setup, you can start the app anytime by running the following command in the app folder:
 
@@ -51,7 +51,7 @@ Once you've completed the initial setup, you can start the app anytime by runnin
 npm start
 ```
 
-## Using the Demo
+## Using the App
 
 ### Turn on the video
 
@@ -75,4 +75,4 @@ To turn on blurring you have to turn on inference using the _Inference_ switch. 
 You can change the inference device or video source, and turn on and off inference, and streaming anytime.
 
 [//]: # (telemetry pixel)
-<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca&project=demos/hide_your_mess_behind_demo&file=README.md" />
+<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca&project=apps/hide_your_mess_behind&file=README.md" />
