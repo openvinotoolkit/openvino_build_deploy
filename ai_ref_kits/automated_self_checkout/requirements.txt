@@ -7,10 +7,9 @@ nncf==2.17.0
 
 ultralytics==8.3.38
 onnx==1.18.0
-supervision==0.17.1
+supervision==0.18.0
 
 numpy==2.2.6
-opencv-python-headless==4.8.1.78
 pycocotools==2.0.6
 
 lapx==0.5.11
