@@ -18,10 +18,11 @@ runs:
         python ${{ inputs.script }} 2>&1 | tee gradio_log.txt &
 
         # Assign process ID
-        app_pid=$(ps aux | grep -i '[p]ython ${{ inputs.script }}' | awk '{print $2}')
+        python ${{ inputs.script }} > >(tee -a gradio_log.txt) 2>&1 &
+        app_pid=$!
 
         # Wait for the specific log message
-        tail -f gradio_log.txt | awk '/Demo is ready!/ {exit}'
+        tail -f gradio_log.txt | grep -q "Demo is ready!"
 
         # Capture the readiness status
         status=$?
