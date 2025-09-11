@@ -27,11 +27,16 @@ runs:
         # Capture the readiness status
         status=$?
 
-        # Stop the Gradio app process
         echo "Stopping the Gradio app..."
-        pkill -P $app_pid || echo "No child processes to kill."
-        kill $app_pid || echo "App process already terminated."
-        wait $app_pid || echo "App process cleanup complete."
-
-        # Exit with the readiness check status
+        pkill -P $app_pid 2>/dev/null || true
+        kill $app_pid 2>/dev/null || true
+        wait $app_pid 2>/dev/null || true
+    
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          if tasklist | grep -q "python.exe"; then
+            echo "Forcing termination with taskkill..."
+            taskkill //PID $app_pid //T //F || true
+          fi
+        fi
+    
         exit $status
