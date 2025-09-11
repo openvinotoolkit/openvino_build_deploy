@@ -23,7 +23,7 @@ runs:
         
         set +o pipefail
         # Wait for the specific log message
-        tail -n +1 -f gradio_log.txt | grep -m1 -q "Demo is ready!"
+        tail -n +1 -f gradio_log.txt | grep -m1 -q "*Demo is ready!*"
         # Capture the readiness status
         status=$?
         echo "=== 'Demo is ready!' detected! ==="
