@@ -75,6 +75,7 @@ jobs:
             echo "script=main.py" >> "$GITHUB_ENV"
           fi
       - uses: ./.github/reusable-steps/gradio-action
+        timeout-minutes: 30
         with:
           script: ${{ env.script }}
           project: ${{ matrix.subproject }}
