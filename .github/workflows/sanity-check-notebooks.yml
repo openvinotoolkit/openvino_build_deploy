@@ -69,5 +69,5 @@ jobs:
       - uses: ./.github/reusable-steps/timeouted-action
         name: Run Notebook
         with:
-          command: jupyter nbconvert --to notebook --execute *.ipynb
+          command: jupyter nbconvert --to notebook --debug --execute *.ipynb
           project: ${{ matrix.subproject }}
