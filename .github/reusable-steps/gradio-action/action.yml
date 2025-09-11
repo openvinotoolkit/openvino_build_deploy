@@ -5,33 +5,24 @@ inputs:
     required: true
   project:
     required: true
-  timeout:
-    required: false
-    default: 3600
 
 runs:
   using: 'composite'
   steps:
     - name: Run Gradio App (Linux/Mac)
       if: ${{ runner.os != 'Windows' }}
+      timeout-minutes: 30
       shell: bash
       run: |
         cd ${{ inputs.project }}
 
-        if [ "${{ runner.os }}" == "Linux" ]; then
-          # Start the Gradio app in the background
-          xvfb-run python ${{ inputs.script }} 2>&1 | tee gradio_log.txt &
-        else
-          python ${{ inputs.script }} 2>&1 | tee gradio_log.txt &
-        fi
+        python ${{ inputs.script }} 2>&1 | tee gradio_log.txt &
 
         # Assign process ID
         app_pid=$(ps aux | grep -i '[p]ython ${{ inputs.script }}' | awk '{print $2}')
 
         # Wait for the specific log message
-        timeout ${{ inputs.timeout }} bash -c "
-          (tail -f gradio_log.txt &) | awk '/Demo is ready!/ {exit}'
-        "
+        tail -f gradio_log.txt | awk '/Demo is ready!/ {exit}'
 
         # Capture the readiness status
         status=$?
