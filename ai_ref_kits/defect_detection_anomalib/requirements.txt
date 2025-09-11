@@ -10,4 +10,4 @@ onnx==1.18.0
 scikit-learn==1.6.1
 python-dotenv==1.0.1
 matplotlib==3.9.4
-numpy==2.3.3
+numpy==2.2.6
