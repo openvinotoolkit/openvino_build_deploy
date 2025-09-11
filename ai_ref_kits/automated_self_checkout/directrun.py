@@ -275,7 +275,7 @@ def stream_object_detection(video):
 
                 labels = [
                     f'#{tracker_id} {label_map[class_id]} {confidence:0.2f}'
-                    for _, _, confidence, class_id, tracker_id
+                    for _, _, confidence, class_id, tracker_id, _
                     in detections
                 ]
 
@@ -285,10 +285,10 @@ def stream_object_detection(video):
                 frame = zone_annotator.annotate(scene=frame)
 
                 objects = [f'#{tracker_id} {label_map[class_id]}' for _,
-                           _, confidence, class_id, tracker_id in detections]
+                           _, confidence, class_id, tracker_id, _ in detections]
 
                 # Accumlate detections by classid
-                for _, _, confidence, class_id, tracker_id in detections:
+                for _, _, confidence, class_id, tracker_id, _ in detections:
                     if label_map[class_id] in item_list:
                         item_list[label_map[class_id]] += 1
                     else:
