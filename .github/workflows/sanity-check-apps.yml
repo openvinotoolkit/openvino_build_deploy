@@ -58,9 +58,9 @@ jobs:
         run: |
           cd ${{ matrix.subproject }}
           npm install
-      - uses: ./.github/reusable-steps/timeouted-action
-        name: Run JS Project
-        with:
-          command: npm start
-          project: ${{ matrix.subproject }}
-          timeout: 1m
+      - name: Run JS Project
+        shell: bash
+        timeout-minutes: 1
+        run: |
+          cd ${{ matrix.subproject }}
+          npm start &
