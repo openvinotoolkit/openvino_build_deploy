@@ -9,8 +9,7 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Run Gradio App (Linux/Mac)
-      if: ${{ runner.os != 'Windows' }}
+    - name: Run Gradio App
       shell: bash
       run: |
         cd ${{ inputs.project }}
@@ -36,39 +35,3 @@ runs:
 
         # Exit with the readiness check status
         exit $status
-
-    - name: Run Gradio App (Windows)
-      if: ${{ runner.os == 'Windows' }}
-      shell: powershell
-      run: |
-        cd ${{ inputs.project }}
-    
-        # Start the app, redirect output to a log, and capture its PID
-        $process = Start-Process -FilePath "python" -ArgumentList "${{ inputs.script }}" `
-          -RedirectStandardOutput "gradio_log.txt" `
-          -RedirectStandardError "gradio_log.txt" `
-          -PassThru
-    
-        Write-Output "Started app (pid $($process.Id)). Waiting for readiness message..."
-    
-        $found = $false
-        # Wait until "Demo is ready!" appears in the log
-        while (-not $found -and -not $process.HasExited) {
-          Start-Sleep -Seconds 1
-          if (Select-String -Path "gradio_log.txt" -Pattern "Demo is ready!") {
-            $found = $true
-          }
-        }
-    
-        Write-Output "Stopping the Gradio app..."
-        try {
-          Stop-Process -Id $process.Id -Force
-        } catch {
-          Write-Output "Process already terminated."
-        }
-    
-        if ($found) {
-          exit 0
-        } else {
-          exit 1
-        }
