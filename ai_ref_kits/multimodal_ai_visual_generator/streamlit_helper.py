@@ -1,14 +1,15 @@
-import streamlit as st
-import requests
 import base64
 import time
-from PIL import Image
 from io import BytesIO
-from fpdf import FPDF
-import os
-import yaml
-import uuid
+
+import requests
+import streamlit as st
 import streamlit.components.v1 as components
+import yaml
+from PIL import Image
+
+from pdf_helper import generate_pdf
+
 
 # ------------------ Dark Theme Styling ------------------
 def apply_custom_styling():
@@ -264,45 +265,7 @@ def render_image_generation_page():
                 st.image(img, caption=prompt, use_container_width=True)
                 progress_bar.progress((idx + 1) / 4)
 
-        # Generate PDF
-        pdf = FPDF()
-        pdf.set_auto_page_break(auto=True, margin=15)
-        pdf.add_page()
-        pdf.set_fill_color(31, 31, 46)
-        pdf.rect(0, 0, 210, 297, 'F')
-        pdf.set_font("Arial", "B", 28)
-        pdf.set_text_color(106, 17, 203)
-        pdf.cell(0, 80, "", ln=True)
-        pdf_title = "Your Visual Story" if st.session_state.mode_param == "illustration" else "Your T-Shirt Designs"
-        pdf.cell(0, 20, pdf_title, ln=True, align='C')
-        pdf.set_font("Arial", "", 16)
-        pdf.set_text_color(255, 255, 255)
-        pdf.cell(0, 15, "Crafted with AI Magic", ln=True, align='C')
-        pdf.ln(20)
-        pdf.set_font("Arial", "I", 14)
-        pdf.set_text_color(200, 200, 200)
-        pdf.multi_cell(0, 10, f'Story Idea:\n"{st.session_state.story_idea}"', align='C')
-
-
-        image_paths = []
-        for img, caption in st.session_state.generated_images:
-            pdf.add_page()
-            img_path = f"temp_image_{uuid.uuid4().hex}.png"
-            img.save(img_path)
-            image_paths.append(img_path)
-            pdf.image(img_path, w=180)
-            pdf.ln(5)
-            pdf.set_font("Arial", size=12)
-            pdf.set_text_color(0, 0, 0)
-            pdf.multi_cell(0, 10, caption)
-
-        pdf_bytes = BytesIO()
-        pdf_bytes.write(pdf.output(dest='S').encode('latin1'))
-        pdf_bytes.seek(0)
-        st.session_state.pdf_data = pdf_bytes.read()
-        for path in image_paths:
-            os.remove(path)
-
+        st.session_state.pdf_data = generate_pdf(st.session_state.mode_param, st.session_state.story_idea, st.session_state.generated_images)
         st.session_state.images_generated = True
         st.session_state.images_displayed = True
 
