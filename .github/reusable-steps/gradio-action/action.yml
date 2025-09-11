@@ -11,7 +11,6 @@ runs:
   steps:
     - name: Run Gradio App (Linux/Mac)
       if: ${{ runner.os != 'Windows' }}
-      timeout-minutes: 30
       shell: bash
       run: |
         cd ${{ inputs.project }}
