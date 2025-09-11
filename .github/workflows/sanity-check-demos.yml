@@ -85,8 +85,14 @@ jobs:
         with:
           python: ${{ matrix.python }}
           project: ${{ matrix.subproject }}
-      - uses: ./.github/reusable-steps/timeouted-action
-        name: Run Webcam Demo
-        with:
-          command: python main.py --stream sample_video.mp4
-          project: ${{ matrix.subproject }}
+      - name: Run Webcam Demo
+        shell: bash
+        timeout-minutes: 30
+        run: |
+          cd ${{ matrix.subproject }}
+          # linux requires a virtual display
+          if [ "${{ runner.os }}" == "Linux" ]; then
+            xvfb-run python main.py --stream sample_video.mp4
+          else 
+            python main.py --stream sample_video.mp4 
+          fi

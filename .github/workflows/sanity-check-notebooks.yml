@@ -66,8 +66,9 @@ jobs:
           cd ${{ matrix.subproject }}
           # replace video_path with sample_video.mp4
           find . -name "*.ipynb" -exec sed -E -i "s/video_path\s*=\s*(['\"]?.*?['\"]?)/video_path=\\\\\"sample_video.mp4\\\\\"\\\n\",/g" {} +
-      - uses: ./.github/reusable-steps/timeouted-action
-        name: Run Notebook
-        with:
-          command: jupyter nbconvert --to notebook --debug --execute *.ipynb
-          project: ${{ matrix.subproject }}
+      - name: Run Notebook
+        shell: bash
+        timeout-minutes: 30
+        run: |
+          cd ${{ matrix.subproject }}
+          jupyter nbconvert --to notebook --debug --execute *.ipynb
