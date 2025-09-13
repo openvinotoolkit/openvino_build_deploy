@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-nodered-env
+  namespace: {{ .Release.Namespace }}
+data:
+  TZ: "America/Los_Angeles"
+  HTTP_PROXY: "{{ .Values.httpProxy }}"
+  HTTPS_PROXY: "{{ .Values.httpsProxy }}"
+  NO_PROXY: "{{ .Values.noProxy }},broker.scenescape.intel.com,influxdb2"
+  http_proxy: "{{ .Values.httpProxy }}"
+  https_proxy: "{{ .Values.httpsProxy }}"
+  no_proxy: "{{ .Values.noProxy }},broker.scenescape.intel.com,influxdb2"
+  MQTT_HOST: "broker.scenescape.intel.com"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-nodered
+  namespace: {{ .Release.Namespace }}
+data:
+  flows_cred.json: |
+{{ .Files.Get "files/node-red/flows_cred.json" | indent 4 }}
+  settings.js: |
+{{ .Files.Get "files/node-red/settings.js" | indent 4 }}
+  flows.json: |
+{{ .Files.Get "files/node-red/flows.json" | indent 4 }}
+  install_package.sh: |
+{{ .Files.Get "files/node-red/install_package.sh" | indent 4 }}

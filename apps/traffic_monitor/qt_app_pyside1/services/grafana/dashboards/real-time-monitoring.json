@@ -1,0 +1,129 @@
+{
+    "id": null,
+    "title": "Smart Intersection - Real-time Monitoring",
+    "tags": ["smart-intersection", "traffic", "real-time"],
+    "timezone": "browser",
+    "refresh": "5s",
+    "time": {
+      "from": "now-15m",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "System Performance",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "from(bucket: \"traffic_monitoring\") |> range(start: -1m) |> filter(fn: (r) => r._measurement == \"performance\" and r._field == \"fps\") |> last()",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 15},
+                {"color": "green", "value": 25}
+              ]
+            },
+            "unit": "fps"
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "GPU Usage",
+        "type": "stat", 
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "from(bucket: \"traffic_monitoring\") |> range(start: -1m) |> filter(fn: (r) => r._measurement == \"performance\" and r._field == \"gpu_usage\") |> last()",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 70},
+                {"color": "red", "value": 90}
+              ]
+            },
+            "unit": "percent",
+            "max": 100,
+            "min": 0
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Object Detection Over Time",
+        "type": "timeseries",
+        "gridPos": {"h": 9, "w": 24, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "from(bucket: \"traffic_monitoring\") |> range(start: -15m) |> filter(fn: (r) => r._measurement == \"detection_events\" and r._field == \"vehicle_count\") |> aggregateWindow(every: 30s, fn: mean)",
+            "refId": "Vehicles"
+          },
+          {
+            "expr": "from(bucket: \"traffic_monitoring\") |> range(start: -15m) |> filter(fn: (r) => r._measurement == \"detection_events\" and r._field == \"pedestrian_count\") |> aggregateWindow(every: 30s, fn: mean)",
+            "refId": "Pedestrians"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Violation Events",
+        "type": "barchart",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 17},
+        "targets": [
+          {
+            "expr": "from(bucket: \"traffic_monitoring\") |> range(start: -1h) |> filter(fn: (r) => r._measurement == \"violation_events\") |> group(columns: [\"violation_type\"]) |> count()",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Camera Status",
+        "type": "table",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 17},
+        "targets": [
+          {
+            "expr": "from(bucket: \"traffic_monitoring\") |> range(start: -5m) |> filter(fn: (r) => r._measurement == \"detection_events\") |> group(columns: [\"camera_id\"]) |> last()",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Processing Time",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 25},
+        "targets": [
+          {
+            "expr": "from(bucket: \"traffic_monitoring\") |> range(start: -15m) |> filter(fn: (r) => r._measurement == \"performance\" and r._field == \"processing_time_ms\") |> aggregateWindow(every: 30s, fn: mean)",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "continuous-GrYlRd"},
+            "unit": "ms"
+          }
+        }
+      }
+    ]
+  }

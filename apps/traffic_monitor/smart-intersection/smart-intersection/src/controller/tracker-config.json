@@ -1,0 +1,6 @@
+{
+    "max_unreliable_frames": 10,
+    "non_measurement_frames_dynamic": 8,
+    "non_measurement_frames_static": 16,
+    "baseline_frame_rate": 30
+}

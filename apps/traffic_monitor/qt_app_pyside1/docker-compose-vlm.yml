@@ -1,0 +1,31 @@
+version: '3'
+
+services:
+  vlm-backend:
+    image: vlm-backend:latest
+    build:
+      context: ./vlm_backend
+      dockerfile: Dockerfile
+    ports:
+      - "8399:8399"
+    environment:
+      - VLM_MODEL_NAME=Qwen/Qwen2.5-VL-7B-Instruct
+      - LOCAL_EMBED_MODEL_ID=CLIP-ViT-H-14
+    volumes:
+      - ./data:/home/user/data
+    restart: unless-stopped
+
+  traffic-monitoring-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - vlm-backend
+    environment:
+      - BACKEND_VQA_BASE_URL=http://vlm-backend:8399
+      - DISPLAY=${DISPLAY}
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    devices:
+      - /dev/video0:/dev/video0
+    network_mode: "host"

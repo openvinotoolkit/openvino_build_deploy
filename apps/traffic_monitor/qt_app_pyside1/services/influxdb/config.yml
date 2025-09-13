@@ -1,0 +1,56 @@
+# InfluxDB Configuration for Smart Intersection
+# Configuration file for InfluxDB v2.x
+
+# HTTP API settings
+http-bind-address = ":8086"
+http-idle-timeout = "3m"
+http-read-header-timeout = "10s"
+http-read-timeout = "0"
+http-write-timeout = "0"
+
+# Storage engine configuration
+bolt-path = "./influxd.bolt"
+engine-path = "./engine"
+sqlite-path = "./influxd.sqlite"
+
+# Storage settings
+storage-cache-max-memory-size = "1g"
+storage-cache-snapshot-memory-size = "25m"
+storage-cache-snapshot-write-cold-duration = "10m"
+storage-max-concurrent-compactions = 3
+storage-retention-check-interval = "30m"
+storage-series-id-set-cache-size = 100
+
+# Query settings
+query-concurrency = 1024
+query-initial-memory-bytes = 0
+query-max-memory-bytes = 0
+query-memory-bytes = "unlimited"
+query-queue-size = 1024
+
+# Logging
+log-level = "info"
+
+# Security
+tls-cert = ""
+tls-key = ""
+
+# Feature flags
+feature-flags = []
+
+# Session settings
+session-length = 60
+session-renew-disabled = false
+
+# Continuous Queries (if needed)
+continuous-queries-enabled = true
+
+# Retention policies
+[retention]
+  check-interval = "1h"
+  
+# Default bucket for smart intersection data
+[smart-intersection]
+  name = "traffic_monitoring"
+  retention-period = "168h"  # 7 days
+  shard-group-duration = "24h"

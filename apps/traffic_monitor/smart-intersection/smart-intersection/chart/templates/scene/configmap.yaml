@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-scene-config
+  namespace: {{ .Release.Namespace }}
+data:
+  tracker-config.json: |
+{{ .Files.Get "files/controller/tracker-config.json" | indent 4 }}

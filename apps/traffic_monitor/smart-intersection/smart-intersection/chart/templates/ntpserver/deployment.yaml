@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-ntpserver
+  labels:
+    app: {{ .Release.Name }}-ntpserver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-ntpserver
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-ntpserver
+    spec:
+      shareProcessNamespace: true
+      containers:
+      - envFrom:
+        - configMapRef:
+            name: {{ .Release.Name }}-ntpserver
+        image: {{ .Values.ntpserver.repository }}:{{ .Values.ntpserver.tag }}
+        name: {{ .Release.Name }}-ntpserver
+        imagePullPolicy: {{ .Values.ntpserver.imagePullPolicy }}
+        ports:
+          - containerPort: 123
+      restartPolicy: Always
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

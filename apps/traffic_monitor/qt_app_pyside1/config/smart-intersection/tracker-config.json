@@ -1,0 +1,21 @@
+{
+    "max_unreliable_frames": 10,
+    "non_measurement_frames_dynamic": 8,
+    "non_measurement_frames_static": 16,
+    "baseline_frame_rate": 30,
+    "desktop_integration": {
+        "enable_scene_analytics": true,
+        "gpu_acceleration": true,
+        "local_processing_only": true,
+        "roi_analytics": {
+            "crosswalk_monitoring": true,
+            "lane_analysis": true,
+            "safety_zones": true
+        },
+        "performance": {
+            "max_concurrent_cameras": 4,
+            "target_fps": 30,
+            "gpu_memory_limit_mb": 2048
+        }
+    }
+}

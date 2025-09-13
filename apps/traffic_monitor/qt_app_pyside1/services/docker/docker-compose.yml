@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  # Mosquitto MQTT Broker
+  mosquitto:
+    image: eclipse-mosquitto:2.0.18
+    container_name: smart-intersection-mqtt
+    restart: unless-stopped
+    ports:
+      - "1883:1883"      # MQTT
+      - "9001:9001"      # WebSocket
+    volumes:
+      - ./mqtt/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_logs:/mosquitto/logs
+    networks:
+      - smart-intersection
+
+  # InfluxDB v2 Time Series Database  
+  influxdb:
+    image: influxdb:2.7.4
+    container_name: smart-intersection-influxdb
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=smartintersection2024
+      - DOCKER_INFLUXDB_INIT_ORG=smart-intersection-org
+      - DOCKER_INFLUXDB_INIT_BUCKET=traffic_monitoring
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=smart-intersection-super-secret-token
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+      - influxdb_config:/etc/influxdb2
+      - ./influxdb/init.flux:/docker-entrypoint-initdb.d/init.flux:ro
+    networks:
+      - smart-intersection
+
+  # Grafana Dashboard and Visualization
+  grafana:
+    image: grafana/grafana:10.2.2
+    container_name: smart-intersection-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=grafana-influxdb-datasource
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+    networks:
+      - smart-intersection
+    depends_on:
+      - influxdb
+
+  # MQTT to InfluxDB Bridge (Optional)
+  telegraf:
+    image: telegraf:1.28.3
+    container_name: smart-intersection-telegraf
+    restart: unless-stopped
+    volumes:
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+    networks:
+      - smart-intersection
+    depends_on:
+      - mosquitto
+      - influxdb
+
+volumes:
+  mosquitto_data:
+    driver: local
+  mosquitto_logs:
+    driver: local
+  influxdb_data:
+    driver: local
+  influxdb_config:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  smart-intersection:
+    driver: bridge
+    name: smart-intersection-network

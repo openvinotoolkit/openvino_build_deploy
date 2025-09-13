@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-pgserver
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}-pgserver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-pgserver
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-pgserver
+    spec:
+      initContainers:
+      - name: init-smart-intersection-ri
+        image: busybox
+        command: ['sh', '-c', '
+          if [ -f /data/smart-intersection-ri.tar.bz2 ]; then
+            echo "File exists: /data/smart-intersection-ri.tar.bz2";
+          else
+            echo "File does NOT exist: /data/smart-intersection-ri.tar.bz2";
+          fi &&
+          until [ -f /data/.done ]; do
+            echo "Waiting for .done ...";
+            sleep 5;
+          done &&
+          ls /tmp &&
+          echo "Files copied to /tmp";
+        ']
+        volumeMounts:
+        - name: smart-intersection-ri-data
+          mountPath: /data
+      containers:
+      - name: pgserver
+        image: {{ .Values.pgserver.repository }}:{{ .Values.pgserver.tag }}
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: DBROOT
+          value: /workspace
+        - name: EXAMPLEDB
+          value: smart-intersection-ri.tar.bz2
+        volumeMounts:
+        - name: pgserver-db
+          mountPath: /workspace/db
+        - name: pgserver-migrations
+          mountPath: /workspace/migrations
+        - name: pgserver-media
+          mountPath: /workspace/media
+        - name: pgserver-config
+          mountPath: /tmp
+        - name: secrets
+          mountPath: /tmp/secrets  # Mount secrets in /tmp/secrets
+        - name: smart-intersection-ri-data
+          mountPath: /data
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
+          fsGroup: 0
+          readOnlyRootFilesystem: false
+          capabilities:
+            add:
+              - SYS_ADMIN
+          privileged: true
+        command: ["/bin/bash", "-e", "-c"]
+        args:
+        - >
+          sed -i 's+RUNSECRETS=/run/secrets+RUNSECRETS=/tmp/secrets+g' /usr/local/bin/scenescape-init &&
+          cp /data/smart-intersection-ri.tar.bz2 /home/scenescape/SceneScape/smart-intersection-ri.tar.bz2 &&
+          cp /tmp/secrets/secrets.py /home/scenescape/SceneScape/sscape/secrets.py &&
+          cp /tmp/user_access_config.json /home/scenescape/SceneScape/user_access_config.json &&
+          chown -R scenescape:scenescape /workspace &&
+          sed -i 's+/run/secrets+/tmp/secrets+g' /home/scenescape/SceneScape/sscape/settings.py &&
+          sed -i '/touch \/tmp\/healthy/d' /usr/local/bin/scenescape-init &&
+          SUPASS=$(cat /tmp/secrets/supass) /usr/local/bin/scenescape-init database --preloadexample
+      volumes:
+      - name: pgserver-db
+        persistentVolumeClaim:
+          claimName: {{ .Release.Name }}-pgserver-db
+      - name: pgserver-migrations
+        persistentVolumeClaim:
+          claimName: {{ .Release.Name }}-pgserver-migrations
+      - name: pgserver-media
+        persistentVolumeClaim:
+          claimName: {{ .Release.Name }}-pgserver-media
+      - name: pgserver-config
+        configMap:
+          name: {{ .Release.Name }}-pgserver-config
+      - name: secrets
+        secret:
+          secretName: {{ .Release.Name }}-pgserver-secrets
+      - name: smart-intersection-ri-data
+        persistentVolumeClaim:
+          claimName: {{ .Release.Name }}-ri-pvc

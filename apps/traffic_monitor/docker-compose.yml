@@ -1,0 +1,32 @@
+version: "3.8"
+services:
+  detector:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: traffic-detector:latest
+    environment:
+      - MODEL_PATH=/app/yolo11x.xml
+    volumes:
+      - ./models:/app/models
+    command: ["python", "detection_openvino.py"]
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: traffic-app:latest
+    depends_on:
+      - detector
+    environment:
+      - DETECTOR_API=http://detector:8000
+    command: ["python", "qt_app_pyside/main.py"]
+    ports:
+      - "8501:8501"
+    deploy:
+      resources:
+        limits:
+          memory: 2g

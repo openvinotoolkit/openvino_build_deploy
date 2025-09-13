@@ -12,3 +12,7 @@ qt_app_pyside1/build/*/base_library.zip filter=lfs diff=lfs merge=lfs -text
 qt_app_pyside1/services/services/downloads/grafana-10.2.2.windows-amd64.zip filter=lfs diff=lfs merge=lfs -text
 apps/smart_traffic_monitor/openvino_models/*.xml filter=lfs diff=lfs merge=lfs -text
 apps/smart_traffic_monitor/openvino_models/*.bin filter=lfs diff=lfs merge=lfs -text
+apps/traffic_monitor/yolo11n_openvino_model/* filter=lfs diff=lfs merge=lfs -text
+apps/traffic_monitor/yolo11x_openvino_model/* filter=lfs diff=lfs merge=lfs -text
+yolo11n_openvino_model/* filter=lfs diff=lfs merge=lfs -text
+yolo11x_openvino_model/* filter=lfs diff=lfs merge=lfs -text

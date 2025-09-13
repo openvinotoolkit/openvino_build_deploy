@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: smart-intersection-influxdb-pv
+  labels:
+    app.kubernetes.io/managed-by: "Helm"  # Required by Helm
+  annotations:
+    meta.helm.sh/release-name: "smart-intersection"  # Required by Helm
+    meta.helm.sh/release-namespace: "smart-intersection"  # Required by Helm
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /mnt/data/influxdb  # Replace with a valid path on your node

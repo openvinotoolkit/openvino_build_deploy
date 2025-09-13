@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-pgserver-config
+  namespace: {{ .Release.Namespace }}
+data:
+  user_access_config.json: |
+{{ .Files.Get "files/webserver/user_access_config.json" | indent 4 }}

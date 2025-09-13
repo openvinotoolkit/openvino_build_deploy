@@ -1,0 +1,482 @@
+{
+    "intersection": {
+        "id": "desktop_smart_intersection_v1",
+        "name": "Desktop Smart Intersection Analytics",
+        "description": "4-camera intersection monitoring with advanced scene analytics",
+        "version": "1.0.0",
+        "cameras": {
+            "north": {
+                "id": "camera1",
+                "name": "North Camera",
+                "position": "north",
+                "angle": 0,
+                "enabled": true,
+                "stream_config": {
+                    "resolution": "1920x1080",
+                    "fps": 30,
+                    "format": "BGR"
+                },
+                "detection_config": {
+                    "confidence_threshold": 0.5,
+                    "inference_interval": 1,
+                    "model_instance_id": "detect1"
+                },
+                "calibration": {
+                    "intrinsics": [1000, 1000, 960, 540],
+                    "position": {"x": 0, "y": -100, "z": 500},
+                    "rotation": {"pitch": -30, "yaw": 0, "roll": 0}
+                }
+            },
+            "east": {
+                "id": "camera2", 
+                "name": "East Camera",
+                "position": "east",
+                "angle": 90,
+                "enabled": true,
+                "stream_config": {
+                    "resolution": "1920x1080",
+                    "fps": 30,
+                    "format": "BGR"
+                },
+                "detection_config": {
+                    "confidence_threshold": 0.5,
+                    "inference_interval": 1,
+                    "model_instance_id": "detect1"
+                },
+                "calibration": {
+                    "intrinsics": [1000, 1000, 960, 540],
+                    "position": {"x": 100, "y": 0, "z": 500},
+                    "rotation": {"pitch": -30, "yaw": 90, "roll": 0}
+                }
+            },
+            "south": {
+                "id": "camera3",
+                "name": "South Camera", 
+                "position": "south",
+                "angle": 180,
+                "enabled": true,
+                "stream_config": {
+                    "resolution": "1920x1080",
+                    "fps": 30,
+                    "format": "BGR"
+                },
+                "detection_config": {
+                    "confidence_threshold": 0.5,
+                    "inference_interval": 1,
+                    "model_instance_id": "detect1"
+                },
+                "calibration": {
+                    "intrinsics": [1000, 1000, 960, 540],
+                    "position": {"x": 0, "y": 100, "z": 500},
+                    "rotation": {"pitch": -30, "yaw": 180, "roll": 0}
+                }
+            },
+            "west": {
+                "id": "camera4",
+                "name": "West Camera",
+                "position": "west", 
+                "angle": 270,
+                "enabled": true,
+                "stream_config": {
+                    "resolution": "1920x1080",
+                    "fps": 30,
+                    "format": "BGR"
+                },
+                "detection_config": {
+                    "confidence_threshold": 0.5,
+                    "inference_interval": 1,
+                    "model_instance_id": "detect1"
+                },
+                "calibration": {
+                    "intrinsics": [1000, 1000, 960, 540],
+                    "position": {"x": -100, "y": 0, "z": 500},
+                    "rotation": {"pitch": -30, "yaw": 270, "roll": 0}
+                }
+            }
+        },
+        "detection": {
+            "model_path": "models/intersection/openvino.xml",
+            "model_config": "models/intersection/config.json",
+            "label_schema": "models/intersection/label_schema.json",
+            "confidence_threshold": 0.5,
+            "device": "GPU",
+            "classes": {
+                "vehicle": {
+                    "id": 0,
+                    "name": "vehicle",
+                    "color": [247, 218, 179],
+                    "tracking_enabled": true,
+                    "speed_estimation": true
+                },
+                "pedestrian": {
+                    "id": 1,
+                    "name": "pedestrian", 
+                    "color": [255, 86, 98],
+                    "tracking_enabled": true,
+                    "safety_monitoring": true
+                }
+            },
+            "inference_config": {
+                "batch_size": 1,
+                "inference_threads": 4,
+                "memory_optimization": true
+            }
+        },
+        "tracking": {
+            "max_unreliable_frames": 10,
+            "non_measurement_frames_dynamic": 8,
+            "non_measurement_frames_static": 16,
+            "baseline_frame_rate": 30,
+            "cross_camera_tracking": {
+                "enabled": true,
+                "similarity_threshold": 0.7,
+                "max_time_gap_seconds": 2.0,
+                "max_distance_pixels": 100
+            },
+            "reid_features": {
+                "enabled": false,
+                "model_path": null,
+                "feature_dimension": 256
+            }
+        },
+        "analytics": {
+            "enable_traffic_flow": true,
+            "enable_pedestrian_safety": true,
+            "enable_roi_analytics": true,
+            "enable_violation_detection": true,
+            "enable_speed_estimation": true,
+            "enable_direction_analysis": true,
+            "enable_congestion_detection": true,
+            "analytics_interval_ms": 100,
+            "history_retention_seconds": 3600
+        },
+        "roi_definitions": {
+            "crosswalks": [
+                {
+                    "id": "crosswalk_north_south",
+                    "name": "North-South Crosswalk",
+                    "type": "rectangle",
+                    "coordinates": {
+                        "x": 350,
+                        "y": 250,
+                        "width": 100,
+                        "height": 200
+                    },
+                    "monitoring": [
+                        "pedestrian_safety",
+                        "traffic_conflicts",
+                        "crosswalk_violations"
+                    ],
+                    "safety_rules": {
+                        "vehicle_exclusion_when_pedestrian": true,
+                        "pedestrian_right_of_way": true,
+                        "max_vehicle_speed_kmh": 10
+                    }
+                },
+                {
+                    "id": "crosswalk_east_west",
+                    "name": "East-West Crosswalk", 
+                    "type": "rectangle",
+                    "coordinates": {
+                        "x": 250,
+                        "y": 350,
+                        "width": 200,
+                        "height": 100
+                    },
+                    "monitoring": [
+                        "pedestrian_safety",
+                        "traffic_conflicts", 
+                        "crosswalk_violations"
+                    ],
+                    "safety_rules": {
+                        "vehicle_exclusion_when_pedestrian": true,
+                        "pedestrian_right_of_way": true,
+                        "max_vehicle_speed_kmh": 10
+                    }
+                }
+            ],
+            "traffic_lanes": [
+                {
+                    "id": "lane_north_incoming",
+                    "name": "North Incoming Lane",
+                    "direction": "incoming",
+                    "coordinates": {
+                        "x": 350,
+                        "y": 0,
+                        "width": 50,
+                        "height": 250
+                    },
+                    "monitoring": [
+                        "traffic_flow",
+                        "speed_detection",
+                        "vehicle_counting"
+                    ],
+                    "speed_limit_kmh": 50
+                },
+                {
+                    "id": "lane_north_outgoing",
+                    "name": "North Outgoing Lane",
+                    "direction": "outgoing",
+                    "coordinates": {
+                        "x": 400,
+                        "y": 0,
+                        "width": 50,
+                        "height": 250
+                    },
+                    "monitoring": [
+                        "traffic_flow",
+                        "speed_detection",
+                        "vehicle_counting"
+                    ],
+                    "speed_limit_kmh": 50
+                },
+                {
+                    "id": "lane_east_incoming",
+                    "name": "East Incoming Lane",
+                    "direction": "incoming", 
+                    "coordinates": {
+                        "x": 450,
+                        "y": 350,
+                        "width": 250,
+                        "height": 50
+                    },
+                    "monitoring": [
+                        "traffic_flow",
+                        "speed_detection",
+                        "vehicle_counting"
+                    ],
+                    "speed_limit_kmh": 50
+                },
+                {
+                    "id": "lane_east_outgoing",
+                    "name": "East Outgoing Lane",
+                    "direction": "outgoing",
+                    "coordinates": {
+                        "x": 450,
+                        "y": 400,
+                        "width": 250,
+                        "height": 50
+                    },
+                    "monitoring": [
+                        "traffic_flow",
+                        "speed_detection", 
+                        "vehicle_counting"
+                    ],
+                    "speed_limit_kmh": 50
+                },
+                {
+                    "id": "lane_south_incoming",
+                    "name": "South Incoming Lane",
+                    "direction": "incoming",
+                    "coordinates": {
+                        "x": 400,
+                        "y": 450,
+                        "width": 50,
+                        "height": 250
+                    },
+                    "monitoring": [
+                        "traffic_flow",
+                        "speed_detection",
+                        "vehicle_counting"
+                    ],
+                    "speed_limit_kmh": 50
+                },
+                {
+                    "id": "lane_south_outgoing", 
+                    "name": "South Outgoing Lane",
+                    "direction": "outgoing",
+                    "coordinates": {
+                        "x": 350,
+                        "y": 450,
+                        "width": 50,
+                        "height": 250
+                    },
+                    "monitoring": [
+                        "traffic_flow",
+                        "speed_detection",
+                        "vehicle_counting"
+                    ],
+                    "speed_limit_kmh": 50
+                },
+                {
+                    "id": "lane_west_incoming",
+                    "name": "West Incoming Lane",
+                    "direction": "incoming",
+                    "coordinates": {
+                        "x": 0,
+                        "y": 400,
+                        "width": 250,
+                        "height": 50
+                    },
+                    "monitoring": [
+                        "traffic_flow",
+                        "speed_detection",
+                        "vehicle_counting"
+                    ],
+                    "speed_limit_kmh": 50
+                },
+                {
+                    "id": "lane_west_outgoing",
+                    "name": "West Outgoing Lane", 
+                    "direction": "outgoing",
+                    "coordinates": {
+                        "x": 0,
+                        "y": 350,
+                        "width": 250,
+                        "height": 50
+                    },
+                    "monitoring": [
+                        "traffic_flow",
+                        "speed_detection",
+                        "vehicle_counting"
+                    ],
+                    "speed_limit_kmh": 50
+                }
+            ],
+            "intersection_center": {
+                "id": "intersection_core",
+                "name": "Intersection Center",
+                "type": "rectangle",
+                "coordinates": {
+                    "x": 250,
+                    "y": 250,
+                    "width": 200,
+                    "height": 200
+                },
+                "monitoring": [
+                    "traffic_conflicts",
+                    "congestion_detection",
+                    "intersection_violations",
+                    "vehicle_pedestrian_conflicts"
+                ],
+                "safety_rules": {
+                    "max_occupancy": 10,
+                    "max_dwell_time_seconds": 30,
+                    "pedestrian_vehicle_separation_meters": 2.0
+                }
+            },
+            "safety_zones": [
+                {
+                    "id": "pedestrian_waiting_north",
+                    "name": "North Pedestrian Waiting Area",
+                    "type": "rectangle",
+                    "coordinates": {
+                        "x": 325,
+                        "y": 200,
+                        "width": 150,
+                        "height": 50
+                    },
+                    "monitoring": [
+                        "pedestrian_counting",
+                        "waiting_time_analysis"
+                    ]
+                },
+                {
+                    "id": "pedestrian_waiting_south",
+                    "name": "South Pedestrian Waiting Area", 
+                    "type": "rectangle",
+                    "coordinates": {
+                        "x": 325,
+                        "y": 500,
+                        "width": 150,
+                        "height": 50
+                    },
+                    "monitoring": [
+                        "pedestrian_counting",
+                        "waiting_time_analysis"
+                    ]
+                },
+                {
+                    "id": "pedestrian_waiting_east",
+                    "name": "East Pedestrian Waiting Area",
+                    "type": "rectangle",
+                    "coordinates": {
+                        "x": 500,
+                        "y": 325,
+                        "width": 50,
+                        "height": 150
+                    },
+                    "monitoring": [
+                        "pedestrian_counting",
+                        "waiting_time_analysis"
+                    ]
+                },
+                {
+                    "id": "pedestrian_waiting_west",
+                    "name": "West Pedestrian Waiting Area",
+                    "type": "rectangle", 
+                    "coordinates": {
+                        "x": 200,
+                        "y": 325,
+                        "width": 50,
+                        "height": 150
+                    },
+                    "monitoring": [
+                        "pedestrian_counting",
+                        "waiting_time_analysis"
+                    ]
+                }
+            ]
+        },
+        "alerts": {
+            "pedestrian_safety": {
+                "enabled": true,
+                "severity_levels": ["low", "medium", "high", "critical"],
+                "vehicle_pedestrian_distance_threshold_meters": 3.0,
+                "crosswalk_violation_enabled": true,
+                "outside_crosswalk_alert_enabled": true
+            },
+            "traffic_violations": {
+                "enabled": true,
+                "speed_violations": true,
+                "red_light_violations": true,
+                "crosswalk_violations": true,
+                "intersection_blocking": true
+            },
+            "congestion": {
+                "enabled": true,
+                "vehicle_count_threshold": 15,
+                "avg_speed_threshold_kmh": 5,
+                "dwell_time_threshold_seconds": 60
+            }
+        },
+        "performance": {
+            "target_fps": 30,
+            "max_processing_latency_ms": 33,
+            "memory_limit_mb": 4096,
+            "gpu_utilization_target": 0.8,
+            "parallel_processing": {
+                "enabled": true,
+                "max_worker_threads": 4,
+                "camera_processing_parallel": true
+            }
+        },
+        "data_retention": {
+            "analytics_history_hours": 24,
+            "violation_records_days": 30,
+            "performance_metrics_hours": 12,
+            "object_tracks_minutes": 30
+        },
+        "ui_integration": {
+            "display_options": {
+                "show_roi_overlays": true,
+                "show_tracking_lines": true,
+                "show_analytics_overlay": true,
+                "show_camera_labels": true,
+                "show_performance_stats": true
+            },
+            "color_scheme": {
+                "vehicle_color": [0, 255, 0],
+                "pedestrian_color": [255, 0, 0],
+                "roi_color": [255, 255, 0],
+                "violation_color": [255, 0, 255],
+                "tracking_line_color": [0, 255, 255]
+            },
+            "refresh_rates": {
+                "display_fps": 30,
+                "analytics_update_hz": 10,
+                "performance_update_hz": 1
+            }
+        }
+    }
+}

@@ -1,0 +1,64 @@
+{
+  "services_config": {
+    "mqtt": {
+      "broker": "localhost",
+      "port": 1883,
+      "keepalive": 60,
+      "client_id_prefix": "smart_intersection_desktop",
+      "username": null,
+      "password": null,
+      "tls_enabled": false,
+      "auto_reconnect": true,
+      "max_retries": 3,
+      "retry_interval": 5
+    },
+    "influxdb": {
+      "url": "http://localhost:8086",
+      "token": "smart-intersection-super-secret-token",
+      "org": "smart-intersection-org",
+      "bucket": "traffic_monitoring",
+      "timeout": 30,
+      "enable_gzip": true,
+      "batch_size": 1000,
+      "flush_interval": 10000
+    },
+    "grafana": {
+      "url": "http://localhost:3000",
+      "username": "admin",
+      "password": "admin",
+      "api_key": null
+    },
+    "health_monitoring": {
+      "check_interval": 30,
+      "timeout": 5,
+      "enabled": true,
+      "services": ["mqtt", "influxdb", "grafana"]
+    },
+    "data_retention": {
+      "raw_data_days": 7,
+      "aggregated_data_days": 30,
+      "cleanup_enabled": true
+    },
+    "performance": {
+      "publish_interval": 5,
+      "batch_events": true,
+      "max_queue_size": 10000,
+      "compression_enabled": false
+    }
+  },
+  "desktop_integration": {
+    "enable_services": true,
+    "fallback_to_local": true,
+    "show_service_status": true,
+    "auto_start_services": false,
+    "service_startup_timeout": 30,
+    "graceful_degradation": true
+  },
+  "logging": {
+    "level": "INFO",
+    "enable_service_logs": true,
+    "log_file": "services_integration.log",
+    "max_log_size_mb": 10,
+    "backup_count": 3
+  }
+}

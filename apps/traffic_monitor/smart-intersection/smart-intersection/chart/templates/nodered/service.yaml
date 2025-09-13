@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-nodered
+spec:
+  selector:
+    app: {{ .Release.Name }}-nodered
+  ports:
+    - protocol: TCP
+      port: 1880
+      targetPort: 1880

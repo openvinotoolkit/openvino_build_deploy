@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-broker
+  namespace: {{ .Release.Namespace }}
+data:
+  mosquitto-secure.conf: |
+{{ .Files.Get "files/mosquitto/mosquitto-secure.conf" | indent 4 }}

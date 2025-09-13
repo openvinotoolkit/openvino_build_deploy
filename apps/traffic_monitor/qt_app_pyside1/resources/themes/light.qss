@@ -1,0 +1,4 @@
+/* Light theme QSS */
+QWidget { background: #f5f6fa; color: #222; }
+QPushButton { background: #2e86de; color: #fff; }
+QTabWidget::pane { background: #fff; }

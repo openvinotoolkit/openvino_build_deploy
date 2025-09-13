@@ -1,0 +1,74 @@
+{
+    "label_tree": {
+        "type": "tree",
+        "directed": true,
+        "nodes": [],
+        "edges": []
+    },
+    "label_groups": [
+        {
+            "_id": "668f63e29e37e79b86d7ffd2",
+            "name": "Detection labels",
+            "label_ids": [
+                "668f63e29e37e79b86d7ffce",
+                "668f63e29e37e79b86d7ffcf"
+            ],
+            "relation_type": "EXCLUSIVE"
+        },
+        {
+            "_id": "668f63e29e37e79b86d7ffd4",
+            "name": "No object",
+            "label_ids": [
+                "668f63e29e37e79b86d7ffd3"
+            ],
+            "relation_type": "EMPTY_LABEL"
+        }
+    ],
+    "all_labels": {
+        "668f63e29e37e79b86d7ffce": {
+            "_id": "668f63e29e37e79b86d7ffce",
+            "name": "vehicle",
+            "color": {
+                "red": 247,
+                "green": 218,
+                "blue": 179,
+                "alpha": 255
+            },
+            "hotkey": "",
+            "domain": "DETECTION",
+            "creation_date": "2024-07-11T04:47:30.547000",
+            "is_empty": false,
+            "is_anomalous": false
+        },
+        "668f63e29e37e79b86d7ffcf": {
+            "_id": "668f63e29e37e79b86d7ffcf",
+            "name": "pedestrian",
+            "color": {
+                "red": 255,
+                "green": 86,
+                "blue": 98,
+                "alpha": 255
+            },
+            "hotkey": "",
+            "domain": "DETECTION",
+            "creation_date": "2024-07-11T04:47:30.547000",
+            "is_empty": false,
+            "is_anomalous": false
+        },
+        "668f63e29e37e79b86d7ffd3": {
+            "_id": "668f63e29e37e79b86d7ffd3",
+            "name": "No object",
+            "color": {
+                "red": 0,
+                "green": 0,
+                "blue": 0,
+                "alpha": 255
+            },
+            "hotkey": "",
+            "domain": "DETECTION",
+            "creation_date": "2024-07-11T04:47:30.565000",
+            "is_empty": true,
+            "is_anomalous": false
+        }
+    }
+}

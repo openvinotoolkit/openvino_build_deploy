@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: (C) 2025 Intel Corporation
+# SPDX-License-Identifier: LicenseRef-Intel-Edge-Software
+# This file is licensed under the Limited Edge Software Distribution License Agreement.
+
+pytest==7.4.4
+selenium==4.33.0
+webdriver-manager==4.0.2
+python-dotenv==1.1.1

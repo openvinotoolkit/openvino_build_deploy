@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-scene
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}-scene
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-scene
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-scene
+    spec:
+      initContainers:
+      - name: wait-for-db-ready
+        image: curlimages/curl
+        command:
+          - sh
+          - -c
+          - |
+            echo "Waiting for DB via smart-intersection-web...";
+            until curl --insecure -s https://smart-intersection-web:443/api/v1/database-ready | grep 'true'; do
+              echo "Database not ready yet...";
+              sleep 5;
+            done;
+            echo "Database is ready!"
+      # initContainers:
+      # - name: init-scene-secrets
+      #   image: busybox
+      #   command: ['sh', '-c', '
+      #     if [ -f /data/secrets.py ]; then
+      #       echo "File exists: /data/secrets.py";
+      #     else
+      #       echo "File does NOT exist: /data/secrets.py";
+      #     fi &&
+      #     until [ -f /data/.done ]; do
+      #       echo "Waiting for .done ...";
+      #       sleep 5;
+      #     done &&
+      #     echo "secrets.py copied to /tmp/secrets/django";
+      #   ']
+      #   volumeMounts:
+      #   - name: scene-secrets-data
+      #     mountPath: /data
+      containers:
+      - name: scene
+        image: {{ .Values.scene.repository }}:{{ .Values.scene.tag }}
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/bash", "-e", "-c"]
+        args:
+        - >
+          echo $SMART_INTERSECTION_BROKER_SERVICE_HOST    broker.scenescape.intel.com >> /etc/hosts &&
+          echo $SMART_INTERSECTION_WEB_SERVICE_HOST    web.scenescape.intel.com >> /etc/hosts &&
+          mkdir -p /tmp/secrets/django &&
+          cp /tmp/secrets_/secrets.py /tmp/secrets/django/secrets.py &&
+          cp /tmp/secrets_/scenescape-ca.pem /tmp/secrets/scenescape-ca.pem &&
+          cp /tmp/secrets_/controller.auth /tmp/secrets/controller.auth &&
+          sed -i 's+RUNSECRETS=/run/secrets+RUNSECRETS=/tmp/secrets+g' /usr/local/bin/controller-init &&
+          sed -i '/touch \/tmp\/healthy/d' /usr/local/bin/controller-init &&
+          sed -i 's|--brokerauth ${BROKERAUTH}|--brokerauth ${BROKERAUTH} --rootcert ${BROKERROOTCERT}|g' /usr/local/bin/controller-init &&
+          /usr/local/bin/controller-init controller --broker broker.scenescape.intel.com --brokerrootcert /tmp/secrets/scenescape-ca.pem --ntp ntpserv
+        volumeMounts:
+        - name: pgserver-media
+          mountPath: /home/scenescape/SceneScape/media
+        - name: tracker-config
+          mountPath: /home/scenescape/SceneScape/tracker-config.json
+          subPath: tracker-config.json
+        - name: secrets
+          mountPath: /tmp/secrets_
+        - name: scene-secrets-data
+          mountPath: /data
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
+          fsGroup: 0
+          readOnlyRootFilesystem: false
+        env:
+        - name: CONTROLLER_AUTH
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-scene-secrets
+              key: controller.auth
+      volumes:
+      - name: pgserver-media
+        persistentVolumeClaim:
+          claimName: {{ .Release.Name }}-pgserver-media
+      - name: tracker-config
+        configMap:
+          name: {{ .Release.Name }}-scene-config
+      - name: secrets
+        secret:
+          secretName: {{ .Release.Name }}-scene-secrets
+      - name: scene-secrets-data
+        persistentVolumeClaim:
+          claimName: {{ .Release.Name }}-scene-secrets-pvc

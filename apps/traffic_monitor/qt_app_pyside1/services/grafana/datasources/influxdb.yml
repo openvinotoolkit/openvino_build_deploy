@@ -1,0 +1,41 @@
+apiVersion: 1
+
+# Smart Intersection Data Sources Configuration
+
+datasources:
+  # InfluxDB data source for traffic monitoring
+  - name: Smart Intersection InfluxDB
+    type: influxdb
+    access: proxy
+    url: http://localhost:8086
+    isDefault: true
+    version: 2
+    editable: true
+    jsonData:
+      version: Flux
+      organization: smart-intersection-org
+      defaultBucket: traffic_monitoring
+      tlsSkipVerify: true
+    secureJsonData:
+      token: "your-influxdb-token-here"
+    
+  # InfluxDB data source for analytics
+  - name: Smart Intersection Analytics
+    type: influxdb
+    access: proxy  
+    url: http://localhost:8086
+    version: 2
+    editable: true
+    jsonData:
+      version: Flux
+      organization: smart-intersection-org
+      defaultBucket: traffic_analytics
+      tlsSkipVerify: true
+    secureJsonData:
+      token: "your-influxdb-token-here"
+
+  # TestData DB for demo purposes
+  - name: TestData DB
+    type: testdata
+    access: proxy
+    isDefault: false

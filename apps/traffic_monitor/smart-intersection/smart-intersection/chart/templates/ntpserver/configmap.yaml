@@ -1,0 +1,12 @@
+apiVersion: v1
+data:
+  NTP_SERVERS: "0.pool.ntp.org,1.pool.ntp.org,2.pool.ntp.org,3.pool.ntp.org"
+  HTTP_PROXY: "{{ .Values.httpProxy }}"
+  HTTPS_PROXY: "{{ .Values.httpsProxy }}"
+  NO_PROXY: "{{ .Values.noProxy }}"
+  http_proxy: "{{ .Values.httpProxy }}"
+  https_proxy: "{{ .Values.httpsProxy }}"
+  no_proxy: "{{ .Values.noProxy }}"
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-ntpserver
