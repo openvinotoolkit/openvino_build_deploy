@@ -1,0 +1,14 @@
+*.bin filter=lfs diff=lfs merge=lfs -text
+*.pt filter=lfs diff=lfs merge=lfs -text
+*.xml filter=lfs diff=lfs merge=lfs -text
+*.pth filter=lfs diff=lfs merge=lfs -text
+*.onnx filter=lfs diff=lfs merge=lfs -text
+*.exe filter=lfs diff=lfs merge=lfs -text
+*.pkg filter=lfs diff=lfs merge=lfs -text
+*.pyz filter=lfs diff=lfs merge=lfs -text
+*.toc filter=lfs diff=lfs merge=lfs -text
+*.html filter=lfs diff=lfs merge=lfs -text
+qt_app_pyside1/build/*/base_library.zip filter=lfs diff=lfs merge=lfs -text
+qt_app_pyside1/services/services/downloads/grafana-10.2.2.windows-amd64.zip filter=lfs diff=lfs merge=lfs -text
+apps/smart_traffic_monitor/openvino_models/*.xml filter=lfs diff=lfs merge=lfs -text
+apps/smart_traffic_monitor/openvino_models/*.bin filter=lfs diff=lfs merge=lfs -text
