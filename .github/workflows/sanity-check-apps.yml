@@ -1,4 +1,4 @@
-name: Sanity check (notebooks)
+name: Sanity check (apps)
 
 on:
   schedule:
@@ -20,7 +20,7 @@ jobs:
   find-subprojects:
     runs-on: ubuntu-latest
     outputs:
-      notebook: ${{ steps.categorize-subprojects.outputs.notebook }}
+      js: ${{ steps.categorize-subprojects.outputs.js }}
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -30,45 +30,37 @@ jobs:
         id: find-updates
         uses: ./.github/reusable-steps/find-updates
         with:
-          dir: notebooks
-          ci_config_file: sanity-check-notebooks.yml
+          dir: apps
+          ci_config_file: sanity-check-apps.yml
       - name: Categorize subprojects
         id: categorize-subprojects
         uses: ./.github/reusable-steps/categorize-projects
         with:
           subprojects: ${{ steps.find-updates.outputs.subproject_dirs }}
 
-  notebook:
+  js:
     needs: find-subprojects
-    if: ${{ needs.find-subprojects.outputs.notebook != '[]' }}
+    if: ${{ needs.find-subprojects.outputs.js != '[]' }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        # onnxruntime-openvino is not available on mac
-        os: [ubuntu-24.04, windows-2025]
-        python: ["3.10", "3.13"]
-        subproject: ${{ fromJson(needs.find-subprojects.outputs.notebook) }}
+        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025]
+        subproject: ${{ fromJson(needs.find-subprojects.outputs.js) }}
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/reusable-steps/setup-os
-      - name: Set up Python ${{ matrix.python }}
-        uses: actions/setup-python@v5
+      - name: Install Node.js
+        uses: actions/setup-node@v4
         with:
-          python-version: ${{ matrix.python }}
-      - uses: ./.github/reusable-steps/setup-python
-        with:
-          python: ${{ matrix.python }}
-          project: ${{ matrix.subproject }}
-      - name: Use downloaded video as a stream
-        shell: bash
+          node-version: "22"
+      - name: Install dependencies
         run: |
           cd ${{ matrix.subproject }}
-          # replace video_path with sample_video.mp4
-          find . -name "*.ipynb" -exec sed -E -i "s/video_path\s*=\s*(['\"]?.*?['\"]?)/video_path=\\\\\"sample_video.mp4\\\\\"\\\n\",/g" {} +
-      - name: Run Notebook
+          npm install
+      - name: Run JS Project
         shell: bash
-        timeout-minutes: 30
+        timeout-minutes: 1
         run: |
           cd ${{ matrix.subproject }}
-          jupyter nbconvert --to notebook --debug --execute *.ipynb
+          npm start &
