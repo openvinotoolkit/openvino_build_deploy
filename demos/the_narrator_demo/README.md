@@ -74,15 +74,7 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### Step 5: Download Pre-optimized LLM model
-
-Download the pre-optimized LLM model:
-
-```shell
-huggingface-cli download OpenVINO/Qwen2.5-1.5B-Instruct-int4-ov --local-dir model/Qwen2.5-1.5B-Instruct-int4
-```
-
-### Step 6: Run the Application
+## Step 5: Run the Application
 
 To run the application on your webcam (default):
 
@@ -104,10 +96,10 @@ python main.py --stream 0 --model_name Salesforce/blip-image-captioning-large
 
 The first run will automatically download and convert the required BLIP model to OpenVINO IR format. The converted models will be stored in the `model` directory for future runs.
 
-You can also select which LLM model to use (by replacing model id in the downloading cli) and the maximum number of tokens for generating the summarization:
+You can also select which LLM, pre-optimized in OpenVINO IR format, to be used for text summarization, from the OpenVINO model zone on Hugging Face https://huggingface.co/collections/OpenVINO/llm-6687aaa2abca3bbcec71a9bd:
 
 ```shell
-python main.py --stream 0 --summary_ov_model models/Qwen2.5-7B-Instruct-int4 --summary_max_new_tokens 160
+python main.py --stream 0 --summary_ov_model OpenVINO/qwen2.5-1.5b-instruct-int4-ov
 ```
 
 To see all available options:
@@ -132,6 +124,7 @@ python main.py --help
 - The `model` directory will contain the OpenVINO IR models after conversion.
 - For best performance, use a machine with an Intel CPU, GPU or NPU.
 
+---
 
 [//]: # (telemetry pixel)
 <img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca&project=demos/the_narrator_demo&file=README.md" />
