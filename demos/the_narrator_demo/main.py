@@ -1,4 +1,3 @@
-
 import argparse
 import logging as log
 import os
@@ -13,8 +12,8 @@ import cv2
 import numpy as np
 import openvino as ov
 import torch
+from transformers import BlipProcessor, BlipVisionModel, BlipTextLMHeadModel, BlipTextConfig, BlipForConditionalGeneration
 from transformers.modeling_outputs import CausalLMOutputWithCrossAttentions
-from transformers import BlipProcessor, BlipVisionModel, BlipTextLMHeadModel, BlipForConditionalGeneration, BlipTextConfig
 
 import openvino_genai as ov_genai
 from huggingface_hub import snapshot_download
@@ -30,8 +29,6 @@ TEXT_CONFIG = BlipTextConfig()
 
 current_frames = deque(maxlen=1)
 captions = deque(maxlen=1000)   # keep history for summary + latest for display
-
-processing_times = deque(maxlen=100)
 
 global_stop_event = threading.Event()
 
@@ -219,6 +216,9 @@ def run(video_path: str, model_name: str, flip: bool = True, summary_ov_model: s
     if isinstance(video_path, str) and video_path.isnumeric():
         video_path = int(video_path)
     player = utils.VideoPlayer(video_path, size=(1920, 1080), fps=60, flip=flip)
+
+    # keep at most 100 last times
+    processing_times = deque(maxlen=100)
 
     title = "Press ESC to Exit"
     cv2.namedWindow(title, cv2.WINDOW_GUI_NORMAL)
