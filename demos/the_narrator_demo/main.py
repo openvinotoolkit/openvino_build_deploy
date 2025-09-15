@@ -17,7 +17,6 @@ from transformers.modeling_outputs import CausalLMOutputWithCrossAttentions
 from transformers import AutoProcessor
 from optimum.intel.openvino import OVModelForVisualCausalLM
 from transformers import LlavaNextVideoProcessor
-from huggingface_hub import login
 from optimum.intel import OVWeightQuantizationConfig, OVPipelineQuantizationConfig
 from PIL import Image
 import tempfile
@@ -309,8 +308,16 @@ def run(video_path: str, model_name: str, flip: bool = True, video_input: bool =
     device_mapping = utils.available_devices(exclude=["NPU"])
     device_type = "AUTO"
 
+    #Downloadn and convert Image and Video models
     vision_model, text_decoder, processor = load_models(model_name, device_type)
     
+    #For video captioning
+    model_name_video = "llava-hf/LLaVA-NeXT-Video-7B-hf"
+    device_type_video = "AUTO"
+    
+    # Load video input model and processor
+    model_video, processor_video = load_llava_video_models(model_name_video, device_type_video)
+
     # initialize video player to deliver frames
     if isinstance(video_path, str) and video_path.isnumeric():
         video_path = int(video_path)
@@ -461,24 +468,14 @@ def run(video_path: str, model_name: str, flip: bool = True, video_input: bool =
                 caption = "Switching to image_input mode..."
             else: 
                 print("Switching to video_input mode...")
-                model_name = "llava-hf/LLaVA-NeXT-Video-7B-hf"
-                device_type = "AUTO"
-    
-              # Stop current worker
-                global_stop_event.set()
-                worker.join(timeout=1)
-                global_stop_event.clear()
-    
-                # Load video input model and processor
-                model, processor = load_llava_video_models(model_name, device_type)
 
                # Start new inference worker with video_input=True
                 worker = threading.Thread(
                     target=inference_worker,
                     kwargs={
                         "video_input": True,
-                        "model": model,
-                        "processor": processor,
+                        "model": model_video,
+                        "processor": processor_video,
                         "vision_model": None,
                         "text_decoder": None
                     },
