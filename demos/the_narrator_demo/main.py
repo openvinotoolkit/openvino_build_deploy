@@ -230,7 +230,7 @@ def summarize_session(captions_list: list[str], ov_model_path: Path, device: str
     pipe.generate(VIDEO_SUMMARY_PROMPT.format(captions="\n".join(captions_list)), streamer=streamer)
 
 
-def run(video_path: str, captioning_model: str, flip: bool = True, summary_model: str = "") -> None:
+def run(video_path: str, captioning_model: str, summary_model: str, flip: bool = True) -> None:
     global current_frames, captions, processing_times
     # set up logging
     log.getLogger().setLevel(log.INFO)
@@ -348,9 +348,9 @@ def run(video_path: str, captioning_model: str, flip: bool = True, summary_model
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--stream", default="0", type=str, help="Path to a video file or the webcam number")
-    parser.add_argument("--model_name", type=str, default="Salesforce/blip-image-captioning-base", help="Model to be used for captioning",
+    parser.add_argument("--captioning_model", type=str, default="Salesforce/blip-image-captioning-base", help="Model to be used for captioning",
                         choices=["Salesforce/blip-image-captioning-base", "Salesforce/blip-image-captioning-large"])
+    parser.add_argument("--summary_model", type=str, default="OpenVINO/qwen2.5-1.5b-instruct-int4-ov", help="Path or HF repo ID for OV pre-optimized GenAI LLM")
     parser.add_argument("--flip", type=bool, default=True, help="Mirror input video")
-    parser.add_argument("--summary_ov_model", type=str, default="OpenVINO/qwen2.5-1.5b-instruct-int4-ov", help="Path or HF repo ID for OV pre-optimized GenAI LLM")
     args = parser.parse_args()
-    run(args.stream, args.model_name, args.flip, args.summary_ov_model)
+    run(args.stream, args.captioning_model, args.summary_model, args.flip)
