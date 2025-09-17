@@ -3,5 +3,5 @@
 jupyterlab==4.2.5
 ipywidgets==8.1.5
 
-anomalib[openvino]
+anomalib[openvino]==2.2.0
 
