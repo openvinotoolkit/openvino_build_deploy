@@ -17,14 +17,13 @@ from transformers.modeling_outputs import CausalLMOutputWithCrossAttentions
 
 import openvino_genai as ov_genai
 from huggingface_hub import snapshot_download
-import asyncio
 
 SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "utils")
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 from utils import demo_utils as utils
 
-MODEL_DIR = Path("models")
+MODEL_DIR = Path("model")
 TEXT_CONFIG = BlipTextConfig()
 
 current_frames = deque(maxlen=1)
@@ -71,7 +70,7 @@ def convert_decoder_model(text_decoder: BlipTextLMHeadModel, output_dir: Path) -
     ov.save_model(ov_text_decoder, output_dir / "blip_text_decoder_with_past.xml")
 
 
-def download_and_convert_model(model_name: str) -> None:
+def download_and_convert_captioning_model(model_name: str) -> None:
     output_dir = MODEL_DIR / model_name
     
     processor = BlipProcessor.from_pretrained(model_name, use_fast=True)
@@ -90,7 +89,7 @@ def load_models(model_name: str, device: str = "AUTO") -> tuple[ov.CompiledModel
     text_decoder_path = model_dir / "blip_text_decoder_with_past.xml"
 
     if not vision_model_path.exists() or not text_decoder_path.exists():
-        download_and_convert_model(model_name)
+        download_and_convert_captioning_model(model_name)
 
     core = ov.Core()
     core.set_property({"CACHE_DIR": "cache"})
@@ -167,41 +166,49 @@ def inference_worker(vision_model, text_decoder, processor):
             processing_times.append(elapsed)
 
 
-async def download_model(model_name: str) -> Path:
-    """Download a pre-optimized OpenVINO LLM snapshot from Hugging Face if missing."""
+def download_summarization_model(model_name: str) -> Path:
+    is_openvino_model = model_name.split("/")[0] == "OpenVINO"
+
+    if not is_openvino_model:
+        raise ValueError(f"Model '{model_name}' is not an OpenVINO pre-optimized model. Please provide a valid model from the OpenVINO organization on Hugging Face.")
+
     output_dir = MODEL_DIR / model_name
     if not output_dir.exists():
-        print(f"[INFO] Downloading {model_name}...")
+        log.info(f"Downloading {model_name}...")
         snapshot_download(model_name, local_dir=output_dir, resume_download=True)
+
     return output_dir
 
 
-def summarize_captions_with_ov_llmpipeline(captions_list, ov_model_path, device):
+def summarize_session(captions_list: list[str], ov_model_path: Path, device: str) -> None:
     if not captions_list:
-        print("[WARN] No captions collected.")
+        log.warning("No captions collected.")
         return
 
+    log.info("Summarization model loading...")
+
     pipe = ov_genai.LLMPipeline(ov_model_path, device)
-    cfg = ov_genai.GenerationConfig()  # defaults
     prompt = (
         "You are a helpful assistant. Always provide a concise and clear text summary.\n"
-        "Summarize these captions into one brief paragraph:\n"
+        "Summarize the video, based on these captions, into one brief paragraph:\n"
         + " ".join(captions_list)
         + "\nSummary:"
     )
 
-    buf = []
+    log.info("============================================================")
+    log.info("Session Summary (OpenVINO GenAI LLMPipeline):")
+    log.info("============================================================")
+
+    buffer = []
     def cb(subword: str):
         print(subword, end="", flush=True)
-        buf.append(subword)
+        buffer.append(subword)
         return ov_genai.StreamingStatus.RUNNING
 
-    print("[STREAM START]", flush=True)
-    pipe.generate(prompt, cfg, cb)
-    print("\n[STREAM END]", flush=True)
+    pipe.generate(prompt, streamer=cb)
 
 
-def run(video_path: str, model_name: str, flip: bool = True, summary_ov_model: str = "") -> None:
+def run(video_path: str, captioning_model: str, flip: bool = True, summary_model: str = "") -> None:
     global current_frames, captions, processing_times
     # set up logging
     log.getLogger().setLevel(log.INFO)
@@ -212,7 +219,10 @@ def run(video_path: str, model_name: str, flip: bool = True, summary_ov_model: s
     device_mapping = utils.available_devices(exclude=["NPU"])
     device_type = "AUTO"
 
-    vision_model, text_decoder, processor = load_models(model_name, device_type)
+    # download the summary model
+    local_summary_model = download_summarization_model(summary_model)
+
+    vision_model, text_decoder, processor = load_models(captioning_model, device_type)
 
     # initialize video player to deliver frames
     if isinstance(video_path, str) and video_path.isnumeric():
@@ -266,8 +276,8 @@ def run(video_path: str, model_name: str, flip: bool = True, summary_ov_model: s
         # Draw the results on the frame
         utils.draw_text(frame, text=caption, point=(f_width // 2, f_height - 50), center=True, font_scale=1.5, with_background=True)
         utils.draw_text(frame, text=f"Inference time: {processing_time:.0f}ms ({fps:.1f} FPS)", point=(10, 10))
-        utils.draw_text(frame, text=f"Currently running {model_name} on {device_type}", point=(10, 50))
-        utils.draw_text(frame, text=f"Press ESC to get text summary", point=(10, 90))
+        utils.draw_text(frame, text=f"Currently running {captioning_model} on {device_type}", point=(10, 50))
+        utils.draw_text(frame, text=f"Press ESC to exit and get text summary", point=(10, 90))
 
         utils.draw_ov_watermark(frame)
         utils.draw_qr_code(frame, qr_code)
@@ -289,7 +299,7 @@ def run(video_path: str, model_name: str, flip: bool = True, summary_ov_model: s
                     global_stop_event.clear()
 
                     # Recompile models for the new device
-                    vision_model, text_decoder, processor = load_models(model_name, device_type)
+                    vision_model, text_decoder, processor = load_models(captioning_model, device_type)
                     # Start a new inference worker
                     worker = threading.Thread(
                         target=inference_worker,
@@ -309,13 +319,9 @@ def run(video_path: str, model_name: str, flip: bool = True, summary_ov_model: s
     # clean-up windows
     cv2.destroyAllWindows()
 
-    if summary_ov_model:
-        local_summary_model = asyncio.run(download_model(summary_ov_model))
-        print("\n" + "=" * 60)
-        print("Session Summary (OpenVINO GenAI LLMPipeline):")
-        print("-" * 60)
-        summarize_captions_with_ov_llmpipeline(list(captions), local_summary_model, device_type)
-        print("\n" + "=" * 60)
+    # summarize the session
+    summarize_session(list(captions), local_summary_model, device_type)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
