@@ -2,9 +2,8 @@
 
 openvino==2025.2
 onnx==1.18.0
-ultralytics==8.3.161
-supervision==0.25.1
+ultralytics==8.3.186
+supervision==0.26.1
 torch==2.8.0
 opencv-python==4.10.0.84
-numpy==2.2.6
 qrcode[pil]==8.2
