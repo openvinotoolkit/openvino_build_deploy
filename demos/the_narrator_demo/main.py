@@ -195,7 +195,7 @@ def inference_worker(vision_model, text_decoder, processor):
 
 
 def download_summarization_model(model_name: str) -> Path:
-    is_openvino_model = model_name.split("/")[0] == "OpenVINO"
+    is_openvino_model = model_name.startswith("OpenVINO/")
 
     if not is_openvino_model:
         raise ValueError(f"Model '{model_name}' is not an OpenVINO pre-optimized model. Please provide a valid model from the OpenVINO organization on Hugging Face.")
