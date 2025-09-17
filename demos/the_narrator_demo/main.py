@@ -36,6 +36,29 @@ global_stop_event = threading.Event()
 global_frame_lock = threading.Lock()
 global_result_lock = threading.Lock()
 
+VIDEO_SUMMARY_PROMPT = """
+You are given captions generated independently for each frame of a webcam video stream. 
+These captions may contain:
+- Redundant or repeated descriptions of the same person or background.
+- Small, frame-by-frame variations in appearance (e.g., shirt color, facial hair, glasses).
+- Minor or trivial movements that are not meaningful (e.g., blinking, head tilts).
+- Fragmented or inconsistent wording.
+
+Your task:
+1. Clean & Deduplicate: Merge repeated or overlapping frame-level descriptions into a single, coherent narrative.
+2. Infer Context: Use the temporal sequence to reconstruct what is happening across the video.
+3. Identify Main Events: Focus on meaningful actions, gestures, and scene changes rather than frame-by-frame noise.
+4. Summarize Clearly: Produce a concise summary (1–2 sentences) describing what the webcam stream shows overall.
+5. Ignore Noise: Do not include tiny repetitive movements, trivial frame changes, or redundant appearance details.
+
+Input:
+Webcam frame captions (in order):
+{captions}
+
+Output:
+A concise, human-readable summary of the webcam video stream.
+"""
+
 
 def convert_vision_model(vision_model: BlipVisionModel, processor: BlipProcessor, output_dir: Path) -> None:
     vision_model.eval()
@@ -154,15 +177,20 @@ def inference_worker(vision_model, text_decoder, processor):
     global current_frames, captions, processing_times
 
     while not global_stop_event.is_set():
+        if len(current_frames) == 0:
+            time.sleep(0.01)
+            continue
+
         with global_frame_lock:
-            frame = current_frames.pop() if len(current_frames) > 0 else np.zeros((1080, 1920, 3), dtype=np.uint8)
+            frame = current_frames[-1]
 
         start_time = time.perf_counter()
         caption = generate_caption(frame, vision_model, text_decoder, processor)
         elapsed = time.perf_counter() - start_time
 
         with global_result_lock:
-            captions.append(caption)
+            if caption != (captions[-1] if len(captions) > 0 else None):
+                captions.append(caption)
             processing_times.append(elapsed)
 
 
@@ -188,24 +216,18 @@ def summarize_session(captions_list: list[str], ov_model_path: Path, device: str
     log.info("Summarization model loading...")
 
     pipe = ov_genai.LLMPipeline(ov_model_path, device)
-    prompt = (
-        "You are a helpful assistant. Always provide a concise and clear text summary.\n"
-        "Summarize the video, based on these captions, into one brief paragraph:\n"
-        + " ".join(captions_list)
-        + "\nSummary:"
-    )
 
     log.info("============================================================")
     log.info("Session Summary (OpenVINO GenAI LLMPipeline):")
     log.info("============================================================")
 
     buffer = []
-    def cb(subword: str):
+    def streamer(subword: str):
         print(subword, end="", flush=True)
         buffer.append(subword)
         return ov_genai.StreamingStatus.RUNNING
 
-    pipe.generate(prompt, streamer=cb)
+    pipe.generate(VIDEO_SUMMARY_PROMPT.format(captions="\n".join(captions_list)), streamer=streamer)
 
 
 def run(video_path: str, captioning_model: str, flip: bool = True, summary_model: str = "") -> None:
@@ -266,7 +288,7 @@ def run(video_path: str, captioning_model: str, flip: bool = True, summary_model
             t2 = time.time()
             # update the caption only if the time difference is significant, otherwise it will be flickering
             if t2 - t1 > 1 or not caption:
-                caption = captions.pop() if len(captions) > 0 else ""
+                caption = captions[-1] if len(captions) > 0 else ""
                 t1 = t2
 
             # Get the mean processing time
