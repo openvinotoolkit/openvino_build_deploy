@@ -30,6 +30,8 @@ TEXT_CONFIG = BlipTextConfig()
 current_frames = deque(maxlen=1)
 captions = deque(maxlen=1000)   # keep history for summary + latest for display
 
+processing_times = deque(maxlen=100)
+
 global_stop_event = threading.Event()
 
 global_frame_lock = threading.Lock()
