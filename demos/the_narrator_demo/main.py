@@ -189,7 +189,7 @@ def inference_worker(vision_model, text_decoder, processor):
         elapsed = time.perf_counter() - start_time
 
         with global_result_lock:
-            if caption != (captions[-1] if len(captions) > 0 else None):
+            if len(captions) == 0 or caption != captions[-1]:
                 captions.append(caption)
             processing_times.append(elapsed)
 
