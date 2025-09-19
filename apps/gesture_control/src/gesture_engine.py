@@ -716,8 +716,9 @@ class CompleteGestureEngine:
 
         # Display FPS
         fps_val = self.fps if hasattr(self, 'fps') else 0
-        utils.draw_text(frame, f"FPS: {fps_val:.1f}", (5, 10), 
-                    font_scale=4.0, font_color=(0, 255, 0), with_background=False)
+        if utils is not None:
+            utils.draw_text(frame, f"FPS: {fps_val:.1f}", (5, 10), 
+                        font_scale=4.0, font_color=(0, 255, 0), with_background=False)
     
         
         # Add OpenVINO watermark (ADD THIS)
