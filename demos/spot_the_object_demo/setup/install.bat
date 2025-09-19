@@ -19,8 +19,8 @@ if not exist "%INSTALL_DIR%" (
     echo Repository already exists. Skipping cloning...
 )
 
-:: Navigate to Spot the Object Demo directory
-cd /d "%INSTALL_DIR%\demos\spot_the_object_demo"
+:: Navigate to Gesture Control Demo directory
+cd /d "%INSTALL_DIR%\demos\gesture_control_demo"
 
 :: Create virtual environment
 echo Creating virtual environment...
@@ -40,7 +40,7 @@ pip install -r requirements.txt
 :: Final success message
 echo.
 echo ========================================
-echo All requirements installed for Spot the Object.
+echo All requirements installed for PalmPilot Gesture Control.
 echo You can now run the demo!
 echo ========================================
 pause

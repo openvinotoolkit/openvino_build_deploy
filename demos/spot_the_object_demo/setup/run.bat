@@ -2,9 +2,9 @@
 setlocal enabledelayedexpansion
 
 :: Get the current directory where the script is placed
-set "INSTALL_DIR=%CD%\openvino_build_deploy\demos\spot_the_object_demo"
+set "INSTALL_DIR=%CD%\openvino_build_deploy\demos\gesture_control_demo"
 
-:: Navigate to the Spot the Object Demo directory
+:: Navigate to the Gesture Control Demo directory
 cd /d "%INSTALL_DIR%"
 
 :: Check if virtual environment exists
@@ -18,7 +18,7 @@ echo Activating virtual environment...
 call venv\Scripts\activate.bat
 
 :: Run the application
-echo Running Spot the Object Demo...
+echo Running PalmPilot Gesture Control Demo...
 python main.py --stream 0
 
 :: Keep console open after execution

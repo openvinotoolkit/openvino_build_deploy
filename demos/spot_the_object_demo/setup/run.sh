@@ -4,9 +4,9 @@
 set -e
 
 # Get the current directory where the script is placed
-DEMO_DIR="$(pwd)/openvino_build_deploy/demos/spot_the_object_demo"
+DEMO_DIR="$(pwd)/openvino_build_deploy/demos/gesture_control_demo"
 
-# Navigate to the People Counter Demo directory
+# Navigate to the Gesture Control Demo directory
 cd "$DEMO_DIR"
 
 # Check if virtual environment exists
@@ -20,11 +20,11 @@ echo "Activating virtual environment..."
 source venv/bin/activate
 
 # Run the application
-echo "Running Spot the Object Demo..."
+echo "Running PalmPilot Gesture Control Demo..."
 python main.py --stream 0
 
 # Final message
 echo ""
 echo "========================================"
-echo "People Counter Demo execution completed."
+echo "PalmPilot Gesture Control Demo execution completed."
 echo "========================================"
