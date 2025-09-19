@@ -21,7 +21,6 @@ from gesture_engine import CompleteGestureEngine
 from config_manager import config_manager
 
 from openvino import opset13 as opset
-from openvino import Model
 
 class DeviceConfigDialog(QDialog):
     """Dialog for configuring inference devices for each model."""
