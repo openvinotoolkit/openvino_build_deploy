@@ -21,7 +21,7 @@ import time
 import os
 import sys
 
-SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "utils")
+SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),  "..", "utils")
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 try:
