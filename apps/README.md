@@ -22,7 +22,7 @@ The app blurs the background behind a person on a webcam, and it's built using N
 
 Control your computer with hand gestures using real-time hand detection. Features multiple application modes including presentation control, media playback, gaming, and browser navigation.
 
-[![PalmPilot - Gesture Control Demo](https://img.youtube.com/vi/U29NRoX4sjk/0.jpg)](https://www.youtube.com/watch?v=U29NRoX4sjk)
+[![PalmPilot - Gesture Control Demo](https://img.youtube.com/vi/U29NRoX4sjk/maxresdefault.jpg)](https://www.youtube.com/watch?v=U29NRoX4sjk)
 
 | [PalmPilot - Gesture Control](gesture_control_demo) |                                                                                       |
 |--------------------------------------|------------------------------------------------------------------------------------------------------|
