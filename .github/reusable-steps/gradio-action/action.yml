@@ -20,7 +20,7 @@ runs:
 
         if [ "${{ runner.os }}" == "Linux" ]; then
           # Start the Gradio app in the background
-          xvfb-run python ${{ inputs.script }} 2>&1 | tee gradio_log.txt &
+          /usr/bin/time -v xvfb-run python ${{ inputs.script }} 2>&1 | tee gradio_log.txt &
         else
           python ${{ inputs.script }} 2>&1 | tee gradio_log.txt &
         fi
