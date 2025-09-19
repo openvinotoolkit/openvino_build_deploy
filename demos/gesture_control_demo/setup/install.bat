@@ -43,10 +43,6 @@ echo ========================================
 echo PalmPilot - Gesture Control Demo Ready!
 echo ========================================
 echo.
-echo ✅ Virtual environment created
-echo ✅ Dependencies installed
-echo ✅ Models will download automatically from GitHub
-echo.
 echo To start the demo:
 echo   python main.py --stream 0
 echo   python main.py --stream 1

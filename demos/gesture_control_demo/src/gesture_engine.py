@@ -59,7 +59,27 @@ class CompleteGestureEngine:
         
         self.anchors2_np = None
         self.app_mode_manager = None
-        
+
+        self.qr_code = None
+        self.initialize_qr_code()
+
+
+    def initialize_qr_code(self):
+        """Initialize QR code for the demo"""
+        if utils is not None:
+            try:
+                self.qr_code = utils.get_qr_code(
+                    'https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/demos/gesture_control_demo',
+                    with_embedded_image=True
+                )
+                print("✅ QR code generated successfully.")
+            except Exception as e:
+                print(f"⚠️  QR code generation failed: {e}")
+                self.qr_code = None
+        else:
+            print("⚠️  QR code not available (utils not loaded)")
+
+     
     def initialize(self, benchmark_mode: bool = False) -> bool:
         """Initialize the complete gesture engine"""
         print("🔧 Initializing Complete Gesture Engine...")
@@ -271,8 +291,14 @@ class CompleteGestureEngine:
            
             if utils is not None:
                 try:
-                    utils.draw_ov_watermark(original_frame, alpha=0.35, size=0.4)
-                except Exception:
+                    # Draw OpenVINO watermark
+                    utils.draw_ov_watermark(frame, alpha=0.35, size=0.2)
+                    
+                    # Draw QR code in bottom-right corner
+                    if self.qr_code is not None:
+                        utils.draw_qr_code(frame, self.qr_code)
+                except Exception as e:
+                    # Silently fail if watermark/QR code can't be drawn
                     pass
                     
             return original_frame
@@ -376,8 +402,14 @@ class CompleteGestureEngine:
 
             if utils is not None:
                 try:
-                    utils.draw_ov_watermark(original_frame, alpha=0.35, size=0.4)
-                except Exception:
+                    # Draw OpenVINO watermark
+                    utils.draw_ov_watermark(frame, alpha=0.35, size=0.2)
+                    
+                    # Draw QR code in bottom-right corner
+                    if self.qr_code is not None:
+                        utils.draw_qr_code(frame, self.qr_code)
+                except Exception as e:
+                    # Silently fail if watermark/QR code can't be drawn
                     pass
             
             return original_frame
@@ -392,8 +424,14 @@ class CompleteGestureEngine:
             # Add watermark even on error frames (ADD THIS)
             if utils is not None:
                 try:
-                    utils.draw_ov_watermark(original_frame, alpha=0.35, size=0.4)
-                except Exception:
+                    # Draw OpenVINO watermark
+                    utils.draw_ov_watermark(frame, alpha=0.35, size=0.2)
+                    
+                    # Draw QR code in bottom-right corner
+                    if self.qr_code is not None:
+                        utils.draw_qr_code(frame, self.qr_code)
+                except Exception as e:
+                    # Silently fail if watermark/QR code can't be drawn
                     pass
                     
             return original_frame
@@ -708,9 +746,15 @@ class CompleteGestureEngine:
         # Add OpenVINO watermark (ADD THIS)
         if utils is not None:
             try:
-                utils.draw_ov_watermark(frame, alpha=0.35, size=0.4)
+                # Draw OpenVINO watermark
+                utils.draw_ov_watermark(frame, alpha=0.35, size=0.2)
+                
+                # Draw QR code in bottom-right corner
+                if self.qr_code is not None:
+                    utils.draw_qr_code(frame, self.qr_code)
             except Exception as e:
-                pass  # Silently fail if watermark can't be drawn
+                # Silently fail if watermark/QR code can't be drawn
+                pass
 
     def _render_game_controller_overlay(self, frame):
         """Renders the two-handed game control visuals."""
@@ -795,8 +839,14 @@ class CompleteGestureEngine:
 
         if utils is not None:
             try:
-                utils.draw_ov_watermark(frame, alpha=0.35, size=0.4)
+                # Draw OpenVINO watermark
+                utils.draw_ov_watermark(frame, alpha=0.35, size=0.2)
+                
+                # Draw QR code in bottom-right corner
+                if self.qr_code is not None:
+                    utils.draw_qr_code(frame, self.qr_code)
             except Exception as e:
+                # Silently fail if watermark/QR code can't be drawn
                 pass
         
         

@@ -9,8 +9,8 @@ from game_controller import get_game_controller
 class DetectionConfig:
     """Core detection parameters"""
     input_size: int = 192
-    score_threshold: float = 0.75
-    nms_threshold: float = 0.3
+    score_threshold: float = 0.5
+    nms_threshold: float = 0.4
     num_hands: int = 2
     enable_dynamic_box_expansion: bool = True
     dynamic_box_expansion_margin: float = 0.2
@@ -18,11 +18,11 @@ class DetectionConfig:
     dynamic_box_shrink_factor: float = 0.99
     dynamic_box_default_scale: float = 2.6
     dynamic_box_max_scale: float = 4.0
-    smoothing_alpha: float = 0.8
+    smoothing_alpha: float = 0.6
     iou_match_threshold: float = 0.3
-    detection_smoothing_alpha: float = 0.7
-    gesture_smoothing_frames: int = 6
-    landmark_score_for_palm_redetection_threshold: float = 0.7
+    detection_smoothing_alpha: float = 0.5
+    gesture_smoothing_frames: int = 8
+    landmark_score_for_palm_redetection_threshold: float = 0.5
     always_run_palm_detection: bool = False
     show_landmarks: bool = True
     show_static_gestures: bool = True
@@ -41,9 +41,9 @@ class DetectionConfig:
 @dataclass
 class SmartPalmDetectionConfig:
     """Smart palm detection state machine settings"""
-    grace_period_duration: float = 0.5
-    periodic_check_interval: int = 30
-    state_transition_debug: bool = True
+    grace_period_duration: float = 0.3
+    periodic_check_interval: int = 50
+    state_transition_debug: bool = False
 
 @dataclass
 class ControlSystemConfig:
@@ -60,46 +60,42 @@ class ControlSystemConfig:
     pinch_threshold_start: float = 0.1
     pinch_threshold_stop: float = 0.15
     volume_change_cooldown: float = 0.05
-    
+
     enable_scroll_control: bool = False
     scroll_sensitivity: int = 6
     scroll_threshold: float = 0.1
     scroll_smoothing: float = 0.6
-    scroll_hand_preference: str = 'any'  
-    
+    scroll_hand_preference: str = 'any'
+
     enable_key_control: bool = False
     key_press_cooldown: float = 0.6
-    
-    
-    enable_game_control: bool = False
-    game_control_type: str = 'keyboard'  
-    
-    
-    steering_max_tilt: int = 200         
-    steering_sensitivity: float = 1.5    
-    steering_deadzone: float = 0.15      
-    accelerate_line_y: float = 0.35      
-    brake_line_y: float = 0.75          
-    
-    
-    steering_box_width: float = 0.4      
-    steering_box_height: float = 0.3     
-    steering_box_x: float = 0.3          
-    steering_box_y: float = 0.35         
-    steering_smoothing: float = 0.8      
-    steering_exponent: float = 1.0 
-    steering_displacement_amplification: float = 1.0
-    
-    open_palm_threshold: float = 0.7     
-    game_gesture_cooldown: float = 0.2   
 
+    enable_game_control: bool = True
+    game_control_type: str = 'keyboard'
 
-    hand_label_offset_x: float = 0.0  
-    hand_label_offset_y: float = 0.0  
-    left_hand_offset_x: float = 0.0   
-    left_hand_offset_y: float = 0.0   
-    right_hand_offset_x: float = 0.0  
-    right_hand_offset_y: float = 0.0  
+    steering_max_tilt: int = 200
+    steering_sensitivity: float = 0.7
+    steering_deadzone: float = 0.07
+    accelerate_line_y: float = 0.28
+    brake_line_y: float = 0.75
+
+    steering_box_width: float = 0.1
+    steering_box_height: float = 0.1
+    steering_box_x: float = 0.01
+    steering_box_y: float = 0.25
+    steering_smoothing: float = 0.2
+    steering_exponent: float = 1.0
+    steering_displacement_amplification: float = 4.0
+
+    open_palm_threshold: float = 0.5
+    game_gesture_cooldown: float = 0.2
+
+    hand_label_offset_x: float = 55.0
+    hand_label_offset_y: float = 150.0
+    left_hand_offset_x: float = 15.0
+    left_hand_offset_y: float = 15.0
+    right_hand_offset_x: float = 200.0
+    right_hand_offset_y: float = 20.0
 
 @dataclass
 class GestureDefinition:
@@ -165,7 +161,7 @@ class ApplicationModeConfig:
 @dataclass
 class ApplicationModesConfig:
     """Application modes system configuration"""
-    current_mode: str = 'disabled'
+    current_mode: str = 'volume_mode'
     mode_switch_cooldown: float = 2.0
     last_mode_switch: float = 0.0
     debug_mode: bool = True
@@ -237,73 +233,86 @@ class ConfigurationManager:
         }
 
     def _initialize_default_gestures(self):
-        """Initialize default gesture definitions"""
+        """Initialize default gesture definitions to match required JSON"""
         default_gestures = {
             'left_index_bent': GestureDefinition(
                 name='Left Index Finger Bent',
                 description='Left hand index finger bent',
                 detection_type='finger_angle',
                 hand='left',
+                enabled=True,
                 mapped_key='left',
-                cooldown=0.6
+                cooldown=0.6,
+                last_triggered=0.0
             ),
             'right_index_bent': GestureDefinition(
                 name='Right Index Finger Bent',
                 description='Right hand index finger bent',
                 detection_type='finger_angle',
                 hand='right',
+                enabled=True,
                 mapped_key='right',
-                cooldown=0.6
+                cooldown=0.6,
+                last_triggered=0.0
             ),
             'left_index_middle_bent': GestureDefinition(
                 name='Left Index + Middle Bent',
                 description='Left hand index and middle fingers bent',
                 detection_type='finger_angle',
                 hand='left',
+                enabled=True,
                 mapped_key='up',
-                cooldown=0.6
+                cooldown=0.6,
+                last_triggered=0.0
             ),
             'right_index_middle_bent': GestureDefinition(
                 name='Right Index + Middle Bent',
                 description='Right hand index and middle fingers bent',
                 detection_type='finger_angle',
                 hand='right',
+                enabled=True,
                 mapped_key='down',
-                cooldown=0.6
+                cooldown=0.6,
+                last_triggered=0.0
             ),
             'fist_gesture': GestureDefinition(
                 name='Closed Fist',
                 description='closed fist',
                 detection_type='mediapipe_static',
                 hand='any',
+                enabled=True,
                 mapped_key='space',
-                cooldown=1.0
+                cooldown=1.0,
+                last_triggered=0.0
             ),
             'open_palm_gesture': GestureDefinition(
-            name='Open Palm',
-            description='Open palm (stop/cancel gesture)',
-            detection_type='mediapipe_static',
-            hand='any',
-            mapped_key='escape',
-            cooldown=1.0
+                name='Open Palm',
+                description='Open palm (stop/cancel gesture)',
+                detection_type='mediapipe_static',
+                hand='any',
+                enabled=True,
+                mapped_key='escape',
+                cooldown=1.0,
+                last_triggered=0.0
             ),
             'iloveyou_gesture': GestureDefinition(
                 name='I Love You Sign',
                 description='ASL I Love You sign (thumb, index, pinky extended)',
                 detection_type='mediapipe_static',
                 hand='any',
+                enabled=True,
                 mapped_key='ctrl+s',
-                cooldown=1.5
+                cooldown=1.5,
+                last_triggered=0.0
             )
         }
         self.gesture_mapping.gesture_definitions = default_gestures
     
     def _initialize_default_app_modes(self):
-        """Initialize default application mode configurations"""
-        
+        """Initialize default application mode configurations to match required JSON"""
         self.app_modes.ppt_mode.gestures = {
             'right_index_bent': ApplicationModeGesture(
-                action='key_press', key='right', 
+                action='key_press', key='right',
                 description='Next slide', cooldown=0.8
             ),
             'left_index_bent': ApplicationModeGesture(
@@ -315,8 +324,7 @@ class ConfigurationManager:
                 description='Start slideshow', cooldown=2.0
             )
         }
-        
-        
+
         self.app_modes.media_mode.gestures = {
             'right_index_bent': ApplicationModeGesture(
                 action='key_press', key='space',
@@ -339,8 +347,7 @@ class ConfigurationManager:
                 description='Fullscreen', cooldown=1.5
             )
         }
-        
-        
+
         self.app_modes.browser_mode.gestures = {
             'left_index_bent': ApplicationModeGesture(
                 action='mouse_click', button='left',
@@ -349,60 +356,26 @@ class ConfigurationManager:
             'left_index_middle_bent': ApplicationModeGesture(
                 action='mouse_click', button='right',
                 description='Right click', cooldown=0.6
+            ),
+            'fist_gesture': ApplicationModeGesture(
+                action='key_press', key='win+h',
+                description='Speech to text (Win + H)', cooldown=1.0
+            ),
+            'iloveyou_gesture': ApplicationModeGesture(
+                action='key_press', key='ctrl+shift+tab',
+                description='Switch to next browser tab (left-hand ILoveYou)', cooldown=0.5
             )
         }
-        
-        self.app_modes.browser_mode.gestures['iloveyou_gesture'] = ApplicationModeGesture(
-            action='key_press', key='ctrl+shift+tab',
-            description='Switch to previous browser tab (left-hand ILoveYou)', cooldown=0.5
-        )
 
-
-                
-        self.app_modes.fighting_arcade_mode = ApplicationModeConfig(name='Fighting Arcade Mode')
-        self.app_modes.fighting_arcade_mode.gestures = {
-            
-            'right_index_bent': ApplicationModeGesture(
-                action='key_press', key='k',
-                description='Right Punch (2) - Cross/Hook', cooldown=0.80
-            ),
-            'right_index_middle_bent': ApplicationModeGesture(
-                action='key_press', key='i',
-                description='Right Kick (4) - High/Roundhouse Kick', cooldown=0.80
-            ),
-            'fist_gesture': ApplicationModeGesture(  
-                action='key_press', key='k+i',
-                description='Right Combo (2+4) - Right Power Throw', cooldown=0.80
-            ),
-            'iloveyou_gesture': ApplicationModeGesture(  
-                action='key_press', key='i+k+j',
-                description='Right-Initiated Triple Strike', cooldown=0.80
-            ),
-            
-            'left_index_bent': ApplicationModeGesture(
-                action='key_press', key='j',
-                description='Left Punch (1) - Jab/Quick Strike', cooldown=0.80
-            ),
-            'left_index_middle_bent': ApplicationModeGesture(
-                action='key_press', key='u',
-                description='Left Kick (3) - Low/Mid Kick', cooldown=0.80
-            ),
-            'left_fist_gesture': ApplicationModeGesture(
-                action='key_press', key='j+u',
-                description='Left Combo (1+3) - Left Power Throw', cooldown=0.80
-            ),
-        }
-
-         
         self.app_modes.game_mode = ApplicationModeConfig(name='Game Mode (Racing)')
         self.app_modes.game_mode.gestures = {
             'left_index_bent': ApplicationModeGesture(
                 action='key_press', key='x',
-                description='Speedbreaker/Handbrake', cooldown=0.2
+                description='Speedbreaker/Handbrake', cooldown=0.1
             ),
             'left_index_middle_bent': ApplicationModeGesture(
-                action='key_press', key='z', 
-                description='Brake', cooldown=0.1
+                action='key_press', key='w',
+                description='Accelerate', cooldown=0.1
             ),
             'fist_gesture': ApplicationModeGesture(
                 action='key_press', key='shift',
@@ -410,7 +383,25 @@ class ConfigurationManager:
             )
         }
 
-        self._initialize_default_game_mode()
+        self.app_modes.volume_mode = ApplicationModeConfig(name='Volume Control Mode', enabled=True, gestures={})
+
+        self.app_modes.browser_right_hand_mode = 'cursor'
+        self.app_modes.browser_iloveyou_switch_cooldown = 1.0
+        self.app_modes.browser_last_iloveyou_switch = 1756369598.924626
+
+        self.app_modes.current_mode = 'volume_mode'
+        self.app_modes.mode_switch_cooldown = 2.0
+        self.app_modes.last_mode_switch = 1756369711.155566
+        self.app_modes.debug_mode = True
+        self.app_modes.gesture_timings = {
+            'left_index_bent': 1756369694.0063186,
+            'left_index_middle_bent': 1756369705.6043553,
+            'right_index_bent': 1756369683.6069806,
+            'right_index_middle_bent': 1756369698.7675455,
+            'fist_gesture': 1756369707.4752407,
+            'open_palm_gesture': 1756042844.102283,
+            'iloveyou_gesture': 1756369596.5354419
+        }
     
     def save_config(self) -> bool:
         """Save current configuration to file"""
