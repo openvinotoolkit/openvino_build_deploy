@@ -191,4 +191,4 @@ The application uses a JSON configuration file (`gesture_config.json`) that is a
 - **OS**: Windows 10/11, Ubuntu 20.04+, macOS 10.15+
 
 [//]: # (telemetry pixel)
-<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca&project=demos/gesture_control_demo&file=README.md" />
+<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca&project=apps/palm_pilot&file=README.md" />
