@@ -1,0 +1,376 @@
+{
+    "detection": {
+        "input_size": 192,
+        "score_threshold": 0.5,
+        "nms_threshold": 0.4,
+        "num_hands": 2,
+        "enable_dynamic_box_expansion": true,
+        "dynamic_box_expansion_margin": 0.2,
+        "dynamic_box_expansion_factor": 1.15,
+        "dynamic_box_shrink_factor": 0.99,
+        "dynamic_box_default_scale": 2.6,
+        "dynamic_box_max_scale": 4.0,
+        "smoothing_alpha": 0.6,
+        "iou_match_threshold": 0.3,
+        "detection_smoothing_alpha": 0.5,
+        "gesture_smoothing_frames": 8,
+        "landmark_score_for_palm_redetection_threshold": 0.5,
+        "always_run_palm_detection": false,
+        "show_landmarks": true,
+        "show_static_gestures": true,
+        "enable_finger_detection": true,
+        "bend_angle_threshold": 160
+    },
+    "smart_palm": {
+        "grace_period_duration": 0.3,
+        "periodic_check_interval": 50,
+        "state_transition_debug": false
+    },
+    "control_system": {
+        "enable_cursor_control": false,
+        "cursor_smoothing": 0.7,
+        "cursor_sensitivity": 2.5,
+        "screen_width": 1920,
+        "screen_height": 1080,
+        "enable_volume_control": true,
+        "volume_control_hand": "any",
+        "volume_sensitivity": 1.5,
+        "pinch_threshold_start": 0.1,
+        "pinch_threshold_stop": 0.15,
+        "volume_change_cooldown": 0.05,
+        "enable_scroll_control": false,
+        "scroll_sensitivity": 6,
+        "scroll_threshold": 0.1,
+        "scroll_smoothing": 0.6,
+        "scroll_hand_preference": "any",
+        "enable_key_control": false,
+        "key_press_cooldown": 0.6,
+        "enable_game_control": true,
+        "game_control_type": "keyboard",
+        "steering_max_tilt": 200,
+        "steering_sensitivity": 0.7,
+        "steering_deadzone": 0.07,
+        "accelerate_line_y": 0.28,
+        "brake_line_y": 0.75,
+        "steering_box_width": 0.1,
+        "steering_box_height": 0.1,
+        "steering_box_x": 0.01,
+        "steering_box_y": 0.25,
+        "steering_smoothing": 0.2,
+        "steering_exponent": 1.0,
+        "steering_displacement_amplification": 4.0,
+        "open_palm_threshold": 0.5,
+        "game_gesture_cooldown": 0.2,
+        "hand_label_offset_x": 55.0,
+        "hand_label_offset_y": 150.0,
+        "left_hand_offset_x": 15.0,
+        "left_hand_offset_y": 15.0,
+        "right_hand_offset_x": 200.0,
+        "right_hand_offset_y": 20.0
+    },
+    "gesture_mapping": {
+        "enable_gesture_mapping": true,
+        "global_cooldown": 0.1,
+        "last_any_gesture_time": 0.0,
+        "relaxed_threshold": 60,
+        "bent_threshold": 160,
+        "require_simultaneous_detection": true,
+        "gesture_stability_frames": 2,
+        "available_keys": [
+            "space",
+            "enter",
+            "tab",
+            "escape",
+            "backspace",
+            "delete",
+            "left",
+            "right",
+            "up",
+            "down",
+            "pageup",
+            "pagedown",
+            "home",
+            "end",
+            "insert",
+            "a",
+            "b",
+            "c",
+            "d",
+            "e",
+            "f",
+            "g",
+            "h",
+            "i",
+            "j",
+            "k",
+            "l",
+            "m",
+            "n",
+            "o",
+            "p",
+            "q",
+            "r",
+            "s",
+            "t",
+            "u",
+            "v",
+            "w",
+            "x",
+            "y",
+            "z",
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "f1",
+            "f2",
+            "f3",
+            "f4",
+            "f5",
+            "f6",
+            "f7",
+            "f8",
+            "f9",
+            "f10",
+            "f11",
+            "f12",
+            "ctrl",
+            "alt",
+            "shift",
+            "win",
+            "cmd",
+            "command",
+            "option"
+        ],
+        "gesture_definitions": {
+            "left_index_bent": {
+                "name": "Left Index Finger Bent",
+                "description": "Left hand index finger bent",
+                "detection_type": "finger_angle",
+                "hand": "left",
+                "enabled": true,
+                "mapped_key": "left",
+                "cooldown": 0.6,
+                "last_triggered": 0.0
+            },
+            "right_index_bent": {
+                "name": "Right Index Finger Bent",
+                "description": "Right hand index finger bent",
+                "detection_type": "finger_angle",
+                "hand": "right",
+                "enabled": true,
+                "mapped_key": "right",
+                "cooldown": 0.6,
+                "last_triggered": 0.0
+            },
+            "left_index_middle_bent": {
+                "name": "Left Index + Middle Bent",
+                "description": "Left hand index and middle fingers bent",
+                "detection_type": "finger_angle",
+                "hand": "left",
+                "enabled": true,
+                "mapped_key": "up",
+                "cooldown": 0.6,
+                "last_triggered": 0.0
+            },
+            "right_index_middle_bent": {
+                "name": "Right Index + Middle Bent",
+                "description": "Right hand index and middle fingers bent",
+                "detection_type": "finger_angle",
+                "hand": "right",
+                "enabled": true,
+                "mapped_key": "down",
+                "cooldown": 0.6,
+                "last_triggered": 0.0
+            },
+            "fist_gesture": {
+                "name": "Closed Fist",
+                "description": "closed fist",
+                "detection_type": "mediapipe_static",
+                "hand": "any",
+                "enabled": true,
+                "mapped_key": "space",
+                "cooldown": 1.0,
+                "last_triggered": 0.0
+            },
+            "open_palm_gesture": {
+                "name": "Open Palm",
+                "description": "Open palm (stop/cancel gesture)",
+                "detection_type": "mediapipe_static",
+                "hand": "any",
+                "enabled": true,
+                "mapped_key": "escape",
+                "cooldown": 1.0,
+                "last_triggered": 0.0
+            },
+            "iloveyou_gesture": {
+                "name": "I Love You Sign",
+                "description": "ASL I Love You sign (thumb, index, pinky extended)",
+                "detection_type": "mediapipe_static",
+                "hand": "any",
+                "enabled": true,
+                "mapped_key": "ctrl+s",
+                "cooldown": 1.5,
+                "last_triggered": 0.0
+            }
+        }
+    },
+    "app_modes": {
+        "current_mode": "volume_mode",
+        "mode_switch_cooldown": 2.0,
+        "last_mode_switch": 1756369711.155566,
+        "debug_mode": true,
+        "gesture_timings": {
+            "left_index_bent": 1756369694.0063186,
+            "left_index_middle_bent": 1756369705.6043553,
+            "right_index_bent": 1756369683.6069806,
+            "right_index_middle_bent": 1756369698.7675455,
+            "fist_gesture": 1756369707.4752407,
+            "open_palm_gesture": 1756042844.102283,
+            "iloveyou_gesture": 1756369596.5354419
+        },
+        "ppt_mode": {
+            "name": "PowerPoint Mode",
+            "enabled": false,
+            "gestures": {
+                "right_index_bent": {
+                    "action": "key_press",
+                    "key": "right",
+                    "button": null,
+                    "description": "Next slide",
+                    "cooldown": 0.8
+                },
+                "left_index_bent": {
+                    "action": "key_press",
+                    "key": "left",
+                    "button": null,
+                    "description": "Previous slide",
+                    "cooldown": 0.8
+                },
+                "fist_gesture": {
+                    "action": "key_press",
+                    "key": "f5",
+                    "button": null,
+                    "description": "Start slideshow",
+                    "cooldown": 2.0
+                }
+            }
+        },
+        "media_mode": {
+            "name": "Media Player Mode",
+            "enabled": false,
+            "gestures": {
+                "right_index_bent": {
+                    "action": "key_press",
+                    "key": "space",
+                    "button": null,
+                    "description": "Play/Pause",
+                    "cooldown": 0.6
+                },
+                "right_index_middle_bent": {
+                    "action": "key_press",
+                    "key": "right",
+                    "button": null,
+                    "description": "Skip 10 secs forward",
+                    "cooldown": 0.3
+                },
+                "left_index_middle_bent": {
+                    "action": "key_press",
+                    "key": "left",
+                    "button": null,
+                    "description": "Skip 10 secs back",
+                    "cooldown": 0.3
+                },
+                "left_index_bent": {
+                    "action": "key_press",
+                    "key": "m",
+                    "button": null,
+                    "description": "Mute",
+                    "cooldown": 0.8
+                },
+                "fist_gesture": {
+                    "action": "key_press",
+                    "key": "f",
+                    "button": null,
+                    "description": "Fullscreen",
+                    "cooldown": 1.5
+                }
+            }
+        },
+        "browser_mode": {
+            "name": "Browser Mode",
+            "enabled": false,
+            "gestures": {
+                "left_index_bent": {
+                    "action": "mouse_click",
+                    "key": null,
+                    "button": "left",
+                    "description": "Left click",
+                    "cooldown": 0.4
+                },
+                "left_index_middle_bent": {
+                    "action": "mouse_click",
+                    "key": null,
+                    "button": "right",
+                    "description": "Right click",
+                    "cooldown": 0.6
+                },
+                "fist_gesture": {
+                    "action": "key_press",
+                    "key": "win+h",
+                    "button": null,
+                    "description": "Speech to text (Win + H)",
+                    "cooldown": 1.0
+                },
+                "iloveyou_gesture": {
+                    "action": "key_press",
+                    "key": "ctrl+shift+tab",
+                    "button": null,
+                    "description": "Switch to next browser tab (left-hand ILoveYou)",
+                    "cooldown": 0.5
+                }
+            }
+        },
+        "game_mode": {
+            "name": "Game Mode (Racing)",
+            "enabled": false,
+            "gestures": {
+                "left_index_bent": {
+                    "action": "key_press",
+                    "key": "x",
+                    "button": null,
+                    "description": "Speedbreaker/Handbrake",
+                    "cooldown": 0.1
+                },
+                "left_index_middle_bent": {
+                    "action": "key_press",
+                    "key": "w",
+                    "button": null,
+                    "description": "Accelerate",
+                    "cooldown": 0.1
+                },
+                "fist_gesture": {
+                    "action": "key_press",
+                    "key": "shift",
+                    "button": null,
+                    "description": "Nitrous",
+                    "cooldown": 0.3
+                }
+            }
+        },
+        "volume_mode": {
+            "name": "Volume Control Mode",
+            "enabled": true,
+            "gestures": {}
+        },
+        "browser_right_hand_mode": "cursor",
+        "browser_iloveyou_switch_cooldown": 1.0,
+        "browser_last_iloveyou_switch": 1756369598.924626
+    }
+}

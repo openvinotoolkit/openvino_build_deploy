@@ -18,6 +18,18 @@ The app blurs the background behind a person on a webcam, and it's built using N
 | Platforms                            | Client (CPU, GPU, NPU), Edge (CPU)                                                                   |
 | Owner                                | [@Roszczyk](https://github.com/Roszczyk), [@adrianboguszewski](https://github.com/adrianboguszewski) |
 
+### 🖐️ PalmPilot - Gesture Control
+
+Control your computer with hand gestures using real-time hand detection. Features multiple application modes including presentation control, media playback, gaming, and browser navigation.
+
+[![PalmPilot - Gesture Control Demo](https://img.youtube.com/vi/U29NRoX4sjk/maxresdefault.jpg)](https://www.youtube.com/watch?v=U29NRoX4sjk)
+
+| [PalmPilot - Gesture Control](palm_pilot) |                                                 |
+|--------------------------------------|------------------------------------------------------|
+| Related AI concepts                  | hand detection, gesture recognition, computer vision |
+| Platforms                            | Client (CPU, GPU), Edge (CPU)                        |
+| Owner                                | [@vijaykr338](https://github.com/vijaykr338)         |
+
 ### 💬 Messenger AI‑Assistant
 
 This Telegram RAG Assistant is a privacy-first desktop app that locally processes Telegram data using OpenVINO-accelerated retrieval-augmented generation and a native Qt interface. It supports streaming responses, device diagnostics, and metadata-preserving chunking for efficient, secure AI-powered insights.

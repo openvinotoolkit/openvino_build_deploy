@@ -1,0 +1,258 @@
+<?xml version="1.0"?>
+<net name="TensorFlow_Lite_Frontend_IR" version="11">
+	<layers>
+		<layer id="0" name="hand_embedding" type="Parameter" version="opset1">
+			<data shape="?,128" element_type="f32" />
+			<output>
+				<port id="0" precision="FP32" names="hand_embedding">
+					<dim>-1</dim>
+					<dim>128</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="1" name="Constant_1937_compressed" type="Const" version="opset1">
+			<data element_type="f16" shape="1, 128" offset="0" size="256" />
+			<output>
+				<port id="0" precision="FP16">
+					<dim>1</dim>
+					<dim>128</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="2" name="Constant_1937" type="Convert" version="opset1">
+			<data destination_type="f32" />
+			<rt_info>
+				<attribute name="decompression" version="0" />
+			</rt_info>
+			<input>
+				<port id="0" precision="FP16">
+					<dim>1</dim>
+					<dim>128</dim>
+				</port>
+			</input>
+			<output>
+				<port id="1" precision="FP32">
+					<dim>1</dim>
+					<dim>128</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="3" name="0" type="Multiply" version="opset1">
+			<data auto_broadcast="numpy" />
+			<input>
+				<port id="0" precision="FP32">
+					<dim>-1</dim>
+					<dim>128</dim>
+				</port>
+				<port id="1" precision="FP32">
+					<dim>1</dim>
+					<dim>128</dim>
+				</port>
+			</input>
+			<output>
+				<port id="2" precision="FP32" names="model_1/batch_normalization_1/batchnorm/mul_1">
+					<dim>-1</dim>
+					<dim>128</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="4" name="Constant_1938_compressed" type="Const" version="opset1">
+			<data element_type="f16" shape="1, 128" offset="256" size="256" />
+			<output>
+				<port id="0" precision="FP16">
+					<dim>1</dim>
+					<dim>128</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="5" name="Constant_1938" type="Convert" version="opset1">
+			<data destination_type="f32" />
+			<rt_info>
+				<attribute name="decompression" version="0" />
+			</rt_info>
+			<input>
+				<port id="0" precision="FP16">
+					<dim>1</dim>
+					<dim>128</dim>
+				</port>
+			</input>
+			<output>
+				<port id="1" precision="FP32">
+					<dim>1</dim>
+					<dim>128</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="6" name="Add_7" type="Add" version="opset1">
+			<data auto_broadcast="numpy" />
+			<input>
+				<port id="0" precision="FP32">
+					<dim>-1</dim>
+					<dim>128</dim>
+				</port>
+				<port id="1" precision="FP32">
+					<dim>1</dim>
+					<dim>128</dim>
+				</port>
+			</input>
+			<output>
+				<port id="2" precision="FP32">
+					<dim>-1</dim>
+					<dim>128</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="7" name="1" type="ReLU" version="opset1">
+			<input>
+				<port id="0" precision="FP32">
+					<dim>-1</dim>
+					<dim>128</dim>
+				</port>
+			</input>
+			<output>
+				<port id="1" precision="FP32" names="model_1/re_lu_1/Relu;model_1/batch_normalization_1/batchnorm/add_1">
+					<dim>-1</dim>
+					<dim>128</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="8" name="model_1/new_classifier/MatMul_compressed" type="Const" version="opset1">
+			<data element_type="f16" shape="8, 128" offset="512" size="2048" />
+			<output>
+				<port id="0" precision="FP16" names="model_1/new_classifier/MatMul">
+					<dim>8</dim>
+					<dim>128</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="9" name="model_1/new_classifier/MatMul" type="Convert" version="opset1">
+			<data destination_type="f32" />
+			<rt_info>
+				<attribute name="decompression" version="0" />
+			</rt_info>
+			<input>
+				<port id="0" precision="FP16">
+					<dim>8</dim>
+					<dim>128</dim>
+				</port>
+			</input>
+			<output>
+				<port id="1" precision="FP32">
+					<dim>8</dim>
+					<dim>128</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="10" name="MatMul_18" type="MatMul" version="opset1">
+			<data transpose_a="false" transpose_b="true" />
+			<input>
+				<port id="0" precision="FP32">
+					<dim>-1</dim>
+					<dim>128</dim>
+				</port>
+				<port id="1" precision="FP32">
+					<dim>8</dim>
+					<dim>128</dim>
+				</port>
+			</input>
+			<output>
+				<port id="2" precision="FP32">
+					<dim>-1</dim>
+					<dim>8</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="11" name="Constant_1939_compressed" type="Const" version="opset1">
+			<data element_type="f16" shape="1, 8" offset="2560" size="16" />
+			<output>
+				<port id="0" precision="FP16">
+					<dim>1</dim>
+					<dim>8</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="12" name="Constant_1939" type="Convert" version="opset1">
+			<data destination_type="f32" />
+			<rt_info>
+				<attribute name="decompression" version="0" />
+			</rt_info>
+			<input>
+				<port id="0" precision="FP16">
+					<dim>1</dim>
+					<dim>8</dim>
+				</port>
+			</input>
+			<output>
+				<port id="1" precision="FP32">
+					<dim>1</dim>
+					<dim>8</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="13" name="2" type="Add" version="opset1">
+			<data auto_broadcast="numpy" />
+			<input>
+				<port id="0" precision="FP32">
+					<dim>-1</dim>
+					<dim>8</dim>
+				</port>
+				<port id="1" precision="FP32">
+					<dim>1</dim>
+					<dim>8</dim>
+				</port>
+			</input>
+			<output>
+				<port id="2" precision="FP32" names="model_1/new_classifier/MatMul;model_1/new_classifier/BiasAdd">
+					<dim>-1</dim>
+					<dim>8</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="14" name="3" type="SoftMax" version="opset8">
+			<data axis="-1" />
+			<input>
+				<port id="0" precision="FP32">
+					<dim>-1</dim>
+					<dim>8</dim>
+				</port>
+			</input>
+			<output>
+				<port id="1" precision="FP32" names="Identity">
+					<dim>-1</dim>
+					<dim>8</dim>
+				</port>
+			</output>
+		</layer>
+		<layer id="15" name="Result_21" type="Result" version="opset1" output_names="Identity">
+			<input>
+				<port id="0" precision="FP32">
+					<dim>-1</dim>
+					<dim>8</dim>
+				</port>
+			</input>
+		</layer>
+	</layers>
+	<edges>
+		<edge from-layer="0" from-port="0" to-layer="3" to-port="0" />
+		<edge from-layer="1" from-port="0" to-layer="2" to-port="0" />
+		<edge from-layer="2" from-port="1" to-layer="3" to-port="1" />
+		<edge from-layer="3" from-port="2" to-layer="6" to-port="0" />
+		<edge from-layer="4" from-port="0" to-layer="5" to-port="0" />
+		<edge from-layer="5" from-port="1" to-layer="6" to-port="1" />
+		<edge from-layer="6" from-port="2" to-layer="7" to-port="0" />
+		<edge from-layer="7" from-port="1" to-layer="10" to-port="0" />
+		<edge from-layer="8" from-port="0" to-layer="9" to-port="0" />
+		<edge from-layer="9" from-port="1" to-layer="10" to-port="1" />
+		<edge from-layer="10" from-port="2" to-layer="13" to-port="0" />
+		<edge from-layer="11" from-port="0" to-layer="12" to-port="0" />
+		<edge from-layer="12" from-port="1" to-layer="13" to-port="1" />
+		<edge from-layer="13" from-port="2" to-layer="14" to-port="0" />
+		<edge from-layer="14" from-port="1" to-layer="15" to-port="0" />
+	</edges>
+	<rt_info>
+		<Runtime_version value="2025.1.0-18503-6fec06580ab-releases/2025/1" />
+		<conversion_parameters>
+			<is_python_object value="False" />
+		</conversion_parameters>
+	</rt_info>
+</net>
