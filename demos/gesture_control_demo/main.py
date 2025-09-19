@@ -15,7 +15,7 @@ src_dir = current_dir / "src"
 sys.path.insert(0, str(src_dir))
 
 # OpenVINO demo utils integration
-SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "utils")
+SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "utils")
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 try:
