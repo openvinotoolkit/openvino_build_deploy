@@ -132,33 +132,14 @@ def decode_bboxes(score_thresh, scores, bboxes, anchors):
     if det_scores.size == 0: return regions
     det_bboxes = bboxes[detection_mask]
     det_anchors = anchors[detection_mask]
-    scale = 128 
-
-    
-    
-    
-    
-    
+    scale = 128   
     det_bboxes = det_bboxes* np.tile(det_anchors[:,2:4], 9) / scale + np.tile(det_anchors[:,0:2],9)
-    
-    
     det_bboxes[:,2:4] = det_bboxes[:,2:4] - det_anchors[:,0:2]
-    
     det_bboxes[:,0:2] = det_bboxes[:,0:2] - det_bboxes[:,3:4] * 0.5
-
     for i in range(det_bboxes.shape[0]):
         score = det_scores[i]
         box = det_bboxes[i,0:4]
         kps = []
-        
-        
-        
-        
-        
-        
-        
-        
-        
         for kp in range(7):
             kps.append(det_bboxes[i,4+kp*2:6+kp*2])
         regions.append(HandRegion(float(score), box, kps))
