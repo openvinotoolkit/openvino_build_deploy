@@ -58,8 +58,6 @@ class ModelManager:
         
         return devices
 
-
-
     def initialize_models(self, model_paths: dict) -> bool:
         """Initialize all required models using the specified device configuration."""
         with self._lock:
