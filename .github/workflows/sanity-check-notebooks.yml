@@ -71,4 +71,9 @@ jobs:
         timeout-minutes: 30
         run: |
           cd ${{ matrix.subproject }}
-          jupyter nbconvert --to notebook --debug --execute *.ipynb
+          if [ "${{ runner.os }}" == "Linux" ]; then
+            xvfb-run jupyter nbconvert --to notebook --debug --execute *.ipynb
+          else 
+            jupyter nbconvert --to notebook --debug --execute *.ipynb
+          fi
+          
