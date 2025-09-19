@@ -1,47 +1,30 @@
-@echo off
-setlocal enabledelayedexpansion
+#!/bin/bash
 
-:: Get the current directory where the script is placed
-set "INSTALL_DIR=%CD%\openvino_build_deploy"
+# Enable error handling
+set -e
 
-:: Check if Git is installed
-where git >nul 2>&1
-if %errorlevel% neq 0 (
-    echo ERROR: Git is not installed. Please install Git and try again.
-    exit /b
-)
+# Get the current directory where the script is placed
+DEMO_DIR="$(pwd)/openvino_build_deploy/demos/spot_the_object_demo"
 
-:: Clone the repository (if not already cloned)
-if not exist "%INSTALL_DIR%" (
-    echo Cloning repository...
-    git clone https://github.com/openvinotoolkit/openvino_build_deploy.git "%INSTALL_DIR%"
-) else (
-    echo Repository already exists. Skipping cloning...
-)
+# Navigate to the People Counter Demo directory
+cd "$DEMO_DIR"
 
-:: Navigate to Gesture Control Demo directory
-cd /d "%INSTALL_DIR%\demos\gesture_control_demo"
+# Check if virtual environment exists
+if [ ! -d "venv" ]; then
+    echo "ERROR: Virtual environment not found! Please run ./install.sh first."
+    exit 1
+fi
 
-:: Create virtual environment
-echo Creating virtual environment...
-python -m venv venv
+# Activate virtual environment
+echo "Activating virtual environment..."
+source venv/bin/activate
 
-:: Activate virtual environment
-call venv\Scripts\activate.bat
+# Run the application
+echo "Running Spot the Object Demo..."
+python main.py --stream 0
 
-:: Upgrade pip
-echo Upgrading pip...
-python -m pip install --upgrade pip
-
-:: Install dependencies
-echo Installing dependencies...
-pip install -r requirements.txt
-
-:: Final success message
-echo.
-echo ========================================
-echo All requirements installed for PalmPilot Gesture Control.
-echo You can now run the demo!
-echo ========================================
-pause
-exit
+# Final message
+echo ""
+echo "========================================"
+echo "People Counter Demo execution completed."
+echo "========================================"
