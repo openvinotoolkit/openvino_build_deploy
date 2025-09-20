@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-grafana-config
+  namespace: {{ .Release.Namespace }}
+data:
+  dashboards.yml: |
+{{ .Files.Get "files/grafana/dashboards.yml" | indent 4 }}
+  datasources.yml: |
+{{ .Files.Get "files/grafana/datasources.yml" | indent 4 }}
+  anthem-intersection.json: |
+{{ .Files.Get "files/grafana/data/dashboards/anthem-intersection.json" | indent 4 }}

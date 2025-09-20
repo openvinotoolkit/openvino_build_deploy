@@ -1,0 +1,318 @@
+networks:
+  scenescape:
+
+secrets:
+  root-cert:
+    file: ./src/secrets/certs/scenescape-ca.pem
+  broker-cert:
+    file: ./src/secrets/certs/scenescape-broker.crt
+  broker-key:
+    file: ./src/secrets/certs/scenescape-broker.key
+  web-cert:
+    file: ./src/secrets/certs/scenescape-web.crt
+  web-key:
+    file: ./src/secrets/certs/scenescape-web.key
+  influxdb2-admin-username:
+    file: ./src/secrets/influxdb2/influxdb2-admin-username
+  influxdb2-admin-password:
+    file: ./src/secrets/influxdb2/influxdb2-admin-password
+  influxdb2-admin-token:
+    file: ./src/secrets/influxdb2/influxdb2-admin-token
+  django:
+    file: ./src/secrets/django
+  browser.auth:
+    file: ./src/secrets/browser.auth
+  controller.auth:
+    file: ./src/secrets/controller.auth
+  supass:
+    file: ./src/secrets/supass
+
+volumes:
+  dlstreamer-pipeline-server-pipeline-root:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+  dlstreamer-pipeline-server-tmp:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+  influxdb2-data:
+  influxdb2-config:
+  grafana-storage:
+  pgserver-db:
+  pgserver-migrations:
+  pgserver-media:
+
+services:
+  ntpserver:
+    image: docker.io/dockurr/chrony:4.6.1
+    networks:
+      scenescape:
+        aliases:
+         - ntpserv
+    restart: on-failure:5
+
+  broker:
+    image: docker.io/library/eclipse-mosquitto:2.0.21
+    ports:
+     - "1883:1883"
+    volumes:
+    - ./src/mosquitto/mosquitto-secure.conf:/mosquitto/config/mosquitto.conf
+    secrets:
+      - root-cert
+      - broker-cert
+      - broker-key
+    entrypoint: [
+      "/bin/sh",
+      "-e",
+      "-c",
+      "cp -r /run/secrets /mosquitto/secrets  && \
+      /docker-entrypoint.sh /usr/sbin/mosquitto -c /mosquitto/config/mosquitto.conf"
+    ]
+    networks:
+      scenescape:
+        aliases:
+         - broker.scenescape.intel.com
+    user: "${UID}:${GID}"
+    restart: on-failure:5
+
+  node-red:
+    image: docker.io/nodered/node-red:4.0
+    user: root
+    environment:
+      TZ: America/Los_Angeles
+    ports:
+      - "1880:1880"
+    networks:
+      - scenescape
+    volumes:
+      - ./src/node-red/flows.json:/tmp/flows.json
+      - ./src/node-red/flows_cred.json:/tmp/flows_cred.json
+      - ./src/node-red/settings.js:/tmp/settings.js
+      - ./src/node-red/install_package.sh:/tmp/install_package.sh
+    secrets:
+      - influxdb2-admin-token
+      - root-cert
+      - broker-cert
+      - broker-key
+    depends_on:
+      influxdb2:
+        condition: service_started
+      broker:
+        condition: service_started
+    entrypoint: [
+      "/bin/bash",
+      "-e",
+      "-c",
+      "cp /tmp/flows.json /data/flows.json && \
+      cp /tmp/settings.js /data/settings.js && \
+      cp /tmp/flows_cred.json /data/flows_cred.json && \
+      sed -i \"s/<influx-api-token>/$(cat /run/secrets/influxdb2-admin-token)/g\" /data/flows_cred.json && \
+      bash /tmp/install_package.sh && \
+      /usr/src/node-red/entrypoint.sh"
+    ]
+    restart: on-failure:5
+
+  influxdb2:
+    image: docker.io/library/influxdb:2.7.11
+    ports:
+      - "8086:8086"
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME_FILE: /run/secrets/influxdb2-admin-username
+      DOCKER_INFLUXDB_INIT_PASSWORD_FILE: /run/secrets/influxdb2-admin-password
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN_FILE: /run/secrets/influxdb2-admin-token
+      DOCKER_INFLUXDB_INIT_ORG: ITM
+      DOCKER_INFLUXDB_INIT_BUCKET: SS-Anthem
+      DOCKER_INFLUXDB_INIT_RETENTION: 1w
+    secrets:
+      - influxdb2-admin-username
+      - influxdb2-admin-password
+      - influxdb2-admin-token
+    volumes:
+      - type: volume
+        source: influxdb2-data
+        target: /var/lib/influxdb2
+      - type: volume
+        source: influxdb2-config
+        target: /etc/influxdb2
+    restart: on-failure:5
+    networks:
+      - scenescape
+
+  grafana:
+    image: docker.io/grafana/grafana:11.6.0
+    user: root
+    volumes:
+      - ./src/grafana/data/dashboards/anthem-intersection.json:/tmp/anthem-intersection.json
+      - ./src/grafana/dashboards.yml:/tmp/dashboards.yml
+      - ./src/grafana/datasources.yml:/tmp/datasources.yml
+      - grafana-storage:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    restart: on-failure:5
+    networks:
+      - scenescape
+    secrets:
+      - influxdb2-admin-token
+    depends_on:
+      influxdb2:
+        condition: service_started
+    entrypoint: [
+      "/bin/bash",
+      "-e",
+      "-c",
+      "mkdir -p /var/lib/grafana/dashboards && \
+      cp /tmp/anthem-intersection.json /var/lib/grafana/dashboards/anthem-intersection.json && \
+      mkdir -p /etc/grafana/provisioning/dashboards && \
+      cp /tmp/dashboards.yml /etc/grafana/provisioning/dashboards/main.yml && \
+      mkdir -p /etc/grafana/provisioning/datasources && \
+      cp /tmp/datasources.yml /etc/grafana/provisioning/datasources/datasources.yml && \
+      sed -i \"s/<influx-api-token>/$(cat /run/secrets/influxdb2-admin-token)/g\" /etc/grafana/provisioning/datasources/datasources.yml && \
+      /run.sh"
+    ]
+
+  dlstreamer-pipeline-server:
+    image: docker.io/intel/dlstreamer-pipeline-server:3.0.0
+    networks:
+      - scenescape
+    privileged: true
+    entrypoint: ["./run.sh"]
+    ports:
+      - '8080:8080'
+      - '8555:8555'
+    devices:
+      - "/dev/dri:/dev/dri"
+    depends_on:
+    - broker
+    - ntpserver
+    environment:
+      - ENABLE_RTSP=true
+      - ENABLE_WEBRTC=true
+      - WEBRTC_SIGNALING_SERVER=ws://localhost:8443
+      - RUN_MODE=EVA
+      - GENICAM=Balluff
+      - DETECTION_DEVICE=CPU
+      - CLASSIFICATION_DEVICE=CPU
+      - ADD_UTCTIME_TO_METADATA=true
+      - APPEND_PIPELINE_NAME_TO_PUBLISHER_TOPIC=false
+      - REST_SERVER_PORT=8080
+      - MQTT_HOST=broker.scenescape.intel.com
+      - MQTT_PORT=1883
+    volumes:
+      - ./src/dlstreamer-pipeline-server/config.json:/home/pipeline-server/config.json
+      - ./src/dlstreamer-pipeline-server/user_scripts:/home/pipeline-server/user_scripts
+      - ./src/dlstreamer-pipeline-server/videos:/home/pipeline-server/videos
+      - ./src/dlstreamer-pipeline-server/models/intersection:/home/pipeline-server/models/object_detection/intersection
+      - dlstreamer-pipeline-server-pipeline-root:/var/cache/pipeline_root:uid=1999,gid=1999
+      - dlstreamer-pipeline-server-tmp:/tmp
+    secrets:
+      - source: root-cert
+        target: certs/scenescape-ca.pem
+    restart: on-failure:5
+
+  pgserver:
+    image: docker.io/intel/scenescape-manager:v1.3.0
+    init: true
+    networks:
+      - scenescape
+    environment:
+      - "DBROOT=/workspace"
+      - "EXAMPLEDB=smart-intersection-ri.tar.bz2"
+    entrypoint: [
+      "/bin/bash",
+      "-e",
+      "-c",
+      "cp /tmp/user_access_config.json /home/scenescape/SceneScape/user_access_config.json && \
+      cp /tmp/smart-intersection-ri.tar.bz2 /home/scenescape/SceneScape/smart-intersection-ri.tar.bz2 && \
+      chown -R scenescape:scenescape /workspace && \
+      SUPASS=$(cat /run/secrets/supass) /usr/local/bin/scenescape-init database --preloadexample"
+    ]
+    cap_add:
+      - SYS_ADMIN
+    devices:
+      - /dev/fuse
+    security_opt:
+      - apparmor:unconfined
+    volumes:
+      - pgserver-db:/workspace/db
+      - pgserver-migrations:/workspace/migrations
+      - pgserver-media:/workspace/media
+      - ./src/webserver/user_access_config.json:/tmp/user_access_config.json
+      - ./src/webserver/smart-intersection-ri.tar.bz2:/tmp/smart-intersection-ri.tar.bz2
+    secrets:
+      - django
+      - browser.auth
+      - controller.auth
+      - supass
+    restart: on-failure:5
+
+  web:
+    image: docker.io/intel/scenescape-manager:v1.3.0
+    init: true
+    networks:
+      scenescape:
+        aliases:
+         - web.scenescape.intel.com
+    depends_on:
+     - pgserver
+    ports:
+     - "443:443"
+    environment:
+     - "DBROOT=/workspace"
+    command: >
+      webserver
+      --dbhost pgserver
+      --broker broker.scenescape.intel.com
+      --brokerauth /run/secrets/browser.auth
+      --brokerrootcert /run/secrets/certs/scenescape-ca.pem
+    healthcheck:
+      test: "curl --insecure -X GET https://web.scenescape.intel.com:443/api/v1/database-ready | grep 'true'"
+      interval: 10s
+      timeout: 120s
+      retries: 10
+      start_period: 10s
+    cap_add:
+     - SYS_ADMIN
+    devices:
+     - /dev/fuse
+    security_opt:
+     - apparmor:unconfined
+    volumes:
+     - pgserver-media:/workspace/media
+    secrets:
+     - source: root-cert
+       target: certs/scenescape-ca.pem
+     - source: web-cert
+       target: certs/scenescape-web.crt
+     - source: web-key
+       target: certs/scenescape-web.key
+     - django
+     - browser.auth
+     - controller.auth
+    restart: on-failure:5
+
+  scene:
+    image: docker.io/intel/scenescape-controller:v1.3.0
+    init: true
+    networks:
+      scenescape:
+    depends_on:
+      web:
+        condition: service_healthy
+      broker:
+        condition: service_started
+      ntpserver:
+        condition: service_started
+    command: controller --broker broker.scenescape.intel.com --ntp ntpserv
+    volumes:
+     - pgserver-media:/home/scenescape/SceneScape/media
+     - ./src/controller/tracker-config.json:/home/scenescape/SceneScape/tracker-config.json
+    secrets:
+     - source: root-cert
+       target: certs/scenescape-ca.pem
+     - django
+     - controller.auth
+    restart: on-failure:5

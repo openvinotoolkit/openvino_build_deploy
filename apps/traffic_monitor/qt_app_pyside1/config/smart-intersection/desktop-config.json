@@ -1,0 +1,47 @@
+{
+    "desktop_app_config": {
+        "application_name": "Traffic Monitoring Desktop",
+        "scene_analytics": {
+            "enable_multi_camera": true,
+            "enable_roi_analytics": true,
+            "enable_vlm_integration": true
+        },
+        "camera_settings": {
+            "default_resolution": "1920x1080",
+            "default_fps": 30,
+            "max_cameras": 4,
+            "auto_calibration": false
+        },
+        "analytics_settings": {
+            "object_tracking": true,
+            "speed_estimation": true,
+            "direction_analysis": true,
+            "dwell_time_analysis": true,
+            "safety_monitoring": true
+        },
+        "performance_settings": {
+            "gpu_device": "AUTO",
+            "inference_threads": 4,
+            "batch_size": 1,
+            "memory_optimization": true
+        },
+        "ui_settings": {
+            "show_roi_overlay": true,
+            "show_tracking_lines": true,
+            "show_analytics_overlay": true,
+            "auto_refresh_rate": 30
+        }
+    },
+    "regions_of_interest": {
+        "crosswalks": [],
+        "traffic_lanes": [],
+        "safety_zones": [],
+        "monitoring_areas": []
+    },
+    "alert_settings": {
+        "enable_alerts": true,
+        "pedestrian_safety_alerts": true,
+        "traffic_anomaly_alerts": true,
+        "violation_alerts": true
+    }
+}

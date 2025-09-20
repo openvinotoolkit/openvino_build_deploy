@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-web
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-web
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-web
+    spec:
+      # initContainers:
+      # - name: init-smart-intersection-ri-web
+      #   image: busybox
+      #   command: ['sh', '-c', '
+      #     if [ -f /data/secrets.py ]; then
+      #       echo "File exists: /data/secrets.py";
+      #     else
+      #       echo "File does NOT exist: /data/secrets.py";
+      #     fi &&
+      #     until [ -f /data/.done ]; do
+      #       echo "Waiting for .done ...";
+      #       sleep 5;
+      #     done &&
+      #     ls /tmp &&
+      #     echo "Files copied to /tmp";
+      #   ']
+      #   volumeMounts:
+      #   - name: smart-intersection-ri-web-data
+      #     mountPath: /data
+      containers:
+      - name: web
+        image: {{ .Values.web.image.repository }}:{{ .Values.web.image.tag }}
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: DBROOT
+          value: /workspace
+        - name: RUNSECRETS
+          value: /run/secrets
+        - name: SSCAPEDIR
+          value: /home/scenescape/SceneScape
+        volumeMounts:
+        - name: pgserver-media
+          mountPath: /workspace/media
+        - name: secrets
+          mountPath: /tmp/secrets  # Mount secrets in /tmp/secrets
+        - name: smart-intersection-ri-web-data
+          mountPath: /data
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
+          fsGroup: 0
+          readOnlyRootFilesystem: false
+          capabilities:
+            add:
+              - SYS_ADMIN
+          privileged: true
+        command: ["/bin/bash", "-e", "-c"]
+        args:
+        - >
+          echo $SMART_INTERSECTION_BROKER_SERVICE_HOST    broker.scenescape.intel.com >> /etc/hosts &&
+          echo $SMART_INTERSECTION_WEB_SERVICE_HOST    web.scenescape.intel.com >> /etc/hosts &&
+          mkdir -p /run/secrets/certs &&
+          mkdir -p /run/secrets/django &&
+          cp /tmp/secrets/secrets.py /run/secrets/django/secrets.py &&
+          cp /tmp/secrets/browser.auth /run/secrets/browser.auth &&
+          cp /tmp/secrets/controller.auth /run/secrets/controller.auth &&
+          cp /tmp/secrets/scenescape-ca.pem /run/secrets/certs/scenescape-ca.pem &&
+          cp /tmp/secrets/scenescape-web.crt /run/secrets/certs/scenescape-web.crt &&
+          cp /tmp/secrets/scenescape-web.key /run/secrets/certs/scenescape-web.key &&
+          cp /tmp/secrets/secrets.py /home/scenescape/SceneScape/sscape/secrets.py &&
+          sed -i "s/'HOST': 'localhost'/'HOST':'smart-intersection-pgserver'/g" /home/scenescape/SceneScape/sscape/settings.py &&
+          chown -R scenescape:scenescape /workspace &&
+          /usr/local/bin/scenescape-init webserver --dbhost smart-intersection-pgserver --broker broker.scenescape.intel.com --brokerauth /run/secrets/browser.auth --brokerrootcert /run/secrets/certs/scenescape-ca.pem
+      volumes:
+      - name: pgserver-media
+        persistentVolumeClaim:
+          claimName: {{ .Release.Name }}-pgserver-media
+      - name: secrets
+        secret:
+          secretName: {{ .Release.Name }}-web-secrets
+      - name:  {{ .Release.Name }}-ri-web-data
+        persistentVolumeClaim:
+          claimName: {{ .Release.Name }}-ri-pvc

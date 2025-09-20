@@ -1,0 +1,125 @@
+[
+    {
+        "id": "f6f2187d.f17ca8",
+        "type": "tab",
+        "label": "Flow 1",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "mqtt_broker",
+        "type": "mqtt-broker",
+        "name": "MQTT Broker",
+        "broker": "broker.scenescape.intel.com",
+        "port": "1883",
+        "tls": "f5cfea783bb942f1",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": true,
+        "compatmode": false,
+        "protocolVersion": 4,
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "c2dff2cbcb5e51e0",
+        "type": "influxdb",
+        "hostname": "127.0.0.1",
+        "port": 8086,
+        "protocol": "http",
+        "database": "database",
+        "name": "influx",
+        "usetls": false,
+        "tls": "",
+        "influxdbVersion": "2.0",
+        "url": "http://influxdb2:8086",
+        "timeout": 10,
+        "rejectUnauthorized": false
+    },
+    {
+        "id": "f5cfea783bb942f1",
+        "type": "tls-config",
+        "name": "Broker TLS",
+        "cert": "/run/secrets/broker-cert",
+        "key": "/run/secrets/broker-key",
+        "ca": "/run/secrets/root-cert",
+        "certname": "",
+        "keyname": "",
+        "caname": "",
+        "servername": "",
+        "verifyservercert": false,
+        "alpnprotocol": ""
+    },
+    {
+        "id": "mqtt_in",
+        "type": "mqtt in",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "topic": "scenescape/event/region/+/+/objects",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "mqtt_broker",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
+        "x": 220,
+        "y": 300,
+        "wires": [
+            [
+                "process_message"
+            ]
+        ]
+    },
+    {
+        "id": "process_message",
+        "type": "function",
+        "z": "f6f2187d.f17ca8",
+        "name": "Process Message",
+        "func": " var msg_payload = msg.payload;\n\nif (msg_payload.scene_name === 'Intersection-Demo') {\n    var region_name = msg_payload.region_name;\n    var timestamp = msg_payload.timestamp;\n    var counts = msg_payload.counts;\n    var count_keys = Object.keys(counts);\n\n    count_keys.forEach(function(key) {\n        var json_body = [\n                {count: counts[key] + \"i\"},\n                {\n                    location: \"Anthem\",\n                    region: region_name,\n                    object: key\n                }\n            ];\n        node.send({ payload: json_body, measurement: \"region_obj_count_2\", timestamp: timestamp});\n    });\n\n    var objects_exited = msg_payload.exited;\n    var items_exited = objects_exited.length;\n    if (items_exited > 0) {\n        objects_exited.forEach(function(obj) {\n            var json_body2 = [\n                        {dwell_time: parseFloat(obj.dwell.toFixed(2))},\n                        {\n                            location: \"Anthem\",\n                            region: region_name,\n                            object: obj.object.category\n                        }\n                    ];\n            node.send({ payload: json_body2, measurement: \"region_obj_dwell_2\", timestamp: timestamp});\n        });\n    } \n}\nreturn null;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 590,
+        "y": 300,
+        "wires": [
+            [
+                "d013192f8325ddd9"
+            ]
+        ]
+    },
+    {
+        "id": "d013192f8325ddd9",
+        "type": "influxdb out",
+        "z": "f6f2187d.f17ca8",
+        "influxdb": "c2dff2cbcb5e51e0",
+        "name": "myinflux",
+        "measurement": "",
+        "precision": "",
+        "retentionPolicy": "",
+        "database": "database",
+        "precisionV18FluxV20": "s",
+        "retentionPolicyV18Flux": "",
+        "org": "ITM",
+        "bucket": "SS-Anthem",
+        "x": 860,
+        "y": 300,
+        "wires": []
+    }
+]

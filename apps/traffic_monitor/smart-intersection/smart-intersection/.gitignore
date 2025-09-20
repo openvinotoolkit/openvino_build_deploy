@@ -1,0 +1,11 @@
+src/secrets/ca
+src/secrets/certs
+src/secrets/django
+src/secrets/influxdb2
+src/secrets/*.auth
+src/secrets/*.token
+src/secrets/supass
+src/dlstreamer-pipeline-server/videos/*.ts
+chart/files/
+__pycache__/
+venv/

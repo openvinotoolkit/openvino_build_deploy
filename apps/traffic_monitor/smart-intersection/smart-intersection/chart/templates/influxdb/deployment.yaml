@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-influxdb
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}-influxdb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-influxdb
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-influxdb
+    spec:
+      containers:
+        - name: influxdb
+          image: "{{ .Values.influxdb.repository }}:{{ .Values.influxdb.tag }}"
+          ports:
+            - containerPort: {{ .Values.influxdb.service.port }}
+          env:
+            - name: DOCKER_INFLUXDB_INIT_MODE
+              value: "setup"
+            - name: DOCKER_INFLUXDB_INIT_USERNAME_FILE
+              value: /custom/secrets/influxdb2-admin-username
+            - name: DOCKER_INFLUXDB_INIT_PASSWORD_FILE
+              value: /custom/secrets/influxdb2-admin-password
+            - name: DOCKER_INFLUXDB_INIT_ADMIN_TOKEN_FILE
+              value: /custom/secrets/influxdb2-admin-token
+            - name: DOCKER_INFLUXDB_INIT_ORG
+              value: {{ .Values.influxdb.org | quote }}
+            - name: DOCKER_INFLUXDB_INIT_BUCKET
+              value: {{ .Values.influxdb.bucket | quote }}
+            - name: DOCKER_INFLUXDB_INIT_RETENTION
+              value: {{ .Values.influxdb.retention | quote }}
+          volumeMounts:
+            - name: influxdb-data
+              mountPath: /var/lib/influxdb2
+            - name: influxdb-config
+              mountPath: /etc/influxdb2
+            - name: secrets-volume
+              mountPath: /custom/secrets
+              readOnly: true
+      volumes:
+        - name: influxdb-data
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-influxdb-pvc
+        - name: influxdb-config
+          emptyDir: {}  # Use a writable emptyDir volume for /etc/influxdb2
+        - name: secrets-volume
+          secret:
+            secretName: {{ .Release.Name }}-influxdb-secrets

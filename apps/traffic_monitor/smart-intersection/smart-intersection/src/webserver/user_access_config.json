@@ -1,0 +1,60 @@
+{
+    "controller.auth":{
+      "acls": [{ "topic": "CMD_CAMERA", "access": 3 },
+      { "topic": "IMAGE_CALIBRATE", "access": 1 },
+      { "topic": "CMD_DATABASE", "access": 3 },
+      { "topic": "DATA_REGULATED", "access": 2 },
+      { "topic": "DATA_SCENE", "access": 2 },
+      { "topic": "DATA_AUTOCALIB_CAM_POSE", "access": 2 },
+      { "topic": "CMD_AUTOCALIB_SCENE", "access": 3 },
+      { "topic": "CMD_KUBECLIENT", "access": 3 },
+      { "topic": "CMD_SCENE_UPDATE", "access": 3 },
+      { "topic": "DATA_EXTERNAL", "access": 3 },
+      { "topic": "DATA_REGION", "access": 2 },
+      { "topic": "DATA_SENSOR", "access": 1 },
+      { "topic": "EVENT", "access": 3 },
+      { "topic": "SYS_AUTOCALIB_STATUS", "access": 3 },
+      { "topic": "SYS_CHILDSCENE_STATUS", "access": 3 },
+      { "topic": "DATA_CAMERA", "access": 1 }],
+      "is_superuser": true
+    },
+    "percebro.auth": {
+      "acls":[{ "topic": "DATA_CAMERA", "access": 2 },
+      { "topic": "IMAGE_CAMERA", "access": 2 },
+      { "topic": "CHANNEL", "access": 2 },
+      { "topic": "IMAGE_CALIBRATE", "access": 2 },
+      { "topic": "CMD_DATABASE", "access": 3 },
+      { "topic": "DATA_AUTOCALIB_CAM_POSE", "access": 1 },
+      { "topic": "CMD_AUTOCALIB_SCENE", "access": 3 },
+      { "topic": "SYS_AUTOCALIB_STATUS", "access": 3 },
+      { "topic": "CMD_KUBECLIENT", "access": 3 },
+      { "topic": "DATA_SENSOR", "access": 2 },
+      { "topic": "CMD_CAMERA", "access": 3 }],
+      "is_superuser": false
+    },
+    "browser.auth": {
+      "acls":[{ "topic": "DATA_CAMERA", "access": 1 },
+      { "topic": "CHANNEL", "access": 1 },
+      { "topic": "IMAGE_CAMERA", "access": 1 },
+      { "topic": "IMAGE_CALIBRATE", "access": 1 },
+      { "topic": "CMD_DATABASE", "access": 3 },
+      { "topic": "CMD_CAMERA", "access": 3 },
+      { "topic": "DATA_AUTOCALIB_CAM_POSE", "access": 1 },
+      { "topic": "CMD_AUTOCALIB_SCENE", "access": 3 },
+      { "topic": "CMD_KUBECLIENT", "access": 3 },
+      { "topic": "EVENT", "access": 1 },
+      { "topic": "SYS_CHILDSCENE_STATUS", "access": 3 },
+      { "topic": "SYS_AUTOCALIB_STATUS", "access": 3 },
+      { "topic": "DATA_REGULATED", "access": 1 },
+      { "topic": "DATA_EXTERNAL", "access": 1 }],
+      "is_superuser": false
+    },
+    "calibration.auth": {
+      "acls":[{ "topic": "CMD_AUTOCALIB_SCENE", "access": 3 },
+      { "topic": "SYS_AUTOCALIB_STATUS", "access": 3 },
+      { "topic": "IMAGE_CALIBRATE", "access": 1 },
+      { "topic": "CMD_SCENE_UPDATE", "access": 1 },
+      { "topic": "DATA_AUTOCALIB_CAM_POSE", "access": 2}],
+      "is_superuser": true
+    }
+}

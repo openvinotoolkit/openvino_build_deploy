@@ -1,0 +1,17 @@
+apiVersion: 1
+
+datasources:
+  - name: InfluxDB
+    type: influxdb
+    access: proxy
+    url: http://influxdb2:8086
+    basicAuth: true
+    secureJsonData:
+      token: <influx-api-token>
+    jsonData:
+      organization: ITM
+      defaultBucket: SS-Anthem
+      version: Flux
+      tlsSkipVerify: false
+      withCredentials: true
+    uid: xU6Z19aVk
