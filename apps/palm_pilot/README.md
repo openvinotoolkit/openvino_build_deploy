@@ -60,7 +60,7 @@ git clone https://github.com/openvinotoolkit/openvino_build_deploy.git
 ```
 The above will clone the repository into a directory named "openvino_build_deploy" in the current directory. Then, navigate into the directory using the following command:
 ```bash
-cd openvino_build_deploy/demos/gesture_control_demo
+cd openvino_build_deploy/apps/palm_pilot
 ```
 
 ### 2. Create a virtual environment
