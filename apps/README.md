@@ -18,6 +18,18 @@ The app blurs the background behind a person on a webcam, and it's built using N
 | Platforms                            | Client (CPU, GPU, NPU), Edge (CPU)                                                                   |
 | Owner                                | [@Roszczyk](https://github.com/Roszczyk), [@adrianboguszewski](https://github.com/adrianboguszewski) |
 
+### 🚦 Smart Intersection Traffic Monitoring System
+
+The Smart Intersection Traffic Monitoring System is an advanced AI-powered desktop application built with PySide6 and OpenVINO for real-time traffic monitoring, violation detection, and smart intersection analytics. The system combines computer vision, machine learning, and IoT technologies to provide comprehensive traffic management capabilities with enterprise-grade features.
+
+[![image](https://raw.githubusercontent.com/JatinSachdeva2004/GSoC-Traffic_Intersection_Monitoring/main/qt_app_pyside1/resources/dashboard.png)](https://github.com/JatinSachdeva2004/GSoC-Traffic_Intersection_Monitoring)
+
+| [Traffic Monitoring System](https://github.com/JatinSachdeva2004/GSoC-Traffic_Intersection_Monitoring) | |
+|--------------------------------------|-------------------------------------------------------------------|
+| Related AI concepts                  | object detection, VLM                                             |
+| Platforms                            | Client (CPU, GPU, NPU), Edge (CPU)                                |
+| Owner                                | [@JatinSachdeva2004](https://github.com/JatinSachdeva2004)        |
+
 ### 💬 Messenger AI‑Assistant
 
 This Telegram RAG Assistant is a privacy-first desktop app that locally processes Telegram data using OpenVINO-accelerated retrieval-augmented generation and a native Qt interface. It supports streaming responses, device diagnostics, and metadata-preserving chunking for efficient, secure AI-powered insights.
