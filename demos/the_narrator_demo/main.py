@@ -14,6 +14,9 @@ import openvino as ov
 import torch
 from transformers import BlipProcessor, BlipVisionModel, BlipTextLMHeadModel, BlipTextConfig, BlipForConditionalGeneration
 from transformers.modeling_outputs import CausalLMOutputWithCrossAttentions
+
+import openvino_genai as ov_genai
+from huggingface_hub import snapshot_download
 from transformers import AutoProcessor
 from optimum.intel.openvino import OVModelForVisualCausalLM
 from transformers import LlavaNextVideoProcessor
@@ -40,12 +43,33 @@ global_stop_event = threading.Event()
 global_frame_lock = threading.Lock()
 global_result_lock = threading.Lock()
 
+VIDEO_SUMMARY_PROMPT = """
+You are given captions generated independently for each frame of a webcam video stream. 
+These captions may contain:
+- Redundant or repeated descriptions of the same person or background.
+- Small, frame-by-frame variations in appearance (e.g., shirt color, facial hair, glasses).
+- Minor or trivial movements that are not meaningful (e.g., blinking, head tilts).
+- Fragmented or inconsistent wording.
+
+Your task:
+1. Clean & Deduplicate: Merge repeated or overlapping frame-level descriptions into a single, coherent narrative.
+2. Infer Context: Use the temporal sequence to reconstruct what is happening across the video.
+3. Identify Main Events: Focus on meaningful actions, gestures, and scene changes rather than frame-by-frame noise.
+4. Summarize Clearly: Produce a concise summary (1–2 sentences) describing what the webcam stream shows overall.
+5. Ignore Noise: Do not include tiny repetitive movements, trivial frame changes, or redundant appearance details.
+
+Input:
+Webcam frame captions (in order):
+{captions}
+
+Output:
+A concise, human-readable summary of the webcam video stream.
+"""
+
 
 def convert_vision_model(vision_model: BlipVisionModel, processor: BlipProcessor, output_dir: Path) -> None:
     vision_model.eval()
-
     inputs = processor(np.zeros((512, 512, 3), dtype=np.uint8), "sample string", return_tensors="pt")
-
     with torch.no_grad():
         ov_vision_model = ov.convert_model(vision_model, example_input=inputs["pixel_values"])
     ov.save_model(ov_vision_model, output_dir / "blip_vision_model.xml")
@@ -76,9 +100,9 @@ def convert_decoder_model(text_decoder: BlipTextLMHeadModel, output_dir: Path) -
     ov.save_model(ov_text_decoder, output_dir / "blip_text_decoder_with_past.xml")
 
 
-def download_and_convert_model(model_name: str) -> None:
+def download_and_convert_captioning_model(model_name: str) -> None:
     output_dir = MODEL_DIR / model_name
-
+    
     processor = BlipProcessor.from_pretrained(model_name, use_fast=True)
     processor.save_pretrained(output_dir)
 
@@ -95,7 +119,7 @@ def load_models(model_name: str, device: str = "AUTO") -> tuple[ov.CompiledModel
     text_decoder_path = model_dir / "blip_text_decoder_with_past.xml"
 
     if not vision_model_path.exists() or not text_decoder_path.exists():
-        download_and_convert_model(model_name)
+        download_and_convert_captioning_model(model_name)
 
     core = ov.Core()
     core.set_property({"CACHE_DIR": "cache"})
@@ -256,7 +280,7 @@ def generate_caption(image: np.array, vision_model: ov.CompiledModel, text_decod
     pixel_values = np.array(processor(image).pixel_values)
     print("Extracting image features...")
     image_embeds = vision_model(np.array(pixel_values))[vision_model.output(0)]
-
+    
     image_attention_mask = np.ones(image_embeds.shape[:-1], dtype=np.int64)
     input_ids = np.array([[TEXT_CONFIG.bos_token_id, TEXT_CONFIG.eos_token_id]], dtype=np.int64)
     print("Generating caption for image...")
@@ -277,8 +301,16 @@ def inference_worker(model,processor,vision_model, text_decoder,video_input: boo
     else:
         frames = 0
     while not global_stop_event.is_set():
+        if len(current_frames) == 0:
+            time.sleep(0.01)
+            continue
+
         with global_frame_lock:
-            frame = current_frames.pop() if len(current_frames) > frames else np.zeros((1080, 1920, 3), dtype=np.uint8)
+           frame = (
+                current_frames[-1] if len(current_frames) == 1
+                else current_frames.pop() if len(current_frames) > frames
+                else np.zeros((1080, 1920, 3), dtype=np.uint8)
+            )
 
         start_time = time.perf_counter()
 
@@ -293,11 +325,48 @@ def inference_worker(model,processor,vision_model, text_decoder,video_input: boo
         elapsed = time.perf_counter() - start_time
 
         with global_result_lock:
-            captions.append(caption)
+            if len(captions) == 0 or caption != captions[-1]:
+                captions.append(caption)
             processing_times.append(elapsed)
 
 
-def run(video_path: str, model_name: str, flip: bool = True, video_input: bool = False) -> None:
+def download_summarization_model(model_name: str) -> Path:
+    is_openvino_model = model_name.startswith("OpenVINO/")
+
+    if not is_openvino_model:
+        raise ValueError(f"Model '{model_name}' is not an OpenVINO pre-optimized model. Please provide a valid model from the OpenVINO organization on Hugging Face.")
+
+    output_dir = MODEL_DIR / model_name
+    if not output_dir.exists():
+        log.info(f"Downloading {model_name}...")
+        snapshot_download(model_name, local_dir=output_dir, resume_download=True)
+
+    return output_dir
+
+
+def summarize_session(captions_list: list[str], ov_model_path: Path, device: str) -> None:
+    if not captions_list:
+        log.warning("No captions collected.")
+        return
+
+    log.info("Summarization model loading...")
+
+    pipe = ov_genai.LLMPipeline(ov_model_path, device)
+
+    log.info("============================================================")
+    log.info("Session Summary (OpenVINO GenAI LLMPipeline):")
+    log.info("============================================================")
+
+    buffer = []
+    def streamer(subword: str):
+        print(subword, end="", flush=True)
+        buffer.append(subword)
+        return ov_genai.StreamingStatus.RUNNING
+
+    pipe.generate(VIDEO_SUMMARY_PROMPT.format(captions="\n".join(captions_list)), streamer=streamer)
+
+
+def run(video_path: str, captioning_model: str, summary_model: str, flip: bool = True, video_input: bool = False) -> None:
     global current_frames, captions, processing_times
     # set up logging
     log.getLogger().setLevel(log.INFO)
@@ -308,8 +377,11 @@ def run(video_path: str, model_name: str, flip: bool = True, video_input: bool =
     device_mapping = utils.available_devices(exclude=["NPU"])
     device_type = "AUTO"
 
+    # download the summary model
+    local_summary_model = download_summarization_model(summary_model)
+
     #Downloadn and convert Image and Video models
-    vision_model, text_decoder, processor = load_models(model_name, device_type)
+    vision_model, text_decoder, processor = load_models(captioning_model, device_type)
     
     #For video captioning
     model_name_video = "llava-hf/LLaVA-NeXT-Video-7B-hf"
@@ -371,7 +443,7 @@ def run(video_path: str, model_name: str, flip: bool = True, video_input: bool =
                     if len(captions) > 0:
                         caption=captions[-1]
                 else:
-                    caption = captions.pop() if len(captions) > 0 else ""
+                    caption = captions[-1] if len(captions) > 0 else ""
                 t1 = t2
 
             # Get the mean processing time
@@ -381,7 +453,8 @@ def run(video_path: str, model_name: str, flip: bool = True, video_input: bool =
         # Draw the results on the frame
         utils.draw_text(frame, text=caption, point=(f_width // 2, f_height - 50), center=True, font_scale=1.5, with_background=True)
         utils.draw_text(frame, text=f"Inference time: {processing_time:.0f}ms ({fps:.1f} FPS)", point=(10, 10))
-        utils.draw_text(frame, text=f"Currently running {model_name} on {device_type}", point=(10, 50))
+        utils.draw_text(frame, text=f"Currently running {captioning_model} on {device_type}", point=(10, 50))
+        utils.draw_text(frame, text=f"Press ESC to exit and get text summary", point=(10, 90))
         utils.draw_text(frame, text=f"Press 2 to switch between Video and Image Captioning", point=(10, 90))
 
 
@@ -405,8 +478,7 @@ def run(video_path: str, model_name: str, flip: bool = True, video_input: bool =
                     global_stop_event.clear()
 
                     # Recompile models for the new device
-                    vision_model, text_decoder, processor = load_models(model_name, device_type)
-                    
+                    vision_model, text_decoder, processor = load_models(captioning_model, device_type)
                     # Start a new inference worker
                     if video_input == True:
                         worker = threading.Thread(
@@ -502,13 +574,16 @@ def run(video_path: str, model_name: str, flip: bool = True, video_input: bool =
     # clean-up windows
     cv2.destroyAllWindows()
 
+    # summarize the session
+    summarize_session(list(captions), local_summary_model, device_type)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--stream', default="0", type=str, help="Path to a video file or the webcam number")
-    parser.add_argument("--model_name", type=str, default="Salesforce/blip-image-captioning-base", help="Model to be used for captioning",
+    parser.add_argument("--stream", default="0", type=str, help="Path to a video file or the webcam number")
+    parser.add_argument("--captioning_model", type=str, default="Salesforce/blip-image-captioning-base", help="Model to be used for captioning",
                         choices=["Salesforce/blip-image-captioning-base", "Salesforce/blip-image-captioning-large"])
+    parser.add_argument("--summary_model", type=str, default="OpenVINO/qwen2.5-1.5b-instruct-int4-ov", help="Path or HF repo ID for OV pre-optimized GenAI LLM")
     parser.add_argument("--flip", type=bool, default=True, help="Mirror input video")
-
     args = parser.parse_args()
-    run(args.stream, args.model_name, args.flip)
+    run(args.stream, args.captioning_model, args.summary_model, args.flip)

@@ -18,7 +18,8 @@ torch==2.8.0
 # Streamlit Frontend
 streamlit==1.45.0
 pillow==11.3.0
-fpdf==1.7.2
+fpdf2==2.8.4
+qrcode[pil]==8.2
 
 # FastAPI Backend
 fastapi==0.115.12

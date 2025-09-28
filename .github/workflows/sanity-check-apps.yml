@@ -1,0 +1,66 @@
+name: Sanity check (apps)
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  find-subprojects:
+    runs-on: ubuntu-latest
+    outputs:
+      js: ${{ steps.categorize-subprojects.outputs.js }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Determine subprojects to test
+        id: find-updates
+        uses: ./.github/reusable-steps/find-updates
+        with:
+          dir: apps
+          ci_config_file: sanity-check-apps.yml
+      - name: Categorize subprojects
+        id: categorize-subprojects
+        uses: ./.github/reusable-steps/categorize-projects
+        with:
+          subprojects: ${{ steps.find-updates.outputs.subproject_dirs }}
+
+  js:
+    needs: find-subprojects
+    if: ${{ needs.find-subprojects.outputs.js != '[]' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025]
+        subproject: ${{ fromJson(needs.find-subprojects.outputs.js) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/reusable-steps/setup-os
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install dependencies
+        run: |
+          cd ${{ matrix.subproject }}
+          npm install
+      - name: Run JS Project
+        shell: bash
+        timeout-minutes: 1
+        run: |
+          cd ${{ matrix.subproject }}
+          npm start &
