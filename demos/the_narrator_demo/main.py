@@ -134,6 +134,7 @@ def load_models(model_name: str, device: str = "AUTO") -> tuple[ov.CompiledModel
 
     return vision_model, text_model, processor
 
+
 def load_llava_video_models(model_name: str, device: str = "CPU") -> tuple:
     """Load LLaVA-NeXT-Video model with Intel HF Optimum (OpenVINO)"""
     model_dir = MODEL_DIR / model_name.replace("/", "_")
@@ -380,15 +381,16 @@ def run(video_path: str, captioning_model: str, summary_model: str, flip: bool =
     # download the summary model
     local_summary_model = download_summarization_model(summary_model)
 
+
     #Downloadn and convert Image and Video models
     vision_model, text_decoder, processor = load_models(captioning_model, device_type)
     
     #For video captioning
-    model_name_video = "llava-hf/LLaVA-NeXT-Video-7B-hf"
+    model_video_name_video = "llava-hf/LLaVA-NeXT-Video-7B-hf"
     device_type_video = "AUTO"
     
     # Load video input model and processor
-    model_video, processor_video = load_llava_video_models(model_name_video, device_type_video)
+    model_video, processor_video = load_llava_video_models(model_video_name_video, device_type_video)
 
     # initialize video player to deliver frames
     if isinstance(video_path, str) and video_path.isnumeric():
@@ -455,7 +457,7 @@ def run(video_path: str, captioning_model: str, summary_model: str, flip: bool =
         utils.draw_text(frame, text=f"Inference time: {processing_time:.0f}ms ({fps:.1f} FPS)", point=(10, 10))
         utils.draw_text(frame, text=f"Currently running {captioning_model} on {device_type}", point=(10, 50))
         utils.draw_text(frame, text=f"Press ESC to exit and get text summary", point=(10, 90))
-        utils.draw_text(frame, text=f"Press 2 to switch between Video and Image Captioning", point=(10, 90))
+        utils.draw_text(frame, text=f"Press 2 to switch to Video and 1 for Image Captioning", point=(10, 90))
 
 
         utils.draw_ov_watermark(frame)
@@ -467,7 +469,8 @@ def run(video_path: str, captioning_model: str, summary_model: str, flip: bool =
         # escape = 27 or 'q' to close the app
         if key == 27 or key == ord('q'):
             break
-
+        
+        # Device Switching
         for i, dev in enumerate(device_mapping.keys()):
             if key == ord('1') + i:
                 if device_type != dev:
@@ -480,88 +483,64 @@ def run(video_path: str, captioning_model: str, summary_model: str, flip: bool =
                     # Recompile models for the new device
                     vision_model, text_decoder, processor = load_models(captioning_model, device_type)
                     # Start a new inference worker
-                    if video_input == True:
-                        worker = threading.Thread(
-                            target=inference_worker,
-                            args=(video_input,model, processor),
-                            daemon=True
-                    )
-                    else:
-                        worker = threading.Thread(
-                            target=inference_worker,
-                            args=(video_input,vision_model, text_decoder, processor),
-                            daemon=True
+                    worker = threading.Thread(
+                        target=inference_worker,
+                        kwargs={
+                            "video_input": video_input,
+                            "model": vision_model,
+                            "processor":processor,
+                            "vision_model": vision_model ,
+                            "text_decoder": text_decoder 
+                        },
+                        daemon=True
                     )
                     worker.start()
                     # Clear the processing times
                     with global_result_lock:
                         processing_times.clear()
         
-        # For video captioning, allow switching back to image captioning with key '2'
-        if key == ord('2'):
-            video_input = not video_input
-
-            if video_input == False:
-                print("Switching to image_input mode...")
-
-                model_name = "Salesforce/blip-image-captioning-base"
-                device_type = "AUTO"
-        
-                # Stop current worker
+            # For video captioning, allow switching back to image captioning with key '2'
+            if key == ord('2'):
+                video_input = True
+                
+                print("Switching to video_input mode...")
+                           # Stop old worker
                 global_stop_event.set()
                 worker.join(timeout=1)
                 global_stop_event.clear()
-        
-                # Load image input models and processor
-                vision_model, text_decoder, processor = load_models(model_name, device_type)
-                
-                # Start new inference worker with video_input=False
-                worker = threading.Thread(
-                    target=inference_worker,
-                    kwargs={
-                        "video_input": False,
-                        "model": None,
-                        "processor": processor,
-                        "vision_model": vision_model,
-                        "text_decoder": text_decoder
-                    },
-                    daemon=True
-                )
-                worker.start()
-        
-                # Clear frames, captions, processing times to avoid mix-up
-                with global_frame_lock:
-                    current_frames.clear()
-                with global_result_lock:
-                    captions.clear()
-                    processing_times.clear()
-        
-                # Set caption so it shows on screen immediately
-                caption = "Switching to image_input mode..."
-            else: 
-                print("Switching to video_input mode...")
 
-               # Start new inference worker with video_input=True
-                worker = threading.Thread(
-                    target=inference_worker,
-                    kwargs={
-                        "video_input": True,
-                        "model": model_video,
-                        "processor": processor_video,
-                        "vision_model": None,
-                        "text_decoder": None
-                    },
-                    daemon=True
-                )
-                worker.start()
-    
-                # Clear frames, captions, processing times to avoid mix-up
+                # Clear queues
                 with global_frame_lock:
                     current_frames.clear()
                 with global_result_lock:
                     captions.clear()
                     processing_times.clear()
-    
+
+                
+                #Load video models in memory
+                model_video, processor_video = load_llava_video_models(model_video_name_video, device_type_video)
+                
+                # Start new inference worker with video_input=True
+                worker = threading.Thread(
+                    target=inference_worker,
+                    kwargs={
+                            "video_input": True,
+                            "model": model_video,
+                            "processor": processor_video,
+                            "vision_model": None,
+                            "text_decoder": None
+                        },
+                    daemon=True
+                )
+                worker.start()
+        
+                    # Clear frames, captions, processing times to avoid mix-up
+                with global_frame_lock:
+                    current_frames.clear()
+                with global_result_lock:
+                    captions.clear()
+                    processing_times.clear()
+        
                 # Set caption so it shows on screen immediately
                 caption = "Switching to video_input mode..."
 
