@@ -2,3 +2,5 @@
 *.xml
 *.bin
 *.pt
+*.yaml
+data/*
