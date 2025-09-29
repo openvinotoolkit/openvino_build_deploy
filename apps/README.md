@@ -18,6 +18,18 @@ The app blurs the background behind a person on a webcam, and it's built using N
 | Platforms                            | Client (CPU, GPU, NPU), Edge (CPU)                                                                   |
 | Owner                                | [@Roszczyk](https://github.com/Roszczyk), [@adrianboguszewski](https://github.com/adrianboguszewski) |
 
+### 🖐️ PalmPilot - Gesture Control
+
+Control your computer with hand gestures using real-time hand detection. Features multiple application modes including presentation control, media playback, gaming, and browser navigation.
+
+[![PalmPilot - Gesture Control Demo](https://img.youtube.com/vi/U29NRoX4sjk/maxresdefault.jpg)](https://www.youtube.com/watch?v=U29NRoX4sjk)
+
+| [PalmPilot - Gesture Control](palm_pilot) |                                                 |
+|--------------------------------------|------------------------------------------------------|
+| Related AI concepts                  | hand detection, gesture recognition, computer vision |
+| Platforms                            | Client (CPU, GPU), Edge (CPU)                        |
+| Owner                                | [@vijaykr338](https://github.com/vijaykr338)         |
+
 ### 🚦 Smart Intersection Traffic Monitoring System
 
 The Smart Intersection Traffic Monitoring System is an advanced AI-powered desktop application built with PySide6 and OpenVINO for real-time traffic monitoring, violation detection, and smart intersection analytics. The system combines computer vision, machine learning, and IoT technologies to provide comprehensive traffic management capabilities with enterprise-grade features.

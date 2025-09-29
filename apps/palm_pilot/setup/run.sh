@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# Enable error handling
+set -e
+
+# Get the current directory where the script is placed
+DEMO_DIR="$(pwd)/openvino_build_deploy/demos/gesture_control_demo"
+
+# Navigate to the Gesture Control Demo directory
+cd "$DEMO_DIR"
+
+# Check if virtual environment exists
+if [ ! -d "venv" ]; then
+    echo "ERROR: Virtual environment not found! Please run ./install.sh first."
+    exit 1
+fi
+
+# Activate virtual environment
+echo "Activating virtual environment..."
+source venv/bin/activate
+
+# Run the PalmPilot Gesture Control Demo
+echo "Running PalmPilot - Gesture Control Demo..."
+python main.py --stream 0
+
+# Final message
+echo ""
+echo "========================================"
+echo "PalmPilot Demo execution completed."
+echo "========================================"
