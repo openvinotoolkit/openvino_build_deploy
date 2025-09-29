@@ -193,6 +193,9 @@ def inference_worker(vision_model, text_decoder, processor):
                 captions.append(caption)
             processing_times.append(elapsed)
 
+            timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+            log.info(f"{timestamp}: {caption} (inference time: {elapsed * 1000:.0f} ms)")
+
 
 def download_summarization_model(model_name: str) -> Path:
     is_openvino_model = model_name.startswith("OpenVINO/")
@@ -217,9 +220,9 @@ def summarize_session(captions_list: list[str], ov_model_path: Path, device: str
 
     pipe = ov_genai.LLMPipeline(ov_model_path, device)
 
-    log.info("============================================================")
-    log.info("Session Summary (OpenVINO GenAI LLMPipeline):")
-    log.info("============================================================")
+    print("============================================================")
+    print("Session Summary (OpenVINO GenAI LLMPipeline):")
+    print("============================================================")
 
     buffer = []
     def streamer(subword: str):
