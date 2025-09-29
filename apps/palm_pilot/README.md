@@ -88,16 +88,9 @@ pip install -r requirements.txt
 
 ## Step 3
 
-### Basic Usage
 To run the application with webcam input:
 ```bash
 python main.py --stream 0
-```
-
-### GUI Mode
-To launch the full GUI interface:
-```bash
-python gui_main.py
 ```
 
 **Using the GUI:**
