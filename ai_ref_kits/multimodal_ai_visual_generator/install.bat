@@ -20,7 +20,7 @@ pip install -r requirements.txt
 echo.
 echo ========================================
 echo All requirements installed for Storyteller.
-echo You can now run the demo 
+echo You can now run the demo:
 echo 1. download_models.bat
 echo 2. run_backend.bat
 echo 3. run_frontend.bat
