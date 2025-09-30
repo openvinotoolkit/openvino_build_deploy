@@ -12,7 +12,8 @@ comtypes==1.4.11
 pywin32==309
 psutil==7.0.0
 requests==2.32.4
-pillow==11.2.1
+pillow==11.3.0
 tqdm==4.67.1
 pyperclip==1.9.0
 qrcode[pil]==8.2
+
