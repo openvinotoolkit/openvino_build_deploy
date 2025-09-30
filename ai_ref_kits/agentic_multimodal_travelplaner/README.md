@@ -96,7 +96,7 @@ Go to  from https://developers.amadeus.com/self-service/apis-docs/guides/develop
 
 Terminal 1  
 ```
-python mcp_tools/tourism_search.py --agent flight_finder
+python mcp_tools/tourism_search.py 
 
 ```
 ## 6. Start Agents
