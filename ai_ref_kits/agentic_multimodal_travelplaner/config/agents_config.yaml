@@ -1,0 +1,175 @@
+# Agents Configuration File
+# Each agent has its own complete configuration
+
+# Travel Router Agent Configuration (Supervisor)
+travel_router:
+  name: "travel_router"
+  description: "Intelligent travel coordinator that provides accurate, realistic travel information by consulting specialized agents"
+  port: 9996
+  environment_port_var: "TRAVEL_ROUTER_PORT"
+  environment_api_base_var: "OPENAI_API_BASE"
+  role: "Travel Coordinator Supervisor"
+  
+  # LLM Configuration for Travel Router
+  llm:
+    model: "openai:OpenVINO/Phi-4-mini-instruct-int4-ov"
+    temperature: 0.1
+    api_key: "unused"
+    api_base: "http://0.0.0.0:8001/v3"
+  
+  # Memory Configuration
+  memory_size: 100
+  
+  # Supervised Agents Configuration
+  supervised_agents:
+    - name: "hotel_finder"
+      url: "http://127.0.0.1:9999"
+      port_env_var: "HOTEL_SEARCHER_PORT"
+    - name: "flight_finder"
+      url: "http://127.0.0.1:9998"
+      port_env_var: "FLIGHT_SEARCHER_PORT"
+    - name: "video_analysis"
+      url: "http://127.0.0.1:9997"
+      port_env_var: "VIDEO_ANALYSIS_PORT"
+  
+  # Tools Configuration (supervisor specific)
+  tools:
+    - name: "ThinkTool"
+      enabled: false  # Disabled to improve response time 
+    - name: "HandoffTool"
+      enabled: true
+      auto_discovered: true  # Dynamically created from supervised agents
+  
+  # Middleware Configuration
+  middleware:
+    trajectory:
+      included_types: ["Tool"]
+      pretty: true
+      tool_prefix: "🔍 "
+
+# Flight Finder Agent Configuration
+flight_finder:
+  name: "flight_finder"
+  description: "Specialized agent for flight search"
+  port: 9998
+  environment_port_var: "FLIGHT_SEARCHER_PORT"
+  environment_api_base_var: "OPENAI_API_BASE_HOTEL_LLM"
+  role: "Flight Search Specialist"
+  
+  # LLM Configuration for Flight Finder
+  llm:
+    model: "openai:OpenVINO/Phi-4-mini-instruct-int4-ov"
+    temperature: 0.1
+    api_key: "unused"
+    api_base: "http://0.0.0.0:8001/v3"
+  
+  # Memory Configuration
+  memory_size: 100
+  
+  # MCP Configuration for multiple MCP servers
+  mcp_config:
+    servers:
+      - name: "flight_search"
+        url: "http://127.0.0.1:8002/sse"
+        description: "Amadeus Flight search"
+        enabled: true
+  
+  # Tools Configuration specify if it would use mcp_tools or beeai api tools
+  tools:
+    mcp_tools: true 
+  
+  # Middleware Configuration
+  middleware:
+    trajectory:
+      included_types: ["Tool"]
+      pretty: true
+      tool_prefix: "🔍 "
+
+    # BeeAI rules requirements, useful to force agent behaviour
+  requirements:
+    - tool_name: "search_flights"
+      force_at_step: 1
+      max_invocations: 2
+    - tool_name: "search_hotels"
+      max_invocations: 0 
+
+# Hotel Finder Agent Configuration
+hotel_finder:
+  name: "hotel_finder"
+  description: "Specialized agent for hotel search with access to tourism search tools"
+  port: 9999
+  environment_port_var: "A2A_SERVER_PORT"
+  environment_api_base_var: "OPENAI_API_BASE"
+  
+  # LLM Configuration for Hotel Finder
+  llm:
+    model: "openai:OpenVINO/Phi-4-mini-instruct-int4-ov"
+    temperature: 0.1
+    api_key: "unused"
+    api_base: "http://0.0.0.0:8001/v3"
+  
+  # MCP Configuration for multiple MCP servers
+  mcp_config:
+    servers:
+      - name: "tourism_search"
+        url: "http://127.0.0.1:8002/sse"
+        description: "Amadeus hotel search"
+        enabled: true
+  
+  # Memory Configuration
+  memory_size: 100
+  
+  # Tools Configuration
+  tools:
+    mcp_tools: true 
+  
+  # BeeAI rules requirements, useful to force agent behaviour
+  requirements:
+    - tool_name: "list_hotels"
+      force_at_step: 1
+      max_invocations: 2
+    - tool_name: "search_hotels"
+      only_after: ["list_hotels"]
+    - tool_name: "search_flights"
+      max_invocations: 0 
+  
+  # Middleware Configuration (For console logging)
+  middleware:
+    trajectory:
+      included_types: ["Tool", "ChatModel"]
+      pretty: true
+      tool_prefix: "🔍 "
+
+# Video Analysis Agent Configuration
+video_analysis:
+  name: "video_analysis"
+  description: "Video analysis agent with 2 core tools: video ingestion and video search using Bridge Tower multimodal AI"
+  port: 9997
+  environment_port_var: "VIDEO_ANALYSIS_PORT"
+  environment_api_base_var: "OPENAI_API_BASE"
+  role: "Video Analysis Specialist"
+  
+  # LLM Configuration for Video Search
+  llm:
+    model: "openai:Qwen3-8B-int4-ov"
+    temperature: 0.3
+    api_key: "unused"
+    api_base: "http://0.0.0.0:8000/v3"
+  
+  # MCP Configuration for video agent
+  mcp_config:
+    url: "http://127.0.0.1:3000/sse"
+  
+  # Memory Configuration
+  memory_size: 100
+  
+  # Tools Configuration (MCP-based)
+  tools:
+    type: "mcp_tools"
+    source: "mcp_server"
+  
+  # Middleware Configuration
+  middleware:
+    trajectory:
+      enabled: false  # Video agent doesn't use trajectory middleware
+

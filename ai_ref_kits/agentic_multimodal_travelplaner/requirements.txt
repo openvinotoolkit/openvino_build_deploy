@@ -1,0 +1,64 @@
+# Core dependencies
+duckduckgo-search
+llama_index
+ipywidgets
+
+# LlamaIndex components
+llama-index-core 
+llama-index-embeddings-openvino>=0.4.1
+llama-index-multi-modal-llms-openvino
+llama-index-readers-file
+llama-index-vector-stores-qdrant
+llama-index-tools-mcp
+
+# OpenVINO and AI
+transformers>=4.45
+openvino_genai>=2025.0
+huggingface_hub
+open_clip_torch
+
+# Media processing
+moviepy>=2.1.1
+librosa
+python-ffmpeg<=1.0.16
+ffmpeg
+opencv-python
+webvtt-py
+
+# Web and UI
+gradio>=4.44.1
+
+# AI frameworks
+langchain
+langgraph
+beeai-framework
+
+# MCP (Model Context Protocol) dependencies
+mcp>=1.14.0
+fastmcp>=2.12.3
+anyio>=4.5
+httpx-sse>=0.4
+httpx>=0.27.1
+jsonschema>=4.20.0
+pydantic-settings>=2.5.2
+pydantic>=2.11.0
+python-multipart>=0.0.9
+sse-starlette>=1.6.1
+starlette>=0.27
+uvicorn>=0.31.1
+
+# MCP additional dependencies (from fastmcp)
+authlib>=1.5.2
+cyclopts>=3.0.0
+exceptiongroup>=1.2.2
+openapi-core>=0.19.5
+openapi-pydantic>=0.5.1
+pyperclip>=1.9.0
+python-dotenv>=1.1.0
+rich>=13.9.4
+
+# HTTP client for external MCP servers
+httpx>=0.27.1
+
+# YAML configuration support
+PyYAML>=6.0
