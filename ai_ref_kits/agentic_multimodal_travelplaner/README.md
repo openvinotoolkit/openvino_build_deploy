@@ -37,7 +37,6 @@ This kit uses the following technology stack:
 
 Check out our [AI Reference Kits repository](https://github.com/openvinotoolkit/openvino_build_deploy) for other kits.
 
-![visual-gen-studio](https://github.com/user-attachments/assets/43d6e473-19c1-4047-aee1-07a484cd0dc1)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
