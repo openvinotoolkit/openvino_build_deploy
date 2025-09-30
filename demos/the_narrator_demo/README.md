@@ -2,6 +2,8 @@
 
 This demo generates natural language captions for images or video streams using the BLIP (Bootstrapped Language Image Pretraining) model, accelerated by OpenVINO™. The application can process live webcam feeds or video files, displaying the generated captions in real time. You can switch between different devices (CPU, GPU, etc.) on the fly to compare performance.
 
+In addition, this demo now supports LLM-powered summarization: when you press ESC, the app will instantly close the video window and stream a concise summary of the entire session into your terminal, using OpenVINO GenAI for the LLM inferencing.
+
 ![the_narrator_demo](https://github.com/user-attachments/assets/8fe98025-34ac-44a7-ad46-6f71327c9cdc)
 
 ## Quick Launch using Setup Scripts
@@ -89,10 +91,16 @@ python main.py --stream input.mp4
 You can select which BLIP model to use (base or large):
 
 ```shell
-python main.py --stream 0 --model_name Salesforce/blip-image-captioning-large
+python main.py --stream 0 --captioning_model Salesforce/blip-image-captioning-large
 ```
 
 The first run will automatically download and convert the required BLIP model to OpenVINO IR format. The converted models will be stored in the `model` directory for future runs.
+
+You can also select which LLM, pre-optimized in OpenVINO IR format, to be used for text summarization, from the OpenVINO model zone on Hugging Face https://huggingface.co/collections/OpenVINO/llm-6687aaa2abca3bbcec71a9bd:
+
+```shell
+python main.py --stream 0 --summary_model OpenVINO/qwen2.5-1.5b-instruct-int4-ov
+```
 
 To see all available options:
 
@@ -116,9 +124,5 @@ python main.py --help
 - The `model` directory will contain the OpenVINO IR models after conversion.
 - For best performance, use a machine with an Intel CPU, GPU or NPU.
 
----
-
 [//]: # (telemetry pixel)
 <img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca&project=demos/the_narrator_demo&file=README.md" />
-
----

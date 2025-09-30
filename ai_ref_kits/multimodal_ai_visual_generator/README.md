@@ -119,9 +119,6 @@ pip install -r requirements.txt
 ```
 
 ---
-
-## Convert and Optimize the Model
-
 ### Accessing Gated Models with Hugging Face
 
 
@@ -141,6 +138,20 @@ Now, you're ready to download and optimize the models required to run the applic
 **Note**: Some demonstrated models can require at least 32GB RAM for conversion and running.
 
 Use the provided scripts to export and optimize the models. When you run them, by default, the scripts will prompt you with a numbered list of supported models to choose from interactively.
+
+
+## Download Pre-optimized Models (Option 1)
+
+Download the pre-optimized LLMs model
+```shell
+huggingface-cli download OpenVINO/Qwen2.5-7B-Instruct-int4-ov --local-dir models/Qwen2.5-7B-Instruct-INT4
+```
+Download the pre-optimized image generation model
+```shell
+huggingface-cli download OpenVINO/FLUX.1-schnell-int4-ov --local-dir models/FLUX.1-schnell-INT4
+```
+
+## Convert and Optimize the Model (Option 2)
 
 ### Convert the Chat LLM
 
@@ -186,8 +197,17 @@ source venv/bin/activate         # On Windows: venv\Scripts\activate
 # Run with default values
 uvicorn main:app --host 0.0.0.0 --port 8000
 
-# Or run with custom model configuration
-IMAGE_MODEL_TYPE="your-image-model" LLM_MODEL_TYPE="your-llm-model" MODEL_PRECISION="int4" uvicorn main:app --host 0.0.0.0 --port 8000
+# Or run with custom model configuration. e.g., using the pre-optimized models above 
+IMAGE_MODEL_TYPE="FLUX.1-schnell" LLM_MODEL_TYPE="Qwen2.5-7B-Instruct" MODEL_PRECISION="INT4" uvicorn main:app --host 0.0.0.0 --port 8000
+```
+
+On Windows powershell:
+
+```pwsh
+$env:IMAGE_MODEL_TYPE="FLUX.1-schnell" 
+$env:LLM_MODEL_TYPE="Qwen2.5-7B-Instruct" 
+$env:MODEL_PRECISION="INT4" 
+uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
 If no environment variables are set, the application will use the default values.
@@ -232,3 +252,4 @@ You can evaluate performance benchmarks for models like Qwen2.5-7B and FLUX.1-sc
 <p align="right"><a href="#top">Back to top ⬆️</a></p>
 
 <img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca?project=ai_ref_kits/multimodal_ai_visual_generator?file=README.md" />
+

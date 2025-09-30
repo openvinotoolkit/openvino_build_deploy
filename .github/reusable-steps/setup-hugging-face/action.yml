@@ -1,0 +1,30 @@
+name: Hugging Face setup
+
+inputs:
+  hf_token:
+    description: 'Hugging Face token'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Hugging Face CLI
+      shell: bash
+      run: |
+        uv pip install huggingface_hub hf_transfer hf_xet --system
+    - name: Login to HF
+      shell: bash
+      env:
+        HF_TOKEN: ${{ inputs.hf_token }}
+      run: |
+        if [ -n "$HF_TOKEN" ]; then  
+          export PYTHONIOENCODING=utf-8
+          huggingface-cli login --token "$HF_TOKEN"
+        else
+          echo "HF_TOKEN not set, continuing without login."
+        fi
+    - name: Enable fast Hugging Face downloads
+      shell: bash
+      run: |
+        echo "HF_HUB_ENABLE_HF_TRANSFER=1" >> $GITHUB_ENV
+        echo "HF_HUB_DOWNLOAD_TIMEOUT=600" >> $GITHUB_ENV

@@ -275,7 +275,7 @@ def stream_object_detection(video):
 
                 labels = [
                     f'#{tracker_id} {label_map[class_id]} {confidence:0.2f}'
-                    for _, _, confidence, class_id, tracker_id
+                    for _, _, confidence, class_id, tracker_id, _
                     in detections
                 ]
 
@@ -285,10 +285,10 @@ def stream_object_detection(video):
                 frame = zone_annotator.annotate(scene=frame)
 
                 objects = [f'#{tracker_id} {label_map[class_id]}' for _,
-                           _, confidence, class_id, tracker_id in detections]
+                           _, confidence, class_id, tracker_id, _ in detections]
 
                 # Accumlate detections by classid
-                for _, _, confidence, class_id, tracker_id in detections:
+                for _, _, confidence, class_id, tracker_id, _ in detections:
                     if label_map[class_id] in item_list:
                         item_list[label_map[class_id]] += 1
                     else:
@@ -423,7 +423,7 @@ def ascd_init():
     header = "# Detect and Track Objects with OpenVINO™ for Self-Checkout\n"
     header += "### [Go to Jupyter Notebook](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/ai_ref_kits/automated_self_checkout/self-checkout-recipe.ipynb)"
     footer = "**<center>License: [Apache 2.0](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/LICENSE.txt) | Learn more about [OpenVINO](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) | Explore [OpenVINO’s documentation](https://docs.openvino.ai/2023.0/home.html)</center>**"
-    with gr.Blocks(theme=gr.themes.Soft()) as demo:
+    with gr.Blocks(theme=gr.themes.Base()) as demo:
         with gr.Row():
             gr.Markdown(header)
         with gr.Row(equal_height=True):

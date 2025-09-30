@@ -1,0 +1,9 @@
+data/friends.mp4 filter=lfs diff=lfs merge=lfs -text
+data/input_vid.mp4 filter=lfs diff=lfs merge=lfs -text
+whisper_tokenizers/openvino_tokenizer.bin filter=lfs diff=lfs merge=lfs -text
+whisper_tokenizers/openvino_detokenizer.bin filter=lfs diff=lfs merge=lfs -text
+# Additional patterns for large files that may be added later
+*.mp4 filter=lfs diff=lfs merge=lfs -text
+*.mp3 filter=lfs diff=lfs merge=lfs -text
+*.bin filter=lfs diff=lfs merge=lfs -text
+

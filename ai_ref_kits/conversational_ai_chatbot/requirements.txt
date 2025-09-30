@@ -1,25 +1,26 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 
 openvino==2025.2
-optimum-intel==1.24.0
+optimum-intel==1.25.1
 nncf==2.17.0
 
-llama-index==0.12.50
-llama-index-llms-openvino==0.4.0
-llama-index-embeddings-openvino==0.5.2
-llama-index-postprocessor-openvino-rerank==0.4.1
+llama-index==0.13.0
+llama-index-llms-openvino==0.5.0
+llama-index-embeddings-openvino==0.6.0
+llama-index-postprocessor-openvino-rerank==0.5.0
 langchain-text-splitters==0.3.4
 
 onnx==1.18.0
 onnxruntime==1.20.1
-torch==2.7.1
-torchaudio==2.7.1
+torch==2.8.0
+torchaudio==2.8.0
 numpy==2.2.6
 
-transformers==4.50.3
+transformers==4.53.3
+datasets==4.0.0
 librosa==0.10.2
 pyyaml==6.0.1
-pymupdf==1.24.10
+pymupdf==1.26.3
 
 gradio==5.35.0
 

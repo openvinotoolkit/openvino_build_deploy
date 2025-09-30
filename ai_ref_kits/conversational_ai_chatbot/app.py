@@ -383,7 +383,7 @@ def create_UI(initial_message: str, example_pdf_path: Path) -> gr.Blocks:
     Returns:
         Demo UI
     """
-    with gr.Blocks(title="Adrishuo - the Conversational AI Chatbot") as demo:
+    with gr.Blocks(theme="base", title="Adrishuo - the Conversational AI Chatbot") as demo:
         gr.Markdown(chatbot_config["instructions"])
         with gr.Row():
             file_uploader_ui = gr.File(label="Hotel guide", file_types=[".pdf", ".txt"], value=str(example_pdf_path), scale=1)
@@ -462,7 +462,7 @@ def run(asr_model_dir: Path, chat_model_dir: Path, embedding_model_dir: Path, re
     # create user interface
     demo = create_UI(initial_message, example_pdf_path)
 
-    print("Demo is ready!")
+    print("Demo is ready!", flush=True) # Required for the CI to detect readiness
     # launch demo
     demo.queue().launch(share=public_interface)
 

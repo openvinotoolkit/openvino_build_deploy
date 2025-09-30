@@ -14,7 +14,7 @@ python -m pip install --upgrade pip
 
 :: Install dependencies
 echo Installing dependencies...
-pip install openvino==2025.1.0 ultralytics==8.3.120
+pip install openvino==2025.2.0 ultralytics==8.3.169
 
 :: Final success message
 echo.

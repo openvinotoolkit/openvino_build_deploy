@@ -22,7 +22,6 @@ jobs:
     outputs:
       gradio: ${{ steps.categorize-subprojects.outputs.gradio }}
       webcam: ${{ steps.categorize-subprojects.outputs.webcam }}
-      js: ${{ steps.categorize-subprojects.outputs.js }}
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -47,7 +46,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025]
         python: ["3.10", "3.13"]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.gradio) }}
     steps:
@@ -61,14 +60,9 @@ jobs:
         with:
           python: ${{ matrix.python }}
           project: ${{ matrix.subproject }}
-      - name: Login to HF
-        shell: bash
-        run: |
-          if [ -n "${{ secrets.HF_TOKEN }}" ]; then
-            huggingface-cli login --token ${{ secrets.HF_TOKEN }}
-          else
-            echo "HF_TOKEN not set, continuing without login."
-          fi
+      - uses: ./.github/reusable-steps/setup-hugging-face
+        with:
+          hf_token: ${{ secrets.HF_TOKEN }}
       - uses: ./.github/reusable-steps/gradio-action
         with:
           script: main.py
@@ -81,7 +75,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025]
         python: ["3.10", "3.13"]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.webcam) }}
     steps:
@@ -91,35 +85,14 @@ jobs:
         with:
           python: ${{ matrix.python }}
           project: ${{ matrix.subproject }}
-      - uses: ./.github/reusable-steps/timeouted-action
-        name: Run Webcam Demo
-        with:
-          command: python main.py --stream sample_video.mp4
-          project: ${{ matrix.subproject }}
-
-  js:
-    needs: find-subprojects
-    if: ${{ needs.find-subprojects.outputs.js != '[]' }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        subproject: ${{ fromJson(needs.find-subprojects.outputs.js) }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/reusable-steps/setup-os
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - name: Install dependencies
+      - name: Run Webcam Demo
+        shell: bash
+        timeout-minutes: 30
         run: |
           cd ${{ matrix.subproject }}
-          npm install
-      - uses: ./.github/reusable-steps/timeouted-action
-        name: Run JS Project
-        with:
-          command: npm start
-          project: ${{ matrix.subproject }}
-          timeout: 1m
+          # linux requires a virtual display
+          if [ "${{ runner.os }}" == "Linux" ]; then
+            xvfb-run python main.py --stream sample_video.mp4
+          else 
+            python main.py --stream sample_video.mp4 
+          fi
