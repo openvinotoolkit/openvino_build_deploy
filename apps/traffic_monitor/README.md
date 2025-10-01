@@ -675,24 +675,4 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 ---
 
-### Project Goals
-
-This project demonstrates the integration of:
-
-- **Modern AI/ML**: Latest YOLO11 models with OpenVINO optimization
-- **Real-time Processing**: High-performance video analytics with minimal latency
-- **Enterprise Integration**: Professional-grade monitoring and data streaming
-- **User Experience**: Intuitive desktop interface with advanced features
-- **Scalability**: Modular architecture supporting various deployment scenarios
-
-### Future Enhancements
-
-- **Cloud Integration**: Azure/AWS deployment capabilities
-- **Mobile Support**: Mobile application for remote monitoring
-- **Advanced Analytics**: Machine learning-based traffic prediction
-- **Multi-Site Management**: Centralized management of multiple intersections
-- **Enhanced VLM**: Advanced scene understanding and automated reporting
-
----
-
 _Built with ❤️ for intelligent traffic management and smart city applications._
