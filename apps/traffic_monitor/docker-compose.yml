@@ -1,31 +1,22 @@
 version: "3.8"
 services:
-  detector:
+  qt_app:
     build:
       context: .
       dockerfile: Dockerfile
-    image: traffic-detector:latest
+    image: qt-app-x11:latest
     environment:
-      - MODEL_PATH=/app/yolo11x.xml
+      - DISPLAY=:99
     volumes:
-      - ./models:/app/models
-    command: ["python", "detection_openvino.py"]
-    deploy:
-      resources:
-        limits:
-          memory: 2g
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: traffic-app:latest
-    depends_on:
-      - detector
-    environment:
-      - DETECTOR_API=http://detector:8000
-    command: ["python", "qt_app_pyside/main.py"]
+      - ./logs:/app/logs
     ports:
       - "8501:8501"
+    command: ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
+    healthcheck:
+      test: ["CMD-SHELL", "ps aux | grep -q run_app.py"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     deploy:
       resources:
         limits:

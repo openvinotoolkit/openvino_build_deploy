@@ -1,6 +1,7 @@
+# Dockerfile for qt_app_pyside1 (optimized)
 FROM python:3.10-slim
 
-# Install system dependencies for OpenCV, PySide6, OpenVINO, etc.
+# Install system dependencies for OpenCV, PySide6, OpenVINO, X11 GUI, and supervisor
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     libgl1 \
@@ -16,22 +17,22 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Copy requirements
-COPY qt_app_pyside/requirements.txt ./requirements.txt
+# Copy requirements and install dependencies first for caching
+COPY requirements_enhanced.txt ./requirements_enhanced.txt
+RUN pip install --no-cache-dir -r requirements_enhanced.txt
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy all source code and models
+COPY . .
 
-# Copy only the files and folders actually used by the main app
-COPY qt_app_pyside/ ./qt_app_pyside/
-COPY main.py ./main.py
-COPY config.json ./config.json
-COPY detection_openvino.py ./detection_openvino.py
-COPY utils.py ./utils.py
-COPY yolo11n.pt ./yolo11n.pt
-COPY yolo11x.bin ./yolo11x.bin
-COPY yolo11x.pt ./yolo11x.pt
-COPY yolo11x.xml ./yolo11x.xml
+# Copy supervisor config
+COPY supervisord.conf /etc/supervisord.conf
 
-# Set the entrypoint to the main app
-CMD ["python", "qt_app_pyside/main.py"]
+# Make start.sh executable
+RUN chmod +x start.sh
+
+# Expose display for X11 and logs
+ENV DISPLAY=:99
+VOLUME ["/app/logs"]
+
+# Use supervisor to run Xvfb and app together, with logging
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
