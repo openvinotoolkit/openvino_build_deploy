@@ -1,22 +1,24 @@
 # Smart Intersection Traffic Monitoring System
 
 <p align="center">
-<img src="qt_app_pyside1/resources/splash.png" alt="App Logo" width="800"/>
+<img src="app/resources/splash.png" alt="App Logo" width="800"/>
 </p>
 <p align="center">
-  <img src="qt_app_pyside1/resources/gsoc.png" alt="GSoC Logo" width="400" />
-  <img src="qt_app_pyside1/resources/openvino.png" alt="OpenVINO Logo" width="400" />
+  <img src="app/resources/gsoc.png" alt="GSoC Logo" width="400" />
+  <img src="app/resources/openvino.png" alt="OpenVINO Logo" width="400" />
 </p>
 
 ## Quick Access
 
 - [Project Overview](#project-overview)
-- [Tech Stack](#tech-stack)
+- [Architecture](#architecture)
 - [Installation & Setup](#installation--setup)
 - [Configuration](#configuration)
 - [Usage Guide](#usage-guide)
 - [Building & Deployment](#building--deployment)
 - [Key Features](#key-features)
+- [API Reference](#api-reference)
+- [Services Integration](#services-integration)
 - [Troubleshooting](#troubleshooting)
 - [License](#license)
 - [Contributors](#contributors)
@@ -25,87 +27,79 @@
 ## Project Overview
 
 <p align="center">
-  <img src="qt_app_pyside1/resources/dashboard.png" alt="Dashboard Screenshot" width="1000"/>
+  <img src="app/resources/dashboard.png" alt="Dashboard Screenshot" width="1000"/>
 </p>
 
 <p align="center">
-  <img src="qt_app_pyside1/resources/vehicle_monitor.png" alt="Vehicle Monitoring" width="400"/>
-  <img src="qt_app_pyside1/resources/violation_monitor.png" alt="Violation Monitoring" width="400"/>
+  <img src="app/resources/vehicle_monitor.png" alt="Vehicle Monitoring" width="400"/>
+  <img src="app/resources/violation_monitor.png" alt="Violation Monitoring" width="400"/>
 </p>
 
 <p align="center">
-  <img src="qt_app_pyside1/resources/traffic_light.png" alt="Traffic Light Detection" width="400"/>
+  <img src="app/resources/traffic_light.png" alt="Traffic Light Detection" width="400"/>
 </p>
 
 ---
 
-The **Smart Intersection Traffic Monitoring System** is an advanced AI-powered desktop application built with PySide6 and OpenVINO for real-time traffic monitoring, violation detection, and smart intersection analytics. The system combines computer vision, machine learning, and IoT technologies to provide comprehensive traffic management capabilities with enterprise-grade features.
+The **Smart Intersection Traffic Monitoring System** is an advanced AI-powered desktop application built with PySide6 and OpenVINO for comprehensive traffic monitoring, violation detection, and smart intersection analytics. The system features a modern tabbed interface with real-time analytics, VLM (Vision-Language Model) insights, and enterprise-grade IoT integration capabilities.
 
 ### Features
 
 - **Real-time Object Detection**: YOLO11 (n/x) models with OpenVINO optimization for vehicles, pedestrians, and traffic lights
-- **Intelligent Violation Detection**: Red light violations, crosswalk violations, speed violations, and wrong-way detection
+- **Advanced Violation Detection**: Red light violations, crosswalk violations, wrong way violation
 - **Multi-Device Support**: CPU, GPU, and AUTO device selection with Intel Arc GPU optimization
 - **Vision-Language Model (VLM)**: OpenVINO GenAI integration for scene understanding and natural language analysis
-- **Real-time Analytics**: Live dashboards with vehicle tracking, traffic patterns, and performance metrics
+- **Modern UI Interface**: Tabbed interface with Analytics, Violations, Export, Smart Intersection, and VLM Insights tabs
 - **IoT Integration**: MQTT + InfluxDB + Grafana for data streaming and visualization
 - **Multi-Source Input**: Webcam, RTSP streams, video files, and drag-and-drop support
-- **Performance Monitoring**: FPS, latency, CPU/GPU utilization tracking with benchmark export
-- **Modern UI**: Dark/light themes, responsive design, and intuitive tabbed interface
+- **Performance Monitoring**: Real-time FPS, latency, CPU/GPU utilization tracking with overlay display
+- **Enhanced Tracking**: ByteTrack, DeepSORT algorithms with enhanced object tracking capabilities
+- **Data Export**: CSV/JSON export with comprehensive analytics and reporting
 
 ---
+
+## Architecture
 
 ## Tech Stack
 
 ### Core Technologies
 
-- **Frontend**: PySide6 (Qt6) - Modern desktop GUI framework
+- **Frontend**: PySide6 (Qt6) - Modern desktop GUI framework with advanced widgets
 - **AI/ML Engine**: OpenVINO 2025.2+ - Intel's AI inference optimization toolkit
 - **Computer Vision**: OpenCV 4.11+ - Image and video processing
-- **Object Detection**: YOLO11 (Ultralytics) - State-of-the-art detection models
-- **Object Tracking**: ByteTrack, DeepSORT - Multi-object tracking algorithms
-- **VLM Integration**: OpenVINO GenAI - Vision-Language Model pipeline
+- **Object Detection**: YOLO11 (Ultralytics) - State-of-the-art detection models (yolo11n, yolo11x)
+- **Object Tracking**: ByteTrack, DeepSORT - Multi-object tracking algorithms with enhanced features
+- **VLM Integration**: OpenVINO GenAI - Vision-Language Model pipeline for scene understanding
 
 ### Data & Analytics
 
-- **Time-Series DB**: InfluxDB - Real-time metrics storage
-- **Message Broker**: MQTT (Mosquitto) - IoT data streaming
-- **Visualization**: Grafana - Real-time dashboards and alerts
-- **Data Export**: Pandas, CSV/JSON - Analytics and reporting
-
-### Performance & Deployment
-
-- **Packaging**: PyInstaller - Cross-platform executable generation
-- **Containerization**: Docker + Docker Compose - Service orchestration
-- **Monitoring**: Performance overlay, benchmark logging
-- **Configuration**: JSON-based config management with live updates
-
----
+- **Time-Series DB**: InfluxDB - Real-time metrics storage and analytics
+- **Message Broker**: MQTT (Mosquitto) - IoT data streaming and communication
+- **Visualization**: Grafana - Real-time dashboards, alerts, and analytics
+- **Data Export**: Pandas, CSV/JSON - Comprehensive analytics and reporting
+- **Performance Metrics**: Custom performance overlay with real-time monitoring
 
 ## Installation & Setup
-
-### Prerequisites
 
 #### System Requirements
 
 - **OS**: Windows 10+, macOS 10.14+, or Ubuntu 18.04+
 - **Python**: 3.8 - 3.11 (recommended: 3.11)
 - **Memory**: Minimum 8GB RAM (16GB recommended for VLM)
-- **GPU**: Intel Arc,or AMD GPU (optional but recommended)
+- **GPU**: Intel Arc
 - **Storage**: 5GB free space for models and dependencies
 
 #### Hardware Acceleration (Optional)
 
 - **Intel**: Intel Arc GPU, or Intel integrated graphics
-- **AMD**: ROCm-compatible GPU
 
 ### Quick Installation
 
 #### 1. Clone and Setup Environment
 
 ```bash
-# Clone the repository
-cd qt_app_pyside1
+# Navigate to the application directory
+cd apps/traffic_monitor/app
 
 # Create virtual environment
 python -m venv .venv
@@ -117,74 +111,78 @@ source .venv/bin/activate  # Linux/macOS
 pip install -r requirements.txt
 ```
 
-#### 2. Download AI Models
+#### 2. Setup Services (Optional)
 
 ```bash
-# YOLOv11 models will be downloaded automatically on first run
-# Or manually download:
-# - Place yolo11n.xml/bin in openvino_models/
-# - Place yolo11x.xml/bin in parent directory
+# Navigate to services directory
+cd services
 
-# VLM models (optional, for advanced features)
-python vlm_backend/model_downloader.py
-```
+# Start backend services using Docker
+docker-compose -f docker/docker-compose.yml up -d
 
-#### 3. Configure Services (Optional)
+# Or use provided scripts
+cd scripts
+./start_services.bat  # Windows
+./start_services.sh   # Linux/macOS
 
-```bash
-# Start backend services
-docker-compose up -d
-
-# Or manually configure:
+# Service endpoints:
 # - MQTT: localhost:1883
 # - InfluxDB: localhost:8086
 # - Grafana: localhost:3000
 ```
 
+#### 3. Setup VLM Backend (Optional)
+
+```bash
+# Navigate to VLM backend
+cd vlm_backend
+
+# Download VLM models
+python model_downloader.py
+
+# Start VLM service
+python app.py
+# VLM service will be available at localhost:5000
+```
+
 #### 4. Run Application
 
 ```bash
+# Navigate back to app directory
+cd ..
+
 # Standard mode
 python main.py
 
-# Enhanced mode with advanced features
+# Enhanced mode with additional features
 python run_app.py
 
-# Debug mode
+# Debug mode (shows detailed logging)
 python main.py --debug
 ```
 
 ---
 
-## Configuration
+### Service Configuration
 
-### Core Configuration (`config.json`)
+#### MQTT Configuration (`services/mqtt/mosquitto.conf`)
 
-```json
-{
-  "detection": {
-    "confidence_threshold": 0.5,
-    "iou_threshold": 0.45,
-    "model": "yolo11n",
-    "device": "GPU",
-    "enable_tracking": true
-  },
-  "violations": {
-    "red_light_grace_period": 2.0,
-    "enable_red_light": true,
-    "enable_crosswalk": true,
-    "enable_speed": true
-  },
-  "display": {
-    "show_confidence": true,
-    "show_labels": true,
-    "max_display_width": 1280
-  },
-  "performance": {
-    "max_history_frames": 1000,
-    "cleanup_interval": 3600
-  }
-}
+```
+port 1883
+allow_anonymous true
+persistence true
+persistence_location /data/
+log_dest file /data/mosquitto.log
+```
+
+#### InfluxDB Configuration (`services/influxdb/config.yml`)
+
+```yaml
+reporting-disabled: false
+bind-address: 127.0.0.1:8088
+[http]
+  enabled: true
+  bind-address: ":8086"
 ```
 
 ### Environment Variables
@@ -199,63 +197,118 @@ export MQTT_BROKER="localhost:1883"
 # Optional: Device preferences
 export OPENVINO_DEVICE="GPU"
 export OPENVINO_PRECISION="FP16"
+
+# VLM Service configuration
+export VLM_SERVICE_URL="http://localhost:5000"
+export VLM_MODEL_NAME="phi-3-vision-128k-instruct"
 ```
 
 ### Device Configuration
 
-The application automatically detects available devices:
+The application automatically detects available OpenVINO devices:
 
 - **CPU**: Always available, good for compatibility
-- **GPU**: Intel Arc, NVIDIA, AMD (recommended for performance)
+- **GPU**: Intel Arc, or any other.
 - **AUTO**: OpenVINO automatically selects optimal device
+
+#### Supported Models
+
+- **yolo11n**: Fast inference, lower accuracy (recommended for real-time)
+- **yolo11x**: High accuracy, slower inference (recommended for precision)
 
 ---
 
 ## Usage Guide
 
-### 1. Live Video Monitoring
+### 1. Application Interface
 
-1. **Launch Application**: Run `python main.py`
+The application features a modern tabbed interface with the following tabs:
+
+#### **Live Detection Tab**
+
+- Real-time video processing and object detection
+- Configurable device selection (CPU/GPU/AUTO)
+- Model selection (yolo11n/yolo11x)
+- Performance overlay with FPS and resource usage
+- Interactive detection settings
+
+#### **Analytics Tab**
+
+- Real-time traffic analytics and statistics
+- Vehicle count and classification metrics
+- Traffic flow analysis and patterns
+- Historical data visualization
+- Performance graphs and charts
+
+#### **Violations Tab**
+
+- Real-time violation detection and alerts
+- Red light violation monitoring
+- Crosswalk safety violations
+- Wrong Way Violation
+
+#### **Export Tab**
+
+- Data export functionality (CSV/JSON)
+- Analytics report generation
+- Detection data with timestamps
+- Performance metrics export
+- Violation reports with evidence
+
+#### **Smart Intersection Tab**
+
+- Multi-camera intersection analytics
+- Cross-camera object tracking
+- Scene-based analytics and ROI definition
+- 3D spatial understanding
+- Traffic pattern analysis
+
+#### **VLM Insights Tab**
+
+- Vision-Language Model analysis
+- Natural language scene descriptions
+- Interactive querying of traffic scenes
+- AI-generated incident reports
+- Scene understanding capabilities
+
+### 2. Live Video Monitoring
+
+1. **Launch Application**: Run `python main.py` or `python run_app.py`
 2. **Select Input Source**:
    - **Webcam**: Select camera index (0, 1, 2...)
    - **RTSP Stream**: Enter stream URL (e.g., `rtsp://camera.ip/stream`)
    - **Video File**: Drag & drop or browse for video files
 3. **Configure Detection**:
    - Choose device (CPU/GPU/AUTO)
-   - Select model (YOLOv11n for speed, YOLOv11x for accuracy)
+   - Select model (yolo11n for speed, yolo11x for accuracy)
    - Adjust confidence and IoU thresholds
-4. **Enable Features**:
-   - Red light violation detection
-   - Crosswalk monitoring
-   - Vehicle tracking
-   - Performance overlay
+   - Enable/disable OCR and tracking features
+4. **Monitor Violations**:
+   - Configure violation types in settings
+   - Set grace periods and tolerances
+   - Monitor real-time alerts and notifications
 
-### 2. Analytics & Reporting
+### 3. Analytics & Reporting
 
-- **Analytics Tab**: View real-time statistics, charts, and trends
-- **Violations Tab**: Review detected violations with evidence
-- **Performance Tab**: Monitor system performance and benchmarks
-- **Smart Intersection**: Multi-camera intersection analytics
-- **VLM Insights**: Natural language scene analysis
+- **Real-time Metrics**: View live statistics on vehicle counts, types, and speeds
+- **Violation Monitoring**: Track violations with timestamps and evidence
+- **Performance Analysis**: Monitor system performance and resource usage
+- **Data Export**: Export detection data, analytics, and violation reports
+- **Trend Analysis**: Analyze traffic patterns over time
 
-### 3. Data Export & Integration
+### 4. VLM Integration
 
-- **CSV/JSON Export**: Export detection data and analytics
-- **MQTT Streaming**: Real-time data to external systems
-- **InfluxDB Storage**: Time-series data for long-term analysis
-- **Grafana Dashboards**: Professional visualization and alerts
+- **Scene Analysis**: Get natural language descriptions of traffic scenes
+- **Interactive Queries**: Ask questions about current traffic situations
+- **Incident Reports**: Generate detailed AI-powered incident reports
+- **Safety Insights**: Receive AI-generated safety recommendations
 
-### 4. Performance Benchmarking
+### 5. Smart Intersection Features
 
-```bash
-# Run benchmark across devices/models
-python benchmark_logger.py
-
-# Generate performance reports
-python plot_benchmarks.py
-
-# View results in benchmark_graphs/
-```
+- **Multi-Camera Setup**: Configure multiple camera feeds for intersection monitoring
+- **Cross-Camera Tracking**: Track objects across multiple camera views
+- **ROI Analytics**: Define regions of interest for specific analysis
+- **3D Scene Understanding**: Analyze traffic in three-dimensional space
 
 ---
 
@@ -263,33 +316,75 @@ python plot_benchmarks.py
 
 ### Cross-Platform Executable
 
-```bash
-# Build for current platform
-python build_crossplatform.py
+The application includes PyInstaller specifications for building executables:
 
-# Outputs:
-# - dist/TrafficMonitor/         (Release version)
-# - dist/TrafficMonitorDebug/    (Debug version)
-# - install_trafficmonitor_*.sh  (Installer scripts)
+```bash
+# Build using PyInstaller
+pyinstaller main.spec
+
+# Or build debug version
+pyinstaller main.spec --debug
+
+# Output will be in dist/ directory
 ```
 
 ### Docker Deployment
 
 ```bash
-# Build and run containerized version
-docker-compose up --build
+# Build and run containerized services
+cd services/docker
+docker-compose up --build -d
+
+# Individual service deployment
+docker-compose up -d mqtt influxdb grafana
 
 # Service endpoints:
-# - App: http://localhost:8501
-# - Grafana: http://localhost:3000
+# - Grafana: http://localhost:3000 (admin/admin)
 # - InfluxDB: http://localhost:8086
+# - MQTT: localhost:1883
 ```
 
-### Service Installation
+### VLM Backend Deployment
 
 ```bash
-# Windows
-install_trafficmonitor_windows.bat
+# Build VLM backend container
+cd vlm_backend
+docker build -t traffic-vlm-backend .
+
+# Run VLM service
+docker run -p 5000:5000 traffic-vlm-backend
+```
+
+### Service Management
+
+```bash
+# Windows service scripts
+cd services/scripts
+start_services.bat    # Start all services
+stop_services.bat     # Stop all services
+
+# Linux/macOS service scripts
+./start_services.sh   # Start all services
+./stop_services.sh    # Stop all services
+
+# Individual service management
+supervisord -c supervisord.conf  # Start with supervisor
+```
+
+### Smart Intersection Deployment
+
+```bash
+# Navigate to smart intersection module
+cd smart-intersection/smart-intersection
+
+# Deploy with Docker Compose
+docker-compose up -d
+
+# Deploy with Helm (Kubernetes)
+helm install smart-intersection ./chart
+
+# Initialize services
+./init.sh
 ```
 
 ---
@@ -298,54 +393,133 @@ install_trafficmonitor_windows.bat
 
 ### 1. AI-Powered Detection
 
-- **YOLO11 Models**: Latest Ultralytics models optimized for traffic scenarios
+- **YOLO11 Models**: Latest Ultralytics models (yolo11n, yolo11x) optimized for traffic scenarios
 - **OpenVINO Acceleration**: Intel hardware optimization for maximum performance
-- **Multi-Class Detection**: Vehicles, pedestrians, cyclists, traffic lights
-- **Real-time Tracking**: ByteTrack algorithm for persistent object tracking
+- **Multi-Class Detection**: Vehicles, pedestrians, cyclists, traffic lights, and license plates
+- **Real-time Tracking**: ByteTrack and DeepSORT algorithms for persistent object tracking
+- **OCR Integration**: License plate recognition and text detection
 
-### 2. Smart Violation Detection
+### 2. Advanced Violation Detection
 
-- **Red Light Violations**: Advanced traffic light state detection with grace periods
+- **Red Light Violations**: Traffic light state detection with configurable grace periods
 - **Crosswalk Monitoring**: Pedestrian safety with violation line detection
-- **Speed Analysis**: Vehicle speed estimation and violation alerts
-- **Wrong-Way Detection**: Advanced traffic flow analysis
 
 ### 3. Vision-Language Integration
 
 - **Scene Understanding**: Natural language descriptions of traffic scenes
 - **Incident Analysis**: AI-generated reports for violations and anomalies
-- **Interactive Queries**: Ask questions about traffic situations
-- **Automated Reporting**: Generate detailed incident reports
+- **Interactive Queries**: Ask questions about traffic situations in natural language
+- **Automated Reporting**: Generate detailed incident reports with AI insights
+- **Safety Recommendations**: AI-powered safety analysis and recommendations
 
-### 4. Enterprise Integration
+### 4. Modern User Interface
 
-- **MQTT Streaming**: Real-time data for traffic management systems
-- **InfluxDB Storage**: Scalable time-series data storage
-- **Grafana Dashboards**: Professional monitoring and alerting
-- **REST API**: Programmatic access to detection and analytics
+- **Tabbed Interface**: Organized tabs for different functionality areas
+- **Live Detection**: Real-time video processing with overlay information
+- **Analytics Dashboard**: Comprehensive traffic analytics and visualizations
+- **Violation Monitoring**: Real-time violation alerts and historical data
+- **Data Export**: Flexible export options for analytics and reports
+- **Performance Overlay**: Real-time performance metrics display
 
-### 5. Performance Optimization
+### 5. Enterprise Integration
 
-- **Multi-Device Support**: Automatic selection of optimal processing device
-- **Model Quantization**: FP32, FP16, INT8 support for efficiency
-- **Asynchronous Processing**: Non-blocking UI with threaded processing
-- **Memory Management**: Efficient handling of video streams and models
+- **MQTT Streaming**: Real-time data streaming for traffic management systems
+- **InfluxDB Storage**: Scalable time-series data storage and analytics
+- **Grafana Dashboards**: Professional monitoring, alerting, and visualization
+- **REST API**: VLM backend provides RESTful API for scene analysis
+- **Docker Support**: Containerized deployment for production environments
+
+### 6. Smart Intersection Analytics
+
+- **Multi-Camera Support**: Unified analytics across multiple camera views
+- **Cross-Camera Tracking**: Track objects across different camera perspectives
+- **Scene-Based ROI**: Define regions of interest spanning multiple views
+- **Traffic Flow Optimization**: Advanced analytics for traffic pattern optimization
+
+### 7. Performance Optimization
+
+- **Multi-Device Support**: Automatic selection of optimal processing device (CPU/GPU/AUTO)
+- **Model Optimization**: OpenVINO model optimization for different hardware
+- **Asynchronous Processing**: Non-blocking UI with threaded video processing
+- **Memory Management**: Efficient handling of video streams and model inference
+- **Configurable Performance**: Adjustable settings for optimal performance vs accuracy trade-offs
 
 ---
 
-### Adding Features
+## API Reference
 
-1. **New Detection Logic**: Add to `controllers/video_controller_new.py`
-2. **UI Components**: Create in `ui/` directory
-3. **Utilities**: Add to `utils/` package
-4. **Services**: Extend `services/` configuration
+### VLM Backend API
 
-### Extending VLM Capabilities
+The VLM (Vision-Language Model) backend provides RESTful API endpoints for scene analysis:
+
+#### Base URL
+
+```
+http://localhost:5000
+```
+
+## Services Integration
+
+### MQTT Integration
+
+#### Setup MQTT Broker
+
+```bash
+# Using Docker
+docker run -d --name mosquitto -p 1883:1883 eclipse-mosquitto
+
+# Using services scripts
+cd services/scripts
+./start_services.sh
+```
+
+#### MQTT Configuration
 
 ```python
-# Add new VLM analysis in vlm_controller.py
-def analyze_custom_scene(self, frame, prompt):
-    return self.vlm_pipeline.generate(frame, prompt)
+# MQTT Publisher configuration
+MQTT_CONFIG = {
+    "host": "localhost",
+    "port": 1883,
+    "keepalive": 60,
+    "topics": {
+        "detection": "traffic/detection/objects",
+        "violations": "traffic/violations/",
+        "analytics": "traffic/analytics/metrics"
+    }
+}
+```
+
+### InfluxDB Integration
+
+#### Database Schema
+
+```sql
+-- Detection measurements
+detection,camera=cam1,object_type=car confidence=0.85,x=100,y=150,width=80,height=120
+
+-- Violation measurements
+violation,type=red_light,camera=cam1 severity=high,timestamp=1641024000
+
+-- Analytics measurements
+analytics,camera=cam1 vehicle_count=15,avg_speed=45.2,flow_rate=120
+```
+
+### Grafana Integration
+
+#### Dashboard Configuration
+
+The application includes pre-configured Grafana dashboards:
+
+- **Traffic Overview**: Vehicle counts, flow rates, and violation summaries
+- **Performance Monitoring**: System performance metrics and resource usage
+- **Violation Analysis**: Detailed violation tracking and trends
+- **Camera Status**: Individual camera health and performance metrics
+
+#### Dashboard Import
+
+```bash
+# Dashboards are automatically provisioned from services/grafana/dashboards/
+# Manual import available at: http://localhost:3000/dashboard/import
 ```
 
 ---
@@ -357,9 +531,14 @@ def analyze_custom_scene(self, frame, prompt):
 #### 1. Model Loading Errors
 
 ```bash
-# Download models manually
-wget https://github.com/ultralytics/assets/releases/download/v0.0.0/yolo11n.pt
-python convert_model.py yolo11n.pt
+# Clear model cache
+rm -rf openvino_models/.cache
+
+# Manually download YOLO11 models
+python -c "from ultralytics import YOLO; YOLO('yolo11n.pt')"
+python -c "from ultralytics import YOLO; YOLO('yolo11x.pt')"
+
+# Check model paths in config.json
 ```
 
 #### 2. OpenVINO Device Issues
@@ -368,56 +547,151 @@ python convert_model.py yolo11n.pt
 # Check available devices
 python -c "import openvino as ov; print(ov.Core().available_devices)"
 
-# Reset device selection
+# Update Intel GPU drivers
+# For Intel Arc: https://www.intel.com/content/www/us/en/support/articles/000005520/
+
+# Reset OpenVINO cache
 rm -rf ~/.cache/openvino
 ```
 
-#### 3. Service Connection Issues
+#### 3. VLM Backend Issues
 
 ```bash
-# Check service status
-docker-compose ps
+# Check VLM service status
+curl http://localhost:5000/health
 
-# Restart services
-docker-compose restart
+# Restart VLM service
+cd vlm_backend
+python app.py
+
+# Check VLM model availability
+python model_downloader.py --list
 ```
 
 #### 4. Performance Issues
 
-- **Low FPS**: Switch to faster model (YOLOv11n) or reduce resolution
-- **High Memory**: Reduce `max_history_frames` in config
-- **GPU Issues**: Update drivers and check OpenVINO device support
+- **Low FPS**:
+
+  - Switch to yolo11n model for faster inference
+  - Reduce video resolution in display settings
+  - Use GPU device if available
+  - Reduce confidence threshold
+
+- **High Memory Usage**:
+
+  - Reduce `max_history_frames` in config.json
+  - Disable tracking if not needed
+  - Use smaller model (yolo11n vs yolo11x)
+
+- **GPU Issues**:
+  - Update GPU drivers
+  - Check CUDA/OpenCL installation
+  - Verify OpenVINO GPU support
+
+#### 6. UI Issues
+
+```bash
+# Qt/PySide6 issues
+pip install --upgrade PySide6
+
+# Font rendering issues on Linux
+sudo apt-get install fonts-liberation
+
+# High DPI display issues
+export QT_AUTO_SCREEN_SCALE_FACTOR=1
+```
 
 ### Debug Mode
 
 ```bash
 # Enable detailed logging
-python main.py --debug --log-level DEBUG
+python main.py --debug
 
-# Performance profiling
-python main.py --profile --benchmark
+# Enable performance profiling
+python run_app.py --profile
+
+# Check system requirements
+python -c "
+import sys
+print(f'Python: {sys.version}')
+import PySide6
+print(f'PySide6: {PySide6.__version__}')
+import openvino as ov
+print(f'OpenVINO: {ov.__version__}')
+print(f'Available devices: {ov.Core().available_devices}')
+"
 ```
-
----
 
 ## License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
+### Third-Party Licenses
+
+- **OpenVINO**: Apache License 2.0
+- **Ultralytics YOLO**: AGPL-3.0 License
+- **PySide6**: LGPL License
+- **OpenCV**: Apache License 2.0
+- **PyTorch**: BSD License
+
 ---
 
 ## Contributors
 
-- **Lead:** Jatin Sachdeva
-- **Mentors:** Hassnaa Moustafa, Zhuo Wu, Vibhu Bithar
+### Core Team
+
+- **Lead Developer**: Jatin Sachdeva
+- **Mentors**: Hassnaa Moustafa, Zhuo Wu, Vibhu Bithar
+
+### Special Thanks
+
+- Intel OpenVINO Team for AI acceleration framework
+
+---
 
 ## Acknowledgments
 
-- **Intel OpenVINO**: AI acceleration and optimization framework
-- **Ultralytics**: YOLO11 object detection models
-- **Qt/PySide6**: Cross-platform GUI framework
-- **OpenCV**: Computer vision library
-- **InfluxDB & Grafana**: Time-series data platform
+### Technologies & Frameworks
+
+- **Intel OpenVINO**: AI inference optimization and acceleration framework
+- **Ultralytics YOLO11**: State-of-the-art object detection models
+- **Qt/PySide6**: Cross-platform GUI framework for modern desktop applications
+- **OpenCV**: Comprehensive computer vision library
+- **PyTorch**: Machine learning framework for model operations
+- **Transformers**: Hugging Face transformers for VLM integration
+
+### Data & Analytics
+
+- **InfluxDB**: Time-series database for real-time metrics storage
+- **Grafana**: Professional monitoring and visualization platform
+- **MQTT (Mosquitto)**: Lightweight messaging protocol for IoT integration
+- **Pandas**: Data analysis and manipulation library
+
+### Research & Development
+
+- **GSoC (Google Summer of Code)**: Supporting open source development
+- **Intel Corporation**: Hardware optimization and AI acceleration
+- **Open Source Community**: Collaborative development and innovation
+
+---
+
+### Project Goals
+
+This project demonstrates the integration of:
+
+- **Modern AI/ML**: Latest YOLO11 models with OpenVINO optimization
+- **Real-time Processing**: High-performance video analytics with minimal latency
+- **Enterprise Integration**: Professional-grade monitoring and data streaming
+- **User Experience**: Intuitive desktop interface with advanced features
+- **Scalability**: Modular architecture supporting various deployment scenarios
+
+### Future Enhancements
+
+- **Cloud Integration**: Azure/AWS deployment capabilities
+- **Mobile Support**: Mobile application for remote monitoring
+- **Advanced Analytics**: Machine learning-based traffic prediction
+- **Multi-Site Management**: Centralized management of multiple intersections
+- **Enhanced VLM**: Advanced scene understanding and automated reporting
 
 ---
 
