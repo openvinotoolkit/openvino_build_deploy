@@ -49,7 +49,7 @@ The **Smart Intersection Traffic Monitoring System** is an advanced AI-powered d
 - **Advanced Violation Detection**: Red light violations, crosswalk violations, wrong way violation
 - **Multi-Device Support**: CPU, GPU, and AUTO device selection with Intel Arc GPU optimization
 - **Vision-Language Model (VLM)**: OpenVINO GenAI integration for scene understanding and natural language analysis
-- **Modern UI Interface**: Tabbed interface with Analytics, Violations, Export, Smart Intersection, and VLM Insights tabs
+- **Modern UI Interface**: Tabbed interface with Analytics, Violations, Export, and VLM Insights tabs
 - **IoT Integration**: MQTT + InfluxDB + Grafana for data streaming and visualization
 - **Multi-Source Input**: Webcam, RTSP streams, video files, and drag-and-drop support
 - **Performance Monitoring**: Real-time FPS, latency, CPU/GPU utilization tracking with overlay display
@@ -255,14 +255,6 @@ The application features a modern tabbed interface with the following tabs:
 - Performance metrics export
 - Violation reports with evidence
 
-#### **Smart Intersection Tab**
-
-- Multi-camera intersection analytics
-- Cross-camera object tracking
-- Scene-based analytics and ROI definition
-- 3D spatial understanding
-- Traffic pattern analysis
-
 #### **VLM Insights Tab**
 
 - Vision-Language Model analysis
@@ -371,24 +363,6 @@ stop_services.bat     # Stop all services
 supervisord -c supervisord.conf  # Start with supervisor
 ```
 
-### Smart Intersection Deployment
-
-```bash
-# Navigate to smart intersection module
-cd smart-intersection/smart-intersection
-
-# Deploy with Docker Compose
-docker-compose up -d
-
-# Deploy with Helm (Kubernetes)
-helm install smart-intersection ./chart
-
-# Initialize services
-./init.sh
-```
-
----
-
 ## Key Features
 
 ### 1. AI-Powered Detection
@@ -429,14 +403,7 @@ helm install smart-intersection ./chart
 - **REST API**: VLM backend provides RESTful API for scene analysis
 - **Docker Support**: Containerized deployment for production environments
 
-### 6. Smart Intersection Analytics
-
-- **Multi-Camera Support**: Unified analytics across multiple camera views
-- **Cross-Camera Tracking**: Track objects across different camera perspectives
-- **Scene-Based ROI**: Define regions of interest spanning multiple views
-- **Traffic Flow Optimization**: Advanced analytics for traffic pattern optimization
-
-### 7. Performance Optimization
+### 6. Performance Optimization
 
 - **Multi-Device Support**: Automatic selection of optimal processing device (CPU/GPU/AUTO)
 - **Model Optimization**: OpenVINO model optimization for different hardware
@@ -588,19 +555,6 @@ python model_downloader.py --list
   - Check CUDA/OpenCL installation
   - Verify OpenVINO GPU support
 
-#### 6. UI Issues
-
-```bash
-# Qt/PySide6 issues
-pip install --upgrade PySide6
-
-# Font rendering issues on Linux
-sudo apt-get install fonts-liberation
-
-# High DPI display issues
-export QT_AUTO_SCREEN_SCALE_FACTOR=1
-```
-
 ### Debug Mode
 
 ```bash
@@ -625,16 +579,6 @@ print(f'Available devices: {ov.Core().available_devices}')
 ## License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
-
-### Third-Party Licenses
-
-- **OpenVINO**: Apache License 2.0
-- **Ultralytics YOLO**: AGPL-3.0 License
-- **PySide6**: LGPL License
-- **OpenCV**: Apache License 2.0
-- **PyTorch**: BSD License
-
----
 
 ## Contributors
 
