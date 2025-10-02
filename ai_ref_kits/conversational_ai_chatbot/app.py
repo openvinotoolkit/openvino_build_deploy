@@ -57,12 +57,13 @@ def get_available_devices() -> Set[str]:
     return {device.split(".")[0] for device in core.available_devices}
 
 
-def load_asr_model(model_dir: Path) -> None:
+def load_asr_model(model_dir: Path, device: str) -> None:
     """
     Load automatic speech recognition model and assign it to a global variable
 
     Params:
         model_dir: dir with the ASR model
+        device: device to run the model inference on
     """
     global asr_model, asr_processor
 
@@ -70,7 +71,6 @@ def load_asr_model(model_dir: Path) -> None:
         log.error(f"Cannot find {model_dir}. Did you run convert_and_optimize_asr.py first?")
         return
 
-    device = "AUTO:GPU,CPU" if ov.__version__ < "2024.3" else "AUTO:CPU"
     # create a distil-whisper model and its processor
     asr_model = OVModelForSpeechSeq2Seq.from_pretrained(model_dir, device=device)
     asr_processor = AutoProcessor.from_pretrained(model_dir)
@@ -79,12 +79,13 @@ def load_asr_model(model_dir: Path) -> None:
     log.info(f"Running {model_name} on {','.join(asr_model.encoder.request.get_property('EXECUTION_DEVICES'))}")
 
 
-def load_chat_model(model_dir: Path) -> Optional[OpenVINOLLM]:
+def load_chat_model(model_dir: Path, device: str) -> Optional[OpenVINOLLM]:
     """
     Load chat model
 
     Params:
         model_dir: dir with the chat model
+        device: device to run the model inference on
     Returns:
         OpenVINO LLM model in LLama Index
     """
@@ -94,16 +95,17 @@ def load_chat_model(model_dir: Path) -> Optional[OpenVINOLLM]:
 
     ov_config = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1', "CACHE_DIR": ""}
     # load llama model and its tokenizer in the format of Llama Index
-    return OpenVINOLLM(context_window=2048, model_id_or_path=str(model_dir), max_new_tokens=512, device_map="AUTO:GPU,CPU",
+    return OpenVINOLLM(context_window=2048, model_id_or_path=str(model_dir), max_new_tokens=512, device_map=device,
                        model_kwargs={"ov_config": ov_config}, generate_kwargs={"do_sample": True, "temperature": 0.7, "top_k": 50, "top_p": 0.95})
 
 
-def load_embedding_model(model_dir: Path) -> Optional[OpenVINOEmbedding]:
+def load_embedding_model(model_dir: Path, device: str) -> Optional[OpenVINOEmbedding]:
     """
     Load embedding model
 
     Params:
         model_dir: dir with the embedding model
+        device: device to run the model inference on
     Returns:
         OpenVINO Embedding model in LLama Index
     """
@@ -111,17 +113,17 @@ def load_embedding_model(model_dir: Path) -> Optional[OpenVINOEmbedding]:
         log.error(f"Cannot find {model_dir}. Did you run convert_and_optimize_chat.py first?")
         return None
 
-    device = "AUTO:NPU" if "NPU" in get_available_devices() else "AUTO:CPU"
     # load embedding model in the format of Llama Index
     return OpenVINOEmbedding(str(model_dir), device=device, embed_batch_size=1, model_kwargs={"dynamic_shapes": False})
 
 
-def load_reranker_model(model_dir: Path) -> Optional[OpenVINORerank]:
+def load_reranker_model(model_dir: Path, device: str) -> Optional[OpenVINORerank]:
     """
     Load embedding model
 
     Params:
         model_dir: dir with the reranker model
+        device: device to run the model inference on
     Returns:
         OpenVINO Reranker model in LLama Index
     """
@@ -130,17 +132,20 @@ def load_reranker_model(model_dir: Path) -> Optional[OpenVINORerank]:
         return None
 
     # load reranker model in the format of Llama Index
-    return OpenVINORerank(model_id_or_path=str(model_dir), device="AUTO:CPU", top_n=3)
+    return OpenVINORerank(model_id_or_path=str(model_dir), device=device, top_n=3)
 
 
-def load_rag_models(chat_model_dir: Path, embedding_model_dir: Path, reranker_model_dir: Path, personality_file_path: Path) -> None:
+def load_rag_models(chat_model_dir: Path, chat_model_device: str, embedding_model_dir: Path, embedding_model_device: str, reranker_model_dir: Path, reranker_model_device: str, personality_file_path: Path) -> None:
     """
     Load all models required in RAG pipeline
 
     Params:
         chat_model_dir: dir with the chat model
+        chat_model_device: device to run chat model inference on
         embedding_model_dir: dir with the embedding model
+        embedding_model_device: device to run embedding model inference on
         reranker_model_dir: dir with the reranker model
+        reranker_model_device: device to run reranker model inference on
         personality_file_path: path to the chatbot personality specification file
     """
     global ov_llm, ov_embedding, ov_reranker, ov_chat_engine, chatbot_config
@@ -149,15 +154,15 @@ def load_rag_models(chat_model_dir: Path, embedding_model_dir: Path, reranker_mo
         chatbot_config = yaml.safe_load(f)
 
     # embedding model
-    ov_embedding = load_embedding_model(embedding_model_dir)
+    ov_embedding = load_embedding_model(embedding_model_dir, embedding_model_device)
     log.info(f"Running {embedding_model_dir} on {','.join(ov_embedding._model.request.get_property('EXECUTION_DEVICES'))}")
 
     # reranker model
-    ov_reranker = load_reranker_model(reranker_model_dir)
+    ov_reranker = load_reranker_model(reranker_model_dir, reranker_model_device)
     log.info(f"Running {reranker_model_dir} on {','.join(ov_reranker._model.request.get_property('EXECUTION_DEVICES'))}")
 
     # chat model
-    ov_llm = load_chat_model(chat_model_dir)
+    ov_llm = load_chat_model(chat_model_dir, chat_model_device)
     log.info(f"Running {chat_model_dir} on {','.join(ov_llm._model.request.get_compiled_model().get_property('EXECUTION_DEVICES'))}")
 
     # chat engine
@@ -424,17 +429,20 @@ def create_UI(initial_message: str, example_pdf_path: Path) -> gr.Blocks:
         return demo
 
 
-def run(asr_model_dir: Path, chat_model_dir: Path, embedding_model_dir: Path, reranker_model_dir: Path, personality_file_path: Path, example_pdf_path: Path, public_interface: bool = False) -> None:
+def run(asr_model_dir: Path, asr_model_device: str, chat_model_dir: Path, chat_model_device: str, embedding_model_dir: Path, embedding_model_device: str,
+        reranker_model_dir: Path, reranker_model_device: str, personality_file_path: Path, example_pdf_path: Path, public_interface: bool = False) -> None:
     """
     Run the chatbot application
 
     Params
         asr_model_dir: dir with the automatic speech recognition model
+        asr_model_device: device to run ASR model inference on
         chat_model_dir: dir with the chat model
-        tts_model_dir: dir with the tts model
-        vocoder_model_dir: dir with the vocoder model for tts
+        chat_model_device: device to run chat model inference on
         embedding_model_dir: dir with the embedding model
+        embedding_model_device: device to run embedding model inference on
         reranker_model_dir: dir with the reranker model
+        reranker_model_device: device to run reranker model inference on
         personality_file_path: path to the chatbot personality specification file
         example_pdf_path: path to the pdf file
         public_interface: whether UI should be available publicly
@@ -443,9 +451,9 @@ def run(asr_model_dir: Path, chat_model_dir: Path, embedding_model_dir: Path, re
     log.getLogger().setLevel(log.INFO)
 
     # load whisper model
-    load_asr_model(asr_model_dir)
+    load_asr_model(asr_model_dir, asr_model_device)
     # load chat models
-    load_rag_models(chat_model_dir, embedding_model_dir, reranker_model_dir, personality_file_path)
+    load_rag_models(chat_model_dir, chat_model_device, embedding_model_dir, embedding_model_device, reranker_model_dir, reranker_model_device, personality_file_path)
     # load tts model
     load_tts_model()
 
@@ -470,13 +478,17 @@ def run(asr_model_dir: Path, chat_model_dir: Path, embedding_model_dir: Path, re
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--asr_model", type=str, default="model/distil-whisper-large-v3-FP16", help="Path of the automatic speech recognition model directory")
+    parser.add_argument("--asr_model_device", type=str, default="CPU", choices=["AUTO", "GPU", "CPU", "NPU"], help="Device to run ASR model inference on")
     parser.add_argument("--chat_model", type=str, default="model/llama3.2-3B-INT4", help="Path to the chat model directory")
+    parser.add_argument("--chat_model_device", type=str, default="GPU", choices=["AUTO", "GPU", "CPU", "NPU"], help="Device to run chat model inference on")
     parser.add_argument("--embedding_model", type=str, default="model/bge-small-FP32", help="Path to the embedding model directory")
+    parser.add_argument("--embedding_model_device", type=str, default="CPU", choices=["AUTO", "GPU", "CPU", "NPU"], help="Device to run embedding model inference on")
     parser.add_argument("--reranker_model", type=str, default="model/bge-reranker-large-FP32", help="Path to the reranker model directory")
+    parser.add_argument("--reranker_model_device", type=str, default="CPU", choices=["AUTO", "GPU", "CPU", "NPU"], help="Device to run reranker model inference on")
     parser.add_argument("--personality", type=str, default="config/concierge_personality.yaml", help="Path to the YAML file with chatbot personality")
     parser.add_argument("--example_pdf", type=str, default="data/Grand_Azure_Resort_Spa_Full_Guide.pdf", help="Path to the PDF file which is an additional context")
     parser.add_argument("--public", default=False, action="store_true", help="Whether interface should be available publicly")
 
     args = parser.parse_args()
-    run(Path(args.asr_model), Path(args.chat_model), Path(args.embedding_model), Path(args.reranker_model), Path(args.personality), Path(args.example_pdf), args.public)
-    
+    run(Path(args.asr_model), args.asr_model_device, Path(args.chat_model), args.chat_model_device, Path(args.embedding_model), args.embedding_model_device,
+        Path(args.reranker_model), args.reranker_model_device, Path(args.personality), Path(args.example_pdf), args.public)
