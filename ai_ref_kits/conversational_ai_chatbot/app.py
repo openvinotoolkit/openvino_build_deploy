@@ -478,7 +478,7 @@ def run(asr_model_dir: Path, asr_model_device: str, chat_model_dir: Path, chat_m
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--asr_model", type=str, default="model/distil-whisper-large-v3-FP16", help="Path of the automatic speech recognition model directory")
-    parser.add_argument("--asr_model_device", type=str, default="CPU", choices=["AUTO", "GPU", "CPU", "NPU"], help="Device to run chat model inference on")
+    parser.add_argument("--asr_model_device", type=str, default="CPU", choices=["AUTO", "GPU", "CPU", "NPU"], help="Device to run ASR model inference on")
     parser.add_argument("--chat_model", type=str, default="model/llama3.2-3B-INT4", help="Path to the chat model directory")
     parser.add_argument("--chat_model_device", type=str, default="GPU", choices=["AUTO", "GPU", "CPU", "NPU"], help="Device to run chat model inference on")
     parser.add_argument("--embedding_model", type=str, default="model/bge-small-FP32", help="Path to the embedding model directory")
