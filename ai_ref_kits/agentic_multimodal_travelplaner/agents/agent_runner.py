@@ -16,9 +16,8 @@ import yaml
 from pathlib import Path
 import argparse
 from contextlib import AsyncExitStack
-import threading
 import requests
-import signal
+import multiprocessing
 
 # Add parent directory to path for imports
 sys.path.append(str(Path(__file__).parent.parent))
@@ -241,35 +240,32 @@ class AgentRunner:
         self.config_manager = ConfigManager()
     
     async def run_agent(self, agent_name):
-        """Run a single agent with optional MCP support"""
         config = load_config(agent_name)
-        
-        # Check for MCP configuration
         mcp_config = config.get('mcp_config')
         has_valid_mcp = mcp_config and ('url' in mcp_config or ('servers' in mcp_config and mcp_config['servers']))
-        
+
         if has_valid_mcp:
             async with AsyncExitStack() as stack:
                 all_mcp_tools = await self.mcp_manager.setup_mcp_tools_with_stack(config, stack)
-                
                 if not all_mcp_tools:
                     return
-                
                 agent = self.agent_factory.create_agent(config, all_mcp_tools)
-                server = self.server_manager.create_server(agent, config)
-                
-                try:
-                    await asyncio.to_thread(server.serve)
-                except (KeyboardInterrupt, asyncio.CancelledError):
-                    pass
         else:
             agent = self.agent_factory.create_agent(config, None)
-            server = self.server_manager.create_server(agent, config)
-            
-            try:
-                await asyncio.to_thread(server.serve)
-            except (KeyboardInterrupt, asyncio.CancelledError):
-                print(f"\n{config['name']} stopped")
+
+        server = self.server_manager.create_server(agent, config)
+
+        import multiprocessing
+
+        process = multiprocessing.Process(target=server.serve)
+        process.start()
+
+        try:
+            while process.is_alive():
+                await asyncio.sleep(1)
+        except (KeyboardInterrupt, asyncio.CancelledError):
+            process.terminate()
+            process.join()
     
     def get_available_agents(self):
         """Get list of available agents"""
