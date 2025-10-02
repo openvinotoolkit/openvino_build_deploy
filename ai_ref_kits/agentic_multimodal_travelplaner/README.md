@@ -42,78 +42,209 @@ Check out our [AI Reference Kits repository](https://github.com/openvinotoolkit/
 ┌─────────────────────────────────────────────────────────────┐
 │                    Travel Router Agent                      │
 │              (Main Coordinator & Orchestrator)              │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-        ┌─────────────┼─────────────┐
-        │             │             │
-        ▼             ▼             ▼
-┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-│Hotel Finder │ │Flight Finder│ │Video Search │
-│   Agent     │ │   Agent     │ │   Agent     │
-│  (Port 9999)│ │ (Port 9998) │ │ (Port 9997) │
-└─────────────┘ └─────────────┘ └─────────────┘
-        │             │             │
-        ▼             ▼             ▼
-┌─────────────────────────┐ ┌─────────────┐
-│ Travel MCP Tool Server  │ │ OpenVINO    │
-│  • search_hotel         │ │ Multimodal  │
-│  • search_flight        │ │ VLM + Vector│
-│  • weather              │ │ Store       │
-│  • think                │ └─────────────┘
-└─────────────────────────┘
+│                        (Port 9996)                          │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+   ┌───────────────-──────┼───────────────┬───────────────┐
+   │                      │               │               │
+   ▼                      ▼               ▼               ▼
+┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌───────────────┐
+│Hotel Finder │ │Flight Finder│ │Budget Agent │ │Video Processing│
+│   Agent     │ │   Agent     │ │   Agent     │ │    Agent       │
+│  (Port 9999)│ │ (Port 9998) │ │ (Port 9997) │ │   (Port 9995)  │
+└─────────────┘ └─────────────┘ └─────────────┘ └───────────────┘
+      │               │              │               │
+      ▼               ▼              ▼               ▼
+┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌───────────────┐
+│Hotel Search │ │Flight Search│ │   (Logic)   │ │Video Analysis  │
+│ MCP Server  │ │ MCP Server  │ │   No MCP    │ │   MCP Server   │
+│ (Port 7901) │ │ (Port 7902) │ │   Needed    │ │   (Port 7903)  │
+└─────────────┘ └─────────────┘ └─────────────┘ └───────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│           Hardware OpenVINO AI Stack                       │
+│  • Phi-4-mini-instruct (LLM) • Qwen3-8B (Video Analysis)   │
+│  • Bridge Tower (Multimodal VLM) • Vector Store            │
+└─────────────────────────────────────────────────────────────┘
+
 ```
 
 ---
 
-# To run it
+# Setting Up Your Environment
 
-## 1. Create virtual environment
 
-```
-python -m venv agentic
-source agentic/bin/activate
-```
 
-## 2. Download optimized models for OVMS
+To set up your environment, you first clone the repository, then create a virtual environment, activate the environment, and install the packages.
 
-```
-```docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --task text_generation --tool_parser phi4
-curl -L -o models/OpenVINO/Phi-4-mini-instruct-int4-ov/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/extras/chat_template_examples/chat_template_phi4_mini.jinja
+### Clone the Repository
+
+To clone the repository, run this command:
+
+```shell
+git clone https://github.com/openvinotoolkit/openvino_build_deploy.git
 ```
 
-## 3. Start LLM (OVMS)
+This command clones the repository into a directory named "openvino_build_deploy" in the current directory. After the directory is cloned, run the following command to go to that directory:
+
+
+```shell
+cd openvino_build_deploy/ai_ref_kits/agentic_multimodal_travelplaner
+```
+
+`## Create virtual environment
+
+```
+python3 -m venv agentic
+```
+
+### Activate the Environment
+
+The command you run to activate the virtual environment you created depends on whether you have a Unix-based operating system (Linux or macOS) or a Windows operating system.
+
+To activate  the virtual environment for a **Unix-based** operating system, run:
+
+```shell
+source agentic/bin/activate   # For Unix-based operating systems such as Linux or macOS
+```
+
+To activate the virtual environment for a **Windows** operating system, run:
+
+```shell
+agentic\Scripts\activate  # This command is for Windows operating systems
+```
+This activates the virtual environment and changes your shell's prompt to indicate that you are now working in that environment.
+
+### Install the Requirements
+
+To install the required packages, run the following commands:
+
+```shell
+python -m pip install --upgrade pip 
+pip install -r requirements.txt
+```
+
+# Getting the LLM for agents ready with OpenVINO model Server (OVMS) using optimized models
+
+Windows and Linux
+## OPTION 1: Windows
+
+TBC
+
+## OPTION 2: Linux
+
+### Docker Installation
+
+
+### Get OVMS image
+
+```
+docker pull openvino/model_server:latest
+```
+### Download optimized models for OVMS
 ```
 docker run -d --user $(id -u):$(id -g) --rm -p 8001:8001 -v $(pwd)/models:/models openvino/model_server:latest \
 --rest_port 8001 --model_repository_path models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --tool_parser phi4 --cache_size 2 --task text_generation --enable_prefix_caching true
 ```
 
-## 4. Get your Amadeus Key and replace it on config/mcp_tools.yaml (client_id and client_secret)
-
-Go to  from https://developers.amadeus.com/self-service/apis-docs/guides/developer-guides/quick-start/
-
-
-## 5. Start Tools (MCP)
-
-Terminal 1  
-```
-python mcp_tools/tourism_search.py 
+### Start OVMS
 
 ```
-## 6. Start Agents
-
-Terminal 2
-
-```
-python agents/agent_runner.py --agent hotel_finder
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --task text_generation --tool_parser phi4
+curl -L -o models/OpenVINO/Phi-4-mini-instruct-int4-ov/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/extras/chat_template_examples/chat_template_phi4_mini.jinja
 ```
 
-Terminal 3  
+### Check
+Run
 ```
-python agents/agent_runner.py --agent flight_finder
+docker ps
+```
+
+You should see 
+```
+CONTAINER ID   IMAGE                          COMMAND                  CREATED       STATUS       PORTS                                         NAMES
+4c1590b2d392   openvino/model_server:latest   "/ovms/bin/ovms --re…"   5 hours ago   Up 5 hours   0.0.0.0:8001->8001/tcp, [::]:8001->8001/tcp   infallible_davinci
+```
+
+We have now our LLM running and ready to be used by our agents.
+
+# Start MCP tools
+In this example, we will have multiple MCP servers to be consumed by the agents. In order to follow and understand the behavior, each agent and tool should be started from an independent terminal (be sure to activate the environment).
+### Get your SerpAPi
+
+Go to https://serpapi.com/
+
+### Start Hotel finder API Tool (TERMINAL 1)
+Clone server from AI Builder
+```
+cd mcp_tools
+wget -O /home/ubuntu/openvino_build_deploy/workshops/Agentic_Tourism_copy/mcp_tools/ai_builder_mcp_hotel_finder.py \
+https://raw.githubusercontent.com/intel/intel-ai-assistant-builder/main/mcp/mcp_servers/mcp_google_hotel/server.py
 
 ```
-## 7. Start UI
-Terminal 4  
+Start MCP tool
+```
+export SERP_API_KEY= 
+python ai_builder_mcp_hotel_finder.py start --port 7901 --protocol sse
+```
+
+### Start Flight finder API Tool (TERMINAL 2)
+Clone server from AI Builder
+```
+cd mcp_tools
+wget -O /home/ubuntu/openvino_build_deploy/workshops/Agentic_Tourism_copy/mcp_tools/ai_builder_mcp_flight_finder.py \
+https://raw.githubusercontent.com/intel/intel-ai-assistant-builder/main/mcp/mcp_servers/mcp_google_flight/server.py
+
+```
+Start MCP tool
+```
+export SERP_API_KEY= 
+python ai_builder_mcp_flight_finder.py start --port 7902 --protocol sse
+```
+
+### Start VideoProcessing Tools (WIP)
+
+# Start Agents
+
+### Regular A2A
+
+Hotel finder agent (TERMINAL 3)
+
+```
+cd agents
+python agent_runner_copy.py --agent travel hotel_finder
+```
+
+Flight finder agent (TERMINAL 4)
+```
+cd agents
+python agent_runner_copy.py --agent flight_finder
+```
+
+
+Budget approval agent (TERMINAL 5)
+```
+cd agents
+python agent_runner_copy.py --agent budget_agent
+```
+
+### Supervisor Agent (TERMINAL 6)
+
+```
+cd agents
+python agent_runner_copy.py --agent travel_router
+```
+
+# Start UI (TERMINAL 7)
+
 ```
 python start_ui.py
 ```
+
+Go to http://127.0.0.1:7860
+
+# Customization
+You can add any agents by configuring the yaml files
+
+TBC

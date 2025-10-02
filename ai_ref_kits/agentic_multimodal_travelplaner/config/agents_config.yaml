@@ -6,8 +6,6 @@ travel_router:
   name: "travel_router"
   description: "Intelligent travel coordinator that provides accurate, realistic travel information by consulting specialized agents"
   port: 9996
-  environment_port_var: "TRAVEL_ROUTER_PORT"
-  environment_api_base_var: "OPENAI_API_BASE"
   role: "Travel Coordinator Supervisor"
   
   # LLM Configuration for Travel Router
@@ -20,7 +18,7 @@ travel_router:
   # Memory Configuration
   memory_size: 100
   
-  # Supervised Agents Configuration
+  # Supervised Agents Configuration. It means that the travel_router agent can delegate to the following agents.
   supervised_agents:
     - name: "hotel_finder"
       url: "http://127.0.0.1:9999"
@@ -28,17 +26,20 @@ travel_router:
     - name: "flight_finder"
       url: "http://127.0.0.1:9998"
       port_env_var: "FLIGHT_SEARCHER_PORT"
-    - name: "video_analysis"
+    - name: "budget_agent"
       url: "http://127.0.0.1:9997"
+      port_env_var: "BUDGET_AGENT_PORT"
+    - name: "video_analysis"
+      url: "http://127.0.0.1:9996"
       port_env_var: "VIDEO_ANALYSIS_PORT"
   
   # Tools Configuration (supervisor specific)
   tools:
     - name: "ThinkTool"
-      enabled: false  # Disabled to improve response time 
+      enabled: false  # Disabled to improve response time, tool for planning
     - name: "HandoffTool"
       enabled: true
-      auto_discovered: true  # Dynamically created from supervised agents
+      auto_discovered: true 
   
   # Middleware Configuration
   middleware:
@@ -52,11 +53,8 @@ flight_finder:
   name: "flight_finder"
   description: "Specialized agent for flight search"
   port: 9998
-  environment_port_var: "FLIGHT_SEARCHER_PORT"
-  environment_api_base_var: "OPENAI_API_BASE_HOTEL_LLM"
   role: "Flight Search Specialist"
   
-  # LLM Configuration for Flight Finder
   llm:
     model: "openai:OpenVINO/Phi-4-mini-instruct-int4-ov"
     temperature: 0.1
@@ -66,14 +64,21 @@ flight_finder:
   # Memory Configuration
   memory_size: 100
   
-  # MCP Configuration for multiple MCP servers
   mcp_config:
     servers:
-      - name: "flight_search"
-        url: "http://127.0.0.1:8002/sse"
-        description: "Amadeus Flight search"
-        enabled: true
+      - name: "Flight_search_api"
+        url: "http://127.0.0.1:7902"
+        protocol: "sse"
+        description: "Fligh search"
+        enabled: true 
   
+  # Memory Configuration
+  memory_size: 5
+  
+  # Tools Configuration
+  tools:
+    mcp_tools: true 
+
   # Tools Configuration specify if it would use mcp_tools or beeai api tools
   tools:
     mcp_tools: true 
@@ -85,21 +90,19 @@ flight_finder:
       pretty: true
       tool_prefix: "🔍 "
 
-    # BeeAI rules requirements, useful to force agent behaviour
-  requirements:
-    - tool_name: "search_flights"
-      force_at_step: 1
-      max_invocations: 2
-    - tool_name: "search_hotels"
-      max_invocations: 0 
-
-# Hotel Finder Agent Configuration
-hotel_finder:
-  name: "hotel_finder"
-  description: "Specialized agent for hotel search with access to tourism search tools"
-  port: 9999
-  environment_port_var: "A2A_SERVER_PORT"
-  environment_api_base_var: "OPENAI_API_BASE"
+  # BeeAI rules requirements, useful to force agent behaviour
+  #requirements:
+  #  - tool_name: "search_flights"
+  #    force_at_step: 1
+  #    max_invocations: 2
+  #  - tool_name: "search_hotels"
+  #    max_invocations: 0 
+  #  - tool_name: "list_hotels"
+  #    max_invocations: 0 
+budget_agent:
+  name: "budget_agent"
+  description: "Specialized agent to calculate TOTAL trips with costs"
+  port: 9997
   
   # LLM Configuration for Hotel Finder
   llm:
@@ -108,30 +111,44 @@ hotel_finder:
     api_key: "unused"
     api_base: "http://0.0.0.0:8001/v3"
   
-  # MCP Configuration for multiple MCP servers
+  # Memory Configuration
+  memory_size: 5
+
+  # Middleware Configuration (For console logging)
+  middleware:
+    trajectory:
+      included_types: ["Tool", "ChatModel"]
+      pretty: true
+      tool_prefix: "🔍 "
+
+# Hotel Finder Agent Configuration
+hotel_finder:
+  name: "hotel_finder"
+  description: "Specialized agent for hotel search with access to hotel search tools"
+  port: 9999
+  
+  # LLM Configuration for Hotel Finder
+  llm:
+    model: "openai:OpenVINO/Phi-4-mini-instruct-int4-ov"
+    temperature: 0.1
+    api_key: "unused"
+    api_base: "http://0.0.0.0:8001/v3"
+  
   mcp_config:
     servers:
-      - name: "tourism_search"
-        url: "http://127.0.0.1:8002/sse"
-        description: "Amadeus hotel search"
-        enabled: true
+      - name: "Hotel Search Tool"
+        url: "http://127.0.0.1:7901"
+        protocol: "sse"
+        description: "Hotel search tool to get prices and accomodation places"
+        enabled: true 
+
   
   # Memory Configuration
-  memory_size: 100
+  memory_size: 5
   
   # Tools Configuration
   tools:
     mcp_tools: true 
-  
-  # BeeAI rules requirements, useful to force agent behaviour
-  requirements:
-    - tool_name: "list_hotels"
-      force_at_step: 1
-      max_invocations: 2
-    - tool_name: "search_hotels"
-      only_after: ["list_hotels"]
-    - tool_name: "search_flights"
-      max_invocations: 0 
   
   # Middleware Configuration (For console logging)
   middleware:
@@ -145,8 +162,6 @@ video_analysis:
   name: "video_analysis"
   description: "Video analysis agent with 2 core tools: video ingestion and video search using Bridge Tower multimodal AI"
   port: 9997
-  environment_port_var: "VIDEO_ANALYSIS_PORT"
-  environment_api_base_var: "OPENAI_API_BASE"
   role: "Video Analysis Specialist"
   
   # LLM Configuration for Video Search
@@ -161,7 +176,7 @@ video_analysis:
     url: "http://127.0.0.1:3000/sse"
   
   # Memory Configuration
-  memory_size: 100
+  memory_size: 5
   
   # Tools Configuration (MCP-based)
   tools:
@@ -173,3 +188,17 @@ video_analysis:
     trajectory:
       enabled: false  # Video agent doesn't use trajectory middleware
 
+###########################################################
+###########################################################
+# HELPER RULES FOR AGENTS
+###########################################################
+
+  ## BeeAI rules requirements, useful to force agent behaviour
+  #requirements:
+  #  - tool_name: "list_hotels"
+  #    force_at_step: 1
+  #    max_invocations: 2
+  #  - tool_name: "search_hotels"
+  #    only_after: ["list_hotels"]
+  #  - tool_name: "search_flights"
+  #    max_invocations: 0 

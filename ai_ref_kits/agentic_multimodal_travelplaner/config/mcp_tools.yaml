@@ -1,6 +1,9 @@
 # MCP Tools Configuration
 # Configuration for MCP servers and tools used by agents
 
+####################################
+## WIP! Video Processing MCP Server Configuration
+####################################    
 # Video Processing MCP Server Configuration
 video_processing_server:
   name: "video_processing_server"
@@ -45,35 +48,16 @@ video_processing_server:
           description: "Maximum number of results to return"
           default: 5
 
-# Bridge Tower Configuration (used by video processing)
-bridgetower:
-  # Model paths (environment variable fallbacks)
-  text_vision_model_path: "${TEXT_VISION_BRIDGETOWER_MODEL_PATH}"
-  text_model_path: "${TEXT_BRIDGETOWER_MODEL_PATH}"
-  vision_model_path: "${VISION_BRIDGETOWER_MODEL_PATH}"
-  
-  # Vector store configuration
-  vectorstore:
-    table_name: "${VECTORSTORE_TBL_NAME:-mmrag}"
-    lancedb_host_file: "${LANCEDB_HOST_FILE:-./lancedb_vectorstore/.lancedb}"
-    ingestion_mode: "${VECTORSTORE_INGESTION_MODE:-overwrite}"
-  
-  # Device configuration
-  device: "${BRIDGETOWER_MODEL_DEVICE:-GPU}"
 
-# OpenVINO Whisper Configuration (for transcript extraction)
-openvino_whisper:
-  model_dir: "${OPENVINO_WHISPER_MODEL_DIR}"
-
-# Tourism Search MCP Server Configuration
-tourism_search_server:
-  name: "tourism_search_server"
-  description: "Amadeus tourism search server for flights and hotels"
+# Video Processing MCP Server Configuration
+video_search_server:
+  name: "video_processing_server"
+  description: "Bridge Tower video processing server for ingestion and search"
   host: "0.0.0.0"
-  port: 8002
-  transport: "sse"
-  url: "http://127.0.0.1:8002"
-  script_path: "mcp_tools/tourism_search.py"
+  port: 3000
+  transport: "sse"  # Server-Sent Events transport
+  url: "http://127.0.0.1:3000/sse"
+  script_path: "src/main_search_server.py"
   
   # Health check configuration
   health_check:
@@ -82,25 +66,29 @@ tourism_search_server:
     retry_attempts: 3
     retry_delay: 2
   
-  # API credentials (from environment this variables)
-  credentials:
-    client_id: "9qoGJPdxpqxDetttZWvH9NAL7E7xBavx"
-    client_secret: "qgiUALl92Ln7rGjr"
-  
-  # API endpoints
-  api:
-    base_url: "https://test.api.amadeus.com"
-    token_endpoint: "/v1/security/oauth2/token"
-    flights_endpoint: "/v2/shopping/flight-offers"
-    hotels_list_endpoint: "/v1/reference-data/locations/hotels/by-city"
-    hotels_offer_endpoint: "/v3/shopping/hotel-offers"
-  # Tools are dynamically registered from Python @tool decorators
-
-# Alternative MCP servers (for future use)
-# shopping_cart_server:
-#   name: "shopping_cart_server"
-#   host: "0.0.0.0"
-#   port: 3001
-#   transport: "sse"
-#   url: "http://127.0.0.1:3001/sse"
-#   script_path: "src/main_shopping_cart_server.py"
+  # Tools provided by this server
+  tools:
+    - name: "ingest_videos"
+      description: "Preprocess and ingest video files into the database"
+      parameters:
+        - name: "b64_file"
+          type: "bytes"
+          description: "Base64 encoded video file content"
+        - name: "filename"
+          type: "string"
+          description: "Name of the video file"
+        - name: "mode"
+          type: "string"
+          description: "Ingestion mode (overwrite, append)"
+          default: "overwrite"
+    
+    - name: "search_videos"
+      description: "Search through ingested video content using natural language"
+      parameters:
+        - name: "query"
+          type: "string"
+          description: "Natural language search query"
+        - name: "limit"
+          type: "integer"
+          description: "Maximum number of results to return"
+          default: 5

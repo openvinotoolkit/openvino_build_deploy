@@ -195,12 +195,12 @@ def load_config(agent_name: str):
     agent_config = agents_config[agent_name]
     agent_llm_config = agent_config['llm']
     
-    # Environment variable overrides
-    port = int(os.getenv(agent_config['environment_port_var'], agent_config['port']))
-    llm_model = os.getenv("LLM_MODEL", agent_llm_config['model'])
-    llm_temperature = float(os.getenv("LLM_TEMPERATURE", agent_llm_config['temperature']))
-    api_base = os.getenv(agent_config['environment_api_base_var'], agent_llm_config['api_base'])
-    api_key = os.getenv("OPENAI_API_KEY", agent_llm_config['api_key'])
+    # Use config values directly (no environment variable overrides)
+    port = agent_config['port']
+    llm_model = agent_llm_config['model']
+    llm_temperature = agent_llm_config['temperature']
+    api_base = agent_llm_config['api_base']
+    api_key = agent_llm_config['api_key']
     
     # Validate LLM endpoint before proceeding
     print(f"Validating LLM endpoint: {api_base}")
@@ -237,7 +237,8 @@ def load_config(agent_name: str):
         handoff_tools = _create_handoff_tools(agent_config['supervised_agents'])
         tools.extend(handoff_tools)
     
-    return {
+    # Build the return config
+    config = {
         'port': port,
         'llm_model': llm_model,
         'llm_temperature': llm_temperature,
@@ -250,7 +251,12 @@ def load_config(agent_name: str):
         'memory_size': agent_config['memory_size'],
         'tools': tools,
         'is_supervisor': 'supervised_agents' in agent_config,
-        'supervised_agents': agent_config.get('supervised_agents', []),
         'mcp_config': agent_config.get('mcp_config'),  # Add MCP configuration
         'requirements': agent_config.get('requirements', [])
     }
+    
+    # Only add supervised_agents if it exists in the original config
+    if 'supervised_agents' in agent_config:
+        config['supervised_agents'] = agent_config['supervised_agents']
+    
+    return config
