@@ -40,7 +40,7 @@ runs:
   
       if [[ "$RUNNER_OS" == "Windows" ]]; then
           echo "Attempting Windows taskkill fallback..."
-          taskkill //PID $app_pid //T //F 2>/dev/null || echo "No process found for taskkill"
+          taskkill /PID $app_pid /T /F 2>/dev/null || echo "No process found for taskkill"
       fi
   
       echo "Exiting with status: $status"
