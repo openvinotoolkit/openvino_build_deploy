@@ -219,9 +219,8 @@ def available_devices(exclude: list | tuple | None = None) -> Dict[str, str]:
 
     core = ov.Core()
     for device in core.available_devices:
-        device_name = core.get_property(device, "FULL_DEVICE_NAME")
-        if "nvidia" not in device_name.lower() and device not in exclude_devices:
-            device_mapping[device] = device_name
+        if device not in exclude_devices:
+            device_mapping[device] = core.get_property(device, "FULL_DEVICE_NAME")
 
     return device_mapping
 
