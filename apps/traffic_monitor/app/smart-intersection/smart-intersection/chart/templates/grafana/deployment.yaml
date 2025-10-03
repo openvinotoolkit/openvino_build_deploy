@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-grafana
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}-grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-grafana
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-grafana
+    spec:
+      containers:
+        - name: grafana
+          image: "{{ .Values.grafana.repository }}:{{ .Values.grafana.tag }}"
+          imagePullPolicy: {{ .Values.grafana.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.grafana.service.port }}
+          volumeMounts:
+            - name: grafana-storage
+              mountPath: /var/lib/grafana/  # Persistent storage for dashboards
+            - name: grafana-config
+              mountPath: /custom
+            - name: grafana-secrets
+              mountPath: /custom/secrets
+              readOnly: true
+          command: ["/bin/bash", "-e", "-x", "-c"]
+          args:
+          - >
+            mkdir -p /var/lib/grafana/dashboards &&
+            cp /custom/anthem-intersection.json /var/lib/grafana/dashboards/anthem-intersection.json &&
+            mkdir -p /etc/grafana/provisioning/dashboards &&
+            cp /custom/dashboards.yml /etc/grafana/provisioning/dashboards/main.yml &&
+            mkdir -p /etc/grafana/provisioning/datasources &&
+            cp /custom/datasources.yml /etc/grafana/provisioning/datasources/datasources.yml &&
+            sed -i "s/<influx-api-token>/$(cat /custom/secrets/influxdb2-admin-token)/g" /etc/grafana/provisioning/datasources/datasources.yml &&
+            /run.sh
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            fsGroup: 0
+      volumes:
+        - name: grafana-storage
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-grafana-pvc
+        - name: grafana-config
+          configMap:
+            name: {{ .Release.Name }}-grafana-config
+        - name: grafana-secrets
+          secret:
+            secretName: {{ .Release.Name }}-grafana-secrets

@@ -1,0 +1,23 @@
+version: "3.8"
+services:
+  qt_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: qt-app-x11:latest
+    environment:
+      - DISPLAY=:99
+    volumes:
+      - ./logs:/app/logs
+    ports:
+      - "8501:8501"
+    command: ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
+    healthcheck:
+      test: ["CMD-SHELL", "ps aux | grep -q run_app.py"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 2g

@@ -1,0 +1,27 @@
+/* Central QSS for advanced UI */
+QWidget {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 14px;
+    border-radius: 10px;
+}
+QPushButton {
+    border-radius: 8px;
+    padding: 6px 16px;
+    background: #2e86de;
+    color: white;
+    font-weight: bold;
+}
+QPushButton:hover {
+    background: #145a96;
+}
+QTabWidget::pane {
+    border-radius: 12px;
+    background: #222;
+}
+QLabel#fpsLabel {
+    background: #222;
+    color: #00ff99;
+    font-size: 16px;
+    border-radius: 8px;
+    padding: 4px 12px;
+}

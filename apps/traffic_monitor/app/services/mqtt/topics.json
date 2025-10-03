@@ -1,0 +1,121 @@
+{
+  "mqtt_topics": {
+    "base_topic": "smartintersection",
+    "topics": {
+      "detection": {
+        "topic": "smartintersection/detection",
+        "description": "Real-time object detection events",
+        "qos": 1,
+        "retain": false,
+        "schema": {
+          "timestamp": "ISO datetime",
+          "camera_id": "string", 
+          "objects": "array of detected objects",
+          "frame_number": "integer",
+          "processing_time_ms": "float"
+        }
+      },
+      "violations": {
+        "topic": "smartintersection/violations", 
+        "description": "Traffic violations and safety alerts",
+        "qos": 2,
+        "retain": true,
+        "schema": {
+          "timestamp": "ISO datetime",
+          "violation_type": "string",
+          "severity": "low|medium|high|critical",
+          "location": "ROI coordinates",
+          "evidence": "object tracking data"
+        }
+      },
+      "performance": {
+        "topic": "smartintersection/performance",
+        "description": "System performance metrics",
+        "qos": 0,
+        "retain": false,
+        "schema": {
+          "timestamp": "ISO datetime", 
+          "fps": "float",
+          "gpu_usage": "float (0-100)",
+          "memory_usage": "float (MB)",
+          "processing_time": "float (ms)"
+        }
+      },
+      "traffic_flow": {
+        "topic": "smartintersection/traffic/flow",
+        "description": "Traffic flow analytics",
+        "qos": 1,
+        "retain": true,
+        "schema": {
+          "timestamp": "ISO datetime",
+          "lane_id": "string",
+          "vehicle_count": "integer", 
+          "average_speed": "float (mph)",
+          "congestion_level": "low|medium|high"
+        }
+      },
+      "pedestrian_safety": {
+        "topic": "smartintersection/safety/pedestrian",
+        "description": "Pedestrian safety events",
+        "qos": 2,
+        "retain": true,
+        "schema": {
+          "timestamp": "ISO datetime",
+          "event_type": "crosswalk_entry|unsafe_crossing|near_miss",
+          "pedestrian_id": "string",
+          "risk_level": "low|medium|high|critical",
+          "location": "crosswalk coordinates"
+        }
+      },
+      "roi_events": {
+        "topic": "smartintersection/roi/events",
+        "description": "Region of Interest events",
+        "qos": 1,
+        "retain": false,
+        "schema": {
+          "timestamp": "ISO datetime",
+          "roi_id": "string",
+          "roi_type": "crosswalk|lane|intersection",
+          "event_type": "entry|exit|dwell|violation",
+          "object_data": "tracking information"
+        }
+      },
+      "camera_status": {
+        "topic": "smartintersection/cameras/status",
+        "description": "Camera health and status",
+        "qos": 1,
+        "retain": true,
+        "schema": {
+          "timestamp": "ISO datetime",
+          "camera_id": "string",
+          "position": "north|east|south|west",
+          "status": "online|offline|error",
+          "fps": "float",
+          "resolution": "WxH"
+        }
+      },
+      "system_health": {
+        "topic": "smartintersection/system/health",
+        "description": "Overall system health",
+        "qos": 1,
+        "retain": true,
+        "schema": {
+          "timestamp": "ISO datetime",
+          "status": "healthy|degraded|critical",
+          "active_cameras": "integer",
+          "services_status": "object",
+          "uptime_seconds": "integer"
+        }
+      }
+    }
+  },
+  "publishing_config": {
+    "broker_host": "localhost",
+    "broker_port": 1883,
+    "keepalive": 60,
+    "client_id_prefix": "smart_intersection_",
+    "auto_reconnect": true,
+    "max_retries": 3,
+    "retry_interval": 5
+  }
+}

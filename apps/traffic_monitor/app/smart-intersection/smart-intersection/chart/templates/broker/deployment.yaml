@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-broker
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}-broker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-broker
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-broker
+    spec:
+      containers:
+        - name: broker
+          image: eclipse-mosquitto
+          ports:
+            - containerPort: 1883
+            - containerPort: 1884
+          volumeMounts:
+            - name: config-volume
+              mountPath: /mosquitto/config
+            - name: secrets-volume
+              mountPath: /mosquitto/secrets
+          command: ["/usr/sbin/mosquitto", "-c", "/mosquitto/config/mosquitto-secure.conf"]
+          securityContext:
+            runAsUser: {{ .Values.broker.uid }}
+            runAsGroup: {{ .Values.broker.gid }}
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ .Release.Name }}-broker
+            items:
+              - key: mosquitto-secure.conf
+                path: mosquitto-secure.conf
+        - name: secrets-volume
+          secret:
+            secretName: {{ .Release.Name }}-broker-rootcert

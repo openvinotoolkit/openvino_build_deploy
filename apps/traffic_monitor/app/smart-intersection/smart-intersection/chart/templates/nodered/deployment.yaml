@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-nodered
+  labels:
+    app: {{ .Release.Name }}-nodered
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-nodered
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-nodered
+    spec:
+      volumes:
+      - name: nodered-config
+        configMap:
+          name: {{ .Release.Name }}-nodered # Reference the ConfigMap created above
+      - name: secrets-volume
+        secret:
+          secretName: {{ .Release.Name }}-nodered-rootcert
+      containers:
+      - envFrom:
+        - configMapRef:
+            name: {{ .Release.Name }}-nodered-env
+        env:
+          - name: INFLUX_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Release.Name }}-nodered-secrets
+                key: influxdb2-admin-token
+        image: {{ .Values.nodered.repository }}:{{ .Values.nodered.tag }}
+        name: {{ .Release.Name }}-nodered
+        imagePullPolicy: {{ .Values.nodered.imagePullPolicy }}
+        volumeMounts:
+          - name: secrets-volume
+            mountPath: /mosquitto/secrets
+          - name: nodered-config
+            mountPath: /config
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - curl -s http://localhost:1880/ | grep -q 'Node-RED'
+        command: 
+          - /bin/bash
+          - -c
+          - |
+            mkdir -p /data/nodered && \
+            cp /config/flows_cred.json /data/flows_cred.json && \
+            cp /config/settings.js /data/settings.js && \
+            cp /config/flows.json /data/flows.json && \
+            cp /config/install_package.sh /data/install_package.sh && \
+            cp -r /mosquitto/secrets /run/ && \
+            chmod +x /data/install_package.sh && \
+            sed -i "s/<influx-api-token>/$INFLUX_TOKEN/g" /data/flows_cred.json && \
+            echo "$SMART_INTERSECTION_BROKER_SERVICE_HOST    broker.scenescape.intel.com" >> /etc/hosts && \
+            /data/install_package.sh && \
+            chown -R node-red:node-red /data/nodered && \
+            chown -R node-red:node-red /data && \
+            /usr/src/node-red/entrypoint.sh
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
+        ports:
+          - containerPort: 1880
+      restartPolicy: Always
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

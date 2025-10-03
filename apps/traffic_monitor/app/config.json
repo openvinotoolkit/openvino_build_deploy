@@ -1,0 +1,31 @@
+{
+  "detection": {
+    "confidence_threshold": 0.5,
+    "enable_ocr": true,
+    "enable_tracking": true,
+    "model_path": null,
+    "model": "yolo11x",
+    "device": "GPU",
+    "iou_threshold": 0.45
+  },
+  "violations": {
+    "red_light_grace_period": 2.0,
+    "stop_sign_duration": 2.0,
+    "speed_tolerance": 5,
+    "enable_lane": true,
+    "enable_red_light": true,
+    "enable_speed": true,
+    "enable_stop_sign": true
+  },
+  "display": {
+    "max_display_width": 800,
+    "show_confidence": true,
+    "show_labels": true,
+    "show_license_plates": true,
+    "show_performance": true
+  },
+  "performance": {
+    "max_history_frames": 1000,
+    "cleanup_interval": 3600
+  }
+}

@@ -1,0 +1,125 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-dlstreamer-pipeline-server
+  labels:
+    app: {{ .Release.Name }}-dlstreamer-pipeline-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-dlstreamer-pipeline-server
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-dlstreamer-pipeline-server
+    spec:
+      volumes:
+      - name: dlstreamer-pipeline-server-videos-data
+        persistentVolumeClaim:
+          claimName: {{ .Release.Name }}-dlstreamer-pipeline-server-videos-pvc
+      - name: dlstreamer-pipeline-server-models-data
+        persistentVolumeClaim:
+          claimName: {{ .Release.Name }}-dlstreamer-pipeline-server-models-pvc
+      - name: {{ .Release.Name }}-dlstreamer-pipeline-server-pipeline-root
+        emptyDir:
+          sizeLimit: 1Gi
+          medium: Memory
+      - name: {{ .Release.Name }}-dlstreamer-pipeline-server-tmp
+        emptyDir:
+          sizeLimit: 1Gi
+          medium: Memory
+      - name: {{ .Release.Name }}-dlstreamer-pipeline-server-config
+        configMap:
+          name: {{ .Release.Name }}-dlstreamer-pipeline-server-config
+      - name: {{ .Release.Name }}-dlstreamer-pipeline-server-udf
+        configMap:
+          name: {{ .Release.Name }}-dlstreamer-pipeline-server-udf
+      - name: {{ .Release.Name }}-dlstreamer-pipeline-server-rootcert
+        secret:
+          secretName: {{ .Release.Name }}-dlstreamer-pipeline-server-rootcert
+      initContainers:
+      - name: init-dlstreamer-pipeline-server-videos
+        image: busybox
+        command: ['sh', '-c', '
+          if [ -f /data/videos/.done ]; then
+            echo ".done file exists in /data/videos";
+          else
+            echo ".done file does NOT exist in /data/videos";
+          fi &&
+          until [ -f /data/videos/.done ]; do
+            echo "Waiting for .done ...";
+            sleep 5;
+          done &&
+          chown -R 1000:1000 /data &&
+          echo "Initializing...";
+          sleep 5']
+        volumeMounts:
+        - mountPath: /data/videos
+          name: dlstreamer-pipeline-server-videos-data
+      - name: init-dlstreamer-pipeline-server-models
+        image: busybox
+        command: ['sh', '-c', '
+          if [ -f /data/models/.done ]; then
+            echo ".done file exists in /data/models";
+          else
+            echo ".done file does NOT exist in /data/models";
+          fi &&
+          until [ -f /data/models/.done ]; do
+            echo "Waiting for .done ...";
+            sleep 5;
+          done &&
+          chown -R 1000:1000 /data &&
+          echo "Initializing...";
+          sleep 5']
+        volumeMounts:
+        - mountPath: /data/models
+          name: dlstreamer-pipeline-server-models-data
+      containers:
+      - envFrom:
+        - configMapRef:
+            name: {{ .Release.Name }}-dlstreamer-pipeline-server
+        image: {{ .Values.dlstreamerPipelineServer.repository }}:{{ .Values.dlstreamerPipelineServer.tag }}
+        name: {{ .Release.Name }}-dlstreamer-pipeline-server
+        imagePullPolicy: {{ .Values.dlstreamerPipelineServer.imagePullPolicy }}
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
+          fsGroup: 0
+        command: ["/bin/bash", "-c"]
+        args:
+          - |
+            mkdir -p /run/secrets/certs &&
+            cp /home/pipeline-server/certs/root-cert /run/secrets/certs/scenescape-ca.pem &&
+            cp /tmp/pipeline/config.json . &&
+            mkdir -p /home/pipeline-server/user_scripts/gvapython/sscape &&
+            cp /tmp/udf/config.json /home/pipeline-server/user_scripts/gvapython/sscape/sscape_adapter.py &&
+            chmod a+rwx /home/pipeline-server/user_scripts/gvapython/sscape/sscape_adapter.py &&
+            chown -R intelmicroserviceuser:intelmicroserviceuser /home/pipeline-server/models &&
+            chown -R intelmicroserviceuser:intelmicroserviceuser /home/pipeline-server/videos &&
+            echo "$SMART_INTERSECTION_BROKER_SERVICE_HOST    $MQTT_HOST" >> /etc/hosts &&
+            runuser -u intelmicroserviceuser ./run.sh
+        volumeMounts:
+        - mountPath: /home/pipeline-server/videos
+          name: dlstreamer-pipeline-server-videos-data
+        - mountPath: /home/pipeline-server/models/object_detection
+          name: dlstreamer-pipeline-server-models-data
+        - mountPath: /var/cache/pipeline_root
+          name: {{ .Release.Name }}-dlstreamer-pipeline-server-pipeline-root
+        - mountPath: /tmp
+          name: {{ .Release.Name }}-dlstreamer-pipeline-server-tmp
+        - mountPath: /tmp/pipeline
+          name: {{ .Release.Name }}-dlstreamer-pipeline-server-config
+        - mountPath: /tmp/udf
+          name: {{ .Release.Name }}-dlstreamer-pipeline-server-udf
+        - mountPath: /home/pipeline-server/certs
+          name: {{ .Release.Name }}-dlstreamer-pipeline-server-rootcert
+          readOnly: true
+        ports:
+          - containerPort: 8080
+          - containerPort: 8555
+      restartPolicy: Always
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

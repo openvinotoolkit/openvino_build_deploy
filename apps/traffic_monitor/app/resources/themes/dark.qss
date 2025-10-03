@@ -1,0 +1,4 @@
+/* Dark theme QSS */
+QWidget { background: #181c20; color: #e0e0e0; }
+QPushButton { background: #2e86de; color: #fff; }
+QTabWidget::pane { background: #23272b; }
