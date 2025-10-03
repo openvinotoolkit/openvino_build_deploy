@@ -10,35 +10,39 @@ runs:
   using: 'composite'
   steps:
     - name: Run Gradio App
-      shell: bash
-      run: |
-        cd ${{ inputs.project }}
-
-        python ${{ inputs.script }} 2>&1 | tee gradio_log.txt &
-
-        # Assign process ID
-        python -u ${{ inputs.script }} > >(tee -a gradio_log.txt) 2>&1 &
-        app_pid=$!
-        echo "Started app with PID: $app_pid"
-        
-        set +o pipefail
-        # Wait for the specific log message
-        tail -n +1 -f gradio_log.txt | grep -m1 -q "Demo is ready!"
-        # Capture the readiness status
-        status=$?
-        echo "=== 'Demo is ready!' detected! ==="
-        
-        echo "Stopping the Gradio app..."
-        if ps -p $app_pid > /dev/null 2>&1; then
-            echo "Stopping PID $app_pid..."
-            pkill -P $app_pid 2>/dev/null || echo "No child processes to kill"
-            kill $app_pid 2>/dev/null || echo "Main process already terminated"
-            wait $app_pid 2>/dev/null || echo "Waited for process cleanup"
-        fi
-    
-        if [[ "$RUNNER_OS" == "Windows" ]]; then
-            echo "Attempting Windows taskkill fallback..."
-            taskkill //PID $app_pid //T //F 2>/dev/null || echo "No process found for taskkill"
-        fi
-    
-        exit $status
+    shell: bash
+    run: |
+      cd ${{ inputs.project }}
+  
+      # Start the Gradio app once, unbuffered, and capture its PID
+      python -u ${{ inputs.script }} > >(tee -a gradio_log.txt) 2>&1 &
+      app_pid=$!
+      echo "Started app with PID: $app_pid"
+  
+      echo "=== Waiting for 'Demo is ready!' message ==="
+      set +o pipefail
+      tail -n +1 -f gradio_log.txt | grep -m1 -q "Demo is ready!"
+      status=$?
+  
+      if [[ $status -eq 0 ]]; then
+          echo "=== 'Demo is ready!' detected! ==="
+      else
+          echo "!!! Readiness not detected (status=$status) !!!"
+      fi
+  
+      echo "Stopping the Gradio app..."
+      if ps -p $app_pid > /dev/null 2>&1; then
+          echo "Stopping PID $app_pid..."
+          pkill -P $app_pid 2>/dev/null || echo "No child processes to kill"
+          kill $app_pid 2>/dev/null || echo "Main process already terminated"
+          wait $app_pid 2>/dev/null || echo "Waited for process cleanup"
+      fi
+  
+      if [[ "$RUNNER_OS" == "Windows" ]]; then
+          echo "Attempting Windows taskkill fallback..."
+          taskkill //PID $app_pid //T //F 2>/dev/null || echo "No process found for taskkill"
+      fi
+  
+      echo "Exiting with status: $status"
+      exit $status
+  
