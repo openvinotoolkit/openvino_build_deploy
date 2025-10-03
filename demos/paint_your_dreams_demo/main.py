@@ -64,8 +64,12 @@ flux_config = {
     "num_inference_steps": 4,
     "strength_value": 0.2,
     "lora_adapters": [
+        "prithivMLmods/Canopus-LoRA-Flux-FaceRealism",
+        "AlekseyCalvin/Propaganda_Poster_Schnell_by_doctor_diffusion",
+        "aihpi/flux-fashion-lora"
     ]
 }
+
 flux_lite_config = {
     "guidance_scale_value": 3.5,
     "num_inference_steps": 12,
@@ -73,11 +77,13 @@ flux_lite_config = {
     "lora_adapters": [
     ]
 }
+
 sdxl_config = {
     "guidance_scale_value": 1.1,
     "num_inference_steps": 2,
     "strength_value": 0.5,
     "lora_adapters": [
+        # "Stelath/textual_inversion_comic_strip_turbo"
     ]
 }
 
@@ -135,7 +141,7 @@ async def load_lora_adapter(adapter_model_name: str, adapter_alpha: float) -> ge
     safetensors_file = safetensors_files[0]
 
     adapter = genai.Adapter(safetensors_file)
-    adapter_config = genai.AdapterConfig(adapter, adapter_alpha)
+    adapter_config = genai.AdapterConfig(adapter, adapter_alpha, genai.AdapterConfig.Mode.MODE_STATIC)
     return adapter_config
 
 
