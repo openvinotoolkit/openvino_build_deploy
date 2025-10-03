@@ -46,7 +46,7 @@ jobs:
       fail-fast: false
       matrix:
         # onnxruntime-openvino is not available on mac
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-24.04, windows-2025]
         python: ["3.10", "3.13"]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.notebook) }}
     steps:
@@ -66,8 +66,14 @@ jobs:
           cd ${{ matrix.subproject }}
           # replace video_path with sample_video.mp4
           find . -name "*.ipynb" -exec sed -E -i "s/video_path\s*=\s*(['\"]?.*?['\"]?)/video_path=\\\\\"sample_video.mp4\\\\\"\\\n\",/g" {} +
-      - uses: ./.github/reusable-steps/timeouted-action
-        name: Run Notebook
-        with:
-          command: jupyter nbconvert --to notebook --execute *.ipynb
-          project: ${{ matrix.subproject }}
+      - name: Run Notebook
+        shell: bash
+        timeout-minutes: 30
+        run: |
+          cd ${{ matrix.subproject }}
+          if [ "${{ runner.os }}" == "Linux" ]; then
+            xvfb-run jupyter nbconvert --to notebook --debug --execute *.ipynb
+          else 
+            jupyter nbconvert --to notebook --debug --execute *.ipynb
+          fi
+          

@@ -58,12 +58,13 @@ def get_available_devices() -> Set[str]:
     return {device.split(".")[0] for device in core.available_devices}
 
 
-def load_asr_model(model_dir: Path) -> None:
+def load_asr_model(model_dir: Path, device: str) -> None:
     """
     Load automatic speech recognition model and assign it to a global variable
 
     Params:
         model_dir: dir with the ASR model
+        device: device to run ASR model on
     """
     global asr_model, asr_processor
 
@@ -72,17 +73,17 @@ def load_asr_model(model_dir: Path) -> None:
         return
 
     # create a distil-whisper model and its processor
-    device = "GPU" if "GPU" in get_available_devices() and ov.__version__ < "2024.3" else "CPU"
     asr_model = OVModelForSpeechSeq2Seq.from_pretrained(model_dir, device=device)
     asr_processor = AutoProcessor.from_pretrained(model_dir)
 
 
-def load_chat_model(model_dir: Path) -> None:
+def load_chat_model(model_dir: Path, device: str) -> None:
     """
     Load chat model and assign it to a global variable
 
     Params:
         model_dir: dir with the chat model
+        device: device to run chat model on
     """
     global chat_model, chat_tokenizer
 
@@ -91,7 +92,6 @@ def load_chat_model(model_dir: Path) -> None:
         return
 
     # load llama model and its tokenizer
-    device = "GPU" if "GPU" in get_available_devices() else "AUTO"
     ov_config = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1', "CACHE_DIR": ""}
     chat_model = OVModelForCausalLM.from_pretrained(model_dir, device=device, config=AutoConfig.from_pretrained(model_dir), ov_config=ov_config)
     chat_tokenizer = AutoTokenizer.from_pretrained(model_dir)
@@ -297,22 +297,24 @@ def create_UI(initial_message: str) -> gr.Blocks:
     return demo
 
 
-def run(asr_model_dir: Path, chat_model_dir: Path, public_interface: bool = False) -> None:
+def run(asr_model_dir: Path, asr_model_device: str, chat_model_dir: Path, chat_model_device: str, public_interface: bool = False) -> None:
     """
     Run the assistant application
 
     Params
         asr_model_dir: dir with the automatic speech recognition model
+        asr_model_device: device to run ASR model on
         chat_model_dir: dir with the chat model
+        chat_model_device: device to run chat model on
         public_interface: whether UI should be available publicly
     """
     # set up logging
     log.getLogger().setLevel(log.INFO)
 
     # load whisper model
-    load_asr_model(asr_model_dir)
+    load_asr_model(asr_model_dir, asr_model_device)
     # load chat model
-    load_chat_model(chat_model_dir)
+    load_chat_model(chat_model_dir, chat_model_device)
 
     if chat_model is None or asr_model is None:
         log.error("Required models are not loaded. Exiting...")
@@ -332,8 +334,10 @@ def run(asr_model_dir: Path, chat_model_dir: Path, public_interface: bool = Fals
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--asr_model_dir', type=str, default="model/distil-whisper-large-v3-FP16", help="Path to the automatic speech recognition model directory")
+    parser.add_argument("--asr_model_device", type=str, default="CPU", choices=["AUTO", "GPU", "CPU", "NPU"], help="Device to run ASR model inference on")
     parser.add_argument('--chat_model_dir', type=str, default="model/llama3.2-3B-INT4", help="Path to the chat model directory")
+    parser.add_argument("--chat_model_device", type=str, default="GPU", choices=["AUTO", "GPU", "CPU", "NPU"], help="Device to run chat model inference on")
     parser.add_argument('--public', default=False, action="store_true", help="Whether interface should be available publicly")
 
     args = parser.parse_args()
-    run(Path(args.asr_model_dir), Path(args.chat_model_dir), args.public)
+    run(Path(args.asr_model_dir), args.asr_model_device, Path(args.chat_model_dir), args.chat_model_device, args.public)

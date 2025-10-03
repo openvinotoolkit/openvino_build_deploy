@@ -7,33 +7,45 @@ This directory contains interactive demos aimed at demonstrating how OpenVINO pe
 _Please note: even though you can find here a lot of useful OpenVINO code, education is not the main purpose of this directory. If you are interested in educational content visit [ai_ref_kits](../ai_ref_kits/README.md)._
 
 ## Running Demos with Docker
-A Dockerfile and run_container.sh script is provided to run the demos as a container if needed.
+
+A `Dockerfile` and `run_container.sh` script are provided to run the demos as a container if needed.
+
 ### Build Container
+
 ```bash
 docker build -f Dockerfile --build-arg DEMO=<demo folder> -t <image_name> .
 ```
+
 Example:
+
 ```bash
 docker build -f Dockerfile --build-arg DEMO=paint_your_dreams_demo -t paint_your_dreams_demo:latest .
 ```
-Note: Demo folder needs to be the exact folder name, e.g. paint_your_dreams_demo
+
+Note: Demo folder needs to be the exact folder name, e.g. `paint_your_dreams_demo`.
 
 ### Run Container 
+
 ```bash
 run_container.sh <image_name> <flags>
 ```
+
 Example:
+
 ```bash
 run_container.sh virtual_ai_assistant_demo --personality use_your_personality.yaml
 ```
 
-### Performance Note:
-Running the containerized workloads will reduce performance of the application in terms of througput - a 30% drop in FPS vs bare metal is common
+_Performance Note: Running the containerized workloads will reduce performance of the application in terms of throughput - a 30% drop in FPS vs bare metal is common._
+
 ### Proxy Settings
+
 If you are building and running the container behind a proxy please pass the environmental variables to the build command and run_container script:
+
 ```bash
 docker build -f Dockerfile --build-arg DEMO=paint_your_dreams_demo --build-arg http_proxy=$http_proxy --build-arg https_proxy=$https_proxy --build-arg no_proxy="$no_proxy" -t paint_your_dreams_demo:latest .
 ```
+
 ```bash
 run_container.sh -e no_proxy=$NO_PROXY -e http_proxy=$http_proxy -e https_proxy=$https_proxy paint_your_dreams_demo
 ```
@@ -54,7 +66,7 @@ The demo generates images in a reasonable time (seconds) on Intel hardware.
 | Platforms                                     | Client (CPU, GPU), Cloud (CPU, GPU)                        |
 | Owner                                         | [@adrianboguszewski](https://github.com/adrianboguszewski) |
 
-### 🏥 Virtual Assistant
+### 🏥 Virtual AI Assistant
 
 The demo works as a virtual AI assistant. The default personality is a healthcare assistant, whose task is to greet the patient and summarize the patient's condition based on the conversation and uploaded examination report.
 
@@ -99,18 +111,6 @@ The demo detects, tracks and counts defined objects in front of the webcam. The 
 | Related AI concepts                     | object detection, object tracking, object counting, YOLOWorld |
 | Platforms                               | Client (CPU, GPU, NPU), Edge (CPU)                            |
 | Owner                                   | [@adrianboguszewski](https://github.com/adrianboguszewski)    |
-
-### 🔮 Hide Your Mess Behind
-
-The demo blurs the background behind a person on a webcam. The app is built using NodeJS and Electron technologies. It can be run from the compiled exe file or using npm.
-
-[![image](https://github.com/user-attachments/assets/e6925e6b-0d81-41da-b9b0-c4f21f173681)](hide_your_mess_behind_demo)
-
-| [Hide Your Mess Behind](hide_your_mess_behind_demo) |                                                                                       |
-|--------------------------------------|------------------------------------------------------------------------------------------------------|
-| Related AI concepts                  | image segmentation                                                                                   |
-| Platforms                            | Client (CPU, GPU, NPU), Edge (CPU)                                                                   |
-| Owner                                | [@Roszczyk](https://github.com/Roszczyk), [@adrianboguszewski](https://github.com/adrianboguszewski) |
 
 ### 💃 Strike a pose
 

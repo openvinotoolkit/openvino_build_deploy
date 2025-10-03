@@ -10,7 +10,7 @@ onnx==1.18.0
 torch==2.8.0
 torchvision==0.23.0
 supervision==0.11.0
-jupyterlab==4.2.5
+jupyterlab==4.4.8
 tqdm==4.66.3
 pycocotools==2.0.10
 cython==0.29.35
