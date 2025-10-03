@@ -13,6 +13,9 @@ runs:
       shell: bash
       run: |
         cd ${{ inputs.project }}
+
+        # Ensure log file exists before tailing
+        touch gradio_log.txt
     
         # Start the Gradio app once, unbuffered, and capture its PID
         python -u ${{ inputs.script }} > >(tee -a gradio_log.txt) 2>&1 &
