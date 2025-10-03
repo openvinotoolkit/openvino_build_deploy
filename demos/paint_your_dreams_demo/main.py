@@ -141,7 +141,7 @@ async def load_lora_adapter(adapter_model_name: str, adapter_alpha: float) -> ge
     safetensors_file = safetensors_files[0]
 
     adapter = genai.Adapter(safetensors_file)
-    adapter_config = genai.AdapterConfig(adapter, adapter_alpha)
+    adapter_config = genai.AdapterConfig(adapter, adapter_alpha, genai.AdapterConfig.Mode.MODE_STATIC)
     return adapter_config
 
 
