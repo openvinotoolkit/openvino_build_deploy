@@ -83,7 +83,7 @@ sdxl_config = {
     "num_inference_steps": 2,
     "strength_value": 0.5,
     "lora_adapters": [
-        "Stelath/textualit a_inversion_comic_strip_turbo"
+        "Stelath/textual_inversion_comic_strip_turbo"
     ]
 }
 
