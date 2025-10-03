@@ -17,3 +17,4 @@ numpy==2.2.6
 gradio==5.35.0
 tqdm==4.67.1
 qrcode[pil]==8.2
+sentencepiece==0.2.1

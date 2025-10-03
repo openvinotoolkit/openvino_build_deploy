@@ -1,0 +1,6 @@
+*/venv
+*.xml
+*.bin
+*.pt
+*.yaml
+data/*
