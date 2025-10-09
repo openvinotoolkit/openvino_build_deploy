@@ -227,6 +227,11 @@ We have now our LLM running and ready to be used by our agents.
 
 All agents are created by a runner `agent_runner.py` which reads two files : `config/agents_config.yaml` and `config\agents_prompt.yaml`
 
+You can start the agents all together by running 
+```python
+python start_agents.py
+```
+
 ### Agents configuration
 
 ### Agents Prompts
