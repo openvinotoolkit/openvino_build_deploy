@@ -133,7 +133,7 @@ Windows and Linux
 TBC
 
 ## OPTION 2: Linux
-
+v
 ### Docker Installation
 
 
@@ -143,16 +143,68 @@ TBC
 docker pull openvino/model_server:latest
 ```
 ### Download optimized models for OVMS
+
+Agents LLM **Phi-4-mini-instruct-int4-ov**
 ```
-docker run -d --user $(id -u):$(id -g) --rm -p 8001:8001 -v $(pwd)/models:/models openvino/model_server:latest \
---rest_port 8001 --model_repository_path models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --tool_parser phi4 --cache_size 2 --task text_generation --enable_prefix_caching true
+docker run -d --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models openvino/model_server:latest \
+--pull --model_repository_path /models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --tool_parser phi4 --cache_size 2 --task text_generation --enable_prefix_caching true
+```
+
+VLM **Phi-3.5-vision-instruct-int4-ov**
+```
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest  \
+--pull --model_repository_path /models --source_model OpenVINO/Phi-3.5-vision-instruct-int4-ov --task text_generation --pipeline_type VLM
+```
+
+Embeddings
+
+Whisper
+```
+docker run --user $(id -u):$(id -g) --rm \
+  -v $(pwd)/models:/models:rw \
+  openvino/model_server:latest \
+  --pull \
+  --model_repository_path /models \
+  --source_model OpenVINO/whisper-large-v3-int4-ov \
+  --task text_generation \
+  --pipeline_type AUTO
 ```
 
 ### Start OVMS
 
+LLM
 ```
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --task text_generation --tool_parser phi4
-curl -L -o models/OpenVINO/Phi-4-mini-instruct-int4-ov/chat_template.jinja https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/extras/chat_template_examples/chat_template_phi4_mini.jinja
+docker run -d --user $(id -u):$(id -g) --rm \
+  -p 8000:8000 \
+  -v $(pwd)/models:/models openvino/model_server:latest \
+  --rest_port 8000 \
+  --model_repository_path models \
+  --source_model OpenVINO/Phi-4-mini-instruct-int4-ov \
+  --tool_parser phi4 \
+  --cache_size 2 \
+  --task text_generation \
+  --enable_prefix_caching true
+```
+
+VLM
+```
+docker run -d --rm \
+  -p 8003:8000 \
+  -v $(pwd)/models:/models:ro \
+  openvino/model_server:latest \
+  --rest_port 8000 \
+  --model_name penVINO/Phi-3.5-vision-instruct-int4-ov \
+  --model_path /models/OpenVINO/Phi-3.5-vision-instruct-int4-ov
+```
+
+Whisper
+```
+docker run -d --rm \
+  -p 8004:8000 \
+  -v $(pwd)/models:/models openvino/model_server:latest \
+  --rest_port 8000 \
+  --model_repository_path models \
+  --source_model OpenVINO/whisper-large-v3-int4-ov 
 ```
 
 ### Check
@@ -169,11 +221,28 @@ CONTAINER ID   IMAGE                          COMMAND                  CREATED  
 
 We have now our LLM running and ready to be used by our agents.
 
+# Define your Agents and tools
+
+## Agents YAML config
+
+All agents are created by a runner `agent_runner.py` which reads two files : `config/agents_config.yaml` and `config\agents_prompt.yaml`
+
+### Agents configuration
+
+### Agents Prompts
+
+
+## MCP Servers YAML config
+
 # Start MCP tools
 In this example, we will have multiple MCP servers to be consumed by the agents. In order to follow and understand the behavior, each agent and tool should be started from an independent terminal (be sure to activate the environment).
 ### Get your SerpAPi
 
 Go to https://serpapi.com/
+
+## Option 1 (launch all MCP servers at once)
+
+## Option 2 (Ideal for debugging) : Launch each mcp in an individual terminal
 
 ### Start Hotel finder API Tool (TERMINAL 1)
 Clone server from AI Builder
