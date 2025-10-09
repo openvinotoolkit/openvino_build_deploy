@@ -182,7 +182,7 @@ docker run --user $(id -u):$(id -g) --rm \
 LLM
 ```
 docker run -d --user $(id -u):$(id -g) --rm \
-  -p 8000:8000 \
+  -p 8002:8000 \
   -v $(pwd)/models:/models openvino/model_server:latest \
   --rest_port 8000 \
   --model_repository_path models \

@@ -13,7 +13,6 @@ from typing import Tuple
 
 import gradio as gr
 import uvicorn
-import yaml
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
@@ -21,17 +20,9 @@ from dotenv import load_dotenv
 # BeeAI Framework imports
 from beeai_framework.adapters.a2a.agents.agent import A2AAgent
 from beeai_framework.memory import UnconstrainedMemory
+from beeai_framework.logger import Logger
 
 print("✅ Basic imports successful")
-
-# Set OpenAI environment variables from agent config
-config_dir = Path(__file__).parent / "config"
-with open(config_dir / "agents_config.yaml", 'r') as f:
-    agents_config = yaml.safe_load(f)
-
-llm_config = agents_config['travel_router']['llm']
-os.environ["OPENAI_API_KEY"] = llm_config['api_key']
-os.environ["OPENAI_API_BASE"] = llm_config['api_base']
 
 # Import video ingestion with proper error handling
 try:
@@ -77,6 +68,29 @@ class TravelRouterClient:
             import traceback
             print(f"Traceback: {traceback.format_exc()}")
             return False
+
+
+    async def video_ingestion(self, video_file: str) -> str:
+        """Ingest a video into the travel router"""
+        if not self.initialized:
+            await self.initialize()
+        
+        if not self.initialized:
+            return "Error: Travel Router not available. Please check the agent configuration."
+        
+        # Using a remote URL or previously uploaded file ID
+        msg = UserMessage([
+            MessageFileContent(
+                file_id=video_file,  # replace with your actual file URL or ID
+                format="video/mp4",
+            ),
+            "Ingest this video"  # your query
+        ])  
+
+        response = await self.client.run(msg)
+
+        return response
+
     
     async def chat(self, query: str) -> str:
         """Process a query through the travel router"""
@@ -442,6 +456,33 @@ def clear_all():
     if travel_router_client and travel_router_client.memory:
         travel_router_client.memory = UnconstrainedMemory()
     return "", chatbox_msg
+    
+async def ingest_video(video_file:str):
+    # Save the uploaded video file to the data directory
+    from pathlib import Path
+    import shutil
+
+    # Assume video_file is a path-like object or string
+    project_root = Path(__file__).parent.parent
+    tmp_dir = project_root / "tmp_files"
+    tmp_dir.mkdir(exist_ok=True)
+    dest_path = tmp_dir / Path(video_file).name
+    print(f"Video to be saved to {dest_path}", flush=True)
+    # Copy the file to the destination
+    try:
+        shutil.copy(video_file, dest_path)
+        print(f"Video saved to {dest_path}", flush=True)
+    except Exception as e:
+        print(f"Failed to save video: {e}", flush=True)
+        yield f"Failed to save video: {e}", chatbox_msg, ""
+        return
+    if travel_router_client is None or not travel_router_client.initialized:
+        print("Travel Router not available or not initialized", flush=True)
+        yield "Travel Router not available or not initialized.", chatbox_msg, ""
+        return
+    video_msg = f"Ingest this video: {dest_path}"
+    chatbox_msg.append({"role": "user", "content": video_msg})
+    await travel_router_client.chat(video_msg)
 
 async def run_agent_workflow(query: str):
     global chatbox_msg, travel_router_client, memory, stop_requested
@@ -452,7 +493,7 @@ async def run_agent_workflow(query: str):
 
     if travel_router_client is None or not travel_router_client.initialized:
         print("Travel Router not available or not initialized", flush=True)
-        yield "Travel Router not available or not initialized.", chatbox_msg
+        yield "Travel Router not available or not initialized.", chatbox_msg, ""
         return
 
     try:
@@ -468,7 +509,7 @@ async def run_agent_workflow(query: str):
 
 *Processing through Travel Router...*
 """
-        yield initial_log, chatbox_msg
+        yield initial_log, chatbox_msg, query
         
         # Use the URL-based client to chat with travel router
         # Capture tool call logs during processing
@@ -484,7 +525,7 @@ async def run_agent_workflow(query: str):
 
 *Analyzing query and routing to specialized agents...*
 """
-        yield tool_status_log, chatbox_msg
+        yield tool_status_log, chatbox_msg, query
         
         # Capture console output to detect tool calls
         captured_output = io.StringIO()
@@ -499,7 +540,7 @@ async def run_agent_workflow(query: str):
 
 *Processing query through Travel Router...*
 """
-        yield tool_prediction_log, chatbox_msg
+        yield tool_prediction_log, chatbox_msg, query
         
         response = await travel_router_client.chat(query)
         
@@ -513,7 +554,7 @@ async def run_agent_workflow(query: str):
 
 *Generating final response...*
 """
-        yield tools_completed_log, chatbox_msg
+        yield tools_completed_log, chatbox_msg, query
         
         # Simulate streaming by showing the response progressively
         words = response.split()
@@ -522,7 +563,7 @@ async def run_agent_workflow(query: str):
         for i, word in enumerate(words):
             # Check if stop was requested
             if stop_requested:
-                yield "🛑 Query stopped by user.", chatbox_msg
+                yield " Query stopped by user.", chatbox_msg, ""
                 return
                 
             partial_response += word + " "
@@ -540,7 +581,7 @@ async def run_agent_workflow(query: str):
 **Status:** ✅ Active | **Memory:** ✅ Maintained
 """
             
-            yield progress, temp_chatbox
+            yield progress, temp_chatbox, query
             
             # Small delay to make streaming visible
             import asyncio
@@ -564,49 +605,14 @@ async def run_agent_workflow(query: str):
 ✅ **Ready for next query**
 """
         
-        yield final_log, chatbox_msg
+        yield final_log, chatbox_msg, ""  # Clear input after successful processing
         
     except Exception as e:
         error_msg = f"Error communicating with Travel Router: {e}"
         print(f"Error: {error_msg}", flush=True)
         chatbox_msg.append({"role": "assistant", "content": error_msg})
-        yield error_msg, chatbox_msg
+        yield error_msg, chatbox_msg, ""  # Clear input even on error
 
-
-
-
-
-# def please(str):
-#     loop = asyncio.get_event_loop()
-#     loop.run_until_complete(run_agent_workflow(str))
-# async def run_agent_workflow(query: str):
-#     print("HELPING1111")
-#     handler = travel_router_client.query(
-#         query,
-#         memory=memory,
-#     )
-#     print("HELPING2222")
-#     fn_response = ""
-#     img_list = []
-#     async for res in handler:
-#         log, text_res = res
-#         yield log
-
-# def chat(query:str):
-#     """
-#     Function to handle chat queries.
-#     """
-#     return asyncio.create_task(run_agent_workflow(query))
-    # history = [
-    #     {"role": "assistant", "content": "I am happy to provide you that report and plot."},
-    #     {"role": "assistant", "content": "Here is the report and plot you requested."},
-    # ]
-    # return "abc", history
-
-# chat("What dessert is included in this video?")
-
-
-# print(f"=====> RESPONSE: {resp}")
 
 # Set Gradio temporary directory to avoid Windows path issues
 import tempfile
@@ -647,8 +653,11 @@ with gr.Blocks(theme=gr.themes.Soft(), css=".disclaimer{font-variant-caps:all-sm
             log_window = gr.Markdown("### 🤖 Agent’s Reasoning Log", label="Logs", height=300)
     
     # Register listeners    
-    build_btn.click(fn=safe_ingest_video, inputs=[video_file], outputs=[status])
-    send_btn.click(fn=run_agent_workflow, inputs=[msg], outputs=[log_window, chatbot])
+    build_btn.click(fn=ingest_video, inputs=[video_file], outputs=[status])
+    
+    # Both send button and enter key will clear the input automatically
+    send_btn.click(fn=run_agent_workflow, inputs=[msg], outputs=[log_window, chatbot, msg])
+    msg.submit(fn=run_agent_workflow, inputs=[msg], outputs=[log_window, chatbot, msg])
     
     # Register stop button
     stop_btn.click(fn=stop_query, inputs=[], outputs=[log_window, chatbot])

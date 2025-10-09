@@ -19,6 +19,7 @@ import os
 from contextlib import AsyncExitStack
 import requests
 import yaml
+import logging
 
 from mcp.client.sse import sse_client
 from mcp.client.session import ClientSession
@@ -39,11 +40,11 @@ from beeai_framework.serve.utils import LRUMemoryManager
 from beeai_framework.tools import Tool
 from beeai_framework.tools.handoff import HandoffTool
 from beeai_framework.tools.mcp import MCPTool
+from beeai_framework.logger import Logger
 
 # Add parent directory to path for imports (before local imports!)
 sys.path.append(str(Path(__file__).parent.parent))   # noqa: E402
 from utils.config import load_config
-
 
 # =============================================================================
 # MCP TOOLS MANAGEMENT
@@ -102,11 +103,10 @@ class MCPToolsManager:
 # AGENT CREATION
 # =============================================================================
 
-
 class AgentFactory:
     """Factory class for creating different types of agents"""
 
-    def create_agent(self, config, tools=None):
+    def create_agent(self, config, tools=None,agent_name=None):
         """Create an agent from configuration (regular or supervisor)"""
         if 'supervised_agents' in config:
             return self._create_supervisor_agent(config, tools)
@@ -123,6 +123,7 @@ class AgentFactory:
 
         # Create middleware if enabled
         middlewares = []
+
         middleware_config = config['middleware']['trajectory']
         if middleware_config.get('enabled', True):
             middlewares.append(GlobalTrajectoryMiddleware(
@@ -135,6 +136,7 @@ class AgentFactory:
                 prefix_by_type={Tool: middleware_config['tool_prefix']}
             ))
 
+        
         # Handle tool configuration
         # If tools are provided externally (MCP tools), use them
         # Otherwise, check if tools is a list in config
@@ -188,6 +190,7 @@ class AgentFactory:
         available_agents, agent_cards = self._discover_supervised_agents(
             config
         )
+        
         print("***********CREATING SUPERVISOR AGENT***********")
         # Create supervisor tools (HandoffTools)
         supervisor_tools = []
@@ -334,7 +337,7 @@ class AgentRunner:
                 )
                 if not all_mcp_tools:
                     return
-                agent = self.agent_factory.create_agent(config, all_mcp_tools)
+                agent = self.agent_factory.create_agent(config, all_mcp_tools,agent_name)
                 server = self.server_manager.create_server(agent, config)
 
                 # Run server in the same process to keep MCP connections alive
@@ -344,7 +347,7 @@ class AgentRunner:
                 except KeyboardInterrupt:
                     print(f"\n{agent_name} stopped")
         else:
-            agent = self.agent_factory.create_agent(config, None)
+            agent = self.agent_factory.create_agent(config, None,agent_name)
             server = self.server_manager.create_server(agent, config)
 
             process = multiprocessing.Process(target=server.serve)
