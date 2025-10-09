@@ -72,6 +72,13 @@ Check out our [AI Reference Kits repository](https://github.com/openvinotoolkit/
 
 ---
 
+# STEPS
+- Start OVMS LLMs
+- Start MCP servers
+- Start Agents (start_agents.py)
+- Start UI (start_ui.py)
+
+
 # Setting Up Your Environment
 
 
@@ -223,21 +230,7 @@ We have now our LLM running and ready to be used by our agents.
 
 # Define your Agents and tools
 
-## Agents YAML config
-
-All agents are created by a runner `agent_runner.py` which reads two files : `config/agents_config.yaml` and `config\agents_prompt.yaml`
-
-You can start the agents all together by running 
-```python
-python start_agents.py
-```
-
-### Agents configuration
-
-### Agents Prompts
-
-
-## MCP Servers YAML config
+## MCP Servers YAML config (WIP)
 
 # Start MCP tools
 In this example, we will have multiple MCP servers to be consumed by the agents. In order to follow and understand the behavior, each agent and tool should be started from an independent terminal (be sure to activate the environment).
@@ -245,9 +238,16 @@ In this example, we will have multiple MCP servers to be consumed by the agents.
 
 Go to https://serpapi.com/
 
-## Option 1 (launch all MCP servers at once)
+## Option 1 (launch all MCP servers at once) WIP
 
 ## Option 2 (Ideal for debugging) : Launch each mcp in an individual terminal
+
+### Start Video Tool
+
+```
+cd mcp_tools
+python video_tool.py
+```
 
 ### Start Hotel finder API Tool (TERMINAL 1)
 Clone server from AI Builder
@@ -278,6 +278,21 @@ python ai_builder_mcp_flight_finder.py start --port 7902 --protocol sse
 ```
 
 ### Start VideoProcessing Tools (WIP)
+
+
+
+## Agents YAML config
+
+All agents are created by a runner `agent_runner.py` which reads two files : `config/agents_config.yaml` and `config\agents_prompt.yaml`
+
+You can start the agents all together by running 
+```python
+python start_agents.py
+```
+
+### Agents configuration
+
+### Agents Prompts
 
 
 
