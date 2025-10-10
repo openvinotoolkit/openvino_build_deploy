@@ -178,6 +178,11 @@ video_analysis:
   # Memory Configuration
   memory_size: 5
   
+  # Requirements - Force tool usage
+  requirements:
+    - tool_name: "ingest_videos"
+      force_at_step: 1
+      max_invocations: 1
   # Tools Configuration (MCP-based)
   tools:
     type: "mcp_tools"

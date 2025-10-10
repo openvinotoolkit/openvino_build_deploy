@@ -156,6 +156,13 @@ class AgentFactory:
                 )
 
         print(f"Agent using {len(agent_tools)} tools")
+        if agent_tools:
+            print("  Connected tools:")
+            for i, tool in enumerate(agent_tools, 1):
+                tool_type = type(tool).__name__
+                print(f"    {i}. {tool.name} ({tool_type})")
+        else:
+            print("  No tools connected")
 
         # Process requirements
         requirements = []
@@ -208,12 +215,41 @@ class AgentFactory:
         # Combine MCP tools with HandoffTools if provided
         if mcp_tools:
             all_tools = mcp_tools + supervisor_tools
-            print(f"Supervisor using {len(mcp_tools)} MCP tools + "
-                  f"{len(supervisor_tools)} HandoffTools = {len(all_tools)} total tools")
+            print(
+                f"Supervisor using {len(mcp_tools)} MCP tools + "
+                f"{len(supervisor_tools)} HandoffTools = "
+                f"{len(all_tools)} total tools"
+            )
+            print("  MCP tools:")
+            for i, tool in enumerate(mcp_tools, 1):
+                tool_type = type(tool).__name__
+                print(f"    {i}. {tool.name} ({tool_type})")
+            print("  HandoffTools:")
+            for i, tool in enumerate(supervisor_tools, 1):
+                tool_type = type(tool).__name__
+                # Show target agent info - get URL/name, fallback to string
+                target_info = (
+                    getattr(tool._target, 'url', None)
+                    or getattr(tool._target, 'name', None)
+                    or str(tool._target)
+                )
+                print(f"    {i}. {tool.name} ({tool_type}) -> {target_info}")
         else:
             all_tools = supervisor_tools
-            print(f"Supervisor using {len(supervisor_tools)} "
-                  f"HandoffTools (no MCP tools)")
+            print(
+                f"Supervisor using {len(supervisor_tools)} "
+                f"HandoffTools (no MCP tools)"
+            )
+            print("  HandoffTools:")
+            for i, tool in enumerate(supervisor_tools, 1):
+                tool_type = type(tool).__name__
+                # Show target agent info - get URL/name, fallback to string
+                target_info = (
+                    getattr(tool._target, 'url', None)
+                    or getattr(tool._target, 'name', None)
+                    or str(tool._target)
+                )
+                print(f"    {i}. {tool.name} ({tool_type}) -> {target_info}")
 
         return self._create_regular_agent(config, all_tools)
 
@@ -337,7 +373,9 @@ class AgentRunner:
                 )
                 if not all_mcp_tools:
                     return
-                agent = self.agent_factory.create_agent(config, all_mcp_tools,agent_name)
+                agent = self.agent_factory.create_agent(
+                    config, all_mcp_tools, agent_name
+                )
                 server = self.server_manager.create_server(agent, config)
 
                 # Run server in the same process to keep MCP connections alive
@@ -389,3 +427,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
