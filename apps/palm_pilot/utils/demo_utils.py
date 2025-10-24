@@ -6,7 +6,6 @@ import tempfile
 import threading
 import time
 import urllib.parse
-import urllib.parse
 from os import PathLike
 from pathlib import Path
 from typing import Tuple, Dict
