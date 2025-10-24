@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
-
-
+import hashlib
 import platform
+import shutil
 import sys
+import tempfile
 import threading
 import time
+import urllib
 from os import PathLike
 from pathlib import Path
 from typing import NamedTuple, Optional
@@ -100,10 +101,12 @@ def download_file(
     url: PathLike,
     filename: PathLike = None,
     directory: PathLike = None,
+    expected_hash: str = None,
     show_progress: bool = True,
-) -> PathLike:
+    timeout: int = 10,
+) -> Path:
     """
-    Download a file from a url and save it to the local filesystem. The file is saved to the
+    Download a file from an url and save it to the local filesystem. The file is saved to the
     current directory by default, or to `directory` if specified. If a filename is not given,
     the filename of the URL will be used.
 
@@ -112,70 +115,46 @@ def download_file(
                      not the full path. If None the filename from the url will be used
     :param directory: Directory to save the file to. Will be created if it doesn't exist
                       If None the file will be saved to the current working directory
+    :param expected_hash: Expected hash of the file to verify integrity. If None, no hash check is performed
     :param show_progress: If True, show an TQDM ProgressBar
-    :param silent: If True, do not print a message if the file already exists
     :param timeout: Number of seconds before cancelling the connection attempt
     :return: path to downloaded file
     """
     from tqdm.notebook import tqdm_notebook
     import requests
-    import urllib.parse
 
     filename = filename or Path(urllib.parse.urlparse(url).path).name
-    chunk_size = 16384  # make chunks bigger so that not too many updates are triggered for Jupyter front-end
-
-    filename = Path(filename)
-    if len(filename.parts) > 1:
-        raise ValueError(
-            "`filename` should refer to the name of the file, excluding the directory. "
-            "Use the `directory` parameter to specify a target directory for the downloaded file."
-        )
-
-    filepath = Path(directory) / filename if directory is not None else filename
-    if filepath.exists():
-        return filepath.resolve()
-
-    # create the directory if it does not exist, and add the directory to the filename
-    if directory is not None:
+    if directory:
         Path(directory).mkdir(parents=True, exist_ok=True)
-
-    try:
-        response = requests.get(url=url, headers={"User-agent": "Mozilla/5.0"}, stream=True)
-        response.raise_for_status()
-    except (
-        requests.exceptions.HTTPError
-    ) as error:  # For error associated with not-200 codes. Will output something like: "404 Client Error: Not Found for url: {url}"
-        raise Exception(error) from None
-    except requests.exceptions.Timeout:
-        raise Exception(
-            "Connection timed out. If you access the internet through a proxy server, please "
-            "make sure the proxy is set in the shell from where you launched Jupyter."
-        ) from None
-    except requests.exceptions.RequestException as error:
-        raise Exception(f"File downloading failed with error: {error}") from None
-
-    # download the file if it does not exist
-    filesize = int(response.headers.get("Content-length", 0))
-    if not filepath.exists():
-        with tqdm_notebook(
-            total=filesize,
-            unit="B",
-            unit_scale=True,
-            unit_divisor=1024,
-            desc=str(filename),
-            disable=not show_progress,
-        ) as progress_bar:
-            with open(filepath, "wb") as file_object:
-                for chunk in response.iter_content(chunk_size):
-                    file_object.write(chunk)
-                    progress_bar.update(len(chunk))
-                    progress_bar.refresh()
+        filename = Path(directory) / filename
     else:
-        print(f"'{filepath}' already exists.")
+        filename = Path(filename)
 
-    response.close()
+    response = requests.get(url, stream=True, timeout=timeout)
+    response.raise_for_status()
 
-    return filepath.resolve()
+    # Download to temporary file
+    filesize = int(response.headers.get("Content-Length", 0))
+    with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+        with tqdm_notebook(total=filesize, unit="B", unit_scale=True, disable=not show_progress) as bar:
+            for chunk in response.iter_content(16384):
+                tmp_file.write(chunk)
+                bar.update(len(chunk))
+        tmp_path = Path(tmp_file.name)
+
+    # Verify hash if provided
+    if expected_hash:
+        hasher = hashlib.sha256()
+        with open(tmp_path, "rb") as f:
+            for chunk in iter(lambda: f.read(8192), b""):
+                hasher.update(chunk)
+        if hasher.hexdigest().lower() != expected_hash.lower():
+            tmp_path.unlink(missing_ok=True)
+            raise ValueError("Hash mismatch — file integrity verification failed.")
+
+    # Move only after validation passes
+    shutil.move(tmp_path, filename)
+    return filename.resolve()
 
 
 def download_ir_model(model_xml_url: str, destination_folder: PathLike = None) -> PathLike:

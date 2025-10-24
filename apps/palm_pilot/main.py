@@ -75,7 +75,6 @@ def download_models() -> bool:
                 filename=filename,
                 directory=model_dir,
                 show_progress=True,
-                silent=False,
                 timeout=60
             )
             
