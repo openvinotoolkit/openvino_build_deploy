@@ -10,7 +10,7 @@ llama-index-llms-openvino-genai==0.1.1
 llama-index-embeddings-openvino==0.5.2
 llama-index-postprocessor-openvino-rerank==0.4.1
 llama-index-vector-stores-chroma==0.4.2
-langchain-text-splitters==0.3.4
+langchain-text-splitters==0.3.11
 chromadb==1.0.15
 
 onnx==1.18.0
