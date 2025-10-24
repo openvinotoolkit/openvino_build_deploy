@@ -1,7 +1,6 @@
 import hashlib
 import os
 import os.path
-import os.path
 import shutil
 import tempfile
 import threading
