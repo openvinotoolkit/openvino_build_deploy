@@ -66,7 +66,7 @@ The demo generates images in a reasonable time (seconds) on Intel hardware.
 | Platforms                                     | Client (CPU, GPU), Cloud (CPU, GPU)                        |
 | Owner                                         | [@adrianboguszewski](https://github.com/adrianboguszewski) |
 
-### 🏥 Virtual Assistant
+### 🏥 Virtual AI Assistant
 
 The demo works as a virtual AI assistant. The default personality is a healthcare assistant, whose task is to greet the patient and summarize the patient's condition based on the conversation and uploaded examination report.
 

@@ -1,6 +1,6 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 
-jupyterlab==4.4.4
+jupyterlab==4.4.8
 
 openvino==2025.2.0
 ultralytics==8.3.141
