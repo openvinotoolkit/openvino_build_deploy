@@ -2,7 +2,7 @@ import cv2
 import os
 import numpy as np
 import math
-import openvino.runtime as ov
+import openvino as ov
 
 
 class AnalogBase(object):
