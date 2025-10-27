@@ -10,7 +10,7 @@ processing:
 image_mcp:
   model_id: "penVINO/Phi-3.5-vision-instruct-int4-ov"
   ovms_base_url: "http://localhost:8003/v3"
-  script: mcp_tools/image_mcp_new.py
+  script: mcp_tools/imagecaptioning_mcp.py
   mcp_port: 3005
 
 hotel_finder:
