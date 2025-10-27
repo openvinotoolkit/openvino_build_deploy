@@ -31,42 +31,39 @@ This kit uses the following technology stack:
 - [A2A](https://github.com/a2aproject/A2A)
 
 - [Qwen2.5-7B](https://huggingface.co/Qwen/Qwen2.5-7B-Instruct) (LLM)
-- [FLUX.1](https://github.com/black-forest-labs/flux) (text-to-image)
-- [Streamlit](https://docs.streamlit.io/) (frontend)
-- [FastAPI](https://fastapi.tiangolo.com/) (backend)
+- []() (VLM)
 
 Check out our [AI Reference Kits repository](https://github.com/openvinotoolkit/openvino_build_deploy) for other kits.
 
-
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Travel Router Agent                      │
-│              (Main Coordinator & Orchestrator)              │
-│                        (Port 9996)                          │
-└─────────────────────────┬───────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│                    Travel Router Agent                  │
+│              (Main Coordinator & Orchestrator)          │
+│                        (Port 9996)                      │
+└─────────────────────────┬───────────────────────────────┘
                           │
-   ┌───────────────-──────┼───────────────┬───────────────┐
-   │                      │               │               │
-   ▼                      ▼               ▼               ▼
-┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌───────────────┐
-│Hotel Finder │ │Flight Finder│ │Budget Agent │ │Video Processing│
-│   Agent     │ │   Agent     │ │   Agent     │ │    Agent       │
-│  (Port 9999)│ │ (Port 9998) │ │ (Port 9997) │ │   (Port 9995)  │
-└─────────────┘ └─────────────┘ └─────────────┘ └───────────────┘
-      │               │              │               │
-      ▼               ▼              ▼               ▼
-┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌───────────────┐
-│Hotel Search │ │Flight Search│ │   (Logic)   │ │Video Analysis  │
-│ MCP Server  │ │ MCP Server  │ │   No MCP    │ │   MCP Server   │
-│ (Port 7901) │ │ (Port 7902) │ │   Needed    │ │   (Port 7903)  │
-└─────────────┘ └─────────────┘ └─────────────┘ └───────────────┘
+   ┌───────────────-──────┼────────────────┐
+   │                      │                │             
+   ▼                      ▼                ▼           
+┌─────────────┐   ┌─────────────┐   ┌─────────────┐ 
+│Hotel Finder │   │Flight Finder│   │Image Proc.  │ 
+│   Agent     │   │   Agent     │   │   Agent     │ 
+│  (Port 9999)│   │ (Port 9998) │   │ (Port 9995) │ 
+└─────────────┘   └─────────────┘   └─────────────┘ 
+      │                 │                 │               
+      ▼                 ▼                 ▼              
+┌─────────────┐   ┌─────────────┐ ┌─────────────┐ 
+│Hotel Search │   │Flight Search│ │Image Caption│ 
+│ MCP Server  │   │ MCP Server  │ │  MCP Server │
+│ (Port 7901) │   │ (Port 7902) │ │ (Port 7903) │
+└─────────────┘   └─────────────┘ └─────────────┘ 
                           │
                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│           Hardware OpenVINO AI Stack                       │
-│  • Phi-4-mini-instruct (LLM) • Qwen3-8B (Video Analysis)   │
-│  • Bridge Tower (Multimodal VLM) • Vector Store            │
-└─────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│             Hardware OpenVINO AI Stack                     │
+│       • Qwen3-8B-int4-ov (LLM)                             │
+│       • Phi-3.5-vision-instruct-int4-ov (VLM)              │
+└────────────────────────────────────────────────────────────┘
 
 ```
 
@@ -74,14 +71,12 @@ Check out our [AI Reference Kits repository](https://github.com/openvinotoolkit/
 
 # STEPS
 - Start OVMS LLMs
-- Start MCP servers
-- Start Agents (start_agents.py)
-- Start UI (start_ui.py)
+- Start MCP servers (start_mcp.py)
+- Start Agents      (start_agents.py)
+- Start UI           (start_ui.py)
 
 
 # Setting Up Your Environment
-
-
 
 To set up your environment, you first clone the repository, then create a virtual environment, activate the environment, and install the packages.
 
@@ -100,7 +95,7 @@ This command clones the repository into a directory named "openvino_build_deploy
 cd openvino_build_deploy/ai_ref_kits/agentic_multimodal_travelplaner
 ```
 
-`## Create virtual environment
+## Create virtual environment
 
 ```
 python3 -m venv agentic
@@ -132,7 +127,7 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-# Getting the LLM for agents ready with OpenVINO model Server (OVMS) using optimized models
+# Step 1: Getting the LLM for agents ready with OpenVINO model Server (OVMS) using optimized models
 
 Windows and Linux
 ## OPTION 1: Windows
@@ -140,150 +135,180 @@ Windows and Linux
 TBC
 
 ## OPTION 2: Linux
-v
+
 ### Docker Installation
+To install Docker on Ubuntu, follow these steps:
 
+1. **Update your existing list of packages:**
+   ```shell
+   sudo apt-get update
+   ```
 
-### Get OVMS image
+2. **Install packages to allow apt to use a repository over HTTPS:**
+   ```shell
+   sudo apt-get install \
+     ca-certificates \
+     curl \
+     gnupg
+   ```
 
+3. **Add Docker’s official GPG key:**
+   ```shell
+   sudo install -m 0755 -d /etc/apt/keyrings
+   curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+   sudo chmod a+r /etc/apt/keyrings/docker.gpg
+   ```
+
+4. **Set up the Docker repository:**
+   ```shell
+   echo \
+     "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+     $(lsb_release -cs) stable" | \
+     sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+   ```
+
+5. **Update the apt package index:**
+   ```shell
+   sudo apt-get update
+   ```
+
+6. **Install Docker Engine, containerd, and Docker Compose:**
+   ```shell
+   sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+   ```
+
+7. **Verify that Docker Engine is installed correctly:**
+   ```shell
+   sudo docker run hello-world
+   ```
+
+For more details, refer to the [official Docker documentation for Ubuntu](https://docs.docker.com/engine/install/ubuntu/).
+
+### Get OpenVINO Model Server image
+Once you have Docker installed on your machine, pull the OpenVINO Model Server image:
 ```
 docker pull openvino/model_server:latest
 ```
-### Download optimized models for OVMS
 
-Agents LLM **Phi-4-mini-instruct-int4-ov**
+### Download optimized models 
+
+OpenVINO Model Server will serve your models. In this example you will use two models: an LLM and a VLM.
+
+Agent LLM: **Qwen3-8B**
 ```
-docker run -d --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models openvino/model_server:latest \
---pull --model_repository_path /models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --tool_parser phi4 --cache_size 2 --task text_generation --enable_prefix_caching true
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-ov --task text_generation --tool_parser hermes3
 ```
 
-VLM **Phi-3.5-vision-instruct-int4-ov**
+Vision Language Model (VLM): **Phi-3.5-vision-instruct-int4-ov**
 ```
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest  \
 --pull --model_repository_path /models --source_model OpenVINO/Phi-3.5-vision-instruct-int4-ov --task text_generation --pipeline_type VLM
 ```
 
-Embeddings
-
-Whisper
-```
-docker run --user $(id -u):$(id -g) --rm \
-  -v $(pwd)/models:/models:rw \
-  openvino/model_server:latest \
-  --pull \
-  --model_repository_path /models \
-  --source_model OpenVINO/whisper-large-v3-int4-ov \
-  --task text_generation \
-  --pipeline_type AUTO
-```
-
-### Start OVMS
+### Start OpenVINO Model Server 
+Once you have your models, your next step is to start the services. 
 
 LLM
 ```
 docker run -d --user $(id -u):$(id -g) --rm \
-  -p 8002:8000 \
+  -p 8001:8000 \
   -v $(pwd)/models:/models openvino/model_server:latest \
   --rest_port 8000 \
   --model_repository_path models \
-  --source_model OpenVINO/Phi-4-mini-instruct-int4-ov \
-  --tool_parser phi4 \
+  --source_model OpenVINO/Qwen3-8B-int4-ov \
+  --tool_parser hermes3 \
   --cache_size 2 \
   --task text_generation \
   --enable_prefix_caching true
 ```
 
+
 VLM
 ```
 docker run -d --rm \
-  -p 8003:8000 \
+  -p 8002:8000 \
   -v $(pwd)/models:/models:ro \
   openvino/model_server:latest \
   --rest_port 8000 \
-  --model_name penVINO/Phi-3.5-vision-instruct-int4-ov \
+  --model_name OpenVINO/Phi-3.5-vision-instruct-int4-ov \
   --model_path /models/OpenVINO/Phi-3.5-vision-instruct-int4-ov
 ```
 
-Whisper
-```
-docker run -d --rm \
-  -p 8004:8000 \
-  -v $(pwd)/models:/models openvino/model_server:latest \
-  --rest_port 8000 \
-  --model_repository_path models \
-  --source_model OpenVINO/whisper-large-v3-int4-ov 
-```
-
 ### Check
-Run
+Run:
 ```
 docker ps
 ```
 
-You should see 
+You should see the two models serving 
 ```
 CONTAINER ID   IMAGE                          COMMAND                  CREATED       STATUS       PORTS                                         NAMES
-4c1590b2d392   openvino/model_server:latest   "/ovms/bin/ovms --re…"   5 hours ago   Up 5 hours   0.0.0.0:8001->8001/tcp, [::]:8001->8001/tcp   infallible_davinci
+424634ea10fe   openvino/model_server:latest   "/ovms/bin/ovms --re…"   3 days ago    Up 3 days    0.0.0.0:8001->8000/tcp, [::]:8001->8000/tcp   competent_ganguly9
+a962a7695b1f   openvino/model_server:latest   "/ovms/bin/ovms --re…"   3 days ago    Up 3 days    0.0.0.0:8002->8000/tcp, [::]:8002->8000/tcp   agitated_galois
 ```
 
-We have now our LLM running and ready to be used by our agents.
+Your LLM is now running and ready to be used by the agents.
 
-# Define your Agents and tools
+# Step 2: Start the Agents and the MCP tools
 
-## MCP Servers YAML config (WIP)
-
-# Start MCP tools
-In this example, we will have multiple MCP servers to be consumed by the agents. In order to follow and understand the behavior, each agent and tool should be started from an independent terminal (be sure to activate the environment).
-### Get your SerpAPi
-
-Go to https://serpapi.com/
-
-## Option 1 (launch all MCP servers at once) WIP
-
-## Option 2 (Ideal for debugging) : Launch each mcp in an individual terminal
-
-### Start Video Tool
-
-```
-cd mcp_tools
-python video_tool.py
-```
-
-### Start Hotel finder API Tool (TERMINAL 1)
-Clone server from AI Builder
-```
-cd mcp_tools
-wget -O /home/ubuntu/openvino_build_deploy/workshops/Agentic_Tourism_copy/mcp_tools/ai_builder_mcp_hotel_finder.py \
-https://raw.githubusercontent.com/intel/intel-ai-assistant-builder/main/mcp/mcp_servers/mcp_google_hotel/server.py
-
-```
-Start MCP tool
-```
-export SERP_API_KEY= 
-python ai_builder_mcp_hotel_finder.py start --port 7901 --protocol sse
-```
-
-### Start Flight finder API Tool (TERMINAL 2)
-Clone server from AI Builder
+## Clone MCP servers from AI Builder
 ```
 cd mcp_tools
 wget -O /home/ubuntu/openvino_build_deploy/workshops/Agentic_Tourism_copy/mcp_tools/ai_builder_mcp_flight_finder.py \
 https://raw.githubusercontent.com/intel/intel-ai-assistant-builder/main/mcp/mcp_servers/mcp_google_flight/server.py
 
 ```
-Start MCP tool
+
+## Start MCP tools
+In this example, we will have multiple MCP servers to be consumed by the agents, there will be 3 MCP tools
+- Flight_search : It servers to provide avaialble flights 
+- Hotel_search : It servers to provide available hotels
+- Image Captioning : Caption the image
+
+## Get your SerpAPi
+Flight and Travel agents use an external API that provides searches from hotels and flights. This is provided by serapo, please be sure to get your key.
+
+Go to https://serpapi.com/
+
+Navigate to "Your Private API Key"
+
+Once you have your key 
+
+Time to launch the MCP servers
+
+## Launch MCP servers
+
+Set your key
 ```
-export SERP_API_KEY= 
-python ai_builder_mcp_flight_finder.py start --port 7902 --protocol sse
+export SERP_API_KEY=***YOUR_KEY***
 ```
 
-### Start VideoProcessing Tools (WIP)
+Run
+```
+start_mcp_servers.py
+```
 
+**NOTE**: This script starts the MCP servers in the backgroud reads the configuration set on `/config/mcp_config.yaml`. There you can set each MCP parameter
 
+You should get a confirmation that the MCP servers are up and running
+```
+MCP 'image_mcp' started on port 3005
+MCP 'hotel_finder' started on port 7903
+MCP 'flight_finder' started on port 7901
+
+Successfully started MCP servers: image_mcp, hotel_finder, flight_finder
+
+Logs are in logs/
+```
+
+The script also provides a stop function to stop them: 
+```
+python start_mcp_servers.py --stop
+```
 
 ## Agents YAML config
 
-All agents are created by a runner `agent_runner.py` which reads two files : `config/agents_config.yaml` and `config\agents_prompt.yaml`
+All agents are created by a runner `agents/agent_runner.py` which reads two files: `config/agents_config.yaml` and `config/agents_prompt.yaml`.
 
 You can start the agents all together by running 
 ```python
@@ -292,52 +317,58 @@ python start_agents.py
 
 ### Agents configuration
 
-### Agents Prompts
+### Agents prompts
 
 
 
 
 
-# Start Agents
+# Step 3: Start Agents
+
+Start all agents
+```
+python start_agents.py
+```
+
 
 ### Regular A2A
 
-Hotel finder agent (TERMINAL 3)
+Hotel Finder agent (TERMINAL 3)
 
 ```
 cd agents
-python agent_runner_copy.py --agent travel hotel_finder
+python agent_runner.py --agent hotel_finder
 ```
 
-Flight finder agent (TERMINAL 4)
+Flight Finder agent (TERMINAL 4)
 ```
 cd agents
-python agent_runner_copy.py --agent flight_finder
+python agent_runner.py --agent flight_finder
 ```
 
 
-Budget approval agent (TERMINAL 5)
-```
-cd agents
-python agent_runner_copy.py --agent budget_agent
-```
-
-### Supervisor Agent (TERMINAL 6)
-
+Budget Approval agent (TERMINAL 5)
 ```
 cd agents
-python agent_runner_copy.py --agent travel_router
+python agent_runner.py --agent budget_agent
 ```
 
-# Start UI (TERMINAL 7)
+### Supervisor agent (TERMINAL 6)
+
+```
+cd agents
+python agent_runner.py --agent travel_router
+```
+
+# Step 4 Start UI
 
 ```
 python start_ui.py
 ```
 
-Go to http://127.0.0.1:7860
+Open `http://127.0.0.1:7860` in your browser.
 
-# Customization
-You can add any agents by configuring the yaml files
+# OPTIONAL Customization
+You can add agents by configuring the YAML files
 
 TBC
