@@ -246,15 +246,17 @@ MCP 'flight_finder' started on port 3002
 Successfully started MCP servers: image_mcp, hotel_finder, flight_finder
 
 Logs are in `logs/`. You can open each MCP server's log file there.
-
+```
 The script also provides a stop command:
 
 ```
 python start_mcp_servers.py --stop
 ```
+
 # Step 3: Start Agents
 
 Start all agents
+
 ```
 python start_agents.py
 ```
@@ -273,7 +275,6 @@ Logs are in `logs/`
 **NOTE**: To inspect individual agent behavior, start each agent in its own terminal with `python agents/agent_runner.py --agent AGENT_NAME`.
 
 Logs are in `logs/`. You can navigate to the folder to the log to each Agent server
-
 
 # Step 4: Start UI
 
