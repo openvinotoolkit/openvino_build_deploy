@@ -1,34 +1,50 @@
 #!/usr/bin/env python3
-"""
-Agentic Tourism UI - Gradio interface for Travel Router
-Connects to travel_router agent running via agent_runner_copy.py
+"""Gradio UI for the agentic multimodal travel planner.
+
+This module provides a web-based user interface for interacting with the
+travel router agent, supporting both text queries and image analysis through
+an intuitive chat interface.
 """
 
 import asyncio
+import concurrent.futures
 import os
-from pathlib import Path
 import shutil
-from PIL import Image
 import time
-import gradio as gr
-from dotenv import load_dotenv
+import traceback
+from pathlib import Path
 
-# BeeAI Framework imports
+import gradio as gr
 from beeai_framework.adapters.a2a.agents.agent import A2AAgent
 from beeai_framework.memory import UnconstrainedMemory
+from dotenv import load_dotenv
+from PIL import Image
 
 
 class TravelRouterClient:
-    """UI client that connects to the travel_router agent"""
+    """UI client that connects to the travel_router agent.
+
+    This client manages the connection to the travel router agent and handles
+    query processing through the A2A (Agent-to-Agent) protocol.
+
+    Attributes:
+        client: A2AAgent instance for communication.
+        initialized: Boolean flag indicating connection status.
+        memory: Memory instance for maintaining conversation history.
+    """
 
     def __init__(self):
-        """Initialize the TravelRouterClient to connect to travel_router"""
+        """Initialize the TravelRouterClient."""
         self.client = None
         self.initialized = False
         self.memory = UnconstrainedMemory()
 
     async def initialize(self):
-        """Initialize connection to the travel_router agent"""
+        """Initialize connection to the travel_router agent.
+
+        Returns:
+            True if connection successful, False otherwise.
+        """
         print("Initializing connection to Travel Router...")
         load_dotenv()
 
@@ -48,12 +64,18 @@ class TravelRouterClient:
 
         except Exception as e:
             print(f"Failed to initialize Travel Router Agent: {e}")
-            import traceback
             print(f"Traceback: {traceback.format_exc()}")
             return False
 
     async def chat(self, query: str) -> str:
-        """Process a query through the travel router"""
+        """Process a query through the travel router.
+
+        Args:
+            query: User query text to process.
+
+        Returns:
+            Response text from the agent.
+        """
         if not self.initialized:
             await self.initialize()
 
@@ -94,14 +116,12 @@ class TravelRouterClient:
 
         except Exception as e:
             print(f"Error with router agent: {e}")
-            import traceback
             print(f"Error traceback: {traceback.format_exc()}")
             return f"Error processing request: {e}"
 
 
-print("✅ Travel Router Client defined inline")
-
-examples = [
+# Example prompts for the UI
+EXAMPLES = [
     "Clear my cart",
     "Describe what's in this image",
     "What colors are visible in the image?",
@@ -112,57 +132,74 @@ examples = [
     "Analyze the composition of this image",
 ]
 
-# prepare Travel Router Client (A2A client connection)
-print("🔄 Initializing Travel Router Client...")
-travel_router_client = None
-try:
-    # Create client that connects to travel router A2A server via URL
-    travel_router_port = os.getenv("TRAVEL_ROUTER_PORT", "9996")
-    print(
-        "🔗 Connecting to Travel Router at "
-        f"http://127.0.0.1:{travel_router_port}"
-    )
-
-    travel_router_client = TravelRouterClient()
-
-    # Initialize the client asynchronously
-    try:
-        # Try to get the current event loop
-        # If we're in a running loop, run in a new thread
-        import concurrent.futures
-
-        def run_init_in_thread():
-            new_loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(new_loop)
-            try:
-                return new_loop.run_until_complete(
-                    travel_router_client.initialize()
-                )
-            finally:
-                new_loop.close()
-
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            future = executor.submit(run_init_in_thread)
-            future.result()  # Wait for completion
-
-    except RuntimeError:
-        # No running event loop, we can use asyncio.run directly
-        asyncio.run(travel_router_client.initialize())
-        
-    print("✅ Travel Router Client initialized")
-except Exception as e:
-    print(f"❌ Failed to initialize Travel Router Client: {e}")
-    import traceback
-    traceback.print_exc()
-    travel_router_client = None
-
+# Global state variables
 chatbox_msg = []
-stop_requested = False  # Global flag for stopping queries
-current_image_path = None  # Global uploaded image path
+stop_requested = False
+current_image_path = None
+
+
+def run_init_in_thread(client):
+    """Run client initialization in a separate thread with new event loop.
+
+    Args:
+        client: TravelRouterClient instance to initialize.
+
+    Returns:
+        Result of initialization.
+    """
+    new_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(new_loop)
+    try:
+        return new_loop.run_until_complete(client.initialize())
+    finally:
+        new_loop.close()
+
+
+def initialize_travel_router_client():
+    """Initialize the travel router client connection.
+
+    Returns:
+        Initialized TravelRouterClient instance or None on failure.
+    """
+    print("🔄 Initializing Travel Router Client...")
+    try:
+        travel_router_port = os.getenv("TRAVEL_ROUTER_PORT", "9996")
+        print(
+            f"🔗 Connecting to Travel Router at "
+            f"http://127.0.0.1:{travel_router_port}"
+        )
+
+        client = TravelRouterClient()
+
+        # Initialize the client asynchronously
+        try:
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(run_init_in_thread, client)
+                future.result()
+        except RuntimeError:
+            # No running event loop, we can use asyncio.run directly
+            asyncio.run(client.initialize())
+
+        print("✅ Travel Router Client initialized")
+        return client
+    except Exception as e:
+        print(f"❌ Failed to initialize Travel Router Client: {e}")
+        traceback.print_exc()
+        return None
+
+
+# Initialize travel router client
+travel_router_client = initialize_travel_router_client()
 
 async def image_captioning(image_input):
-    """Caption an image using the travel router. Always saves to tmp_files first."""
+    """Process and save uploaded image for analysis.
 
+    Args:
+        image_input: Image input from Gradio (file path or numpy array).
+
+    Returns:
+        Status message string.
+    """
     # Create tmp directory for saving uploaded images
     project_root = Path(__file__).parent.parent
     tmp_dir = project_root / "tmp_files"
@@ -218,17 +255,27 @@ async def image_captioning(image_input):
         return f"Failed to process image: {e}"
 
 def stop_query():
-    """Stop the current query"""
+    """Stop the current query execution.
+
+    Returns:
+        Tuple of (status message, chatbox messages).
+    """
     global stop_requested
     stop_requested = True
     return "🛑 Stopping query...", chatbox_msg
 
+
 def clear_all():
+    """Clear all chat history and reset state.
+
+    Returns:
+        Tuple of (empty log window, empty chatbox).
+    """
     global chatbox_msg, travel_router_client, stop_requested, current_image_path
     # Clear chatbox messages and memory
     chatbox_msg = []
-    stop_requested = False  # Reset stop flag
-    current_image_path = None  # Reset current image path
+    stop_requested = False
+    current_image_path = None
     if (
         travel_router_client
         and getattr(travel_router_client, "client", None)
@@ -240,6 +287,14 @@ def clear_all():
 
 
 async def run_agent_workflow(query: str):
+    """Execute agent workflow for user query.
+
+    Args:
+        query: User query text.
+
+    Yields:
+        Tuple of (log window text, chatbox messages, input field text).
+    """
     global chatbox_msg, travel_router_client, stop_requested, current_image_path
 
     # Create enhanced query that includes image path if available
@@ -249,7 +304,7 @@ async def run_agent_workflow(query: str):
         enhanced_query = f"{query} : <image_path> = <{current_image_path}> "
 
     chatbox_msg.append({"role": "user", "content": enhanced_query})
-    stop_requested = False  # Reset stop flag for new query
+    stop_requested = False
 
     if travel_router_client is None or not travel_router_client.initialized:
         yield (
@@ -260,9 +315,7 @@ async def run_agent_workflow(query: str):
         return
 
     try:
-        msg_text = (
-            f"Sending query to Travel Router: {enhanced_query}"
-        )
+        msg_text = f"Sending query to Travel Router: {enhanced_query}"
         print(msg_text, flush=True)
 
         response = await travel_router_client.chat(enhanced_query)
@@ -270,109 +323,118 @@ async def run_agent_workflow(query: str):
         # Add response to chat history
         chatbox_msg.append({"role": "assistant", "content": response})
 
-        # Return final result - no verbose logging
-        yield "", chatbox_msg, ""  # Clear input after successful processing
-        
+        # Return final result
+        yield "", chatbox_msg, ""
+
     except Exception as e:
         error_msg = f"Error communicating with Travel Router: {e}"
         chatbox_msg.append({"role": "assistant", "content": error_msg})
-        yield error_msg, chatbox_msg, ""  # Clear input even on error
+        yield error_msg, chatbox_msg, ""
 
 
-# Set Gradio temp directory and env var
-gradio_temp_dir = Path(__file__).parent.parent / "temp"
-gradio_temp_dir.mkdir(exist_ok=True)
-os.environ["GRADIO_TEMP_DIR"] = str(gradio_temp_dir)
+def create_gradio_interface():
+    """Create and configure the Gradio interface.
 
-with gr.Blocks(
-    theme=gr.themes.Soft(),
-    css=".disclaimer{font-variant-caps:all-small-caps;}",
-) as demo:
-    # Title
-    gr.Markdown(
-        "<h1><center>Agentic Image Analysis 🤖</center></h1>"
+    Returns:
+        Configured Gradio Blocks interface.
+    """
+    # Set Gradio temp directory and env var
+    gradio_temp_dir = Path(__file__).parent.parent / "temp"
+    gradio_temp_dir.mkdir(exist_ok=True)
+    os.environ["GRADIO_TEMP_DIR"] = str(gradio_temp_dir)
+
+    demo = gr.Blocks(
+        theme=gr.themes.Soft(),
+        css=".disclaimer{font-variant-caps:all-small-caps;}",
     )
-    gr.Markdown(
-        "<center>Powered by OpenVINO + MCP + A2A Tools</center>"
-    )
+    with demo:
+        # Title
+        gr.Markdown(
+            "<h1><center>Agentic Image Analysis 🤖</center></h1>"
+        )
+        gr.Markdown(
+            "<center>Powered by OpenVINO + MCP + A2A Tools</center>"
+        )
 
-    with gr.Row():
-        # === Left Column: Image Upload + Status ===
-        with gr.Column(scale=2):
-            image_file = gr.Image(
-                value=None,
-                label="Upload or choose an image",
-                interactive=True,
-            )
-            status = gr.Textbox(
-                "Ready", interactive=False, show_label=False, lines=3
-            )
-
-        # === Right Column: Chat UI ===
-        with gr.Column(scale=2):
-            chatbot = gr.Chatbot(
-                label="Conversation", height=500, type="messages"
-            )
-            with gr.Row():
-                msg = gr.Textbox(
-                    placeholder="Type your message…",
-                    show_label=False,
-                    container=False,
+        with gr.Row():
+            # Left Column: Image Upload + Status
+            with gr.Column(scale=2):
+                image_file = gr.Image(
+                    value=None,
+                    label="Upload or choose an image",
                     interactive=True,
                 )
-            with gr.Row():
-                send_btn = gr.Button("Send", variant="primary")
-                stop_btn = gr.Button("Stop")
-                clr_btn = gr.Button("Clear")
-            gr.Examples(
-                examples, inputs=[msg], label="Click example, then Send"
-            )
-        with gr.Column(scale=2):
-            log_window = gr.Markdown(
-                "### 🤖 Agent’s Reasoning Log", label="Logs", height=300
-            )
-    
-    # Register listeners
-    # Image upload triggers captioning and saves the path
-    image_file.change(
-        fn=image_captioning, inputs=[image_file], outputs=[status]
-    )
-    # Both send button and enter key will clear the input automatically
-    send_btn.click(
-        fn=run_agent_workflow,
-        inputs=[msg],
-        outputs=[log_window, chatbot, msg],
-    )
-    msg.submit(
-        fn=run_agent_workflow,
-        inputs=[msg],
-        outputs=[log_window, chatbot, msg],
-    )
-    
-    # Register stop button
-    stop_btn.click(
-        fn=stop_query, inputs=[], outputs=[log_window, chatbot]
-    )
-    
-    clr_btn.click(fn=clear_all, inputs=[], outputs=[log_window, chatbot])
+                status = gr.Textbox(
+                    "Ready", interactive=False, show_label=False, lines=3
+                )
 
-if __name__ == "__main__":
+            # Right Column: Chat UI
+            with gr.Column(scale=2):
+                chatbot = gr.Chatbot(
+                    label="Conversation", height=500, type="messages"
+                )
+                with gr.Row():
+                    msg = gr.Textbox(
+                        placeholder="Type your message…",
+                        show_label=False,
+                        container=False,
+                        interactive=True,
+                    )
+                with gr.Row():
+                    send_btn = gr.Button("Send", variant="primary")
+                    stop_btn = gr.Button("Stop")
+                    clr_btn = gr.Button("Clear")
+                gr.Examples(
+                    EXAMPLES, inputs=[msg], label="Click example, then Send"
+                )
+            with gr.Column(scale=2):
+                log_window = gr.Markdown(
+                    "### 🤖 Agent's Reasoning Log", label="Logs", height=300
+                )
+
+        # Register listeners
+        image_file.change(
+            fn=image_captioning, inputs=[image_file], outputs=[status]
+        )
+        send_btn.click(
+            fn=run_agent_workflow,
+            inputs=[msg],
+            outputs=[log_window, chatbot, msg],
+        )
+        msg.submit(
+            fn=run_agent_workflow,
+            inputs=[msg],
+            outputs=[log_window, chatbot, msg],
+        )
+        stop_btn.click(
+            fn=stop_query, inputs=[], outputs=[log_window, chatbot]
+        )
+        clr_btn.click(fn=clear_all, inputs=[], outputs=[log_window, chatbot])
+
+    return demo
+
+def main():
+    """Main entry point for the Gradio UI application."""
     try:
         # Get port from environment variable or use default
         port = int(os.getenv("GRADIO_SERVER_PORT", 7860))
         print(f"🌐 Starting on port {port}")
-        
+
+        demo = create_gradio_interface()
         demo.launch(
-            server_name="0.0.0.0",  # Allow external access
-            server_port=port,       # Use environment variable or default
-            inbrowser=True,         # Automatically open browser
-            share=False,            # Don't create public link
-            debug=False,            # Set to True for debugging
-            show_error=True,        # Show errors in interface
-            quiet=False             # Show startup messages
+            server_name="0.0.0.0",
+            server_port=port,
+            inbrowser=True,
+            share=False,
+            debug=False,
+            show_error=True,
+            quiet=False
         )
     except Exception as e:
         print(f"❌ Error launching Gradio interface: {e}")
-        print("🔧 If issues persist, check if ports 7860 is available")
-        import traceback
+        print("🔧 If issues persist, check if port 7860 is available")
         traceback.print_exc()
+
+
+if __name__ == "__main__":
+    main()

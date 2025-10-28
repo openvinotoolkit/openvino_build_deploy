@@ -1,5 +1,4 @@
 # Agents Configuration File
-# Each agent has its own complete configuration
 
 # Travel Router Agent Configuration (Supervisor)
 travel_router:
@@ -10,8 +9,8 @@ travel_router:
   
   # LLM Configuration for Travel Router
   llm:
-    model: "openai:OpenVINO/Phi-4-mini-instruct-int4-ov"
-    temperature: 0.1
+    model: "openai:OpenVINO/Qwen3-8B-int4-ov"
+    temperature: 0.3
     api_key: "unused"
     api_base: "http://0.0.0.0:8001/v3"
   
@@ -22,16 +21,12 @@ travel_router:
   supervised_agents:
     - name: "hotel_finder"
       url: "http://127.0.0.1:9999"
-      port_env_var: "HOTEL_SEARCHER_PORT"
     - name: "flight_finder"
       url: "http://127.0.0.1:9998"
-      port_env_var: "FLIGHT_SEARCHER_PORT"
-    - name: "budget_agent"
+    #- name: "budget_agent"
+    #  url: "http://127.0.0.1:9997"
+    - name: "image_captioning"
       url: "http://127.0.0.1:9997"
-      port_env_var: "BUDGET_AGENT_PORT"
-    - name: "video_analysis"
-      url: "http://127.0.0.1:9996"
-      port_env_var: "VIDEO_ANALYSIS_PORT"
   
   # Tools Configuration (supervisor specific)
   tools:
@@ -56,8 +51,8 @@ flight_finder:
   role: "Flight Search Specialist"
   
   llm:
-    model: "openai:OpenVINO/Phi-4-mini-instruct-int4-ov"
-    temperature: 0.1
+    model: "openai:OpenVINO/Qwen3-8B-int4-ov"
+    temperature: 0.3
     api_key: "unused"
     api_base: "http://0.0.0.0:8001/v3"
   
@@ -67,7 +62,7 @@ flight_finder:
   mcp_config:
     servers:
       - name: "Flight_search_api"
-        url: "http://127.0.0.1:7902"
+        url: "http://127.0.0.1:3002"
         protocol: "sse"
         description: "Fligh search"
         enabled: true 
@@ -91,35 +86,32 @@ flight_finder:
       tool_prefix: "🔍 "
 
   # BeeAI rules requirements, useful to force agent behaviour
-  #requirements:
-  #  - tool_name: "search_flights"
-  #    force_at_step: 1
-  #    max_invocations: 2
-  #  - tool_name: "search_hotels"
-  #    max_invocations: 0 
-  #  - tool_name: "list_hotels"
-  #    max_invocations: 0 
-budget_agent:
-  name: "budget_agent"
-  description: "Specialized agent to calculate TOTAL trips with costs"
-  port: 9997
-  
-  # LLM Configuration for Hotel Finder
-  llm:
-    model: "openai:OpenVINO/Phi-4-mini-instruct-int4-ov"
-    temperature: 0.1
-    api_key: "unused"
-    api_base: "http://0.0.0.0:8001/v3"
-  
-  # Memory Configuration
-  memory_size: 5
+  requirements:
+    - tool_name: "search_flights"
+      force_at_step: 1
+      max_invocations: 2
 
-  # Middleware Configuration (For console logging)
-  middleware:
-    trajectory:
-      included_types: ["Tool", "ChatModel"]
-      pretty: true
-      tool_prefix: "🔍 "
+# budget_agent:
+#   name: "budget_agent"
+#   description: "Specialized agent to calculate TOTAL trips with costs"
+#   port: 9997
+  
+#   # LLM Configuration for Hotel Finder
+#   llm:
+#     model: "openai:OpenVINO/Phi-4-mini-instruct-int4-ov"
+#     temperature: 0.1
+#     api_key: "unused"
+#     api_base: "http://0.0.0.0:8001/v3"
+  
+#   # Memory Configuration
+#   memory_size: 5
+
+#   # Middleware Configuration (For console logging)
+#   middleware:
+#     trajectory:
+#       included_types: ["Tool", "ChatModel"]
+#       pretty: true
+#       tool_prefix: "🔍 "
 
 # Hotel Finder Agent Configuration
 hotel_finder:
@@ -129,15 +121,15 @@ hotel_finder:
   
   # LLM Configuration for Hotel Finder
   llm:
-    model: "openai:OpenVINO/Phi-4-mini-instruct-int4-ov"
-    temperature: 0.1
+    model: "openai:OpenVINO/Qwen3-8B-int4-ov"
+    temperature: 0.3
     api_key: "unused"
     api_base: "http://0.0.0.0:8001/v3"
   
   mcp_config:
     servers:
       - name: "Hotel Search Tool"
-        url: "http://127.0.0.1:7901"
+        url: "http://127.0.0.1:3001"
         protocol: "sse"
         description: "Hotel search tool to get prices and accomodation places"
         enabled: true 
@@ -157,23 +149,32 @@ hotel_finder:
       pretty: true
       tool_prefix: "🔍 "
 
+  # BeeAI rules requirements, useful to force agent behaviour
+  requirements:
+    - tool_name: "search_hotels"
+      force_at_step: 1
+      max_invocations: 2
+
 # Video Analysis Agent Configuration
-video_analysis:
-  name: "video_analysis"
-  description: "Video analysis agent with 2 core tools: video ingestion and video search using Bridge Tower multimodal AI"
+image_captioning:
+  name: "image_captioning"
+  description: "Image captioning agent with 2 core tools: image ingestion and image search using Bridge Tower multimodal AI"
   port: 9997
   role: "Video Analysis Specialist"
   
   # LLM Configuration for Video Search
   llm:
-    model: "openai:Qwen3-8B-int4-ov"
+    model: "openai:OpenVINO/Qwen3-8B-int4-ov"
     temperature: 0.3
     api_key: "unused"
-    api_base: "http://0.0.0.0:8000/v3"
-  
-  # MCP Configuration for video agent
+    api_base: "http://0.0.0.0:8001/v3"
+ 
+  # MCP Configuration for image captioning
   mcp_config:
-    url: "http://127.0.0.1:3000/sse"
+    url: "http://localhost:3003"
+    protocol: "sse"
+    description: "Image captioning tool to get captions for images"
+    enabled: true 
   
   # Memory Configuration
   memory_size: 5

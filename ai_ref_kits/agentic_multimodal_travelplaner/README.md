@@ -12,11 +12,7 @@ A sophisticated multi-agent system that provides intelligent travel assistance u
 
 ---
 
-The Multimodal AI Visual Generator is a multimodal generative AI reference kit that demonstrates how large language models (LLMs) and diffusion-based image generation models can work together in a creative pipeline. It allows users to transform a single text prompt into detailed illustrated stories or stylized T-shirt design concepts, using optimized models for local deployment.
-
-By combining LLM-driven prompt generation with image synthesis, the application shows how OpenVINO™ can accelerate multimodal generative AI workflows across Intel® NPUs, CPUs, integrated GPUs, and discrete GPUs. Multimodal AI Visual Generator delivers a complete pipeline, covering prompt input, scene generation, visual rendering, and PDF export.
-
-This kit serves as a practical foundation for building real-world applications in storytelling, branding, education, and other creative domains powered by generative AI.
+This reference kit demonstrates a multi-agent travel assistant. It coordinates specialized agents for hotel and flight search via MCP-connected tools and uses an image captioning VLM for visual understanding. The system is built with OpenVINO™ and the OpenVINO Model Server for optimized local inference, and orchestrated using BeeAI, MCP, and the A2A protocol.
 
 This kit uses the following technology stack:
 
@@ -29,7 +25,7 @@ This kit uses the following technology stack:
 - [A2A](https://github.com/a2aproject/A2A)
 
 - [Qwen2.5-7B](https://huggingface.co/Qwen/Qwen2.5-7B-Instruct) (LLM)
-- []() (VLM)
+- [OpenVINO/Phi-3.5-vision-instruct-int4-ov](https://huggingface.co/OpenVINO/Phi-3.5-vision-instruct-int4-ov) (VLM)
 
 Check out our [AI Reference Kits repository](https://github.com/openvinotoolkit/openvino_build_deploy) for other kits.
 
@@ -53,7 +49,7 @@ Check out our [AI Reference Kits repository](https://github.com/openvinotoolkit/
 ┌─────────────┐   ┌─────────────┐ ┌─────────────┐ 
 │Hotel Search │   │Flight Search│ │Image Caption│ 
 │ MCP Server  │   │ MCP Server  │ │  MCP Server │
-│ (Port 7901) │   │ (Port 7902) │ │ (Port 7903) │
+│ (Port 3001) │   │ (Port 3002) │ │ (Port 3003) │
 └─────────────┘   └─────────────┘ └─────────────┘ 
                           │
                           ▼
@@ -69,7 +65,7 @@ Check out our [AI Reference Kits repository](https://github.com/openvinotoolkit/
 
 # STEPS
 - Start OVMS LLMs
-- Start MCP servers (start_mcp.py)
+- Start MCP servers (start_mcp_servers.py)
 - Start Agents      (start_agents.py)
 - Start UI           (start_ui.py)
 
@@ -175,7 +171,7 @@ docker run -d --user $(id -u):$(id -g) --rm \
   -p 8001:8000 \
   -v $(pwd)/models:/models openvino/model_server:latest \
   --rest_port 8000 \
-  --model_repository_path models \
+  --model_repository_path /models \
   --source_model OpenVINO/Qwen3-8B-int4-ov \
   --tool_parser hermes3 \
   --cache_size 2 \
@@ -213,21 +209,19 @@ Your LLM is now running and ready to be used by the agents.
 # Step 2: Start the Agents and the MCP tools
 
 ## Start MCP tools
-In this example, we will have multiple MCP servers to be consumed by the agents, there will be 3 MCP tools
-- Flight_search (Intel AI Builder) : It servers to provide avaialble flights 
-- Hotel_search (Intel AI Builder): It servers to provide available hotels
-- Image Captioning : Caption the image
+This example uses three MCP servers that the agents will consume:
+- Flight search (Intel AI Builder): provides available flight options
+- Hotel search (Intel AI Builder): provides available hotels
+- Image captioning: generates captions for images
 
-## Get your SerpAPi
-Flight and Travel agents use an external API that provides searches from hotels and flights. This is provided by serapo, please be sure to get your key.
+## Get your SerpAPI key
+Flight and travel agents use an external API for hotel and flight search. Obtain an API key from SerpAPI.
 
 Go to https://serpapi.com/
 
 Navigate to "Your Private API Key"
 
-Once you have your key 
-
-Time to launch the MCP servers
+Once you have your key, you can launch the MCP servers.
 
 ## Launch MCP servers
 
@@ -241,19 +235,19 @@ Run
 python start_mcp_servers.py
 ```
 
-**NOTE**: This script starts the MCP servers in the backgroud reads the configuration set on `/config/mcp_config.yaml`. There you can set each MCP parameter
+**NOTE**: This script starts the MCP servers in the background and reads configuration from `config/mcp_config.yaml`. You can configure each MCP server there.
 
-You should get a confirmation that the MCP servers are up and running
+You should see confirmation that the MCP servers are running:
 ```
-MCP 'image_mcp' started on port 3005
-MCP 'hotel_finder' started on port 3003
+MCP 'image_mcp' started on port 3003
+MCP 'hotel_finder' started on port 3001
 MCP 'flight_finder' started on port 3002
 
 Successfully started MCP servers: image_mcp, hotel_finder, flight_finder
 
-Logs are in `logs/`. You can navigate to the folder to the log to each MCP server
+Logs are in `logs/`. You can open each MCP server's log file there.
 
-The script also provides a stop function to stop them: 
+The script also provides a stop command:
 
 ```
 python start_mcp_servers.py --stop
@@ -265,12 +259,23 @@ Start all agents
 python start_agents.py
 ```
 
-**NOTE** : If you want to analyze each agent configuration please start each agent on an independent terminal running `pyhton /agents/agent_runner.py --agent AGENT_NAME`
+You should see:
+```
+Agent 'travel_router' started on port 9996
+Agent 'flight_finder' started on port 9998
+Agent 'hotel_finder' started on port 9999
+Agent 'image_captioning' started on port 9997
+
+Successfully started agents: travel_router, flight_finder, hotel_finder, image_captioning
+
+Logs are in `logs/`
+```
+**NOTE**: To inspect individual agent behavior, start each agent in its own terminal with `python agents/agent_runner.py --agent AGENT_NAME`.
 
 Logs are in `logs/`. You can navigate to the folder to the log to each Agent server
 
 
-# Step 4 Start UI
+# Step 4: Start UI
 
 ```
 python start_ui.py

@@ -1,12 +1,19 @@
-import subprocess
-import yaml
+"""MCP server startup script for the agentic multimodal travel planner.
+
+This module manages MCP (Model Context Protocol) servers, providing
+functionality to start, stop, and download server scripts from GitHub.
+"""
+
 import socket
-from pathlib import Path
+import subprocess
 import sys
 import time
+import urllib.error
 import urllib.request
+from pathlib import Path
 from typing import Dict, List, Tuple
 
+import yaml
 
 CONFIG_PATH = Path("config/mcp_config.yaml")
 LOG_DIR = Path("logs")
@@ -26,6 +33,14 @@ GITHUB_MCP_URLS = {
 
 
 def is_port_in_use(port: int) -> bool:
+    """Check if a port is currently in use.
+
+    Args:
+        port: The port number to check.
+
+    Returns:
+        True if the port is in use, False otherwise.
+    """
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.settimeout(0.5)
@@ -35,6 +50,11 @@ def is_port_in_use(port: int) -> bool:
 
 
 def kill_processes_on_port(port: int) -> None:
+    """Kill any processes using the specified port.
+
+    Args:
+        port: The port number to clear.
+    """
     try:
         result = subprocess.run(
             ["lsof", "-t", f"-i:{port}"],
@@ -54,11 +74,21 @@ def kill_processes_on_port(port: int) -> None:
 
 
 def download_script_if_missing(name: str, script_path: Path) -> bool:
-    """Download script from GitHub if it doesn't exist locally."""
+    """Download script from GitHub if it doesn't exist locally.
+
+    Args:
+        name: The friendly name of the MCP server.
+        script_path: Path where the script should be saved.
+
+    Returns:
+        True if download was successful, False otherwise.
+    """
     script_name = script_path.name
 
     if script_name not in GITHUB_MCP_URLS:
-        print(f"✗ Script '{script_name}' not found and no download URL available")
+        print(
+            f"✗ Script '{script_name}' not found and no download URL available"
+        )
         return False
 
     url = GITHUB_MCP_URLS[script_name]
@@ -92,6 +122,15 @@ def download_script_if_missing(name: str, script_path: Path) -> bool:
 
 
 def start_mcp_server(name: str, conf: Dict) -> bool:
+    """Start an individual MCP server process.
+
+    Args:
+        name: The name of the MCP server to start.
+        conf: Configuration dictionary for the MCP server.
+
+    Returns:
+        True if server started successfully, False otherwise.
+    """
     script = conf.get("script")
     if not script:
         print(f"MCP '{name}' missing script, skipping.")
@@ -120,7 +159,7 @@ def start_mcp_server(name: str, conf: Dict) -> bool:
     cmd: List[str] = [sys.executable, str(script_path)]
     script_lower = script_path.name.lower()
     if "ai_builder_mcp" in script_lower:
-        cmd += ["start"]
+        cmd += ["start", "--protocol", "sse"]
         if port:
             cmd += ["--port", str(port)]
 
@@ -131,7 +170,7 @@ def start_mcp_server(name: str, conf: Dict) -> bool:
                 cmd,
                 stdout=log,
                 stderr=subprocess.STDOUT,
-                start_new_session=True,  # Detach from parent
+                start_new_session=True,
             )
 
         # Wait for server to be ready by monitoring log output
@@ -145,14 +184,14 @@ def start_mcp_server(name: str, conf: Dict) -> bool:
             if proc.poll() is not None:
                 print(f"MCP '{name}' exited early (code: {proc.returncode})")
                 return False
-            
+
             # Read new log content
             if log_file.exists():
                 with open(log_file, "r") as f:
                     f.seek(log_position)
                     new_content = f.read()
                     log_position = f.tell()
-                    
+
                     if new_content:
                         # Check for readiness indicators in new content
                         content_lower = new_content.lower()
@@ -164,17 +203,20 @@ def start_mcp_server(name: str, conf: Dict) -> bool:
                         ]):
                             ready = True
                             break
-            
+
             # Also verify port is in use if specified
             if port and is_port_in_use(port):
                 ready = True
                 break
-            
+
             time.sleep(0.3)
 
         if ready:
-            time.sleep(0.5)  # Small settle time
-            status = f"MCP '{name}' started" + (f" on port {port}" if port else "")
+            time.sleep(0.5)
+            status = (
+                f"MCP '{name}' started" +
+                (f" on port {port}" if port else "")
+            )
             print(status)
             return True
 
@@ -187,6 +229,11 @@ def start_mcp_server(name: str, conf: Dict) -> bool:
 
 
 def load_config() -> Dict:
+    """Load MCP server configuration from YAML file.
+
+    Returns:
+        Configuration dictionary, or empty dict if file not found.
+    """
     if not CONFIG_PATH.exists():
         print(f"Config file not found: {CONFIG_PATH}")
         return {}
@@ -197,6 +244,15 @@ def load_config() -> Dict:
 def select_targets(
     cfg: Dict, only: List[str] = None
 ) -> List[Tuple[str, Dict]]:
+    """Select MCP server targets from configuration.
+
+    Args:
+        cfg: Configuration dictionary.
+        only: Optional list of server names to filter by.
+
+    Returns:
+        List of tuples containing (server_name, config_dict).
+    """
     items: List[Tuple[str, Dict]] = []
     for name, section in (cfg or {}).items():
         if not isinstance(section, dict):
@@ -213,6 +269,12 @@ def stop_mcp_servers(
     targets: List[Tuple[str, Dict]],
     kill_all: bool = False,
 ) -> None:
+    """Stop running MCP server processes.
+
+    Args:
+        targets: List of (server_name, config_dict) tuples to stop.
+        kill_all: If True, aggressively kill by known process patterns.
+    """
     killed = 0
     for name, section in targets:
         port = section.get("mcp_port")
@@ -265,7 +327,11 @@ def stop_mcp_servers(
 
 
 def download_mcp_servers(targets: List[Tuple[str, Dict]]) -> None:
-    """Download MCP server scripts from GitHub to their configured paths."""
+    """Download MCP server scripts from AI Assistant Builder GitHub to their configured paths.
+
+    Args:
+        targets: List of (server_name, config_dict) tuples to download.
+    """
     downloaded = 0
     skipped = 0
 
@@ -288,6 +354,11 @@ def download_mcp_servers(targets: List[Tuple[str, Dict]]) -> None:
 
 
 def main():
+    """Main entry point for managing MCP servers.
+
+    Provides command-line interface for starting, stopping, and downloading
+    MCP server scripts.
+    """
     import argparse
 
     parser = argparse.ArgumentParser(

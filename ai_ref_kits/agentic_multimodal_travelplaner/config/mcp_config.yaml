@@ -1,17 +1,10 @@
-# NEW Video MCP Server Configuration
-# Configuration for the NEW video processing MCP server
-
-# Processing settings
-processing:
-  default_top_k: 3
-  max_new_tokens: 200
-  temperature: 0.1
+# MCP Servers Configuration
 
 image_mcp:
-  model_id: "penVINO/Phi-3.5-vision-instruct-int4-ov"
-  ovms_base_url: "http://localhost:8003/v3"
+  model_id: "OpenVINO/Phi-3.5-vision-instruct-int4-ov"
+  ovms_base_url: "http://localhost:8002/v3"
   script: mcp_tools/imagecaptioning_mcp.py
-  mcp_port: 3005
+  mcp_port: 3003
 
 hotel_finder:
   script: mcp_tools/ai_builder_mcp_hotel_finder.py
