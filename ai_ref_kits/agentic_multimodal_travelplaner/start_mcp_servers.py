@@ -103,10 +103,9 @@ def start_mcp_server(name: str, conf: Dict) -> bool:
     if port:
         if is_port_in_use(port):
             kill_processes_on_port(port)
-            # Small delay to allow OS to release the port
             time.sleep(0.5)
 
-    # Resolve script path relative to repo root
+    # Resolve script path
     script_path = Path(script)
     if not script_path.exists():
         print(f"Script for '{name}' not found: {script_path}")
@@ -120,84 +119,70 @@ def start_mcp_server(name: str, conf: Dict) -> bool:
     # Build command
     cmd: List[str] = [sys.executable, str(script_path)]
     script_lower = script_path.name.lower()
-    # ai_builder MCP servers have a CLI: start/stop/status and accept --port
     if "ai_builder_mcp" in script_lower:
         cmd += ["start"]
         if port:
             cmd += ["--port", str(port)]
 
     try:
-        proc = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-        )
+        # Start process with output redirected to log file
+        with open(log_file, "w") as log:
+            proc = subprocess.Popen(
+                cmd,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,  # Detach from parent
+            )
 
+        # Wait for server to be ready by monitoring log output
         ready = False
         start_time = time.time()
         timeout_s = 30
+        log_position = 0
 
-        # Stream output to log while waiting for readiness
-        if proc.stdout is not None:
-            for line in proc.stdout:
-                with open(log_file, "a") as log:
-                    log.write(line)
-                    log.flush()
-
-                # Heuristic readiness: either port opens or
-                # a clear start message appears
-                if port and is_port_in_use(port):
-                    ready = True
-                    break
-                if any(
-                    s in line.lower()
-                    for s in [
-                        "server started successfully",
-                        "mcp server started",
-                        "starting simple video mcp server",
-                        "uvicorn running",
-                    ]
-                ):
-                    ready = True
-                    break
-
-                if time.time() - start_time > timeout_s:
-                    break
-
-        # Final port probe if port provided
-        if port and not ready:
-            max_retries = 10
-            for _ in range(max_retries):
-                if is_port_in_use(port):
-                    ready = True
-                    break
-                time.sleep(0.5)
+        while time.time() - start_time < timeout_s:
+            # Check if process died early
+            if proc.poll() is not None:
+                print(f"MCP '{name}' exited early (code: {proc.returncode})")
+                return False
+            
+            # Read new log content
+            if log_file.exists():
+                with open(log_file, "r") as f:
+                    f.seek(log_position)
+                    new_content = f.read()
+                    log_position = f.tell()
+                    
+                    if new_content:
+                        # Check for readiness indicators in new content
+                        content_lower = new_content.lower()
+                        if any(s in content_lower for s in [
+                            "uvicorn running on",
+                            "server started successfully",
+                            "mcp server started",
+                            "starting simple video mcp server",
+                        ]):
+                            ready = True
+                            break
+            
+            # Also verify port is in use if specified
+            if port and is_port_in_use(port):
+                ready = True
+                break
+            
+            time.sleep(0.3)
 
         if ready:
-            # Extra settle time
-            time.sleep(1)
-            status = (
-                f"MCP '{name}' started" + (f" on port {port}" if port else "")
-            )
+            time.sleep(0.5)  # Small settle time
+            status = f"MCP '{name}' started" + (f" on port {port}" if port else "")
             print(status)
             return True
 
-        # Early failure
-        if proc.poll() is not None and proc.returncode != 0:
-            print(
-                f"MCP '{name}' failed to start (exit code: {proc.returncode})"
-            )
-            return False
-
-        print(f"Warning: MCP '{name}' may not be ready yet.")
+        print(f"Warning: MCP '{name}' timed out waiting for readiness.")
         return False
 
-    except subprocess.SubprocessError as e:
-        print(f"Failed to start MCP '{name}': {e}")
-        return False
     except Exception as e:
-        print(f"Unexpected error starting MCP '{name}': {e}")
+        print(f"Failed to start MCP '{name}': {e}")
         return False
 
 

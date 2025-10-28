@@ -106,14 +106,15 @@ The command you run to activate the virtual environment you created depends on w
 To activate  the virtual environment for a **Unix-based** operating system, run:
 
 ```shell
-source agentic/bin/activate   # For Unix-based operating systems such as Linux or macOS
+source agentic/bin/activate  
 ```
 
 To activate the virtual environment for a **Windows** operating system, run:
 
 ```shell
-agentic\Scripts\activate  # This command is for Windows operating systems
+agentic\Scripts\activate
 ```
+
 This activates the virtual environment and changes your shell's prompt to indicate that you are now working in that environment.
 
 ### Install the Requirements
@@ -146,6 +147,13 @@ docker pull openvino/model_server:latest
 ### Download optimized models 
 
 OpenVINO Model Server will serve your models. In this example you will use two models: an LLM and a VLM.
+
+Create your folder 
+```
+sudo mkdir -p $(pwd)/models
+sudo chown -R $(id -u):$(id -g) $(pwd)/models
+chmod -R 755 $(pwd)/models   
+```
 
 Agent LLM: **Qwen3-8B**
 ```
@@ -230,7 +238,7 @@ export SERP_API_KEY=***YOUR_KEY***
 
 Run
 ```
-start_mcp_servers.py
+python start_mcp_servers.py
 ```
 
 **NOTE**: This script starts the MCP servers in the backgroud reads the configuration set on `/config/mcp_config.yaml`. There you can set each MCP parameter
@@ -238,15 +246,15 @@ start_mcp_servers.py
 You should get a confirmation that the MCP servers are up and running
 ```
 MCP 'image_mcp' started on port 3005
-MCP 'hotel_finder' started on port 7903
-MCP 'flight_finder' started on port 7901
+MCP 'hotel_finder' started on port 3003
+MCP 'flight_finder' started on port 3002
 
 Successfully started MCP servers: image_mcp, hotel_finder, flight_finder
 
-Logs are in logs/
-```
+Logs are in `logs/`. You can navigate to the folder to the log to each MCP server
 
 The script also provides a stop function to stop them: 
+
 ```
 python start_mcp_servers.py --stop
 ```
@@ -258,6 +266,9 @@ python start_agents.py
 ```
 
 **NOTE** : If you want to analyze each agent configuration please start each agent on an independent terminal running `pyhton /agents/agent_runner.py --agent AGENT_NAME`
+
+Logs are in `logs/`. You can navigate to the folder to the log to each Agent server
+
 
 # Step 4 Start UI
 
