@@ -4,7 +4,7 @@ jupyterlab==4.4.8
 
 openvino==2025.2.0
 ultralytics==8.3.141
-onnxruntime-openvino==1.22.0
+onnxruntime-openvino==1.23.0
 onnx==1.18.0
 torch==2.8.0
 numpy==2.2.6
