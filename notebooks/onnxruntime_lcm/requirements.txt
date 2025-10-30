@@ -7,6 +7,7 @@ openvino==2025.3
 onnxruntime-openvino==1.23.0
 onnx==1.18.0
 optimum==1.26.1
+torch==2.8.0
 accelerate==1.8.1
 diffusers==0.34.0
 numpy==2.2.6
