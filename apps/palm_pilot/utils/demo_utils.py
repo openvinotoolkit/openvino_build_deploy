@@ -36,7 +36,7 @@ def download_file(
     :param timeout: Number of seconds before cancelling the connection attempt
     :return: path to downloaded file
     """
-    from tqdm import tqdm
+    import tqdm
     import requests
 
     filename = filename or Path(urllib.parse.urlparse(url).path).name
