@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Tuple
 
 import gradio as gr
-import nest_asyncio
 import openvino.properties as props
 import openvino.properties.hint as hints
 import openvino.properties.streams as streams
@@ -544,8 +543,6 @@ def run(chat_model: Path, embedding_model: Path, rag_pdf: Path, device: str, pub
         ),
     )
     
-    nest_asyncio.apply()
- 
     # Define agent and available tools
     agent = ReActAgent.from_tools(
         [paint_cost_calculator, add_to_cart_tool, get_cart_items_tool, clear_cart_tool, vector_tool, paint_gallons_calculator],

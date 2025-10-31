@@ -44,9 +44,9 @@ def download_data(data_dir: Path) -> None:
     Params:
         data_dir: dir to download data
     """
-    utils.download_file(DATA_URL, directory=data_dir, show_progress=True)
-    utils.download_file(LABELS_URL, directory=data_dir, show_progress=True)
-    utils.download_file(CFG_URL, directory=data_dir, show_progress=True)
+    utils.download_file(CFG_URL, directory=data_dir, expected_hash="631a3dfc12159993208a10093af2948e68ac288e93b7d4c8ad63f133adadd3ba", show_progress=True)
+    utils.download_file(LABELS_URL, directory=data_dir, expected_hash="039d39b6548fa9dbcc1bb84e722953d25ebc04935772805e5d5c7badefcb349b", show_progress=True)
+    utils.download_file(DATA_URL, directory=data_dir, expected_hash="4f7e2ccb2866ec5041993c9cf2a952bbed69647b115d0f74da7ce8f4bef82f05", show_progress=True)
 
     if not (data_dir / "coco/labels").exists():
         with zf.ZipFile(data_dir / 'coco2017labels-segments.zip', "r") as zip_ref:

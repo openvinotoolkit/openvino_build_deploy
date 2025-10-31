@@ -1,10 +1,7 @@
-from utils import tlwh_to_xyxy
 from analog.base import AnalogBase
 import numpy as np
 import cv2
 import os
-import sys
-sys.path.append("../")
 
 
 class AnalogYolo(AnalogBase):
@@ -102,6 +99,23 @@ class AnalogYolo(AnalogBase):
             filtered_results.append(box)
         return filtered_results
 
+    def tlwh_to_xyxy(self, bbox_tlwh, org_h, org_w):
+        """
+        Convert bbox from tlwh to xyxy format and clip to image size
+        Param：
+            bbox_tlwh (list[float]): bbox in tlwh format
+            org_h (int): original image height
+            org_w (int): original image width
+        Returns：
+            x1, y1, x2, y2 (int): bbox in xyxy
+        """
+        x, y, w, h = bbox_tlwh
+        x1 = max(int(x), 0)
+        x2 = min(int(x+w), org_w-1)
+        y1 = max(int(y), 0)
+        y2 = min(int(y+h), org_h-1)
+        return x1, y1, x2, y2
+
     def roi_crop(self, image, results, scale_x, scale_y):
         """
         Crop the area of detected meter of original image
@@ -120,7 +134,7 @@ class AnalogYolo(AnalogBase):
         roi_imgs = []
         loc = []
         for i in range(len(results)):
-            xmin, ymin, xmax, ymax = tlwh_to_xyxy(results[i], 640, 640)
+            xmin, ymin, xmax, ymax = self.tlwh_to_xyxy(results[i], 640, 640)
             xmin, ymin, xmax, ymax = int(
                 xmin*scale_x), int(ymin*scale_y), int(xmax*scale_x), int(ymax*scale_y)
             sub_img = image[ymin:(ymax + 1), xmin:(xmax + 1), :]

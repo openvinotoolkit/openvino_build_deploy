@@ -64,6 +64,7 @@ jobs:
         with:
           hf_token: ${{ secrets.HF_TOKEN }}
       - uses: ./.github/reusable-steps/gradio-action
+        timeout-minutes: 30
         with:
           script: main.py
           project: ${{ matrix.subproject }}
