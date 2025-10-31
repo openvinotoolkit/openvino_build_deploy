@@ -4,7 +4,7 @@
 A sophisticated multi-agent system that provides intelligent travel assistance using specialized AI agents for hotel search, flight booking, and image captioning travel recommendations. Built with OpenVINO, MCP (Model Context Protocol), A2A (Agent to Agent Protocol), and the BeeAI framework.
 
   <h4>
-    <a href="https://www.intel.com/content/www/us/en/developer/topic-technology/edge-5g/open-potential.html">🏠&nbsp;About&nbsp;the&nbsp;Kits&nbsp;·</a>
+    <a href="https://www.intel.com/content/www/us/en/developer/topic-technology/edge-5g/open-potential.html">🏠&nbsp;About&nbsp;the&nbsp;Kits&nbsp</a>
   </h4>
 </div>
 
@@ -34,23 +34,23 @@ Check out our [AI Reference Kits repository](https://github.com/openvinotoolkit/
 │                    Travel Router Agent                  │
 │              (Main Coordinator & Orchestrator)          │
 │                        (Port 9996)                      │
-└─────────────────────────┬───────────────────────────────┘
-                          │
-   ┌───────────────-──────┼────────────────┐
-   │                      │                │             
-   ▼                      ▼                ▼           
+└────────────────────────┬────────────────────────────────┘
+                         │
+       ┌───────────-─────┼─────────────────┐
+       │                 │                 │             
+       ▼                 ▼                 ▼           
 ┌─────────────┐   ┌─────────────┐   ┌─────────────┐ 
 │Hotel Finder │   │Flight Finder│   │Image Proc.  │ 
 │   Agent     │   │   Agent     │   │   Agent     │ 
 │  (Port 9999)│   │ (Port 9998) │   │ (Port 9995) │ 
 └─────────────┘   └─────────────┘   └─────────────┘ 
-      │                 │                 │               
-      ▼                 ▼                 ▼              
-┌─────────────┐   ┌─────────────┐ ┌─────────────┐ 
-│Hotel Search │   │Flight Search│ │Image Caption│ 
-│ MCP Server  │   │ MCP Server  │ │  MCP Server │
-│ (Port 3001) │   │ (Port 3002) │ │ (Port 3003) │
-└─────────────┘   └─────────────┘ └─────────────┘ 
+       │                 │                 │               
+       ▼                 ▼                 ▼              
+┌─────────────┐   ┌─────────────┐   ┌─────────────┐ 
+│Hotel Search │   │Flight Search│   │Image Caption│ 
+│ MCP Server  │   │ MCP Server  │   │  MCP Server │
+│ (Port 3001) │   │ (Port 3002) │   │ (Port 3003) │
+└─────────────┘   └─────────────┘   └─────────────┘ 
                           │
                           ▼
 ┌────────────────────────────────────────────────────────────┐
@@ -63,14 +63,13 @@ Check out our [AI Reference Kits repository](https://github.com/openvinotoolkit/
 
 ---
 
-# STEPS
-- Start OVMS LLMs
-- Start MCP servers (start_mcp_servers.py)
-- Start Agents      (start_agents.py)
-- Start UI           (start_ui.py)
+## Steps
+1. Start OVMS LLMs
+2. Start MCP servers (`start_mcp_servers.py`)
+3. Start Agents      (`start_agents.py`)
+4. Start UI          (`start_ui.py`)
 
-
-# Setting Up Your Environment
+## Setting Up Your Environment
 
 To set up your environment, you first clone the repository, then create a virtual environment, activate the environment, and install the packages.
 
@@ -82,17 +81,17 @@ To clone the repository, run this command:
 git clone https://github.com/openvinotoolkit/openvino_build_deploy.git
 ```
 
-This command clones the repository into a directory named "openvino_build_deploy" in the current directory. After the directory is cloned, run the following command to go to that directory:
+This command clones the repository into a directory named `openvino_build_deploy` in the current directory. After the directory is cloned, run the following command to go to that directory:
 
 
 ```shell
 cd openvino_build_deploy/ai_ref_kits/agentic_multimodal_travelplaner
 ```
 
-## Create virtual environment
+### Create virtual environment
 
 ```
-python3 -m venv agentic
+python3 -m venv agentic_venv
 ```
 
 ### Activate the Environment
@@ -102,13 +101,13 @@ The command you run to activate the virtual environment you created depends on w
 To activate  the virtual environment for a **Unix-based** operating system, run:
 
 ```shell
-source agentic/bin/activate  
+source agentic_venv/bin/activate  
 ```
 
 To activate the virtual environment for a **Windows** operating system, run:
 
 ```shell
-agentic\Scripts\activate
+agentic_venv\Scripts\activate
 ```
 
 This activates the virtual environment and changes your shell's prompt to indicate that you are now working in that environment.
@@ -122,14 +121,14 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-# Step 1: Getting the LLM for agents ready with OpenVINO model Server (OVMS) using optimized models
+## Step 1: Getting the LLMs for agents ready with OpenVINO model Server (OVMS)
 
 Windows and Linux
-## OPTION 1: Windows
+### OPTION 1: Windows
 
 TBC
 
-## OPTION 2: Linux
+### OPTION 2: Linux
 
 ### Docker Installation
 For instalation instructions details, refer to the [official Docker documentation for Ubuntu](https://docs.docker.com/engine/install/ubuntu/).
@@ -144,7 +143,7 @@ docker pull openvino/model_server:latest
 
 OpenVINO Model Server will serve your models. In this example you will use two models: an LLM and a VLM.
 
-Create your folder 
+Create your folder:
 ```
 sudo mkdir -p $(pwd)/models
 sudo chown -R $(id -u):$(id -g) $(pwd)/models
@@ -191,7 +190,7 @@ docker run -d --rm \
   --model_path /models/OpenVINO/Phi-3.5-vision-instruct-int4-ov
 ```
 
-### Check
+### Verify the services are running
 Run:
 ```
 docker ps
@@ -206,24 +205,23 @@ a962a7695b1f   openvino/model_server:latest   "/ovms/bin/ovms --re…"   3 days 
 
 Your LLM is now running and ready to be used by the agents.
 
-# Step 2: Start the Agents and the MCP tools
+## Step 2: Start the MCP servers
 
-## Start MCP tools
 This example uses three MCP servers that the agents will consume:
 - Flight search (Intel AI Builder): provides available flight options
 - Hotel search (Intel AI Builder): provides available hotels
 - Image captioning: generates captions for images
 
-## Get your SerpAPI key
+### Get your SerpAPI key
 Flight and travel agents use an external API for hotel and flight search. Obtain an API key from SerpAPI.
 
-Go to https://serpapi.com/
-
-Navigate to "Your Private API Key"
+1. Go to https://serpapi.com/
+2. Navigate to "Your Private API Key"
+3. Copy the key
 
 Once you have your key, you can launch the MCP servers.
 
-## Launch MCP servers
+### Launch MCP servers
 
 Set your key
 ```
@@ -253,9 +251,9 @@ The script also provides a stop command:
 python start_mcp_servers.py --stop
 ```
 
-# Step 3: Start Agents
+## Step 3: Start Agents
 
-Start all agents
+Start all the agents.
 
 ```
 python start_agents.py
@@ -272,11 +270,12 @@ Successfully started agents: travel_router, flight_finder, hotel_finder, image_c
 
 Logs are in `logs/`
 ```
-**NOTE**: To inspect individual agent behavior, start each agent in its own terminal with `python agents/agent_runner.py --agent AGENT_NAME`.
 
-Logs are in `logs/`. You can navigate to the folder to the log to each Agent server
+_**NOTE**: To inspect individual agent behavior, start each agent in its own terminal with `python agents/agent_runner.py --agent AGENT_NAME`._
 
-# Step 4: Start UI
+Logs are in `logs/`. You can navigate to the folder to the log of each Agent server.
+
+## Step 4: Start UI
 
 ```
 python start_ui.py
@@ -284,14 +283,16 @@ python start_ui.py
 
 Open `http://127.0.0.1:7860` in your browser.
 
-# OPTIONAL Customization
-You can add agents by configuring the YAML files
+## Customization (optional)
 
-## Agents YAML config
+You can add more agents by providing the YAML config files.
 
-All agents are created by a runner `agents/agent_runner.py` which reads two files: `config/agents_config.yaml` and `config/agents_prompt.yaml`.
+### Agents YAML config
 
-You can start the agents all together by running 
+All agents are created by a runner `agents/agent_runner.py` which looks for two files: `config/agents_config.yaml` and `config/agents_prompt.yaml`.
+
+You can start the agents all together by running
+
 ```python
 python start_agents.py
 ```
