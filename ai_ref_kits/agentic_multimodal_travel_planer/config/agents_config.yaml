@@ -64,7 +64,7 @@ flight_finder:
       - name: "Flight_search_api"
         url: "http://127.0.0.1:3002"
         protocol: "sse"
-        description: "Fligh search"
+        description: "Flight search"
         enabled: true 
   
   # Memory Configuration
