@@ -3,7 +3,7 @@
 image_mcp:
   model_id: "OpenVINO/Phi-3.5-vision-instruct-int4-ov"
   ovms_base_url: "http://localhost:8002/v3"
-  script: mcp_tools/imagecaptioning_mcp.py
+  script: mcp_tools/image_captioning_mcp.py
   mcp_port: 3003
 
 hotel_finder:
