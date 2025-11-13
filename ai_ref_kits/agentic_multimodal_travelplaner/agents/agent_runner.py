@@ -102,7 +102,7 @@ class MCPToolsManager:
 class AgentFactory:
     """Factory class for creating different types of agents"""
 
-    def create_agent(self, config, tools=None,agent_name=None):
+    def create_agent(self, config, tools=None, agent_name=None):
         """Create an agent from configuration (regular or supervisor)"""
         if 'supervised_agents' in config:
             return self._create_supervisor_agent(config, tools)
