@@ -55,11 +55,7 @@ class MCPToolsManager:
     """Manages MCP server connections and tool discovery"""
 
     async def setup_mcp_tools_with_stack(self, config, stack):
-        """Setup MCP tools using
-        AsyncExitStack for proper connection management.
-        If the connection fails, the error is caught and
-        the loop continues to the next server.
-        """
+        """Setup MCP tools using AsyncExitStack for proper connection management. If the connection fails, the error is caught and the loop continues to the next server."""
         mcp_config = config.get('mcp_config')
         if not mcp_config:
             return []
