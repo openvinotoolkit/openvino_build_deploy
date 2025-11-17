@@ -3,11 +3,13 @@ Simple configuration loader for agents.
 """
 
 import os
-import yaml
-import requests
-from pathlib import Path
 import socket
 import subprocess
+import yaml
+from pathlib import Path
+from urllib.parse import urlparse
+
+import requests
 
 def validate_llm_endpoint(api_base, timeout=5):
     """Validate if the LLM API endpoint is accessible"""
@@ -38,20 +40,13 @@ def validate_llm_endpoint(api_base, timeout=5):
         pass
     
     # Check if the server is at least responding on the port
-    import socket
     try:
-        # Extract host and port from api_base
-        if '://' in api_base:
-            host_port = api_base.split('://', 1)[1]
-        else:
-            host_port = api_base
-        
-        if ':' in host_port:
-            host, port = host_port.split(':', 1)
-            port = int(port.split('/')[0])  # Remove any path after port
-        else:
-            host = host_port.split('/')[0]
-            port = 80
+        # Extract host and port from api_base using urlparse
+        parsed = urlparse(
+            api_base if '://' in api_base else f'http://{api_base}'
+        )
+        host = parsed.hostname or 'localhost'
+        port = parsed.port or (443 if parsed.scheme == 'https' else 80)
         
         # Convert 0.0.0.0 to localhost for socket check
         if host == '0.0.0.0':
