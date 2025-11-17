@@ -1,8 +1,8 @@
-gradio==5.9.1
+gradio==5.49.1
 beeai-framework==0.1.56
 beeai-framework[a2a]==0.1.56
-uvicorn==0.32.1
-PyYAML==6.0
+uvicorn==0.37.0
+PyYAML==6.0.1
 fastapi==0.115.5
 python-dotenv==1.1.0
 mcp==1.10.1
