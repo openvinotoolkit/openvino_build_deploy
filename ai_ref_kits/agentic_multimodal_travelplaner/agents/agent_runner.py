@@ -44,7 +44,7 @@ from beeai_framework.logger import Logger
 
 # Add parent directory to path for imports (before local imports!)
 sys.path.append(str(Path(__file__).parent.parent))   # noqa: E402
-from utils.config import load_config
+from utils.util import load_config
 
 # =============================================================================
 # MCP TOOLS MANAGEMENT

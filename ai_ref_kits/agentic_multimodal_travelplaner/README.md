@@ -24,7 +24,7 @@ This kit uses the following technology stack:
 - [Model Context Protocol](https://modelcontextprotocol.io/docs/getting-started/intro)
 - [A2A](https://github.com/a2aproject/A2A)
 
-- [Qwen2.5-7B](https://huggingface.co/Qwen/Qwen2.5-7B-Instruct) (LLM)
+- [OpenVINO/Qwen3-8B-int4-ov](https://huggingface.co/OpenVINO/Qwen3-8B-int4-ov) (LLM)
 - [OpenVINO/Phi-3.5-vision-instruct-int4-ov](https://huggingface.co/OpenVINO/Phi-3.5-vision-instruct-int4-ov) (VLM)
 
 Check out our [AI Reference Kits repository](https://github.com/openvinotoolkit/openvino_build_deploy) for other kits.
@@ -42,7 +42,7 @@ Check out our [AI Reference Kits repository](https://github.com/openvinotoolkit/
 ┌─────────────┐   ┌─────────────┐   ┌─────────────┐ 
 │Hotel Finder │   │Flight Finder│   │Image Proc.  │ 
 │   Agent     │   │   Agent     │   │   Agent     │ 
-│  (Port 9999)│   │ (Port 9998) │   │ (Port 9995) │ 
+│  (Port 9999)│   │ (Port 9998) │   │ (Port 9997) │ 
 └─────────────┘   └─────────────┘   └─────────────┘ 
       │                 │                 │               
       ▼                 ▼                 ▼              
@@ -132,7 +132,7 @@ TBC
 ## OPTION 2: Linux
 
 ### Docker Installation
-For instalation instructions details, refer to the [official Docker documentation for Ubuntu](https://docs.docker.com/engine/install/ubuntu/).
+For installation instructions, refer to the [official Docker documentation for Ubuntu](https://docs.docker.com/engine/install/ubuntu/).
 
 ### Get OpenVINO Model Server image
 Once you have Docker installed on your machine, pull the OpenVINO Model Server image:
@@ -274,7 +274,13 @@ Logs are in `logs/`
 ```
 **NOTE**: To inspect individual agent behavior, start each agent in its own terminal with `python agents/agent_runner.py --agent AGENT_NAME`.
 
-Logs are in `logs/`. You can navigate to the folder to the log to each Agent server
+Logs are in `logs/`. You can open each agent's log file there.
+
+The script also provides a stop command:
+
+```
+python start_agents.py --stop
+```
 
 # Step 4: Start UI
 
@@ -287,15 +293,76 @@ Open `http://127.0.0.1:7860` in your browser.
 # OPTIONAL Customization
 You can add agents by configuring the YAML files
 
-## Agents YAML config
-
-All agents are created by a runner `agents/agent_runner.py` which reads two files: `config/agents_config.yaml` and `config/agents_prompt.yaml`.
-
-You can start the agents all together by running 
-```python
-python start_agents.py
-```
-
 ### Agents configuration
+Below is how you can configure your own agents for the Agentic Multimodal Travel Planner. This guide covers the basics of agent configuration and helps you set up new agents or customize existing ones.
 
-### Agents prompts
+#### 1. Overview
+
+Agents are defined via YAML configuration files located in the `config/` directory:
+
+- `config/agents_config.yaml`: Controls properties, endpoints, ports, and enabled status of each agent.
+- `config/agents_prompts.yaml`: Defines the system instructions (prompt) and templates for communication of each agent.
+
+#### 2. How to add a new agent
+
+1. **Open `config/agents_config.yaml`**  
+   Find an agent section (e.g., `flight_finder:`), and use it as a template for your new agent.
+
+   ```yaml
+   your_custom_agent:
+     name: "agent_name"
+     port: 9988
+     role : "agent_role"
+     enabled: true
+   ```
+
+   - `your_custom_agent`: Unique name for your agent.
+   - `name`: Human-readable identifier for your agent.
+   - `port`: TCP port the agent will listen on (make sure it's unused).
+   - `role`: Brief role/description for your agent.
+   - `enabled`: Set to `true` to enable the agent.
+
+2. **Open `config/agents_prompts.yaml`**  
+   Create an entry for your agent with its system prompt and dialogue template.
+
+   ```yaml
+   your_custom_agent:
+     system: |
+       You are the Custom Agent. Your job is to provide ... (describe the behavior here)
+     template: |
+       [User]: {{query}}
+       [Agent]: 
+   ```
+
+   - The `system` prompt is injected as the agent’s system-level context.
+   - The `template` can be customized to guide your agent's responses.
+
+4. **Start Your Agent**  
+   Make sure your agent is enabled in `agents_config.yaml`, then run:
+
+   ```
+   python start_agents.py
+   ```
+
+   Your agent should start alongside the others. Check the logs in the `logs/` directory for messages from your agent.
+
+#### 3. Tips for Customization
+
+- Use unique port numbers for each new agent.
+- You may copy config stanzas for existing agents as a quick start.
+- Edit the system prompt to set the "personality" and role for your agent.
+- Restart the agent process after changing any YAML config.
+
+#### 4. Disabling/Enabling Agents
+
+Set `enabled: false` to disable an agent in `config/agents_config.yaml`—that agent won't be started by `start_agents.py`.
+
+#### 5. Troubleshooting
+
+- If your agent doesn't appear, check the logs in `logs/` for errors.
+- Make sure the port is not being used by another process.
+- Ensure your new agent class is properly importable and subclassed as required by the BeeAI Framework.
+
+---
+
+With this approach, you can flexibly expand the capabilities of your travel planning system by adding or customizing new agents to fit your requirements!

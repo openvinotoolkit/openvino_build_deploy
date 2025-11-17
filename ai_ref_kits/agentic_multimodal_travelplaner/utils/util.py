@@ -6,7 +6,8 @@ import os
 import yaml
 import requests
 from pathlib import Path
-
+import socket
+import subprocess
 
 def validate_llm_endpoint(api_base, timeout=5):
     """Validate if the LLM API endpoint is accessible"""
@@ -258,3 +259,44 @@ def load_config(agent_name: str):
         config['supervised_agents'] = agent_config['supervised_agents']
     
     return config
+
+
+def is_port_in_use(port: int) -> bool:
+    """Check if a port is currently in use.
+
+    Args:
+        port: The port number to check.
+
+    Returns:
+        True if the port is in use, False otherwise.
+    """
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.settimeout(0.5)
+            return sock.connect_ex(("127.0.0.1", port)) == 0
+    except OSError:
+        return False
+
+
+def kill_processes_on_port(port: int) -> None:
+    """Kill any processes using the specified port.
+
+    Args:
+        port: The port number to clear.
+    """
+    try:
+        result = subprocess.run(
+            ["lsof", "-t", f"-i:{port}"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.stdout.strip():
+            pids = result.stdout.strip().split("\n")
+            for pid in pids:
+                if pid:
+                    subprocess.run(["kill", "-9", pid], check=False)
+                    print(f"Killed process {pid} on port {port}")
+    except FileNotFoundError:
+        # lsof not available; best effort skip
+        pass

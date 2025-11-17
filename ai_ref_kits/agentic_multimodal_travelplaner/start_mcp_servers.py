@@ -4,7 +4,6 @@ This module manages MCP (Model Context Protocol) servers, providing
 functionality to start, stop, and download server scripts from GitHub.
 """
 
-import socket
 import subprocess
 import sys
 import time
@@ -31,47 +30,7 @@ GITHUB_MCP_URLS = {
     ),
 }
 
-
-def is_port_in_use(port: int) -> bool:
-    """Check if a port is currently in use.
-
-    Args:
-        port: The port number to check.
-
-    Returns:
-        True if the port is in use, False otherwise.
-    """
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            sock.settimeout(0.5)
-            return sock.connect_ex(("127.0.0.1", port)) == 0
-    except OSError:
-        return False
-
-
-def kill_processes_on_port(port: int) -> None:
-    """Kill any processes using the specified port.
-
-    Args:
-        port: The port number to clear.
-    """
-    try:
-        result = subprocess.run(
-            ["lsof", "-t", f"-i:{port}"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if result.stdout.strip():
-            pids = result.stdout.strip().split("\n")
-            for pid in pids:
-                if pid:
-                    subprocess.run(["kill", "-9", pid], check=False)
-                    print(f"Killed process {pid} on port {port}")
-    except FileNotFoundError:
-        # lsof not available; best effort skip
-        pass
-
+from utils.util import is_port_in_use, kill_processes_on_port
 
 def download_script_if_missing(name: str, script_path: Path) -> bool:
     """Download script from GitHub if it doesn't exist locally.
