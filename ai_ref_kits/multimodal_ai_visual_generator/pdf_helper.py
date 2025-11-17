@@ -64,10 +64,6 @@ def draw_cover(pdf: FPDF, x: float, y: float, width: float, mode: str, story_ide
         mode (str): The mode ("illustration" or "tshirt")
         story_idea (str): The story idea text
     """
-    # Background rectangle
-    pdf.set_fill_color(31, 31, 46)
-    pdf.rect(x, y, width, 210 - y * 2, 'F')
-
     # Title
     pdf.set_font("Helvetica", "B", 22)
     pdf.set_text_color(106, 17, 203)
@@ -77,14 +73,14 @@ def draw_cover(pdf: FPDF, x: float, y: float, width: float, mode: str, story_ide
 
     # Subtitle
     pdf.set_font("Helvetica", "", 14)
-    pdf.set_text_color(255, 255, 255)
+    pdf.set_text_color(31, 31, 46)
     pdf.ln(5)
     pdf.set_x(x)
     pdf.multi_cell(width, 10, "Crafted with OpenVINO Toolkit", align='C')
 
     # Story idea
     pdf.set_font("Helvetica", "I", 12)
-    pdf.set_text_color(200, 200, 200)
+    pdf.set_text_color(31, 31, 46)
     pdf.ln(10)
     pdf.set_x(x)
     pdf.multi_cell(width, 8, f'Story Idea:\n"{story_idea}"', align='C')

@@ -22,10 +22,6 @@ class Theme(abc.ABC):
     def __init__(self):
         self.model_dir = Path(__file__).parent / "model"
         self.assets_dir = Path(__file__).parent / "assets"
-        self.tracked_faces = {}  # track_id: {'box': np.ndarray, ...}
-        self.next_face_id = 0
-        self.iou_threshold = 0.5
-        self.smoothing_tau = 0.3  # seconds
 
     def __download_model(self, model_name: str, precision: str):
         model_path = self.model_dir / model_name / precision / f"{model_name}"
@@ -80,6 +76,75 @@ class Theme(abc.ABC):
         box2_area = w2 * h2
         union_area = box1_area + box2_area.T - inter_area
         return inter_area / (union_area + 1e-6)
+
+
+class ChristmasTheme(Theme):
+    def __init__(self, device: str = "CPU"):
+        super().__init__()
+        self.emotion_classes = ["neutral", "happy", "sad", "surprise", "anger"]
+        self.emotion_mapping = {"neutral": "Rudolph", "happy": "Cupid", "surprise": "Blitzen", "sad": "Prancer", "anger": "Vixen"}
+
+        self.assets = self._load_assets(["santa_beard", "santa_cap", "reindeer_nose", "reindeer_sunglasses", "reindeer_antlers"])
+
+        self.model_precision = "FP16-INT8"
+        self.device = device
+
+        self.face_detection_model = None
+        self.face_landmarks_model = None
+        self.emotions_recognition_model = None
+
+        self.tracked_faces = {}  # track_id: {'box': np.ndarray, ...}
+        self.next_face_id = 0
+        self.iou_threshold = 0.5
+        self.smoothing_tau = 0.3  # seconds
+
+        self.load_models(device)
+
+    def load_models(self, device: str):
+        self.device = device
+        self.face_detection_model = self._load_model("face-detection-0205", self.model_precision, device)
+        self.face_landmarks_model = self._load_model("facial-landmarks-35-adas-0002", self.model_precision, device)
+        self.emotions_recognition_model = self._load_model("emotions-recognition-retail-0003", self.model_precision, device)
+
+    def run_inference(self, frame: np.ndarray) -> Any:
+        boxes = self.__detect_faces(frame)
+        landmarks = self.__detect_landmarks(frame, boxes)
+        emotions = self.__recognize_emotions(frame, boxes)
+        detections = list(zip(boxes, landmarks, emotions))
+        return self._smooth_detections(detections)
+
+    def draw_results(self, image: np.ndarray, detections: Any) -> np.ndarray:
+        # sort by face size
+        detections = list(sorted(detections, key=lambda x: x[0][1][2] * x[0][1][3]))
+
+        if not detections:
+            return image
+
+        # others are reindeer
+        for (score, box), landmarks, emotion in detections[:-1]:
+            self.__draw_reindeer(image, landmarks, box)
+
+            (label_width, label_height), _ = cv2.getTextSize(
+                text=self.emotion_mapping[emotion],
+                fontFace=cv2.FONT_HERSHEY_SCRIPT_COMPLEX,
+                fontScale=box[2] / 150,
+                thickness=1)
+            point = np.mean(landmarks[:4], axis=0, dtype=np.int32) - [label_width // 2, 2 * label_height]
+            cv2.putText(
+                img=image,
+                text=self.emotion_mapping[emotion],
+                org=point,
+                fontFace=cv2.FONT_HERSHEY_SCRIPT_COMPLEX,
+                fontScale=box[2] / 150,
+                color=(0, 0, 196),
+                thickness=1,
+                lineType=cv2.LINE_AA,
+            )
+
+        # the largest face is santa
+        self.__draw_santa(image, detections[-1])
+
+        return image
 
     def _smooth_detections(self, current_detections):
         now = time.time()
@@ -146,70 +211,6 @@ class Theme(abc.ABC):
                 det = det + (face['emotion'],)
             smoothed.append(det)
         return smoothed
-
-
-class ChristmasTheme(Theme):
-    def __init__(self, device: str = "CPU"):
-        super().__init__()
-        self.emotion_classes = ["neutral", "happy", "sad", "surprise", "anger"]
-        self.emotion_mapping = {"neutral": "Rudolph", "happy": "Cupid", "surprise": "Blitzen", "sad": "Prancer", "anger": "Vixen"}
-
-        self.assets = self._load_assets(["santa_beard", "santa_cap", "reindeer_nose", "reindeer_sunglasses", "reindeer_antlers"])
-
-        self.model_precision = "FP16-INT8"
-        self.device = device
-
-        self.face_detection_model = None
-        self.face_landmarks_model = None
-        self.emotions_recognition_model = None
-
-        self.load_models(device)
-
-    def load_models(self, device: str):
-        self.device = device
-        self.face_detection_model = self._load_model("face-detection-0205", self.model_precision, device)
-        self.face_landmarks_model = self._load_model("facial-landmarks-35-adas-0002", self.model_precision, device)
-        self.emotions_recognition_model = self._load_model("emotions-recognition-retail-0003", self.model_precision, device)
-
-    def run_inference(self, frame: np.ndarray) -> Any:
-        boxes = self.__detect_faces(frame)
-        landmarks = self.__detect_landmarks(frame, boxes)
-        emotions = self.__recognize_emotions(frame, boxes)
-        detections = list(zip(boxes, landmarks, emotions))
-        return self._smooth_detections(detections)
-
-    def draw_results(self, image: np.ndarray, detections: Any) -> np.ndarray:
-        # sort by face size
-        detections = list(sorted(detections, key=lambda x: x[0][1][2] * x[0][1][3]))
-
-        if not detections:
-            return image
-
-        # others are reindeer
-        for (score, box), landmarks, emotion in detections[:-1]:
-            self.__draw_reindeer(image, landmarks, box)
-
-            (label_width, label_height), _ = cv2.getTextSize(
-                text=self.emotion_mapping[emotion],
-                fontFace=cv2.FONT_HERSHEY_SCRIPT_COMPLEX,
-                fontScale=box[2] / 150,
-                thickness=1)
-            point = np.mean(landmarks[:4], axis=0, dtype=np.int32) - [label_width // 2, 2 * label_height]
-            cv2.putText(
-                img=image,
-                text=self.emotion_mapping[emotion],
-                org=point,
-                fontFace=cv2.FONT_HERSHEY_SCRIPT_COMPLEX,
-                fontScale=box[2] / 150,
-                color=(0, 0, 196),
-                thickness=1,
-                lineType=cv2.LINE_AA,
-            )
-
-        # the largest face is santa
-        self.__draw_santa(image, detections[-1])
-
-        return image
 
     def __preprocess_images(self, imgs, width, height):
         result = []
@@ -362,6 +363,11 @@ class HalloweenTheme(Theme):
         self.decoder = OpenPoseDecoder()
         self.pose_estimation_model = None
 
+        self.tracked_poses = {}
+        self.next_pose_id = 0
+        self.smoothing_tau = 0.1
+        self.matching_threshold = 80 # pixels, for centroid matching
+
         self.load_models(device)
 
     def load_models(self, device: str):
@@ -379,10 +385,68 @@ class HalloweenTheme(Theme):
 
         # Get poses from network results.
         poses, scores = self.__process_results(frame, pafs, heatmaps)
+        poses, scores = self._smooth_detections(poses, scores)
         # add additional points to skeletons
         poses = [self.__add_artificial_points(pose, self.point_score_threshold) for pose in poses]
-        detections = list(zip(poses, scores))
-        return self._smooth_detections(detections)
+        return list(zip(poses, scores))
+
+    def _smooth_detections(self, poses, scores):
+        now = time.time()
+
+        if len(poses) == 0:
+            self.tracked_poses = {}
+            return [], []
+
+        curr_centroids = [np.mean([pt[:2] for pt in pose if pt[2] > self.point_score_threshold], axis=0) if np.any(pose[:,2] > self.point_score_threshold) else np.zeros(2) for pose in poses]
+
+        # Prepare tracked centroids
+        tracked_ids = list(self.tracked_poses.keys())
+        tracked_centroids = [self.tracked_poses[tid]['centroid'] for tid in tracked_ids]
+
+        # Matching (using L2 distance between centroids)
+        matches = []
+        matched_tracked = set()
+        matched_current = set()
+        if tracked_ids:
+            dists = np.linalg.norm(np.expand_dims(tracked_centroids,1)-np.expand_dims(curr_centroids,0), axis=2)
+            for t_idx, tid in enumerate(tracked_ids):
+                c_idx = np.argmin(dists[t_idx])
+                if dists[t_idx, c_idx] < self.matching_threshold and c_idx not in matched_current:
+                    matches.append((tid, c_idx))
+                    matched_tracked.add(tid)
+                    matched_current.add(c_idx)
+
+        # Update matched tracks
+        for tid, c_idx in matches:
+            prev = self.tracked_poses[tid]
+            dt = now - prev['last_update']
+            alpha = np.exp(-dt / self.smoothing_tau)
+            smoothed_pose = prev['pose'] * alpha + poses[c_idx] * (1 - alpha)
+            smoothed_score = prev['score'] * alpha + scores[c_idx] * (1 - alpha)
+            centroid = curr_centroids[c_idx]
+            self.tracked_poses[tid].update({'pose': smoothed_pose, 'score': smoothed_score, 'centroid': centroid, 'last_update': now})
+
+        # Add new tracks
+        for c_idx, centroid in enumerate(curr_centroids):
+            if c_idx not in matched_current:
+                tid = self.next_pose_id
+                self.next_pose_id += 1
+                self.tracked_poses[tid] = {
+                    'pose': poses[c_idx].copy(),
+                    'score': scores[c_idx],
+                    'centroid': centroid,
+                    'last_update': now
+                }
+
+        # Remove old tracks
+        for tid in tracked_ids:
+            if tid not in matched_tracked:
+                del self.tracked_poses[tid]
+
+        # Output
+        smoothed_poses = [track['pose'] for track in self.tracked_poses.values()]
+        smoothed_scores = [track['score'] for track in self.tracked_poses.values()]
+        return smoothed_poses, smoothed_scores
 
     def draw_results(self, image: np.ndarray, poses: Any) -> np.ndarray:
         img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -484,8 +548,7 @@ class HalloweenTheme(Theme):
             rib_4_center = (rib_1_center + rib_2_center) / 2
             rib_4_left = (rib_1_left + rib_2_left) / 2
             rib_4_right = (rib_1_right + rib_2_right) / 2
-            new_points = [neck, bellybutton, rib_1_center, rib_1_left, rib_1_right, rib_2_center, rib_2_left,
-                          rib_2_right,
+            new_points = [neck, bellybutton, rib_1_center, rib_1_left, rib_1_right, rib_2_center, rib_2_left, rib_2_right,
                           rib_3_center, rib_3_left, rib_3_right, rib_4_center, rib_4_left, rib_4_right]
             pose = np.vstack([pose, new_points])
         return pose

@@ -49,11 +49,13 @@ CONFIG_PATH = PROJECT_ROOT / "config" / "illustration.yaml"
 
 # Get model types from environment variables with defaults
 IMAGE_MODEL_TYPE = os.getenv("IMAGE_MODEL_TYPE", "flux.1-schnell")
+IMAGE_MODEL_DEVICE = os.getenv("IMAGE_MODEL_DEVICE", "AUTO")
 LLM_MODEL_TYPE = os.getenv("LLM_MODEL_TYPE", "qwen2-7B")
+LLM_MODEL_DEVICE = os.getenv("LLM_MODEL_DEVICE", "AUTO")
 PRECISION = os.getenv("MODEL_PRECISION", "int4")
 
-logger.info(f"Using Image Model Type: {IMAGE_MODEL_TYPE}")
-logger.info(f"Using LLM Model Type: {LLM_MODEL_TYPE}")
+logger.info(f"Using Image Model Type: {IMAGE_MODEL_TYPE} on {IMAGE_MODEL_DEVICE}")
+logger.info(f"Using LLM Model Type: {LLM_MODEL_TYPE} on {LLM_MODEL_DEVICE}")
 logger.info(f"Using Model Precision: {PRECISION}")
 
 image_model_dir = PROJECT_ROOT / "models" / f"{IMAGE_MODEL_TYPE}-{PRECISION.upper()}"
@@ -65,8 +67,6 @@ with open(CONFIG_PATH, "r") as f:
     
 # ---------- Determine Device (GPU if available, else fallback) ----------
 core = ov.Core()
-preferred_device = "GPU" if "GPU" in core.available_devices else "CPU"
-print(f"Using OpenVINO device: {preferred_device}")
 
 # ---------- Load models ----------
 image_pipe = None
@@ -74,7 +74,7 @@ llm_pipe = None
 
 if image_model_dir.exists():
     try:
-        image_pipe = ov_genai.Text2ImagePipeline(image_model_dir, device=preferred_device)
+        image_pipe = ov_genai.Text2ImagePipeline(image_model_dir, device=IMAGE_MODEL_DEVICE)
         logger.info("Image model loaded successfully.")
     except Exception as e:
         logger.error(f"Failed to load image model: {e}")
@@ -83,7 +83,7 @@ else:
 
 if llm_model_dir.exists():
     try:
-        llm_pipe = ov_genai.LLMPipeline(str(llm_model_dir), device=preferred_device)
+        llm_pipe = ov_genai.LLMPipeline(str(llm_model_dir), device=LLM_MODEL_DEVICE)
         logger.info("LLM model loaded successfully.")
     except Exception as e:
         logger.error(f"Failed to load LLM model: {e}")

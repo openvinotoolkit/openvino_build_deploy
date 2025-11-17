@@ -1,0 +1,19 @@
+﻿--extra-index-url https://download.pytorch.org/whl/cpu
+openvino==2025.2
+opencv-python==4.10.0.84
+numpy==2.2.6
+PyQt6==6.9.1
+PyQt6-Qt6==6.9.1
+PyQt6-sip==13.10.2
+pyautogui==0.9.54
+pydirectinput==1.0.4
+pycaw==20240210
+comtypes==1.4.11
+pywin32==309
+psutil==7.0.0
+requests==2.32.4
+pillow==11.3.0
+tqdm==4.67.1
+pyperclip==1.9.0
+qrcode[pil]==8.2
+

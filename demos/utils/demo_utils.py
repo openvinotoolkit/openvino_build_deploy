@@ -1,5 +1,8 @@
+import hashlib
 import os
 import os.path
+import shutil
+import tempfile
 import threading
 import time
 import urllib.parse
@@ -14,12 +17,12 @@ def download_file(
     url: PathLike,
     filename: PathLike = None,
     directory: PathLike = None,
+    expected_hash: str = None,
     show_progress: bool = True,
-    silent: bool = False,
     timeout: int = 10,
-) -> PathLike:
+) -> Path:
     """
-    Download a file from a url and save it to the local filesystem. The file is saved to the
+    Download a file from an url and save it to the local filesystem. The file is saved to the
     current directory by default, or to `directory` if specified. If a filename is not given,
     the filename of the URL will be used.
 
@@ -28,69 +31,45 @@ def download_file(
                      not the full path. If None the filename from the url will be used
     :param directory: Directory to save the file to. Will be created if it doesn't exist
                       If None the file will be saved to the current working directory
+    :param expected_hash: Expected hash of the file to verify integrity. If None, no hash check is performed
     :param show_progress: If True, show an TQDM ProgressBar
-    :param silent: If True, do not print a message if the file already exists
     :param timeout: Number of seconds before cancelling the connection attempt
     :return: path to downloaded file
     """
-    from tqdm import tqdm
+    import tqdm
     import requests
 
     filename = filename or Path(urllib.parse.urlparse(url).path).name
-    chunk_size = 16384  # make chunks bigger so that not too many updates are triggered for Jupyter front-end
-
-    filename = Path(filename)
-    if len(filename.parts) > 1:
-        raise ValueError(
-            "`filename` should refer to the name of the file, excluding the directory. "
-            "Use the `directory` parameter to specify a target directory for the downloaded file."
-        )
-
-    # create the directory if it does not exist, and add the directory to the filename
-    if directory is not None:
-        directory = Path(directory)
-        directory.mkdir(parents=True, exist_ok=True)
-        filename = directory / Path(filename)
-
-    try:
-        response = requests.get(url=url,
-                                headers={"User-agent": "Mozilla/5.0"},
-                                stream=True)
-        response.raise_for_status()
-    except requests.exceptions.HTTPError as error:  # For error associated with not-200 codes. Will output something like: "404 Client Error: Not Found for url: {url}"
-        raise Exception(error) from None
-    except requests.exceptions.Timeout:
-        raise Exception(
-                "Connection timed out. If you access the internet through a proxy server, please "
-                "make sure the proxy is set in the shell from where you launched Jupyter."
-        ) from None
-    except requests.exceptions.RequestException as error:
-        raise Exception(f"File downloading failed with error: {error}") from None
-
-    # download the file if it does not exist, or if it exists with an incorrect file size
-    filesize = int(response.headers.get("Content-length", 0))
-    if not filename.exists() or (os.stat(filename).st_size != filesize):
-
-        with tqdm(
-            total=filesize,
-            unit="B",
-            unit_scale=True,
-            unit_divisor=1024,
-            desc=str(filename),
-            disable=not show_progress,
-        ) as progress_bar:
-
-            with open(filename, "wb") as file_object:
-                for chunk in response.iter_content(chunk_size):
-                    file_object.write(chunk)
-                    progress_bar.update(len(chunk))
-                    progress_bar.refresh()
+    if directory:
+        Path(directory).mkdir(parents=True, exist_ok=True)
+        filename = Path(directory) / filename
     else:
-        if not silent:
-            print(f"'{filename}' already exists.")
+        filename = Path(filename)
 
-    response.close()
+    response = requests.get(url, stream=True, timeout=timeout)
+    response.raise_for_status()
 
+    # Download to temporary file
+    filesize = int(response.headers.get("Content-Length", 0))
+    with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+        with tqdm.tqdm(total=filesize, unit="B", unit_scale=True, disable=not show_progress) as bar:
+            for chunk in response.iter_content(16384):
+                tmp_file.write(chunk)
+                bar.update(len(chunk))
+        tmp_path = Path(tmp_file.name)
+
+    # Verify hash if provided
+    if expected_hash:
+        hasher = hashlib.sha256()
+        with open(tmp_path, "rb") as f:
+            for chunk in iter(lambda: f.read(8192), b""):
+                hasher.update(chunk)
+        if hasher.hexdigest().lower() != expected_hash.lower():
+            tmp_path.unlink(missing_ok=True)
+            raise ValueError("Hash mismatch — file integrity verification failed.")
+
+    # Move only after validation passes
+    shutil.move(tmp_path, filename)
     return filename.resolve()
 
 
@@ -219,9 +198,8 @@ def available_devices(exclude: list | tuple | None = None) -> Dict[str, str]:
 
     core = ov.Core()
     for device in core.available_devices:
-        device_name = core.get_property(device, "FULL_DEVICE_NAME")
-        if "nvidia" not in device_name.lower() and device not in exclude_devices:
-            device_mapping[device] = device_name
+        if device not in exclude_devices:
+            device_mapping[device] = core.get_property(device, "FULL_DEVICE_NAME")
 
     return device_mapping
 
