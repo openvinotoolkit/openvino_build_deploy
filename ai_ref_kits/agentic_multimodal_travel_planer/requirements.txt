@@ -1,4 +1,4 @@
-gradio==5.5.0
+gradio==5.9.1
 beeai-framework==0.1.56
 beeai-framework[a2a]==0.1.56
 uvicorn==0.32.1
