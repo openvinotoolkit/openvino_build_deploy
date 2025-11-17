@@ -216,16 +216,36 @@ async def image_captioning(image_input):
         # Handle different input types from Gradio
         if isinstance(image_input, str):
             # It's a file path - validate that it's inside the temp directory before copying
-            source_path = Path(image_input)
-            if source_path.exists():
-                shutil.copy2(source_path, saved_image_path)
-                print(
-                    f"✅ Image copied from {source_path} "
-                    f"to {saved_image_path}",
-                    flush=True,
+            source_path = Path(image_input).resolve()
+            allowed_base = Path(
+                os.environ.get(
+                    "GRADIO_TEMP_DIR",
+                    str(Path(__file__).parent.parent / "temp"),
                 )
-            else:
+            ).resolve()
+            # Ensure the source path is inside the allowed base directory
+            try:
+                source_path.relative_to(allowed_base)
+            except Exception:
+                return "Error: Invalid image path location."
+            if not source_path.exists():
                 return f"Error: Image file not found at {image_input}"
+            # Enforce allowed file types
+            allowed_suffixes = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp"}
+            if source_path.suffix.lower() not in allowed_suffixes:
+                return "Error: Unsupported image file type."
+            # Enforce a reasonable file size limit (20 MB)
+            try:
+                if source_path.stat().st_size > 20 * 1024 * 1024:
+                    return "Error: Image is too large (limit 20MB)."
+            except Exception:
+                return "Error: Could not validate image file."
+            shutil.copy2(source_path, saved_image_path)
+            print(
+                f"✅ Image copied from {source_path} "
+                f"to {saved_image_path}",
+                flush=True,
+            )
 
         elif hasattr(image_input, "shape"):
             # It's a numpy array (uploaded image) - save to tmp_files
