@@ -222,8 +222,17 @@ async def image_captioning(image_input):
                 # Validate that source_path is within tmp_dir
                 source_path_resolved = source_path.resolve()
                 tmp_dir_resolved = tmp_dir.resolve()
-                if not str(source_path_resolved).startswith(str(tmp_dir_resolved)):
-                    return f"Error: Unsafe file path provided: {image_input}"
+                # Use robust path ancestor check; fallback if Python <3.9
+                try:
+                    # Python 3.9+: Path.is_relative_to
+                    if not source_path_resolved.is_relative_to(tmp_dir_resolved):
+                        return f"Error: Unsafe file path provided: {image_input}"
+                except AttributeError:
+                    # Python <3.9: use commonpath
+                    import os
+                    common_path = os.path.commonpath([str(source_path_resolved), str(tmp_dir_resolved)])
+                    if common_path != str(tmp_dir_resolved):
+                        return f"Error: Unsafe file path provided: {image_input}"
             except Exception as e:
                 return f"Error: Could not resolve file path: {image_input} ({e})"    
 
