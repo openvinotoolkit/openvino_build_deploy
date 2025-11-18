@@ -85,7 +85,7 @@ This command clones the repository into a directory named `openvino_build_deploy
 
 
 ```shell
-cd openvino_build_deploy/ai_ref_kits/agentic_multimodal_travelplaner
+cd openvino_build_deploy/ai_ref_kits/agentic_multimodal_travel_planer
 ```
 
 ### Create virtual environment
