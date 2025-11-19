@@ -4,7 +4,7 @@ openvino==2025.2
 optimum-intel==1.25.1
 nncf==2.17.0
 
-llama-index==0.12.50
+llama-index==0.13.0
 llama-index-llms-openvino-genai==0.1.1
 llama-index-embeddings-openvino==0.5.2
 llama-index-postprocessor-openvino-rerank==0.4.1
