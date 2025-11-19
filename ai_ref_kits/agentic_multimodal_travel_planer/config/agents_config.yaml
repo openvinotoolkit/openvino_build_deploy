@@ -13,7 +13,7 @@ travel_router:
     model: "openai:OpenVINO/Qwen3-8B-int4-ov"
     temperature: 0.3
     api_key: "unused"
-    api_base: "http://0.0.0.0:8001/v3"
+    api_base: "http://127.0.0.1:8001/v3"
   
   # Memory Configuration
   memory_size: 100
@@ -54,7 +54,7 @@ flight_finder:
     model: "openai:OpenVINO/Qwen3-8B-int4-ov"
     temperature: 0.3
     api_key: "unused"
-    api_base: "http://0.0.0.0:8001/v3"
+    api_base: "http://127.0.0.1:8001/v3"
   
   # Memory Configuration
   memory_size: 100
@@ -102,7 +102,7 @@ hotel_finder:
     model: "openai:OpenVINO/Qwen3-8B-int4-ov"
     temperature: 0.3
     api_key: "unused"
-    api_base: "http://0.0.0.0:8001/v3"
+    api_base: "http://127.0.0.1:8001/v3"
   
   mcp_config:
     servers:
@@ -145,7 +145,7 @@ image_captioning:
     model: "openai:OpenVINO/Qwen3-8B-int4-ov"
     temperature: 0.3
     api_key: "unused"
-    api_base: "http://0.0.0.0:8001/v3"
+    api_base: "http://127.0.0.1:8001/v3"
  
   # MCP Configuration for image captioning
   mcp_config:

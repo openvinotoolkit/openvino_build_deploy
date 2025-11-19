@@ -19,8 +19,6 @@ from beeai_framework.adapters.a2a.agents.agent import A2AAgent
 from beeai_framework.memory import UnconstrainedMemory
 from dotenv import load_dotenv
 from PIL import Image
-import tempfile
-
 
 
 class TravelRouterClient:
@@ -138,6 +136,8 @@ EXAMPLES = [
 chatbox_msg = []
 stop_requested = False
 current_image_path = None
+log_cache = {}  # Cache for log file positions
+workflow_steps = []  # Track workflow steps
 
 
 def run_init_in_thread(client):
@@ -193,6 +193,7 @@ def initialize_travel_router_client():
 # Initialize travel router client
 travel_router_client = initialize_travel_router_client()
 
+
 async def image_captioning(image_input):
     """Process and save uploaded image for analysis.
 
@@ -215,9 +216,9 @@ async def image_captioning(image_input):
 
         # Handle different input types from Gradio
         if isinstance(image_input, str):
-            # It's a file path - validate that it's inside the temp directory before copying
+            # It's a file path - validate inside temp directory
             source_path = Path(image_input)
-            
+
             try:
                 # Validate that source_path is within tmp_dir
                 source_path_resolved = source_path.resolve()
@@ -225,17 +226,23 @@ async def image_captioning(image_input):
                 # Use robust path ancestor check; fallback if Python <3.9
                 try:
                     # Python 3.9+: Path.is_relative_to
-                    if not source_path_resolved.is_relative_to(tmp_dir_resolved):
-                        return f"Error: Unsafe file path provided: {image_input}"
+                    if not source_path_resolved.is_relative_to(
+                        tmp_dir_resolved
+                    ):
+                        msg = f"Error: Unsafe file path: {image_input}"
+                        return msg
                 except AttributeError:
                     # Python <3.9: use commonpath
                     import os
-                    common_path = os.path.commonpath([str(source_path_resolved), str(tmp_dir_resolved)])
+                    common_path = os.path.commonpath([
+                        str(source_path_resolved),
+                        str(tmp_dir_resolved)
+                    ])
                     if common_path != str(tmp_dir_resolved):
-                        return f"Error: Unsafe file path provided: {image_input}"
+                        msg = f"Error: Unsafe file path: {image_input}"
+                        return msg
             except Exception as e:
-                return f"Error: Could not resolve file path: {image_input} ({e})"    
-
+                return f"Error: Could not resolve path: {image_input} ({e})"
 
             if source_path.exists():
                 shutil.copy2(source_path, saved_image_path)
@@ -246,8 +253,6 @@ async def image_captioning(image_input):
                 )
             else:
                 return f"Error: Image file not found at {image_input}"
-
-
         elif hasattr(image_input, "shape"):
             # It's a numpy array (uploaded image) - save to tmp_files
             try:
@@ -277,6 +282,7 @@ async def image_captioning(image_input):
     except Exception as e:
         return f"Failed to process image: {e}"
 
+
 def stop_query():
     """Stop the current query execution.
 
@@ -288,17 +294,118 @@ def stop_query():
     return "🛑 Stopping query...", chatbox_msg
 
 
+def add_workflow_step(step_text):
+    """Add a step to the workflow display.
+
+    Args:
+        step_text: Text describing the workflow step.
+    """
+    global workflow_steps
+    import datetime
+    timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+    workflow_steps.append(f"{timestamp} | {step_text}")
+    # Keep only last 20 steps
+    if len(workflow_steps) > 20:
+        workflow_steps.pop(0)
+
+
+def extract_agent_handoffs():
+    """Extract agent handoff events from travel_router log.
+
+    Returns:
+        List of new handoff events.
+    """
+    global log_cache
+    logs_dir = Path(__file__).parent / "logs"
+    travel_router_log = logs_dir / "travel_router.log"
+
+    if not travel_router_log.exists():
+        return []
+
+    new_steps = []
+    cache_key = str(travel_router_log)
+
+    if cache_key not in log_cache:
+        log_cache[cache_key] = {'position': 0, 'seen_handoffs': set()}
+
+    try:
+        file_size = travel_router_log.stat().st_size
+        last_position = log_cache[cache_key]['position']
+        seen_handoffs = log_cache[cache_key]['seen_handoffs']
+
+        if file_size > last_position:
+            with open(
+                travel_router_log, 'r', encoding='utf-8', errors='ignore'
+            ) as f:
+                f.seek(last_position)
+                new_lines = f.readlines()
+
+                for line in new_lines:
+                    line = line.strip()
+
+                    # Detect agent handoff start
+                    if '--> 🔍 HandoffTool[' in line:
+                        parts = line.split('HandoffTool[')[1].split(']')
+                        agent_name = parts[0]
+                        handoff_id = f"{agent_name}_start"
+
+                        if handoff_id not in seen_handoffs:
+                            new_steps.append(
+                                f"🔄 Delegating to {agent_name}..."
+                            )
+                            seen_handoffs.add(handoff_id)
+
+                    # Detect agent handoff completion
+                    elif '<-- 🔍 HandoffTool[' in line:
+                        parts = line.split('HandoffTool[')[1].split(']')
+                        agent_name = parts[0]
+                        handoff_id = f"{agent_name}_complete"
+
+                        if handoff_id not in seen_handoffs:
+                            new_steps.append(
+                                f"✅ {agent_name} completed"
+                            )
+                            seen_handoffs.add(handoff_id)
+
+                log_cache[cache_key]['position'] = f.tell()
+
+    except Exception:
+        pass
+
+    return new_steps
+
+
+def read_latest_logs():
+    """Display workflow steps.
+
+    Returns:
+        Formatted markdown string with workflow steps.
+    """
+    global workflow_steps
+
+    if not workflow_steps:
+        return "### 🤖 Agent Workflow\n\n_Waiting for activity..._"
+
+    # Format output
+    log_content = "### 🤖 Agent Workflow\n\n"
+    log_content += '\n\n'.join(workflow_steps)
+
+    return log_content
+
+
 def clear_all():
     """Clear all chat history and reset state.
 
     Returns:
         Tuple of (empty log window, empty chatbox).
     """
-    global chatbox_msg, travel_router_client, stop_requested, current_image_path
+    global chatbox_msg, travel_router_client, stop_requested
+    global current_image_path, workflow_steps
     # Clear chatbox messages and memory
     chatbox_msg = []
     stop_requested = False
     current_image_path = None
+    workflow_steps = []
     if (
         travel_router_client
         and getattr(travel_router_client, "client", None)
@@ -306,7 +413,7 @@ def clear_all():
     ):
         travel_router_client.client.memory.reset()
 
-    return "", chatbox_msg
+    return read_latest_logs(), chatbox_msg
 
 
 async def run_agent_workflow(query: str):
@@ -318,41 +425,97 @@ async def run_agent_workflow(query: str):
     Yields:
         Tuple of (log window text, chatbox messages, input field text).
     """
-    global chatbox_msg, travel_router_client, stop_requested, current_image_path
+    global chatbox_msg, travel_router_client, stop_requested
+    global current_image_path, workflow_steps, log_cache
+
+    # Clear workflow steps for new query
+    workflow_steps = []
+
+    # Mark current log position to only capture new handoffs
+    logs_dir = Path(__file__).parent / "logs"
+    travel_router_log = logs_dir / "travel_router.log"
+    if travel_router_log.exists():
+        cache_key = str(travel_router_log)
+        try:
+            current_size = travel_router_log.stat().st_size
+            log_cache[cache_key] = {
+                'position': current_size,
+                'seen_handoffs': set()
+            }
+        except Exception:
+            pass
 
     # Create enhanced query that includes image path if available
     enhanced_query = query
     if current_image_path:
-        # Include a clear text hint so the router can reliably parse image_path
+        # Include a clear text hint so router can parse image_path
         enhanced_query = f"{query} : <image_path> = <{current_image_path}> "
+        add_workflow_step("📸 Image included in query")
 
     chatbox_msg.append({"role": "user", "content": enhanced_query})
     stop_requested = False
 
     if travel_router_client is None or not travel_router_client.initialized:
+        add_workflow_step("❌ Travel Router not available")
         yield (
-            "Travel Router not available or not initialized.",
+            read_latest_logs(),
             chatbox_msg,
             "",
         )
         return
 
     try:
+        add_workflow_step("📤 Sending query to Travel Router")
+        yield read_latest_logs(), chatbox_msg, query
+
         msg_text = f"Sending query to Travel Router: {enhanced_query}"
         print(msg_text, flush=True)
 
-        response = await travel_router_client.chat(enhanced_query)
+        add_workflow_step("🤔 Travel Router is processing...")
+        yield read_latest_logs(), chatbox_msg, query
+
+        # Create task for chat and monitor for handoffs
+        chat_task = asyncio.create_task(
+            travel_router_client.chat(enhanced_query)
+        )
+
+        # Poll for handoffs while waiting for response
+        while not chat_task.done():
+            await asyncio.sleep(0.2)  # Poll more frequently
+            new_handoffs = extract_agent_handoffs()
+            if new_handoffs:
+                for handoff in new_handoffs:
+                    add_workflow_step(handoff)
+                yield read_latest_logs(), chatbox_msg, query
+
+        # Get the final response
+        response = await chat_task
+
+        # Give it a moment for logs to flush
+        await asyncio.sleep(0.3)
+
+        # Check for any final handoffs multiple times
+        for _ in range(3):
+            final_handoffs = extract_agent_handoffs()
+            if final_handoffs:
+                for handoff in final_handoffs:
+                    add_workflow_step(handoff)
+                yield read_latest_logs(), chatbox_msg, query
+            await asyncio.sleep(0.1)
+
+        add_workflow_step("✅ Received response from Travel Router")
 
         # Add response to chat history
         chatbox_msg.append({"role": "assistant", "content": response})
 
-        # Return final result
-        yield "", chatbox_msg, ""
+        # Return final result with updated logs
+        yield read_latest_logs(), chatbox_msg, ""
 
     except Exception as e:
         error_msg = f"Error communicating with Travel Router: {e}"
+        add_workflow_step(f"❌ Error: {str(e)[:50]}")
         chatbox_msg.append({"role": "assistant", "content": error_msg})
-        yield error_msg, chatbox_msg, ""
+        yield read_latest_logs(), chatbox_msg, ""
 
 
 def create_gradio_interface():
@@ -412,7 +575,9 @@ def create_gradio_interface():
                 )
             with gr.Column(scale=2):
                 log_window = gr.Markdown(
-                    "### 🤖 Agent's Reasoning Log", label="Logs", height=300
+                    value=read_latest_logs(),
+                    label="Agent Workflow",
+                    height=300
                 )
 
         # Register listeners
@@ -435,6 +600,7 @@ def create_gradio_interface():
         clr_btn.click(fn=clear_all, inputs=[], outputs=[log_window, chatbot])
 
     return demo
+
 
 def main():
     """Main entry point for the Gradio UI application."""

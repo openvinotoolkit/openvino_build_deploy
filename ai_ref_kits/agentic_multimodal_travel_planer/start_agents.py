@@ -3,6 +3,7 @@
 This module manages the lifecycle of multiple agents, starting worker agents
 before the supervisor agent to ensure proper dependency initialization.
 """
+import os
 import subprocess
 import sys
 import time
@@ -10,12 +11,13 @@ from pathlib import Path
 
 import yaml
 
+from utils.util import is_port_in_use, kill_processes_on_port
+
 CONFIG_PATH = Path("config/agents_config.yaml")
 AGENT_RUNNER = Path("agents/agent_runner.py")
 LOG_DIR = Path("logs")
 LOG_DIR.mkdir(exist_ok=True)
 
-from utils.util import is_port_in_use, kill_processes_on_port
 
 def start_agent(name, config):
     """Start an individual agent process.
@@ -40,13 +42,14 @@ def start_agent(name, config):
     log_file = LOG_DIR / f"{name}.log"
 
     try:
-        # Start process with output redirected to log file
-        with open(log_file, "w") as log:
+        # Start process with output redirected to log file (unbuffered)
+        with open(log_file, "w", buffering=1) as log:
             proc = subprocess.Popen(
-                [sys.executable, str(AGENT_RUNNER), "--agent", name],
+                [sys.executable, "-u", str(AGENT_RUNNER), "--agent", name],
                 stdout=log,
                 stderr=subprocess.STDOUT,
                 start_new_session=True,
+                env={**os.environ, "PYTHONUNBUFFERED": "1"},
             )
 
         # Wait for agent to be ready by monitoring log output
@@ -143,7 +146,8 @@ def main():
     # Start supervisor last if it exists
     if supervisor_config:
         print(f"\nStarting supervisor agent ({supervisor_name})...")
-        if supervisor_config.get("enabled", True) and start_agent(supervisor_name, supervisor_config):
+        enabled = supervisor_config.get("enabled", True)
+        if enabled and start_agent(supervisor_name, supervisor_config):
             started.append(supervisor_name)
         else:
             failed.append(supervisor_name)
