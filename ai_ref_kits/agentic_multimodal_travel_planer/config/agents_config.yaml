@@ -136,7 +136,7 @@ hotel_finder:
 # Video Analysis Agent Configuration
 image_captioning:
   name: "image_captioning"
-  description: "Image captioning agent with 2 core tools: image ingestion and image search using Bridge Tower multimodal AI"
+  description: "Image captioning agent with 2 core tools: image ingestion and image captioning"
   port: 9997
   role: "Video Analysis Specialist"
   enabled: true
