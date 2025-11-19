@@ -77,20 +77,6 @@ def _create_tool(tool_config, agent_config=None):
     
     tool_name = tool_config['name']
     
-    # Handle Bridge Tower tools
-    if tool_name in ['MultimodalSearchTool', 'ImageTextRetrievalTool', 'VideoContentSearchTool']:
-        if tool_config.get('enabled', True) and agent_config:
-            try:
-                from utils.bridgetower_tools import create_bridgetower_tools
-                bridgetower_tools = create_bridgetower_tools(agent_config)
-                # Return the specific tool requested
-                for tool in bridgetower_tools:
-                    if tool.name == tool_name:
-                        return tool
-            except ImportError as e:
-                print(f"⚠️ Bridge Tower tools not available: {e}")
-        return None
-    
     # Handle standard tools
     if tool_name in tool_map and tool_config.get('enabled', True):
         return tool_map[tool_name]()
