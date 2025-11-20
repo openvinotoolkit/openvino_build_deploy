@@ -99,6 +99,7 @@ class MCPToolsManager:
 # AGENT CREATION
 # =============================================================================
 
+
 class AgentFactory:
     """Factory class for creating different types of agents"""
 
@@ -345,6 +346,13 @@ class AgentRunner:
         self.agent_factory = AgentFactory()
         self.server_manager = ServerManager()
         self.config_manager = ConfigManager()
+        self.agent_instance = None  # Store agent reference
+
+    def reset_agent_memory(self):
+        """Reset the memory of the agent instance"""
+        if self.agent_instance and hasattr(self.agent_instance, 'memory'):
+            self.agent_instance.memory.reset()
+            print("Agent memory reset successfully")
 
     async def run_agent(self, agent_name):
         """Run an agent based on its configuration.
@@ -372,6 +380,7 @@ class AgentRunner:
                 agent = self.agent_factory.create_agent(
                     config, all_mcp_tools, agent_name
                 )
+                self.agent_instance = agent  # Store agent reference
                 server = self.server_manager.create_server(agent, config)
 
                 # Run server in the same process to keep MCP connections alive
@@ -381,7 +390,8 @@ class AgentRunner:
                 except KeyboardInterrupt:
                     print(f"\n{agent_name} stopped")
         else:
-            agent = self.agent_factory.create_agent(config, None,agent_name)
+            agent = self.agent_factory.create_agent(config, None, agent_name)
+            self.agent_instance = agent  # Store agent reference
             server = self.server_manager.create_server(agent, config)
 
             process = multiprocessing.Process(target=server.serve)

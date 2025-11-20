@@ -393,6 +393,32 @@ def read_latest_logs():
     return log_content
 
 
+def reset_all_agent_memories():
+    """Reset memory for travel router and all supervised agents."""
+    global travel_router_client
+    
+    # Reinitialize the travel router client to create a fresh session
+    # This creates a new A2AAgent with fresh memory, effectively starting
+    # a new conversation session with the server-side agent
+    if travel_router_client:
+        try:
+            # Create new memory instance
+            travel_router_client.memory = UnconstrainedMemory()
+            
+            # Reinitialize the A2AAgent client with fresh memory
+            travel_router_port = os.getenv("TRAVEL_ROUTER_PORT", "9996")
+            travel_router_url = f"http://127.0.0.1:{travel_router_port}"
+            travel_router_client.client = A2AAgent(
+                url=travel_router_url,
+                memory=travel_router_client.memory
+            )
+            print("✅ Travel Router client reinitialized with fresh memory")
+        except Exception as e:
+            print(f"⚠️  Error reinitializing client: {e}")
+    
+    print("✅ All agent memories cleared")
+
+
 def clear_all():
     """Clear all chat history and reset state.
 
@@ -406,12 +432,12 @@ def clear_all():
     stop_requested = False
     current_image_path = None
     workflow_steps = []
-    if (
-        travel_router_client
-        and getattr(travel_router_client, "client", None)
-        and getattr(travel_router_client.client, "memory", None)
-    ):
-        travel_router_client.client.memory.reset()
+    
+    # Reset agent memories
+    try:
+        reset_all_agent_memories()
+    except Exception as e:
+        print(f"⚠️  Error resetting memories: {e}")
 
     return read_latest_logs(), chatbox_msg
 
