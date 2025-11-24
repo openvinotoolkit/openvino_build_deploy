@@ -123,13 +123,6 @@ pip install -r requirements.txt
 
 ## Step 1: Getting the LLMs for agents ready with OpenVINO model Server (OVMS)
 
-Windows and Linux
-### OPTION 1: Windows
-
-TBC
-
-### OPTION 2: Linux
-
 ### Docker Installation
 For installation instructions, refer to the [official Docker documentation for Ubuntu](https://docs.docker.com/engine/install/ubuntu/).
 
@@ -178,7 +171,6 @@ docker run -d --user $(id -u):$(id -g) --rm \
   --enable_prefix_caching true
 ```
 
-
 VLM
 ```
 docker run -d --rm \
@@ -191,6 +183,7 @@ docker run -d --rm \
 ```
 
 ### Verify the services are running
+
 Run:
 ```
 docker ps
@@ -364,3 +357,6 @@ Set `enabled: false` to disable an agent in `config/agents_config.yaml`—that a
 ---
 
 With this approach, you can flexibly expand the capabilities of your travel planning system by adding or customizing new agents to fit your requirements!
+
+[//]: # (telemetry pixel)
+<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca&project=ai_ref_kits/agentic_multimodal_travel_planner&file=README.md" />
