@@ -24,6 +24,7 @@ jobs:
       webcam: ${{ steps.categorize-subprojects.outputs.webcam }}
       python: ${{ steps.categorize-subprojects.outputs.python }}
       notebook: ${{ steps.categorize-subprojects.outputs.notebook }}
+      mcp: ${{ steps.categorize-subprojects.outputs.mcp }}
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -79,6 +80,29 @@ jobs:
         with:
           script: ${{ env.script }}
           project: ${{ matrix.subproject }}
+
+  mcp:
+    needs: find-subprojects
+    if: ${{ needs.find-subprojects.outputs.mcp != '[]' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-24.04, ubuntu-24.04-arm, windows-2025 ]
+        python: [ "3.11", "3.13" ]
+        subproject: ${{ fromJson(needs.find-subprojects.outputs.mcp) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/reusable-steps/setup-os
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: ./.github/reusable-steps/setup-python
+        with:
+          python: ${{ matrix.python }}
+          project: ${{ matrix.subproject }}
+      # todo more steps to be added here
 
   webcam:
     needs: find-subprojects
