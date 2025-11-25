@@ -300,7 +300,6 @@ def render_scene_generation_page():
                                         label=labels[idx],
                                         value=parsed_scenes[idx],
                                         height=150,
-                                        disabled=True,
                                         key=f"streaming_scene_{idx}_{len(accumulated_text)}"
                                     )
                         
@@ -321,15 +320,6 @@ def render_scene_generation_page():
                             break
                     except json.JSONDecodeError:
                         continue
-        
-        # Now animate the final parsed scenes
-        for idx, scene_text in enumerate(st.session_state.scenes):
-            if scene_text:
-                display = ""
-                for word in scene_text.split(" "):
-                    display += word + " "
-                    placeholders[idx].text_area(label=labels[idx], value=display, height=150)
-                    time.sleep(0.03)
         
         st.session_state.scene_animation_complete = True
     
