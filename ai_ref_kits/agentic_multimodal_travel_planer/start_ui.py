@@ -287,11 +287,18 @@ def stop_query():
     """Stop the current query execution.
 
     Returns:
-        Tuple of (status message, chatbox messages).
+        Tuple of (status message, chatbox messages, send_btn state,
+                  stop_btn state, clear_btn state).
     """
     global stop_requested
     stop_requested = True
-    return "🛑 Stopping query...", chatbox_msg
+    return (
+        "🛑 Stopping query...",
+        chatbox_msg,
+        gr.update(interactive=True),   # send_btn enabled
+        gr.update(interactive=False),  # stop_btn disabled
+        gr.update(interactive=True),   # clear_btn enabled
+    )
 
 
 def add_workflow_step(step_text):
@@ -449,7 +456,8 @@ async def run_agent_workflow(query: str):
         query: User query text.
 
     Yields:
-        Tuple of (log window text, chatbox messages, input field text).
+        Tuple of (log window text, chatbox messages, input field text,
+                  send_btn state, stop_btn state, clear_btn state).
     """
     global chatbox_msg, travel_router_client, stop_requested
     global current_image_path, workflow_steps, log_cache
@@ -487,18 +495,36 @@ async def run_agent_workflow(query: str):
             read_latest_logs(),
             chatbox_msg,
             "",
+            gr.update(interactive=True),  # send_btn enabled
+            gr.update(interactive=False),  # stop_btn disabled
+            gr.update(interactive=True),  # clear_btn enabled
         )
         return
 
     try:
         add_workflow_step("📤 Sending query to Travel Router")
-        yield read_latest_logs(), chatbox_msg, query
+        # Disable send and clear, enable stop
+        yield (
+            read_latest_logs(),
+            chatbox_msg,
+            "",
+            gr.update(interactive=False),  # send_btn disabled
+            gr.update(interactive=True),   # stop_btn enabled
+            gr.update(interactive=False),  # clear_btn disabled
+        )
 
         msg_text = f"Sending query to Travel Router: {enhanced_query}"
         print(msg_text, flush=True)
 
         add_workflow_step("🤔 Travel Router is processing...")
-        yield read_latest_logs(), chatbox_msg, query
+        yield (
+            read_latest_logs(),
+            chatbox_msg,
+            "",
+            gr.update(interactive=False),  # send_btn disabled
+            gr.update(interactive=True),   # stop_btn enabled
+            gr.update(interactive=False),  # clear_btn disabled
+        )
 
         # Create task for chat and monitor for handoffs
         chat_task = asyncio.create_task(
@@ -512,7 +538,14 @@ async def run_agent_workflow(query: str):
             if new_handoffs:
                 for handoff in new_handoffs:
                     add_workflow_step(handoff)
-                yield read_latest_logs(), chatbox_msg, query
+                yield (
+                    read_latest_logs(),
+                    chatbox_msg,
+                    "",
+                    gr.update(interactive=False),  # send_btn disabled
+                    gr.update(interactive=True),   # stop_btn enabled
+                    gr.update(interactive=False),  # clear_btn disabled
+                )
 
         # Get the final response
         response = await chat_task
@@ -526,7 +559,14 @@ async def run_agent_workflow(query: str):
             if final_handoffs:
                 for handoff in final_handoffs:
                     add_workflow_step(handoff)
-                yield read_latest_logs(), chatbox_msg, query
+                yield (
+                    read_latest_logs(),
+                    chatbox_msg,
+                    "",
+                    gr.update(interactive=False),  # send_btn disabled
+                    gr.update(interactive=True),   # stop_btn enabled
+                    gr.update(interactive=False),  # clear_btn disabled
+                )
             await asyncio.sleep(0.1)
 
         add_workflow_step("✅ Received response from Travel Router")
@@ -534,14 +574,29 @@ async def run_agent_workflow(query: str):
         # Add response to chat history
         chatbox_msg.append({"role": "assistant", "content": response})
 
-        # Return final result with updated logs
-        yield read_latest_logs(), chatbox_msg, ""
+        # Return final result - re-enable send and clear, disable stop
+        yield (
+            read_latest_logs(),
+            chatbox_msg,
+            "",
+            gr.update(interactive=True),   # send_btn enabled
+            gr.update(interactive=False),  # stop_btn disabled
+            gr.update(interactive=True),   # clear_btn enabled
+        )
 
     except Exception as e:
         error_msg = f"Error communicating with Travel Router: {e}"
         add_workflow_step(f"❌ Error: {str(e)[:50]}")
         chatbox_msg.append({"role": "assistant", "content": error_msg})
-        yield read_latest_logs(), chatbox_msg, ""
+        # Re-enable send and clear, disable stop
+        yield (
+            read_latest_logs(),
+            chatbox_msg,
+            "",
+            gr.update(interactive=True),   # send_btn enabled
+            gr.update(interactive=False),  # stop_btn disabled
+            gr.update(interactive=True),   # clear_btn enabled
+        )
 
 
 def create_gradio_interface():
@@ -562,7 +617,7 @@ def create_gradio_interface():
     with demo:
         # Title
         gr.Markdown(
-            "<h1><center>Agentic Image Analysis 🤖</center></h1>"
+            "<h1><center>Multi-Agent Travel Assistant 🤖</center></h1>"
         )
         gr.Markdown(
             "<center>Powered by OpenVINO + MCP + A2A Tools</center>"
@@ -593,9 +648,9 @@ def create_gradio_interface():
                         interactive=True,
                     )
                 with gr.Row():
-                    send_btn = gr.Button("Send", variant="primary")
-                    stop_btn = gr.Button("Stop")
+                    stop_btn = gr.Button("Stop", interactive=False)
                     clr_btn = gr.Button("Clear")
+                    send_btn = gr.Button("Send", variant="primary")
                 gr.Examples(
                     EXAMPLES, inputs=[msg], label="Click example, then Send"
                 )
@@ -613,15 +668,17 @@ def create_gradio_interface():
         send_btn.click(
             fn=run_agent_workflow,
             inputs=[msg],
-            outputs=[log_window, chatbot, msg],
+            outputs=[log_window, chatbot, msg, send_btn, stop_btn, clr_btn],
         )
         msg.submit(
             fn=run_agent_workflow,
             inputs=[msg],
-            outputs=[log_window, chatbot, msg],
+            outputs=[log_window, chatbot, msg, send_btn, stop_btn, clr_btn],
         )
         stop_btn.click(
-            fn=stop_query, inputs=[], outputs=[log_window, chatbot]
+            fn=stop_query,
+            inputs=[],
+            outputs=[log_window, chatbot, send_btn, stop_btn, clr_btn]
         )
         clr_btn.click(fn=clear_all, inputs=[], outputs=[log_window, chatbot])
 
