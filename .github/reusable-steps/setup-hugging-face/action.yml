@@ -19,7 +19,7 @@ runs:
       run: |
         if [ -n "$HF_TOKEN" ]; then  
           export PYTHONIOENCODING=utf-8
-          huggingface-cli login --token "$HF_TOKEN"
+          huggingface-cli login
         else
           echo "HF_TOKEN not set, continuing without login."
         fi
