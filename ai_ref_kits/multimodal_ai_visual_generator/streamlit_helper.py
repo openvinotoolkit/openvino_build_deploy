@@ -209,6 +209,45 @@ def render_landing_page():
         st.session_state.story_idea = story_input
         st.rerun()
 
+# Helper function to parse scenes from accumulated text in real-time
+def parse_scenes_streaming(text, scene_prefix="Scene"):
+    """Parse scenes from partial/incomplete text during streaming."""
+    scenes = {}
+    lines = text.split("\n")
+    current_scene_num = None
+    current_scene_text = ""
+    
+    for line in lines:
+        clean = line.strip()
+        # Check if this line starts a new scene
+        if clean.lower().startswith(scene_prefix.lower()):
+            # Save previous scene if exists
+            if current_scene_num is not None:
+                scenes[current_scene_num] = current_scene_text.strip()
+            
+            # Extract scene number and text
+            parts = clean.split(":", 1)
+            if len(parts) == 2:
+                # Extract the scene number
+                scene_label = parts[0].strip()
+                # Try to extract number from "Scene 1", "Scene 2", etc.
+                try:
+                    num_str = scene_label.split()[-1]
+                    current_scene_num = int(num_str) - 1  # 0-indexed
+                    current_scene_text = parts[1].strip()
+                except (ValueError, IndexError):
+                    current_scene_num = len(scenes)
+                    current_scene_text = parts[1].strip()
+        elif clean and current_scene_num is not None:
+            # Continuation of current scene
+            current_scene_text += " " + clean
+    
+    # Add the last scene (might be incomplete)
+    if current_scene_num is not None:
+        scenes[current_scene_num] = current_scene_text.strip()
+    
+    return scenes
+
 # ------------------ Scene Generation Page ------------------
 def render_scene_generation_page():
     st.markdown("---")
@@ -225,9 +264,13 @@ def render_scene_generation_page():
         st.session_state.scenes = []
         st.session_state.edited_scenes = []
         
-        # Create a placeholder for showing real-time LLM output
-        llm_output_placeholder = st.empty()
         accumulated_text = ""
+        
+        # Load config to get scene_prefix
+        config_path = f"config/{mode_param}.yaml"
+        with open(config_path, "r") as f:
+            config = yaml.safe_load(f)
+        scene_prefix = config.get("scene_prefix", "Scene")
         
         with st.spinner("Generating story scenes..."):
             # Stream tokens in real-time
@@ -246,13 +289,20 @@ def render_scene_generation_page():
                         if "token" in data:
                             token = data["token"]
                             accumulated_text += token
-                            # Display accumulated text in real-time
-                            llm_output_placeholder.text_area(
-                                "🤖 LLM is thinking...", 
-                                value=accumulated_text, 
-                                height=200,
-                                disabled=True
-                            )
+                            
+                            # Parse scenes in real-time from accumulated text
+                            parsed_scenes = parse_scenes_streaming(accumulated_text, scene_prefix)
+                            
+                            # Display each scene in its own text area as it's being generated
+                            for idx in range(4):
+                                if idx in parsed_scenes:
+                                    placeholders[idx].text_area(
+                                        label=labels[idx],
+                                        value=parsed_scenes[idx],
+                                        height=150,
+                                        disabled=True,
+                                        key=f"streaming_scene_{idx}_{len(accumulated_text)}"
+                                    )
                         
                         # Handle parsed scenes
                         elif "scene" in data:
@@ -271,9 +321,6 @@ def render_scene_generation_page():
                             break
                     except json.JSONDecodeError:
                         continue
-        
-        # Clear the LLM output placeholder
-        llm_output_placeholder.empty()
         
         # Now animate the final parsed scenes
         for idx, scene_text in enumerate(st.session_state.scenes):
