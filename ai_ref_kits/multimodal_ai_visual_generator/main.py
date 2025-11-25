@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pathlib import Path
 from io import BytesIO
 from PIL import Image
@@ -14,6 +14,7 @@ import openvino_genai as ov_genai
 import openvino as ov
 import logging
 import random
+import json
 
 # -------- Logging Setup --------
 logging.basicConfig(
@@ -148,7 +149,7 @@ def finalize_scenes(scenes: list[str], config: dict) -> list[str]:
         final_scenes.append(fallback + ". " + fallback_suffix)
     return final_scenes
 
-# ---------- LLM Endpoint (Story Splitter) ---------
+# ---------- LLM Endpoint (Story Splitter) - Streaming ---------
 @app.post("/generate_story_prompts")
 def generate_story_prompts(request: StoryRequest, req: Request):
     if not llm_pipe:
@@ -157,20 +158,32 @@ def generate_story_prompts(request: StoryRequest, req: Request):
     config = load_story_config(req)
     instruction = config["instruction_template"].replace("{user_prompt}", request.prompt)
 
-    output = []
-    def streamer(subword):
-        sys.stdout.write(subword)
-        sys.stdout.flush()
-        output.append(subword)
-        return False
-
-    _ = llm_pipe.generate(instruction, llm_config, streamer)
-    full_output = "".join(output)
-
-    parsed_scenes = parse_scenes(full_output, config)
-    final_scenes = finalize_scenes(parsed_scenes, config)
-
-    return {"scenes": final_scenes}
+    def stream_scenes():
+        """Generator that yields scenes one by one as they complete."""
+        # Collect LLM output
+        output = []
+        def streamer(subword):
+            sys.stdout.write(subword)
+            sys.stdout.flush()
+            output.append(subword)
+            return False
+        
+        # Generate full output
+        _ = llm_pipe.generate(instruction, llm_config, streamer)
+        full_output = "".join(output)
+        
+        # Parse all scenes
+        parsed_scenes = parse_scenes(full_output, config)
+        final_scenes = finalize_scenes(parsed_scenes, config)
+        
+        # Stream scenes one by one
+        for idx, scene in enumerate(final_scenes):
+            yield json.dumps({"scene": scene, "index": idx}) + "\n"
+        
+        # Signal completion
+        yield json.dumps({"done": True}) + "\n"
+    
+    return StreamingResponse(stream_scenes(), media_type="application/x-ndjson")
 
 # ---------- Image Model Endpoint (Image Generator) ----------
 @app.post("/generate_images")

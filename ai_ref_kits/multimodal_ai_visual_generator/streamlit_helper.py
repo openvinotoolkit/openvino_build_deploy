@@ -7,6 +7,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 import yaml
 from PIL import Image
+import json
 
 from pdf_helper import generate_pdf
 
@@ -220,23 +221,66 @@ def render_scene_generation_page():
     placeholders = [cols[i % 2].empty() for i in range(4)]
 
     if st.session_state.scenes is None:
+        # Initialize scenes list
+        st.session_state.scenes = []
+        st.session_state.edited_scenes = []
+        
         with st.spinner("Generating story scenes..."):
-            res = requests.post(f"http://localhost:8000/generate_story_prompts?config={mode_param}", json={"prompt": st.session_state.story_idea})
-            scenes = res.json()["scenes"]
-            st.session_state.scenes = scenes
-            st.session_state.edited_scenes = scenes.copy()
-
-    if not st.session_state.scene_animation_complete:
+            # Stream scenes one by one
+            res = requests.post(
+                f"http://localhost:8000/generate_story_prompts?config={mode_param}", 
+                json={"prompt": st.session_state.story_idea},
+                stream=True
+            )
+            
+            for line in res.iter_lines():
+                if line:
+                    try:
+                        data = json.loads(line.decode('utf-8'))
+                        
+                        # Check if it's a scene or done signal
+                        if "scene" in data:
+                            idx = data["index"]
+                            scene_text = data["scene"]
+                            
+                            # Ensure we have enough slots
+                            while len(st.session_state.scenes) <= idx:
+                                st.session_state.scenes.append(None)
+                                st.session_state.edited_scenes.append(None)
+                            
+                            st.session_state.scenes[idx] = scene_text
+                            st.session_state.edited_scenes[idx] = scene_text
+                            
+                            # Animate the scene word by word as it arrives
+                            display = ""
+                            for word in scene_text.split(" "):
+                                display += word + " "
+                                placeholders[idx].text_area(label=labels[idx], value=display, height=150)
+                                time.sleep(0.03)
+                        
+                        elif data.get("done"):
+                            break
+                    except json.JSONDecodeError:
+                        continue
+        
+        st.session_state.scene_animation_complete = True
+    
+    elif not st.session_state.scene_animation_complete:
+        # Replay animation if needed
         for idx, text in enumerate(st.session_state.scenes):
-            display = ""
-            for word in text.split(" "):
-                display += word + " "
-                placeholders[idx].text_area(label=labels[idx], value=display, height=150)
-                time.sleep(0.03)
+            if text:
+                display = ""
+                for word in text.split(" "):
+                    display += word + " "
+                    placeholders[idx].text_area(label=labels[idx], value=display, height=150)
+                    time.sleep(0.03)
         st.session_state.scene_animation_complete = True
     else:
+        # Display editable scenes
         for idx, text in enumerate(st.session_state.edited_scenes):
-            placeholders[idx].text_area(label=labels[idx], value=text, height=150)
+            if text:
+                new_text = placeholders[idx].text_area(label=labels[idx], value=text, height=150, key=f"scene_{idx}")
+                st.session_state.edited_scenes[idx] = new_text
 
     next_btn = "📸 Tell Your Story" if mode_param == "illustration" else "📸 Show Me the Designs"
     if st.button(next_btn, use_container_width=True):
