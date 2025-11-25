@@ -225,8 +225,12 @@ def render_scene_generation_page():
         st.session_state.scenes = []
         st.session_state.edited_scenes = []
         
+        # Create a placeholder for showing real-time LLM output
+        llm_output_placeholder = st.empty()
+        accumulated_text = ""
+        
         with st.spinner("Generating story scenes..."):
-            # Stream scenes one by one
+            # Stream tokens in real-time
             res = requests.post(
                 f"http://localhost:8000/generate_story_prompts?config={mode_param}", 
                 json={"prompt": st.session_state.story_idea},
@@ -238,8 +242,20 @@ def render_scene_generation_page():
                     try:
                         data = json.loads(line.decode('utf-8'))
                         
-                        # Check if it's a scene or done signal
-                        if "scene" in data:
+                        # Handle real-time token streaming
+                        if "token" in data:
+                            token = data["token"]
+                            accumulated_text += token
+                            # Display accumulated text in real-time
+                            llm_output_placeholder.text_area(
+                                "🤖 LLM is thinking...", 
+                                value=accumulated_text, 
+                                height=200,
+                                disabled=True
+                            )
+                        
+                        # Handle parsed scenes
+                        elif "scene" in data:
                             idx = data["index"]
                             scene_text = data["scene"]
                             
@@ -250,18 +266,23 @@ def render_scene_generation_page():
                             
                             st.session_state.scenes[idx] = scene_text
                             st.session_state.edited_scenes[idx] = scene_text
-                            
-                            # Animate the scene word by word as it arrives
-                            display = ""
-                            for word in scene_text.split(" "):
-                                display += word + " "
-                                placeholders[idx].text_area(label=labels[idx], value=display, height=150)
-                                time.sleep(0.03)
                         
                         elif data.get("done"):
                             break
                     except json.JSONDecodeError:
                         continue
+        
+        # Clear the LLM output placeholder
+        llm_output_placeholder.empty()
+        
+        # Now animate the final parsed scenes
+        for idx, scene_text in enumerate(st.session_state.scenes):
+            if scene_text:
+                display = ""
+                for word in scene_text.split(" "):
+                    display += word + " "
+                    placeholders[idx].text_area(label=labels[idx], value=display, height=150)
+                    time.sleep(0.03)
         
         st.session_state.scene_animation_complete = True
     
