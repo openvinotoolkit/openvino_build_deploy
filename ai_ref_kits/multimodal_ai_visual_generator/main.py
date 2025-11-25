@@ -15,6 +15,8 @@ import openvino as ov
 import logging
 import random
 import json
+import queue
+import threading
 
 # -------- Logging Setup --------
 logging.basicConfig(
@@ -159,24 +161,49 @@ def generate_story_prompts(request: StoryRequest, req: Request):
     instruction = config["instruction_template"].replace("{user_prompt}", request.prompt)
 
     def stream_scenes():
-        """Generator that yields scenes one by one as they complete."""
-        # Collect LLM output
+        """Generator that yields tokens in real-time as they are generated."""
+        # Use a queue to communicate between the streamer callback and the generator
+        token_queue = queue.Queue()
         output = []
+        generation_complete = threading.Event()
+        
         def streamer(subword):
+            """Callback that receives tokens from LLM as they're generated."""
             sys.stdout.write(subword)
             sys.stdout.flush()
             output.append(subword)
+            token_queue.put(subword)  # Send token to queue for streaming
             return False
         
-        # Generate full output
-        _ = llm_pipe.generate(instruction, llm_config, streamer)
-        full_output = "".join(output)
+        def generate_llm():
+            """Run LLM generation in a separate thread."""
+            try:
+                _ = llm_pipe.generate(instruction, llm_config, streamer)
+            finally:
+                generation_complete.set()
+                token_queue.put(None)  # Signal completion
         
-        # Parse all scenes
+        # Start LLM generation in background thread
+        generation_thread = threading.Thread(target=generate_llm)
+        generation_thread.start()
+        
+        # Stream tokens as they arrive
+        while True:
+            token = token_queue.get()
+            if token is None:  # Generation complete
+                break
+            # Yield each token as it arrives
+            yield json.dumps({"token": token}) + "\n"
+        
+        # Wait for thread to complete
+        generation_thread.join()
+        
+        # Now parse and send final scenes
+        full_output = "".join(output)
         parsed_scenes = parse_scenes(full_output, config)
         final_scenes = finalize_scenes(parsed_scenes, config)
         
-        # Stream scenes one by one
+        # Send all parsed scenes
         for idx, scene in enumerate(final_scenes):
             yield json.dumps({"scene": scene, "index": idx}) + "\n"
         
