@@ -30,7 +30,7 @@ travel_router:
   # Tools Configuration (supervisor specific)
   tools:
     - name: "ThinkTool"
-      enabled: false  # Disabled to improve response time, tool for planning
+      enabled: true  # Disable it if you want to improve response time, tool for planning
     - name: "HandoffTool"
       enabled: true
       auto_discovered: true 
