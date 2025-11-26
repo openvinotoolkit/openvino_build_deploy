@@ -1,5 +1,5 @@
 """
-Configuration utilities.
+Simple configuration loader for agents.
 """
 
 import os
@@ -293,27 +293,6 @@ def is_port_in_use(port: int) -> bool:
 
 
 def kill_processes_on_port(port: int) -> None:
-    """Kill any processes using the specified port.
-
-    Args:
-        port: The port number to clear.
-    """
-    try:
-        result = subprocess.run(
-            ["lsof", "-t", f"-i:{port}"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if result.stdout.strip():
-            pids = result.stdout.strip().split("\n")
-            for pid in pids:
-                if pid:
-                    subprocess.run(["kill", "-9", pid], check=False)
-                    print(f"Killed process {pid} on port {port}")
-    except FileNotFoundError:
-        # lsof not available; best effort skip
-        pass
     """Kill any processes using the specified port.
 
     Args:
