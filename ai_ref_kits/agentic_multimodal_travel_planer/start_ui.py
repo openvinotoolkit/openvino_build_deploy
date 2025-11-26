@@ -166,7 +166,7 @@ class TravelRouterClient:
 
 # Example prompts for the UI
 EXAMPLES = [
-    "Clear my cart",
+    "Which city is shown in this image?",
     "Describe what's in this image",
     "How many people are in this photo?",
     "What is this building?",

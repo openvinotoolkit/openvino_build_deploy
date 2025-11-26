@@ -109,14 +109,17 @@ flight_finder:
       max_invocations: 2
 
 # Hotel Finder Agent Configuration
+# Hotel Finder Agent Configuration
 hotel_finder:
   name: "hotel_finder"
   description: "Specialized agent for hotel search with access to hotel search tools"
   port: 9999
+  role: "Hotel Search Specialist"
   enabled: true
-  # LLM Configuration for Hotel Finder
+
+  # LLM Configuration
   llm:
-    model: "openai:OpenVINO/Qwen3-8B-int4-ov"
+    model: "openai:Qwen/Qwen3-8B"
     temperature: 0.3
     api_key: "unused"
     api_base: "http://127.0.0.1:8001/v3"
@@ -135,7 +138,12 @@ hotel_finder:
   
   # Tools Configuration
   tools:
-    mcp_tools: true 
+    - name: "ThinkTool"
+      enabled: true 
+    - name: "mcp_tools"
+      enabled: true
+    - name: "FinalAnswerTool"
+      enabled: true 
   
   # Middleware Configuration (For console logging)
   middleware:
