@@ -5,6 +5,7 @@ import sys
 import os
 from pathlib import Path
 import logging
+import json
 
 # ----- Logging Setup -----
 logging.basicConfig(
@@ -64,15 +65,46 @@ try:
     else:
         raise RuntimeError("FastAPI server did not start within timeout period.")
 
-    # ----- Step 3: Test Story Prompt Generation -----
-    logger.info("Testing /generate_story_prompts endpoint...")
+    # ----- Step 3: Test Story Prompt Generation (Streaming) -----
+    logger.info("Testing /generate_story_prompts endpoint (streaming)...")
     response1 = requests.post(
         "http://localhost:8000/generate_story_prompts",
-        json={"prompt": "A flying whale in space"}
+        json={"prompt": "A flying whale in space"},
+        stream=True
     )
-    assert response1.status_code == 200, f"Story generation failed: {response1.text}"
-    scenes = response1.json()["scenes"]
-    logger.info("Scene prompt generation test passed. Example: %s", scenes)
+    assert response1.status_code == 200, f"Story generation failed: {response1.status_code}"
+    
+    # Parse streaming NDJSON response
+    scenes = []
+    token_count = 0
+    for line in response1.iter_lines():
+        if line:
+            try:
+                data = json.loads(line.decode('utf-8'))
+                
+                # Handle token streaming
+                if "token" in data:
+                    token_count += 1
+                
+                # Handle parsed scenes
+                elif "scene" in data:
+                    idx = data["index"]
+                    scene_text = data["scene"]
+                    # Ensure we have enough slots
+                    while len(scenes) <= idx:
+                        scenes.append(None)
+                    scenes[idx] = scene_text
+                
+                # Handle completion signal
+                elif data.get("done"):
+                    break
+            except json.JSONDecodeError:
+                continue
+    
+    # Validate we got scenes
+    assert len(scenes) >= 1, f"No scenes were generated. Received {len(scenes)} scenes."
+    logger.info("Scene prompt generation test passed. Received %d tokens and %d scenes.", token_count, len(scenes))
+    logger.info("Example scene: %s", scenes[0])
 
     # ----- Step 4: Test Image Generation -----
     logger.info("Testing /generate_images endpoint...")

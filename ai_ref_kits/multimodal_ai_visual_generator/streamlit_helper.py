@@ -7,6 +7,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 import yaml
 from PIL import Image
+import json
 
 from pdf_helper import generate_pdf
 
@@ -208,6 +209,45 @@ def render_landing_page():
         st.session_state.story_idea = story_input
         st.rerun()
 
+# Helper function to parse scenes from accumulated text in real-time
+def parse_scenes_streaming(text, scene_prefix="Scene"):
+    """Parse scenes from partial/incomplete text during streaming."""
+    scenes = {}
+    lines = text.split("\n")
+    current_scene_num = None
+    current_scene_text = ""
+    
+    for line in lines:
+        clean = line.strip()
+        # Check if this line starts a new scene
+        if clean.lower().startswith(scene_prefix.lower()):
+            # Save previous scene if exists
+            if current_scene_num is not None:
+                scenes[current_scene_num] = current_scene_text.strip()
+            
+            # Extract scene number and text
+            parts = clean.split(":", 1)
+            if len(parts) == 2:
+                # Extract the scene number
+                scene_label = parts[0].strip()
+                # Try to extract number from "Scene 1", "Scene 2", etc.
+                try:
+                    num_str = scene_label.split()[-1]
+                    current_scene_num = int(num_str) - 1  # 0-indexed
+                    current_scene_text = parts[1].strip()
+                except (ValueError, IndexError):
+                    current_scene_num = len(scenes)
+                    current_scene_text = parts[1].strip()
+        elif clean and current_scene_num is not None:
+            # Continuation of current scene
+            current_scene_text += " " + clean
+    
+    # Add the last scene (might be incomplete)
+    if current_scene_num is not None:
+        scenes[current_scene_num] = current_scene_text.strip()
+    
+    return scenes
+
 # ------------------ Scene Generation Page ------------------
 def render_scene_generation_page():
     st.markdown("---")
@@ -220,23 +260,85 @@ def render_scene_generation_page():
     placeholders = [cols[i % 2].empty() for i in range(4)]
 
     if st.session_state.scenes is None:
+        # Initialize scenes list
+        st.session_state.scenes = []
+        st.session_state.edited_scenes = []
+        
+        accumulated_text = ""
+        
+        # Load config to get scene_prefix
+        config_path = f"config/{mode_param}.yaml"
+        with open(config_path, "r") as f:
+            config = yaml.safe_load(f)
+        scene_prefix = config.get("scene_prefix", "Scene")
+        
         with st.spinner("Generating story scenes..."):
-            res = requests.post(f"http://localhost:8000/generate_story_prompts?config={mode_param}", json={"prompt": st.session_state.story_idea})
-            scenes = res.json()["scenes"]
-            st.session_state.scenes = scenes
-            st.session_state.edited_scenes = scenes.copy()
-
-    if not st.session_state.scene_animation_complete:
+            # Stream tokens in real-time
+            res = requests.post(
+                f"http://localhost:8000/generate_story_prompts?config={mode_param}", 
+                json={"prompt": st.session_state.story_idea},
+                stream=True
+            )
+            
+            for line in res.iter_lines():
+                if line:
+                    try:
+                        data = json.loads(line.decode('utf-8'))
+                        
+                        # Handle real-time token streaming
+                        if "token" in data:
+                            token = data["token"]
+                            accumulated_text += token
+                            
+                            # Parse scenes in real-time from accumulated text
+                            parsed_scenes = parse_scenes_streaming(accumulated_text, scene_prefix)
+                            
+                            # Display each scene in its own text area as it's being generated
+                            for idx in range(4):
+                                if idx in parsed_scenes:
+                                    placeholders[idx].text_area(
+                                        label=labels[idx],
+                                        value=parsed_scenes[idx],
+                                        height=150,
+                                        key=f"streaming_scene_{idx}_{len(accumulated_text)}"
+                                    )
+                        
+                        # Handle parsed scenes
+                        elif "scene" in data:
+                            idx = data["index"]
+                            scene_text = data["scene"]
+                            
+                            # Ensure we have enough slots
+                            while len(st.session_state.scenes) <= idx:
+                                st.session_state.scenes.append(None)
+                                st.session_state.edited_scenes.append(None)
+                            
+                            st.session_state.scenes[idx] = scene_text
+                            st.session_state.edited_scenes[idx] = scene_text
+                        
+                        elif data.get("done"):
+                            break
+                    except json.JSONDecodeError:
+                        continue
+        
+        st.session_state.scene_animation_complete = True
+    
+    elif not st.session_state.scene_animation_complete:
+        # Replay animation if needed
         for idx, text in enumerate(st.session_state.scenes):
-            display = ""
-            for word in text.split(" "):
-                display += word + " "
-                placeholders[idx].text_area(label=labels[idx], value=display, height=150)
-                time.sleep(0.03)
+            if text:
+                display = ""
+                for word in text.split(" "):
+                    display += word + " "
+                    placeholders[idx].text_area(label=labels[idx], value=display, height=150)
+                    time.sleep(0.03)
         st.session_state.scene_animation_complete = True
     else:
+        # Display editable scenes
         for idx, text in enumerate(st.session_state.edited_scenes):
-            placeholders[idx].text_area(label=labels[idx], value=text, height=150)
+            if text:
+                new_text = placeholders[idx].text_area(label=labels[idx], value=text, height=150, key=f"scene_{idx}")
+                st.session_state.edited_scenes[idx] = new_text
 
     next_btn = "📸 Tell Your Story" if mode_param == "illustration" else "📸 Show Me the Designs"
     if st.button(next_btn, use_container_width=True):
