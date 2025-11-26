@@ -89,30 +89,74 @@ class TravelRouterClient:
             # Call the travel router client
             response = await self.client.run(query)
 
-            # Extract response text
+            # Debug: print response structure
+            print(f"Response type: {type(response)}")
+            print(f"Response attrs: {[a for a in dir(response) if not a.startswith('_')]}")
+
+            # Extract response text - try multiple approaches
+            result = None
+            
+            # Try result.final_answer
             if (
                 hasattr(response, "result")
                 and hasattr(response.result, "final_answer")
             ):
                 result = response.result.final_answer
-            elif (
+                print(f"Found in result.final_answer: {result[:100] if result else None}...")
+            
+            # Try state.final_answer
+            if not result and (
                 hasattr(response, "state")
                 and hasattr(response.state, "final_answer")
             ):
                 result = response.state.final_answer
-            elif hasattr(response, "final_answer"):
+                print(f"Found in state.final_answer: {result[:100] if result else None}...")
+            
+            # Try direct final_answer
+            if not result and hasattr(response, "final_answer"):
                 result = response.final_answer
-            elif (
+                print(f"Found in final_answer: {result[:100] if result else None}...")
+            
+            # Try output attribute (common in some frameworks)
+            if not result and hasattr(response, "output"):
+                if isinstance(response.output, str):
+                    result = response.output
+                elif hasattr(response.output, "text"):
+                    result = response.output.text
+                print(f"Found in output: {result[:100] if result else None}...")
+            
+            # Try last_message.text
+            if not result and (
                 hasattr(response, "last_message")
                 and hasattr(response.last_message, "text")
             ):
                 result = response.last_message.text
-            elif hasattr(response, "text"):
+                print(f"Found in last_message.text: {result[:100] if result else None}...")
+            
+            # Try text
+            if not result and hasattr(response, "text"):
                 result = response.text
-            else:
+                print(f"Found in text: {result[:100] if result else None}...")
+            
+            # Try messages list (A2A often returns list of messages)
+            if not result and hasattr(response, "messages"):
+                messages = response.messages
+                if messages and len(messages) > 0:
+                    last_msg = messages[-1]
+                    if hasattr(last_msg, "text"):
+                        result = last_msg.text
+                    elif hasattr(last_msg, "content"):
+                        result = last_msg.content
+                    elif isinstance(last_msg, str):
+                        result = last_msg
+                    print(f"Found in messages: {result[:100] if result else None}...")
+            
+            # Fallback to string representation
+            if not result:
                 result = str(response)
+                print(f"Fallback to str: {result[:100]}...")
 
-            return result
+            return result if result else "No response received"
 
         except Exception as e:
             print(f"Error with router agent: {e}")
@@ -124,12 +168,12 @@ class TravelRouterClient:
 EXAMPLES = [
     "Clear my cart",
     "Describe what's in this image",
-    "What colors are visible in the image?",
     "How many people are in this photo?",
     "What is this building?",
     "Describe the scene in detail",
-    "What objects do you see?",
-    "Analyze the composition of this image",
+    "Give me flights from New York to Paris for March 1st to March 10th",
+    "Give me hotels in Paris for March 1st to March 10th for 2 guests",
+    "Give me flights from New York to Paris for March 1st to March 10th in business class",
 ]
 
 # Global state variables
@@ -549,6 +593,10 @@ async def run_agent_workflow(query: str):
 
         # Get the final response
         response = await chat_task
+        
+        # Remove trailing colon if present (UI formatting issue)
+        if isinstance(response, str) and response.rstrip().endswith(':'):
+            response = response.rstrip()[:-1].rstrip()
 
         # Give it a moment for logs to flush
         await asyncio.sleep(0.3)

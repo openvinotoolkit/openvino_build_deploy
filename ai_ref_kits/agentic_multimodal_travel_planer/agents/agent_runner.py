@@ -19,7 +19,7 @@ import os
 from contextlib import AsyncExitStack
 import requests
 import yaml
-import logging
+import re
 
 from mcp.client.sse import sse_client
 from mcp.client.session import ClientSession
@@ -40,7 +40,6 @@ from beeai_framework.serve.utils import LRUMemoryManager
 from beeai_framework.tools import Tool
 from beeai_framework.tools.handoff import HandoffTool
 from beeai_framework.tools.mcp import MCPTool
-from beeai_framework.logger import Logger
 
 # Add parent directory to path for imports (before local imports!)
 sys.path.append(str(Path(__file__).parent.parent))   # noqa: E402
@@ -171,6 +170,13 @@ class AgentFactory:
                 )
                 if tool_instance:
                     kwargs = {k: v for k, v in r.items() if k != "tool_name"}
+                    # Evaluate string lambdas in custom_checks to callable functions
+                    if "custom_checks" in kwargs and isinstance(kwargs["custom_checks"], list):
+                        import re
+                        kwargs["custom_checks"] = [
+                            eval(check) if isinstance(check, str) else check
+                            for check in kwargs["custom_checks"]
+                        ]
                     requirements.append(ConditionalRequirement(
                         tool_instance, **kwargs
                     ))

@@ -1,11 +1,12 @@
 """
-Simple configuration loader for agents.
+Configuration utilities.
 """
 
 import os
 import socket
 import subprocess
 import yaml
+from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -73,12 +74,30 @@ def _create_tool(tool_config, agent_config=None):
     tool_map = {
         'ThinkTool': ThinkTool,
         'OpenMeteoTool': OpenMeteoTool,
+        'FinalAnswerTool': None,  # FinalAnswerTool is built into RequirementAgent
     }
     
     tool_name = tool_config['name']
     
+    # Handle Bridge Tower tools
+    if tool_name in ['MultimodalSearchTool', 'ImageTextRetrievalTool', 'VideoContentSearchTool']:
+        if tool_config.get('enabled', True) and agent_config:
+            try:
+                from utils.bridgetower_tools import create_bridgetower_tools
+                bridgetower_tools = create_bridgetower_tools(agent_config)
+                # Return the specific tool requested
+                for tool in bridgetower_tools:
+                    if tool.name == tool_name:
+                        return tool
+            except ImportError as e:
+                print(f"⚠️ Bridge Tower tools not available: {e}")
+        return None
+    
     # Handle standard tools
     if tool_name in tool_map and tool_config.get('enabled', True):
+        if tool_map[tool_name] is None:
+            # FinalAnswerTool is built into RequirementAgent, return a marker
+            return 'FinalAnswerTool'
         return tool_map[tool_name]()
     elif tool_name == 'HandoffTool' and tool_config.get('auto_discovered', False):
         # HandoffTools will be created dynamically in the supervisor agent
@@ -118,13 +137,21 @@ def _create_handoff_tools(supervised_agents_config):
                 continue
                 
             # Get agent card for description
-            description = f"Consult {agent_name} for specialized tasks via A2A protocol."
+            base_description = f"Consult {agent_name} for specialized tasks via A2A protocol."
             try:
                 agent_card = response.json()
-                description = agent_card.get('description', description)
+                base_description = agent_card.get('description', base_description)
                 print(f"✅ Found agent card for {agent_name}")
             except Exception:
                 print(f"⚠️ Invalid agent card for {agent_name}, using default description")
+            
+            # Add format requirements to description based on agent type
+            if agent_name == "flight_finder":
+                description = f"{base_description} REQUIRES structured input with keys: from, to, departure_date, class. Example: {{'from': 'Toronto', 'to': 'Rome', 'departure_date': '2025-12-15', 'class': 'economy'}}. DO NOT use {{'task': '...'}} format."
+            elif agent_name == "hotel_finder":
+                description = f"{base_description} REQUIRES structured input with keys: destination, check_in_date, check_out_date, guests. Example: {{'destination': 'Paris', 'check_in_date': '2025-12-20', 'check_out_date': '2025-12-25', 'guests': 2}}. DO NOT use {{'task': '...'}} format."
+            else:
+                description = base_description
             
             # Create A2A agent connection
             a2a_agent = A2AAgent(url=agent_url, memory=UnconstrainedMemory())
@@ -217,6 +244,12 @@ def load_config(agent_name: str):
         handoff_tools = _create_handoff_tools(agent_config['supervised_agents'])
         tools.extend(handoff_tools)
     
+    # Get prompt and inject today's date for flight_finder
+    prompt = prompts_config[f'{agent_name}_prompt'].strip()
+    if agent_name == 'flight_finder':
+        today_date = datetime.now().strftime('%Y-%m-%d')
+        prompt = prompt.replace('[TODAY\'S DATE]', today_date)
+    
     # Build the return config
     config = {
         'port': port,
@@ -226,7 +259,7 @@ def load_config(agent_name: str):
         'api_key': api_key,
         'name': agent_config['name'],
         'description': agent_config['description'],
-        'prompt': prompts_config[f'{agent_name}_prompt'].strip(),
+        'prompt': prompt,
         'middleware': agent_config['middleware'],
         'memory_size': agent_config['memory_size'],
         'tools': tools,
@@ -260,6 +293,27 @@ def is_port_in_use(port: int) -> bool:
 
 
 def kill_processes_on_port(port: int) -> None:
+    """Kill any processes using the specified port.
+
+    Args:
+        port: The port number to clear.
+    """
+    try:
+        result = subprocess.run(
+            ["lsof", "-t", f"-i:{port}"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.stdout.strip():
+            pids = result.stdout.strip().split("\n")
+            for pid in pids:
+                if pid:
+                    subprocess.run(["kill", "-9", pid], check=False)
+                    print(f"Killed process {pid} on port {port}")
+    except FileNotFoundError:
+        # lsof not available; best effort skip
+        pass
     """Kill any processes using the specified port.
 
     Args:
