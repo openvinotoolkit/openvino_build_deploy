@@ -31,9 +31,6 @@ This directory contains interactive demos aimed at demonstrating how OpenVINO pe
 ### [Desktop Applications](apps): User-Friendly AI Applications with OpenVINO
 Discover interactive desktop applications using OpenVINO as an engine for AI inference.
 
-### [Notebooks](notebooks): Jupyter Notebooks with OpenVINO code
-Explore Jupyter notebooks that demonstrate how to use OpenVINO to build and deploy AI solutions.
-
 ### [Workshops](workshops): Guided Content to Get Started Building
 Explored guided content our team created and demonstrated at events.
 
