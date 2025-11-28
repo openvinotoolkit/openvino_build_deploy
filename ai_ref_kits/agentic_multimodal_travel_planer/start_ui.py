@@ -3,14 +3,12 @@
 
 This module provides a web-based user interface for interacting with the
 travel router agent, supporting both text queries and image analysis through
-an intuitive chat interface.
+a chat interface.
 """
 
 import asyncio
 import concurrent.futures
 import os
-import shutil
-import time
 import traceback
 from pathlib import Path
 
@@ -18,7 +16,11 @@ import gradio as gr
 from beeai_framework.adapters.a2a.agents.agent import A2AAgent
 from beeai_framework.memory import UnconstrainedMemory
 from dotenv import load_dotenv
-from PIL import Image
+from utils.util import (
+    extract_agent_handoffs_from_log,
+    run_async_in_thread,
+    save_uploaded_image,
+)
 
 
 class TravelRouterClient:
@@ -91,77 +93,72 @@ class TravelRouterClient:
 
             # Debug: print response structure
             print(f"Response type: {type(response)}")
-            print(f"Response attrs: {[a for a in dir(response) if not a.startswith('_')]}")
+            print(
+                f"Response attrs: "
+                f"{[a for a in dir(response) if not a.startswith('_')]}"
+            )
 
-            # Extract response text - try multiple approaches
-            result = None
-            
-            # Try result.final_answer
-            if (
-                hasattr(response, "result")
-                and hasattr(response.result, "final_answer")
-            ):
-                result = response.result.final_answer
-                print(f"Found in result.final_answer: {result[:100] if result else None}...")
-            
-            # Try state.final_answer
-            if not result and (
-                hasattr(response, "state")
-                and hasattr(response.state, "final_answer")
-            ):
-                result = response.state.final_answer
-                print(f"Found in state.final_answer: {result[:100] if result else None}...")
-            
-            # Try direct final_answer
-            if not result and hasattr(response, "final_answer"):
-                result = response.final_answer
-                print(f"Found in final_answer: {result[:100] if result else None}...")
-            
-            # Try output attribute (common in some frameworks)
-            if not result and hasattr(response, "output"):
-                if isinstance(response.output, str):
-                    result = response.output
-                elif hasattr(response.output, "text"):
-                    result = response.output.text
-                print(f"Found in output: {result[:100] if result else None}...")
-            
-            # Try last_message.text
-            if not result and (
-                hasattr(response, "last_message")
-                and hasattr(response.last_message, "text")
-            ):
-                result = response.last_message.text
-                print(f"Found in last_message.text: {result[:100] if result else None}...")
-            
-            # Try text
-            if not result and hasattr(response, "text"):
-                result = response.text
-                print(f"Found in text: {result[:100] if result else None}...")
-            
-            # Try messages list (A2A often returns list of messages)
-            if not result and hasattr(response, "messages"):
-                messages = response.messages
-                if messages and len(messages) > 0:
-                    last_msg = messages[-1]
-                    if hasattr(last_msg, "text"):
-                        result = last_msg.text
-                    elif hasattr(last_msg, "content"):
-                        result = last_msg.content
-                    elif isinstance(last_msg, str):
-                        result = last_msg
-                    print(f"Found in messages: {result[:100] if result else None}...")
-            
-            # Fallback to string representation
-            if not result:
-                result = str(response)
-                print(f"Fallback to str: {result[:100]}...")
-
-            return result if result else "No response received"
+            return self._extract_response_text(response)
 
         except Exception as e:
             print(f"Error with router agent: {e}")
             print(f"Error traceback: {traceback.format_exc()}")
             return f"Error processing request: {e}"
+
+    def _extract_response_text(self, response) -> str:
+        """Return the first text-like value available on the response."""
+
+        def _as_text(value):
+            if value is None:
+                return None
+            if isinstance(value, str):
+                return value
+            if isinstance(value, (list, tuple)):
+                for item in reversed(value):
+                    text = _as_text(item)
+                    if text:
+                        return text
+                return None
+            for attr in ("text", "content", "final_answer", "output"):
+                if hasattr(value, attr):
+                    text = _as_text(getattr(value, attr))
+                    if text:
+                        return text
+            return None
+
+        sources = (
+            (
+                "result.final_answer",
+                getattr(
+                    getattr(response, "result", None),
+                    "final_answer",
+                    None,
+                ),
+            ),
+            (
+                "state.final_answer",
+                getattr(
+                    getattr(response, "state", None),
+                    "final_answer",
+                    None,
+                ),
+            ),
+            ("final_answer", getattr(response, "final_answer", None)),
+            ("output", getattr(response, "output", None)),
+            ("last_message", getattr(response, "last_message", None)),
+            ("text", getattr(response, "text", None)),
+            ("messages[-1]", getattr(response, "messages", None)),
+        )
+
+        for label, candidate in sources:
+            text = _as_text(candidate)
+            if text:
+                print(f"Found in {label}: {text[:100]}...")
+                return text
+
+        fallback = str(response)
+        print(f"Fallback to str: {fallback[:100]}...")
+        return fallback if fallback else "No response received"
 
 
 # Example prompts for the UI
@@ -173,7 +170,10 @@ EXAMPLES = [
     "Describe the scene in detail",
     "Give me flights from New York to Paris for March 1st to March 10th",
     "Give me hotels in Paris for March 1st to March 10th for 2 guests",
-    "Give me flights from New York to Paris for March 1st to March 10th in business class",
+    (
+        "Give me flights from New York to Paris for March 1st to March 10th "
+        "in business class"
+    ),
 ]
 
 # Global state variables
@@ -182,23 +182,6 @@ stop_requested = False
 current_image_path = None
 log_cache = {}  # Cache for log file positions
 workflow_steps = []  # Track workflow steps
-
-
-def run_init_in_thread(client):
-    """Run client initialization in a separate thread with new event loop.
-
-    Args:
-        client: TravelRouterClient instance to initialize.
-
-    Returns:
-        Result of initialization.
-    """
-    new_loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(new_loop)
-    try:
-        return new_loop.run_until_complete(client.initialize())
-    finally:
-        new_loop.close()
 
 
 def initialize_travel_router_client():
@@ -220,7 +203,7 @@ def initialize_travel_router_client():
         # Initialize the client asynchronously
         try:
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(run_init_in_thread, client)
+                future = executor.submit(run_async_in_thread, client.initialize)
                 future.result()
         except RuntimeError:
             # No running event loop, we can use asyncio.run directly
@@ -247,84 +230,22 @@ async def image_captioning(image_input):
     Returns:
         Status message string.
     """
-    # Create tmp directory for saving uploaded images
     project_root = Path(__file__).parent.parent
     tmp_dir = project_root / "tmp_files"
-    tmp_dir.mkdir(exist_ok=True)
 
     try:
-        # Generate unique filename with timestamp for ALL images
-        timestamp = int(time.time())
-        image_filename = f"caption_image_{timestamp}.jpg"
-        saved_image_path = tmp_dir / image_filename
+        saved_image_path = save_uploaded_image(
+            image_input=image_input,
+            destination_dir=tmp_dir,
+            prefix="caption_image",
+        )
+        print(f"✅ Image saved to {saved_image_path}", flush=True)
+    except Exception as exc:
+        return str(exc)
 
-        # Handle different input types from Gradio
-        if isinstance(image_input, str):
-            # It's a file path - validate inside temp directory
-            source_path = Path(image_input)
-
-            try:
-                # Validate that source_path is within tmp_dir
-                source_path_resolved = source_path.resolve()
-                tmp_dir_resolved = tmp_dir.resolve()
-                # Use robust path ancestor check; fallback if Python <3.9
-                try:
-                    # Python 3.9+: Path.is_relative_to
-                    if not source_path_resolved.is_relative_to(
-                        tmp_dir_resolved
-                    ):
-                        msg = f"Error: Unsafe file path: {image_input}"
-                        return msg
-                except AttributeError:
-                    # Python <3.9: use commonpath
-                    import os
-                    common_path = os.path.commonpath([
-                        str(source_path_resolved),
-                        str(tmp_dir_resolved)
-                    ])
-                    if common_path != str(tmp_dir_resolved):
-                        msg = f"Error: Unsafe file path: {image_input}"
-                        return msg
-            except Exception as e:
-                return f"Error: Could not resolve path: {image_input} ({e})"
-
-            if source_path.exists():
-                shutil.copy2(source_path, saved_image_path)
-                print(
-                    f"✅ Image copied from {source_path} "
-                    f"to {saved_image_path}",
-                    flush=True,
-                )
-            else:
-                return f"Error: Image file not found at {image_input}"
-        elif hasattr(image_input, "shape"):
-            # It's a numpy array (uploaded image) - save to tmp_files
-            try:
-                # Convert numpy array to PIL Image and save
-                pil_image = Image.fromarray(image_input)
-                pil_image.save(saved_image_path)
-                print(
-                    f"✅ Image saved to {saved_image_path}",
-                    flush=True,
-                )
-            except Exception as e:
-                return (
-                    f"Error processing uploaded image: {e}. "
-                    "Please ensure PIL (Pillow) is installed."
-                )
-
-        else:
-            return f"Error: Unsupported image input type: {type(image_input)}"
-
-        # Update global current image path
-        global current_image_path
-        current_image_path = str(saved_image_path)
-
-        # Return success message
-        return "✅ Image uploaded successfully"
-
-    except Exception as e:
-        return f"Failed to process image: {e}"
+    global current_image_path
+    current_image_path = str(saved_image_path)
+    return "✅ Image uploaded successfully"
 
 
 def stop_query():
@@ -361,69 +282,10 @@ def add_workflow_step(step_text):
 
 
 def extract_agent_handoffs():
-    """Extract agent handoff events from travel_router log.
-
-    Returns:
-        List of new handoff events.
-    """
-    global log_cache
+    """Extract agent handoff events from travel_router log."""
     logs_dir = Path(__file__).parent / "logs"
     travel_router_log = logs_dir / "travel_router.log"
-
-    if not travel_router_log.exists():
-        return []
-
-    new_steps = []
-    cache_key = str(travel_router_log)
-
-    if cache_key not in log_cache:
-        log_cache[cache_key] = {'position': 0, 'seen_handoffs': set()}
-
-    try:
-        file_size = travel_router_log.stat().st_size
-        last_position = log_cache[cache_key]['position']
-        seen_handoffs = log_cache[cache_key]['seen_handoffs']
-
-        if file_size > last_position:
-            with open(
-                travel_router_log, 'r', encoding='utf-8', errors='ignore'
-            ) as f:
-                f.seek(last_position)
-                new_lines = f.readlines()
-
-                for line in new_lines:
-                    line = line.strip()
-
-                    # Detect agent handoff start
-                    if '--> 🔍 HandoffTool[' in line:
-                        parts = line.split('HandoffTool[')[1].split(']')
-                        agent_name = parts[0]
-                        handoff_id = f"{agent_name}_start"
-
-                        if handoff_id not in seen_handoffs:
-                            new_steps.append(
-                                f"🔄 Delegating to {agent_name}..."
-                            )
-                            seen_handoffs.add(handoff_id)
-
-                    # Detect agent handoff completion
-                    elif '<-- 🔍 HandoffTool[' in line:
-                        parts = line.split('HandoffTool[')[1].split(']')
-                        agent_name = parts[0]
-                        handoff_id = f"{agent_name}_complete"
-
-                        if handoff_id not in seen_handoffs:
-                            new_steps.append(
-                                f"✅ {agent_name} completed"
-                            )
-                            seen_handoffs.add(handoff_id)
-
-                log_cache[cache_key]['position'] = f.tell()
-
-    except Exception:
-        pass
-
-    return new_steps
+    return extract_agent_handoffs_from_log(travel_router_log, log_cache)
 
 
 def read_latest_logs():
@@ -447,7 +309,6 @@ def read_latest_logs():
 def reset_all_agent_memories():
     """Reset memory for travel router and all supervised agents."""
     global travel_router_client
-    
     # Reinitialize the travel router client to create a fresh session
     # This creates a new A2AAgent with fresh memory, effectively starting
     # a new conversation session with the server-side agent
@@ -455,7 +316,6 @@ def reset_all_agent_memories():
         try:
             # Create new memory instance
             travel_router_client.memory = UnconstrainedMemory()
-            
             # Reinitialize the A2AAgent client with fresh memory
             travel_router_port = os.getenv("TRAVEL_ROUTER_PORT", "9996")
             travel_router_url = f"http://127.0.0.1:{travel_router_port}"
@@ -466,7 +326,6 @@ def reset_all_agent_memories():
             print("✅ Travel Router client reinitialized with fresh memory")
         except Exception as e:
             print(f"⚠️  Error reinitializing client: {e}")
-    
     print("✅ All agent memories cleared")
 
 
@@ -483,7 +342,6 @@ def clear_all():
     stop_requested = False
     current_image_path = None
     workflow_steps = []
-    
     # Reset agent memories
     try:
         reset_all_agent_memories()
@@ -593,7 +451,6 @@ async def run_agent_workflow(query: str):
 
         # Get the final response
         response = await chat_task
-        
         # Remove trailing colon if present (UI formatting issue)
         if isinstance(response, str) and response.rstrip().endswith(':'):
             response = response.rstrip()[:-1].rstrip()

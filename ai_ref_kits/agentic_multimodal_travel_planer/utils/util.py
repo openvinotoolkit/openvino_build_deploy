@@ -2,15 +2,20 @@
 Simple configuration loader for agents.
 """
 
+import asyncio
 import os
+import shutil
 import socket
 import subprocess
+import time
 import yaml
 from datetime import datetime
 from pathlib import Path
+from typing import Awaitable, Callable, Dict, Iterable
 from urllib.parse import urlparse
 
 import requests
+from PIL import Image
 
 def validate_llm_endpoint(api_base, timeout=5):
     """Validate if the LLM API endpoint is accessible"""
@@ -147,9 +152,21 @@ def _create_handoff_tools(supervised_agents_config):
             
             # Add format requirements to description based on agent type
             if agent_name == "flight_finder":
-                description = f"{base_description} REQUIRES structured input with keys: from, to, departure_date, class. Example: {{'from': 'Toronto', 'to': 'Rome', 'departure_date': '2025-12-15', 'class': 'economy'}}. DO NOT use {{'task': '...'}} format."
+                description = (
+                    f"{base_description} REQUIRES structured input with keys: "
+                    "from, to, departure_date, class. Example: "
+                    "{'from': 'Toronto', 'to': 'Rome', 'departure_date': "
+                    "'2025-12-15', 'class': 'economy'}. "
+                    "DO NOT use {'task': '...'} format."
+                )
             elif agent_name == "hotel_finder":
-                description = f"{base_description} REQUIRES structured input with keys: destination, check_in_date, check_out_date, guests. Example: {{'destination': 'Paris', 'check_in_date': '2025-12-20', 'check_out_date': '2025-12-25', 'guests': 2}}. DO NOT use {{'task': '...'}} format."
+                description = (
+                    f"{base_description} REQUIRES structured input with keys: "
+                    "destination, check_in_date, check_out_date, guests. "
+                    "Example: {'destination': 'Paris', 'check_in_date': "
+                    "'2025-12-20', 'check_out_date': '2025-12-25', 'guests': 2}. "
+                    "DO NOT use {'task': '...'} format."
+                )
             else:
                 description = base_description
             
@@ -167,7 +184,10 @@ def _create_handoff_tools(supervised_agents_config):
             print(f"✅ Created HandoffTool for {agent_name}")
             
         except requests.RequestException as e:
-            print(f"⚠️ Agent {agent_name} not reachable ({str(e)}), skipping HandoffTool creation")
+            print(
+                f"⚠️ Agent {agent_name} not reachable ({str(e)}), "
+                "skipping HandoffTool creation"
+            )
         except Exception as e:
             print(f"❌ Failed to create HandoffTool for {agent_name}: {e}")
     
@@ -314,3 +334,122 @@ def kill_processes_on_port(port: int) -> None:
     except FileNotFoundError:
         # lsof not available; best effort skip
         pass
+
+
+def run_async_in_thread(
+    coro_factory: Callable[..., Awaitable], *args, **kwargs
+):
+    """Run an async callable inside a fresh event loop on a worker thread."""
+    new_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(new_loop)
+    try:
+        coroutine = coro_factory(*args, **kwargs)
+        return new_loop.run_until_complete(coroutine)
+    finally:
+        new_loop.close()
+
+
+def _path_within_directory(path: Path, directory: Path) -> bool:
+    """Safely check that path resides within directory."""
+    try:
+        path.relative_to(directory)
+        return True
+    except ValueError:
+        common = os.path.commonpath([str(path), str(directory)])
+        return common == str(directory)
+
+
+def save_uploaded_image(image_input, destination_dir, prefix="caption_image"):
+    """Persist uploaded/cached image input into destination_dir."""
+    destination_dir = Path(destination_dir)
+    destination_dir.mkdir(parents=True, exist_ok=True)
+
+    timestamp = int(time.time())
+    saved_image_path = destination_dir / f"{prefix}_{timestamp}.jpg"
+
+    if isinstance(image_input, str):
+        source_path = Path(image_input)
+        try:
+            source_resolved = source_path.resolve()
+            dest_resolved = destination_dir.resolve()
+        except Exception as exc:
+            raise ValueError(
+                f"Error: Could not resolve path: {image_input} ({exc})"
+            ) from exc
+
+        if not _path_within_directory(source_resolved, dest_resolved):
+            raise ValueError(f"Error: Unsafe file path: {image_input}")
+
+        if not source_path.exists():
+            raise FileNotFoundError(
+                f"Error: Image file not found at {image_input}"
+            )
+
+        shutil.copy2(source_path, saved_image_path)
+        return saved_image_path
+
+    if hasattr(image_input, "shape"):
+        try:
+            pil_image = Image.fromarray(image_input)
+            pil_image.save(saved_image_path)
+            return saved_image_path
+        except Exception as exc:
+            raise RuntimeError(
+                f"Error processing uploaded image: {exc}. "
+                "Please ensure PIL (Pillow) is installed."
+            ) from exc
+
+    raise TypeError(
+        f"Error: Unsupported image input type: {type(image_input)}"
+    )
+
+
+def extract_agent_handoffs_from_log(
+    log_path, cache: Dict[str, Dict[str, Iterable]]
+):
+    """Parse agent handoff events from a log file using a cache."""
+    log_path = Path(log_path)
+    if not log_path.exists():
+        return []
+
+    cache_key = str(log_path)
+    cache.setdefault(cache_key, {"position": 0, "seen_handoffs": set()})
+
+    new_steps = []
+    entry = cache[cache_key]
+
+    try:
+        file_size = log_path.stat().st_size
+        last_position = entry["position"]
+        seen_handoffs = entry["seen_handoffs"]
+
+        if file_size > last_position:
+            with open(
+                log_path, "r", encoding="utf-8", errors="ignore"
+            ) as handle:
+                handle.seek(last_position)
+                for line in handle:
+                    line = line.strip()
+                    if "--> 🔍 HandoffTool[" in line:
+                        parts = line.split("HandoffTool[")[1].split("]")
+                        agent_name = parts[0]
+                        handoff_id = f"{agent_name}_start"
+                        if handoff_id not in seen_handoffs:
+                            new_steps.append(
+                                f"🔄 Delegating to {agent_name}..."
+                            )
+                            seen_handoffs.add(handoff_id)
+                    elif "<-- 🔍 HandoffTool[" in line:
+                        parts = line.split("HandoffTool[")[1].split("]")
+                        agent_name = parts[0]
+                        handoff_id = f"{agent_name}_complete"
+                        if handoff_id not in seen_handoffs:
+                            new_steps.append(f"✅ {agent_name} completed")
+                            seen_handoffs.add(handoff_id)
+
+                entry["position"] = handle.tell()
+    except Exception:
+        pass
+
+    return new_steps
+
