@@ -15,7 +15,6 @@
 	- [🔦 Explainable AI](#-explainable-ai)
    	- [🎨 Multimodal AI Visual Generator](#-multimodal-ai-visual-generator)
 	- [💬 Conversational AI Chatbot](#-conversational-ai-chatbot)
-	- [🛒 AI Insight Agent with RAG](#-AI-Insight-Agent-with-RAG)
 
 - [Troubleshooting and Resources](#troubleshooting-and-resources)
 
@@ -83,7 +82,7 @@ This solution is designed to help automate checkout for retail businesses more e
 | Example industries                                 | Retail Customer Service, Smart Home Automation |
 | Demo                                               | [Code video](https://www.youtube.com/watch?v=9jnY9PJjYVk) |
 
-The Custom AI Assistant, powered by the OpenVINO™ toolkit, integrates voice-activated interfaces into various applications. It employs advanced models for speech recognition, natural language processing, and speech synthesis. Additionally, the agent leverages the capabilities of Large Language Models (LLMs) and Generative AI, enabling it to understand complex queries, generate coherent responses, and offer a more dynamic and interactive communication experience. These advanced AI technologies enhance the agent's ability to engage in natural, human-like conversations, making it ideal for applications in customer service and smart home automation.
+The Custom AI Assistant, powered by the OpenVINO™ toolkit, integrates voice-activated interfaces into various applications. It employs advanced models for speech recognition, natural language processing, and speech synthesis. Additionally, the assistant leverages the capabilities of Large Language Models (LLMs) and Generative AI, enabling it to understand complex queries, generate coherent responses, and offer a more dynamic and interactive communication experience. These advanced AI technologies enhance the assistant's ability to engage in natural, human-like conversations, making it ideal for applications in customer service and smart home automation.
 
 ### 🔦 Explainable AI
 ![explainable-ai](https://github.com/openvinotoolkit/openvino_notebooks/assets/138901786/14958589-433b-4617-b3ea-e2307fe6cb53)
@@ -118,17 +117,6 @@ Multimodal AI Visual Generator is a generative AI reference kit that transforms 
 
 The Conversational AI Chatbot is an open-source, voice-driven chat agent that answers spoken questions with meaningful, spoken responses.  It can be configured to respond in any type of scenario or context. 
 This kit demonstrates the AI Chatbot’s capabilities by simulating the experience of talking to a hotel concierge.
-
-### 🛒 AI Insight Agent with RAG
-[![agentic_llm_rag](https://github.com/user-attachments/assets/0471ab91-ded5-4a5f-8d8e-5432f1b4b45c)](agentic-llm-rag)
-
-| [AI Insight Agent with RAG](agentic_llm_rag) |                                                                                                                                                         |
-|--------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Related AI concepts                                    | Natural Language Understanding, Large Language Models (LLMs), Retrieval Augmented Generation (RAG), Agentic AI, Generative AI |
-| Example industries                                     | Retail                                                                                                                                                 |
-| Demo                                                   |                                                                                                                                                         |
-
-The AI Insight Agent with RAG uses Large Language Models (LLMs) and Retrieval-Augmented Generation (RAG) to interpret user prompts, engage in meaningful dialogue, perform calculations, use RAG techniques to improve its knowledge and interact with the user to add items to a virtual shopping cart.
 
 ## Troubleshooting and Resources
 - Open a [discussion topic](https://github.com/openvinotoolkit/openvino_build_deploy/discussions)
