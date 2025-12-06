@@ -322,7 +322,9 @@ def run(video_path: str, captioning_model: str, summary_model: str, flip: bool =
                     device_type = dev
                     # Stop the current worker
                     global_stop_event.set()
-                    worker.join()
+                    worker.join(timeout=5)
+                    if worker.is_alive():
+                        log.warning("Worker thread did not terminate within timeout.")
                     global_stop_event.clear()
 
                     del vision_model, text_decoder, processor
