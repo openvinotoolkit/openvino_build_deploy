@@ -232,6 +232,8 @@ def summarize_session(captions_list: list[str], ov_model_path: Path, device: str
 
     pipe.generate(VIDEO_SUMMARY_PROMPT.format(captions="\n".join(captions_list)), streamer=streamer)
 
+    del pipe
+
 
 def run(video_path: str, captioning_model: str, summary_model: str, flip: bool = True) -> None:
     global current_frames, captions, processing_times
@@ -320,8 +322,12 @@ def run(video_path: str, captioning_model: str, summary_model: str, flip: bool =
                     device_type = dev
                     # Stop the current worker
                     global_stop_event.set()
-                    worker.join(timeout=1)
+                    worker.join(timeout=5)
+                    if worker.is_alive():
+                        log.warning("Worker thread did not terminate within timeout.")
                     global_stop_event.clear()
+
+                    del vision_model, text_decoder, processor
 
                     # Recompile models for the new device
                     vision_model, text_decoder, processor = load_models(captioning_model, device_type)
