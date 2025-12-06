@@ -5,11 +5,11 @@ openvino-genai==2025.3
 optimum-intel==1.25.2
 nncf==2.18.0
 
-llama-index==0.12.50
-llama-index-llms-openvino-genai==0.1.1
-llama-index-embeddings-openvino==0.5.2
-llama-index-postprocessor-openvino-rerank==0.4.1
-llama-index-vector-stores-chroma==0.4.2
+llama-index==0.13.6
+llama-index-llms-openvino-genai==0.2.1
+llama-index-embeddings-openvino==0.6.1
+llama-index-postprocessor-openvino-rerank==0.5.1
+llama-index-vector-stores-chroma==0.5.3
 langchain-text-splitters==0.3.11
 chromadb==1.0.15
 
