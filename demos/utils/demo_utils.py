@@ -329,7 +329,7 @@ def gradio_intel_header(name: str = "") -> "gr.HTML":
             "<div style='width:100%;max-width:100%;margin-left:0;position:relative;padding:0;box-sizing:border-box;'>"
             "  <div style='margin:0;padding:0 15px;background:#0068bb;height:60px;width:100%;display:flex;align-items:center;position:relative;box-sizing:border-box;margin-bottom:15px;'>"
             f"    <div style='height:60px;line-height:60px;color:white;font-size:24px;'>{name}</div>"
-            "    <img src='https://www.intel.com/content/dam/logos/intel-header-logo.svg' style='margin-left:auto;width:60px;height:60px;' />"
+            "    <img src='https://www.intel.com/content/dam/logos/intel-header-logo-homepage.svg' style='margin-left:auto;width:60px;height:60px;' />"
             "  </div>"
             "</div>",
         padding=False
