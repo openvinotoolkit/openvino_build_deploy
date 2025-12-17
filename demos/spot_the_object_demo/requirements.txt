@@ -1,6 +1,6 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 
-openvino==2025.3
+openvino==2025.4
 onnx==1.18.0
 ultralytics==8.3.161
 supervision==0.25.1
