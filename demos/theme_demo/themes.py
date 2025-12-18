@@ -102,7 +102,8 @@ class ChristmasTheme(Theme):
 
     def load_models(self, device: str):
         self.device = device
-        self.face_detection_model = self._load_model("face-detection-0205", self.model_precision, device)
+        # face-detection-0204 is the latest model supported by NPU
+        self.face_detection_model = self._load_model("face-detection-0204", self.model_precision, device)
         self.face_landmarks_model = self._load_model("facial-landmarks-35-adas-0002", self.model_precision, device)
         self.emotions_recognition_model = self._load_model("emotions-recognition-retail-0003", self.model_precision, device)
 
@@ -260,19 +261,18 @@ class ChristmasTheme(Theme):
     def __process_detection_results(self, frame, results, in_width, in_height, thresh=0.5):
         # The size of the original frame.
         h, w = frame.shape[:2]
-        scale_x, scale_y = w / in_width, h / in_height
+        scale_x, scale_y = w, h
         # The 'results' variable is a [200, 5] tensor.
         results = results.squeeze()
         boxes = []
         scores = []
-        for xmin, ymin, xmax, ymax, score in results:
+        for _, _, score, xmin, ymin, xmax, ymax in results:
             # Create a box with pixels real coordinates from the output box.
             xmin = max(0, xmin)
             ymin = max(0, ymin)
             xmax = min(w, xmax)
             ymax = min(h, ymax)
-            boxes.append(
-                tuple(map(int, (xmin * scale_x, ymin * scale_y, (xmax - xmin) * scale_x, (ymax - ymin) * scale_y))))
+            boxes.append(tuple(map(int, (xmin * scale_x, ymin * scale_y, (xmax - xmin) * scale_x, (ymax - ymin) * scale_y))))
             scores.append(float(score))
 
         # Apply non-maximum suppression to get rid of many overlapping entities.
