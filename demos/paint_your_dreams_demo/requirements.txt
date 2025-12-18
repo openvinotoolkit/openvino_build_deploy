@@ -2,8 +2,8 @@
 
 openvino==2025.4    
 openvino-genai==2025.4
-nncf==2.18.0
-optimum-intel==1.25.1
+nncf==2.19.0
+optimum-intel==1.26.1
 onnx==1.18.0
 huggingface-hub==0.33.1
 diffusers==0.34.0
