@@ -1,9 +1,9 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 
-openvino==2025.3
-openvino-genai==2025.3
+openvino==2025.4
+openvino-genai==2025.4
 optimum-intel==1.25.2
-nncf==2.18.0
+nncf==2.19.0
 
 llama-index==0.13.6
 llama-index-llms-openvino-genai==0.2.1
