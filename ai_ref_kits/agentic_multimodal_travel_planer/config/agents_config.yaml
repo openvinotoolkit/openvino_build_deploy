@@ -11,12 +11,13 @@ travel_router:
   # LLM Configuration for Travel Router
   llm:
     model: "openai:OpenVINO/Qwen3-8B-int4-ov"
-    temperature: 0.1
+    temperature: 0.0  # Faster, more deterministic
     api_key: "unused"
     api_base: "http://127.0.0.1:8001/v3"
+    max_tokens: 256  
   
   # Memory Configuration
-  memory_size: 100
+  memory_size: 20  
   
   # Supervised Agents Configuration. It means that the travel_router agent can delegate to the following agents.
   supervised_agents:
@@ -72,12 +73,10 @@ flight_finder:
 
   llm:
     model: "openai:OpenVINO/Qwen3-8B-int4-ov"
-    temperature: 0.1
+    temperature: 0.0  
     api_key: "unused"
     api_base: "http://127.0.0.1:8001/v3"
-  
-  # Memory Configuration
-  memory_size: 100
+    max_tokens: 256  
   
   mcp_config:
     servers:
@@ -92,11 +91,12 @@ flight_finder:
   
   # Tools Configuration
   tools:
-    mcp_tools: true 
-
-  # Tools Configuration specify if it would use mcp_tools or beeai api tools
-  tools:
-    mcp_tools: true 
+    - name: "ThinkTool"
+      enabled: false  # Disable for speed
+    - name: "mcp_tools"
+      enabled: true
+    - name: "FinalAnswerTool"
+      enabled: true 
   
   # Middleware Configuration
   middleware:
@@ -123,9 +123,10 @@ hotel_finder:
   # LLM Configuration
   llm:
     model: "openai:OpenVINO/Qwen3-8B-int4-ov"
-    temperature: 0.1
+    temperature: 0.0  # Faster, more deterministic
     api_key: "unused"
     api_base: "http://127.0.0.1:8001/v3"
+    max_tokens: 256  
   
   mcp_config:
     servers:
@@ -142,7 +143,7 @@ hotel_finder:
   # Tools Configuration
   tools:
     - name: "ThinkTool"
-      enabled: true 
+      enabled: false  # Disabled for speed 
     - name: "mcp_tools"
       enabled: true
     - name: "FinalAnswerTool"
@@ -171,9 +172,10 @@ image_captioning:
   # LLM Configuration for Video Search
   llm:
     model: "openai:OpenVINO/Qwen3-8B-int4-ov"
-    temperature: 0.1
+    temperature: 0.0  
     api_key: "unused"
     api_base: "http://127.0.0.1:8001/v3"
+    max_tokens: 256  
  
   # MCP Configuration for image captioning
   mcp_config:
