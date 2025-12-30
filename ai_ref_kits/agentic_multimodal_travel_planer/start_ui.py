@@ -203,7 +203,9 @@ def initialize_travel_router_client():
         # Initialize the client asynchronously
         try:
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(run_async_in_thread, client.initialize)
+                future = executor.submit(
+                    run_async_in_thread, client.initialize
+                )
                 future.result()
         except RuntimeError:
             # No running event loop, we can use asyncio.run directly
@@ -358,7 +360,7 @@ async def run_agent_workflow(query: str):
         query: User query text.
 
     Yields:
-        Tuple of (log window text, chatbox messages, input field text,
+        Tuple of (log window text, chatbox messages, input field update,
                   send_btn state, stop_btn state, clear_btn state).
     """
     global chatbox_msg, travel_router_client, stop_requested
@@ -396,20 +398,20 @@ async def run_agent_workflow(query: str):
         yield (
             read_latest_logs(),
             chatbox_msg,
-            "",
-            gr.update(interactive=True),  # send_btn enabled
+            gr.update(value="", interactive=True),   # msg cleared and enabled
+            gr.update(interactive=True),   # send_btn enabled
             gr.update(interactive=False),  # stop_btn disabled
-            gr.update(interactive=True),  # clear_btn enabled
+            gr.update(interactive=True),   # clear_btn enabled
         )
         return
 
     try:
         add_workflow_step("📤 Sending query to Travel Router")
-        # Disable send and clear, enable stop
+        # Disable msg, send and clear, enable stop
         yield (
             read_latest_logs(),
             chatbox_msg,
-            "",
+            gr.update(value="", interactive=False),  # msg cleared and disabled
             gr.update(interactive=False),  # send_btn disabled
             gr.update(interactive=True),   # stop_btn enabled
             gr.update(interactive=False),  # clear_btn disabled
@@ -422,7 +424,7 @@ async def run_agent_workflow(query: str):
         yield (
             read_latest_logs(),
             chatbox_msg,
-            "",
+            gr.update(value="", interactive=False),  # msg cleared and disabled
             gr.update(interactive=False),  # send_btn disabled
             gr.update(interactive=True),   # stop_btn enabled
             gr.update(interactive=False),  # clear_btn disabled
@@ -443,7 +445,7 @@ async def run_agent_workflow(query: str):
                 yield (
                     read_latest_logs(),
                     chatbox_msg,
-                    "",
+                    gr.update(value="", interactive=False),  # msg disabled
                     gr.update(interactive=False),  # send_btn disabled
                     gr.update(interactive=True),   # stop_btn enabled
                     gr.update(interactive=False),  # clear_btn disabled
@@ -467,7 +469,7 @@ async def run_agent_workflow(query: str):
                 yield (
                     read_latest_logs(),
                     chatbox_msg,
-                    "",
+                    gr.update(value="", interactive=False),  # msg disabled
                     gr.update(interactive=False),  # send_btn disabled
                     gr.update(interactive=True),   # stop_btn enabled
                     gr.update(interactive=False),  # clear_btn disabled
@@ -479,11 +481,11 @@ async def run_agent_workflow(query: str):
         # Add response to chat history
         chatbox_msg.append({"role": "assistant", "content": response})
 
-        # Return final result - re-enable send and clear, disable stop
+        # Return final result - re-enable msg, send and clear, disable stop
         yield (
             read_latest_logs(),
             chatbox_msg,
-            "",
+            gr.update(value="", interactive=True),   # msg cleared and enabled
             gr.update(interactive=True),   # send_btn enabled
             gr.update(interactive=False),  # stop_btn disabled
             gr.update(interactive=True),   # clear_btn enabled
@@ -493,11 +495,11 @@ async def run_agent_workflow(query: str):
         error_msg = f"Error communicating with Travel Router: {e}"
         add_workflow_step(f"❌ Error: {str(e)[:50]}")
         chatbox_msg.append({"role": "assistant", "content": error_msg})
-        # Re-enable send and clear, disable stop
+        # Re-enable msg, send and clear, disable stop
         yield (
             read_latest_logs(),
             chatbox_msg,
-            "",
+            gr.update(value="", interactive=True),   # msg cleared and enabled
             gr.update(interactive=True),   # send_btn enabled
             gr.update(interactive=False),  # stop_btn disabled
             gr.update(interactive=True),   # clear_btn enabled
