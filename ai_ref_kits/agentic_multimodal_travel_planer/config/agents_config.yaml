@@ -11,7 +11,7 @@ travel_router:
   # LLM Configuration for Travel Router
   llm:
     model: "openai:OpenVINO/Qwen3-8B-int4-ov"
-    temperature: 0.3
+    temperature: 0.1
     api_key: "unused"
     api_base: "http://127.0.0.1:8001/v3"
   
@@ -56,7 +56,10 @@ travel_router:
         - "lambda state: any(re.search(r'\\b(in|at|to|destination)\\s+[a-z]+', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text'))"
         - "lambda state: any(re.search(r'\\b(check.?in|arrival|arriving).*?\\d{4}-\\d{2}-\\d{2}|\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4}', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text'))"
         - "lambda state: any(re.search(r'\\b(check.?out|departure|leaving).*?\\d{4}-\\d{2}-\\d{2}|\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4}', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text'))"
-        - "lambda state: any(re.search(r'\\b(\\d+|one|two|three|four|five|six|seven|eight|nine|ten)\\s+(guest|people|person|adult)', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text'))" 
+        - "lambda state: any(re.search(r'\\b(\\d+|one|two|three|four|five|six|seven|eight|nine|ten)\\s+(guest|people|person|adult)', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text'))"
+    - tool_name: "image_captioning"
+      custom_checks:
+        - "lambda state: any(re.search(r'<image_path>\\s*=\\s*<[^>]+>', msg.text) for msg in state.memory.messages if hasattr(msg, 'text') and hasattr(msg, 'role') and msg.role == 'user')" 
 
 
 # Flight Finder Agent Configuration
@@ -69,7 +72,7 @@ flight_finder:
 
   llm:
     model: "openai:OpenVINO/Qwen3-8B-int4-ov"
-    temperature: 0.3
+    temperature: 0.1
     api_key: "unused"
     api_base: "http://127.0.0.1:8001/v3"
   
@@ -119,8 +122,8 @@ hotel_finder:
 
   # LLM Configuration
   llm:
-    model: "openai:Qwen/Qwen3-8B"
-    temperature: 0.3
+    model: "openai:OpenVINO/Qwen3-8B-int4-ov"
+    temperature: 0.1
     api_key: "unused"
     api_base: "http://127.0.0.1:8001/v3"
   
@@ -168,7 +171,7 @@ image_captioning:
   # LLM Configuration for Video Search
   llm:
     model: "openai:OpenVINO/Qwen3-8B-int4-ov"
-    temperature: 0.3
+    temperature: 0.1
     api_key: "unused"
     api_base: "http://127.0.0.1:8001/v3"
  
