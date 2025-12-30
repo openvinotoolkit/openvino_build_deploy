@@ -113,7 +113,10 @@ class AgentFactory:
         """Create a regular A2A agent from configuration"""
         llm = ChatModel.from_name(
             config['llm_model'],
-            ChatModelParameters(temperature=config['llm_temperature'])
+            ChatModelParameters(
+                temperature=config['llm_temperature'],
+                stream=True 
+            )
         )
         llm.tool_choice_support = {"auto", "none"}
 
