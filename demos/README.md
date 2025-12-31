@@ -112,18 +112,6 @@ The demo detects, tracks and counts defined objects in front of the webcam. The 
 | Platforms                               | Client (CPU, GPU, NPU), Edge (CPU)                            |
 | Owner                                   | [@adrianboguszewski](https://github.com/adrianboguszewski)    |
 
-### 💃 Strike a pose
-
-The demo estimates poses of all people standing in front of the webcam.
-
-[![image](https://github.com/openvinotoolkit/openvino_build_deploy/assets/4547501/3bff0def-9050-450f-8699-389defec4136)](strike_a_pose_demo)
-
-| [Strike a Pose](strike_a_pose_demo) |                                                            |
-|-------------------------------------|------------------------------------------------------------|
-| Related AI concepts                 | pose estimation, YOLO11, YOLOv8                            |
-| Platforms                           | Client (CPU, GPU, NPU), Edge (CPU)                         |
-| Owner                               | [@adrianboguszewski](https://github.com/adrianboguszewski) |
-
 ### 🎅 🎃 🐰 Theme Demo
 
 This is a funny demo making people look like something/someone else based on the chosen theme. It brings much attention to the booth. The available themes are: Christmas, Halloween and Easter.

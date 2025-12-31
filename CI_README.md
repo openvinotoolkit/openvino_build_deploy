@@ -4,7 +4,6 @@
 
 - [Overview](#overview)
 - [CI Pipelines](#ci-pipelines)
-  - [Sanity Check (Notebooks)](#sanity-check-notebooks)
   - [Sanity Check (AI Ref Kits)](#sanity-check-ai-ref-kits)
   - [Sanity Check (Demos)](#sanity-check-demos)
   - [Stale Issues and Pull Requests](#stale-issues-and-pull-requests)
@@ -30,30 +29,7 @@ This document provides an overview of the CI pipelines used in the OpenVINO Buil
 
 CI Pipelines are defined in the `.github/workflows` directory and the workflows performs sanity checks on demo projects and automatically manages and closes inactive issues.
 
-### 1. Sanity Check (Notebooks)
-
-- **File:** `.github/workflows/sanity-check-notebooks.yml`
-- **Triggers:** 
-  - Scheduled: Daily at 2 AM
-  - Pull Requests to `master`
-  - Pushes to `master`
-  - Manual dispatch
-- **Jobs:**
-  - `find-subprojects`: Identifies subprojects to test.
-  - `notebook`: Runs Jupyter notebooks on specified OS and Python versions.
-
-#### Flow:
-1. **Trigger:** The workflow is triggered by a schedule, pull request, push, or manual dispatch.
-2. **find-subprojects Job:**
-   - Checks out the code.
-   - Determines which subprojects need to be tested based on changes.
-   - Categorizes the subprojects.
-3. **notebook Job:**
-   - Runs only if there are notebooks to test.
-   - Sets up the environment for each OS and Python version.
-   - Executes the Jupyter notebooks.
-
-### 2. Sanity Check (AI Ref Kits)
+### 1. Sanity Check (AI Ref Kits)
 
 - **File:** `.github/workflows/sanity-check-kits.yml`
 - **Triggers:** 
@@ -76,7 +52,7 @@ CI Pipelines are defined in the `.github/workflows` directory and the workflows 
    - Sets up the environment for each OS and Python version.
    - Executes the tests for each subproject type.
 
-### 3. Sanity Check (Demos)
+### 2. Sanity Check (Demos)
 
 - **File:** `.github/workflows/sanity-check-demos.yml`
 - **Triggers:** 
@@ -99,7 +75,7 @@ CI Pipelines are defined in the `.github/workflows` directory and the workflows 
    - Sets up the environment for each OS and Python version.
    - Executes the tests for each subproject type.
 
-### 4. Stale Issues and Pull Requests
+### 3. Stale Issues and Pull Requests
 
 - **File:** `.github/workflows/stale.yml`
 - **Triggers:** 
