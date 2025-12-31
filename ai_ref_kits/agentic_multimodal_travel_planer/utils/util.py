@@ -500,6 +500,6 @@ def extract_agent_handoffs_from_log(
                 entry["position"] = handle.tell()
     except Exception:
         pass
-
+ 
     return new_steps
 
