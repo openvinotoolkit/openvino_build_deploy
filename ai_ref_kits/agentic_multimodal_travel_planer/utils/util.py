@@ -359,8 +359,51 @@ def _path_within_directory(path: Path, directory: Path) -> bool:
         return common == str(directory)
 
 
+def _is_safe_upload_source(source_path: Path) -> bool:
+    """Validate that source path is safe for file upload.
+
+    Allows files from:
+    - System temp directories (where Gradio stores uploads)
+    - The application's own directories
+
+    Args:
+        source_path: Resolved absolute path to the source file.
+
+    Returns:
+        True if the source is from a trusted location.
+    """
+    import tempfile
+
+    source_str = str(source_path)
+
+    # Get trusted temp directories
+    trusted_dirs = [
+        tempfile.gettempdir(),
+        "/tmp",
+        "/var/tmp",
+    ]
+
+    # Also allow from the project directory itself
+    project_root = Path(__file__).parent.parent.resolve()
+    trusted_dirs.append(str(project_root))
+
+    # Check if source is within any trusted directory
+    for trusted_dir in trusted_dirs:
+        try:
+            if source_str.startswith(trusted_dir):
+                return True
+        except (TypeError, ValueError):
+            continue
+
+    return False
+
+
 def save_uploaded_image(image_input, destination_dir, prefix="caption_image"):
-    """Persist uploaded/cached image input into destination_dir."""
+    """Persist uploaded/cached image input into destination_dir.
+
+    Security: Validates source paths to prevent path traversal attacks.
+    Only allows uploads from trusted system directories.
+    """
     destination_dir = Path(destination_dir)
     destination_dir.mkdir(parents=True, exist_ok=True)
 
@@ -368,24 +411,31 @@ def save_uploaded_image(image_input, destination_dir, prefix="caption_image"):
     saved_image_path = destination_dir / f"{prefix}_{timestamp}.jpg"
 
     if isinstance(image_input, str):
+        # Sanitize: reject paths with suspicious patterns
+        if ".." in image_input or image_input.startswith("/etc"):
+            raise ValueError(f"Error: Unsafe file path pattern: {image_input}")
+
         source_path = Path(image_input)
+
+        # Resolve to absolute path to prevent traversal
         try:
-            source_resolved = source_path.resolve()
-            dest_resolved = destination_dir.resolve()
-        except Exception as exc:
-            raise ValueError(
-                f"Error: Could not resolve path: {image_input} ({exc})"
+            source_resolved = source_path.resolve(strict=True)
+        except (FileNotFoundError, OSError) as exc:
+            raise FileNotFoundError(
+                f"Error: Image file not found or inaccessible: {image_input}"
             ) from exc
 
-        if not _path_within_directory(source_resolved, dest_resolved):
-            raise ValueError(f"Error: Unsafe file path: {image_input}")
-
-        if not source_path.exists():
-            raise FileNotFoundError(
-                f"Error: Image file not found at {image_input}"
+        # Validate source is from a trusted location
+        if not _is_safe_upload_source(source_resolved):
+            raise ValueError(
+                f"Error: File upload from untrusted location: {image_input}"
             )
 
-        shutil.copy2(source_path, saved_image_path)
+        # Ensure it's a file, not a directory or symlink to unexpected location
+        if not source_resolved.is_file():
+            raise ValueError(f"Error: Path is not a file: {image_input}")
+
+        shutil.copy2(source_resolved, saved_image_path)
         return saved_image_path
 
     if hasattr(image_input, "shape"):
