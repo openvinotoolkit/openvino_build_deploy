@@ -352,6 +352,9 @@ def run_async_in_thread(
 def _get_allowed_upload_directories() -> list:
     """Get list of directories from which file uploads are allowed.
 
+    Security: Only allows trusted temp/upload directories, NOT the entire
+    project tree which could contain arbitrary repository files.
+
     Returns:
         List of normalized absolute paths for allowed directories.
     """
@@ -359,17 +362,27 @@ def _get_allowed_upload_directories() -> list:
 
     allowed_dirs = []
 
-    # System temp directories (where Gradio stores uploads)
-    for temp_dir in [tempfile.gettempdir(), "/tmp", "/var/tmp"]:
-        normalized = os.path.normpath(os.path.abspath(temp_dir))
-        if os.path.isdir(normalized):
-            allowed_dirs.append(normalized)
+    # ONLY system temp directories where Gradio stores uploads
+    # We explicitly do NOT allow the entire project directory tree
+    temp_candidates = [
+        tempfile.gettempdir(),
+        "/tmp",
+        "/var/tmp"
+    ]
 
-    # Project directory
-    project_root = os.path.normpath(
-        os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    )
-    allowed_dirs.append(project_root)
+    for temp_dir in temp_candidates:
+        try:
+            normalized = os.path.normpath(os.path.abspath(temp_dir))
+            if os.path.isdir(normalized):
+                allowed_dirs.append(normalized)
+        except (OSError, ValueError):
+            # Skip directories that cannot be resolved
+            continue
+
+    if not allowed_dirs:
+        raise RuntimeError(
+            "Error: No valid upload directories found on system"
+        )
 
     return allowed_dirs
 
@@ -378,10 +391,11 @@ def _validate_path_in_allowed_directory(filepath: str) -> str:
     """Validate and normalize a file path against allowed directories.
 
     Following security best practices:
+    - Validate input is a non-empty string
     - Normalize the path to resolve any '..' or symbolic links
-    - Check that normalized path starts with an allowed directory
-    - Check that normalized path is contained in an allowed directory
-    - Return the safe, normalized path
+    - Check path is contained within allowed directory using commonpath
+    - Ensure path is a regular file, not a directory
+    - Only allow files from trusted temp/upload locations
 
     Args:
         filepath: User-provided file path string.
@@ -393,32 +407,49 @@ def _validate_path_in_allowed_directory(filepath: str) -> str:
         ValueError: If path is outside allowed directories or invalid.
         FileNotFoundError: If file does not exist.
     """
-    if not filepath:
-        raise ValueError("Error: Empty file path is not allowed")
+    # Validate input early
+    if not filepath or not isinstance(filepath, str):
+        raise ValueError("Error: File path must be a non-empty string")
 
     # Normalize the path to resolve '..' and other tricks.
     # This follows the recommended pattern: normalize, then verify prefix.
     normalized_path = os.path.normpath(os.path.abspath(filepath))
 
-    # Check against allowed directories BEFORE touching the filesystem.
+    # Get precomputed normalized allowed directories
     allowed_dirs = _get_allowed_upload_directories()
 
+    # Check against allowed directories BEFORE touching the filesystem
+    path_is_allowed = False
     for allowed_dir in allowed_dirs:
-        # Ensure we compare normalized absolute paths using commonpath.
-        common = os.path.commonpath([normalized_path, allowed_dir])
-        if common == allowed_dir:
-            # Only after confirming the path is within an allowed directory
-            # do we check that the file actually exists.
-            if not os.path.isfile(normalized_path):
-                raise FileNotFoundError(
-                    f"Error: File not found: {filepath}"
-                )
-            return normalized_path
+        try:
+            # Safer ordering: commonpath([allowed_dir, candidate])
+            # asserts that candidate lies within allowed_dir
+            common = os.path.commonpath([allowed_dir, normalized_path])
+            if common == allowed_dir:
+                # Ensure path is not the directory itself
+                if normalized_path == allowed_dir:
+                    raise ValueError(
+                        f"Error: Path is a directory, not a file: {filepath}"
+                    )
+                path_is_allowed = True
+                break
+        except (ValueError, TypeError):
+            # commonpath can raise ValueError if paths are on different drives
+            continue
 
-    # Path is not in any allowed directory
-    raise ValueError(
-        f"Error: File path not in allowed directory: {filepath}"
-    )
+    if not path_is_allowed:
+        raise ValueError(
+            f"Error: File path not in allowed directory: {filepath}"
+        )
+
+    # Only after confirming the path is within an allowed directory
+    # do we check that the file actually exists and is a regular file
+    if not os.path.isfile(normalized_path):
+        raise FileNotFoundError(
+            f"Error: File not found or not a regular file: {filepath}"
+        )
+
+    return normalized_path
 
 
 def save_uploaded_image(image_input, destination_dir, prefix="caption_image"):
@@ -435,10 +466,10 @@ def save_uploaded_image(image_input, destination_dir, prefix="caption_image"):
 
     if isinstance(image_input, str):
         # SECURITY: Validate and normalize the path before use
-        # This follows the recommended pattern: normalize then verify prefix
+        # This follows the recommended pattern: normalize then verify
         safe_source_path = _validate_path_in_allowed_directory(image_input)
 
-        # File existence is already verified by _validate_path_in_allowed_directory
+        # File existence already verified by validation function
         # Copy using the validated safe path
         shutil.copy2(safe_source_path, saved_image_path)
         return saved_image_path
@@ -507,5 +538,6 @@ def extract_agent_handoffs_from_log(
         pass
 
     return new_steps
+
 
 
