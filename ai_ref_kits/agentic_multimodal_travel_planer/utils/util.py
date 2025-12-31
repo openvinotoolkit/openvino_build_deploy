@@ -380,6 +380,7 @@ def _validate_path_in_allowed_directory(filepath: str) -> str:
     Following security best practices:
     - Normalize the path to resolve any '..' or symbolic links
     - Check that normalized path starts with an allowed directory
+    - Check that normalized path is contained in an allowed directory
     - Return the safe, normalized path
 
     Args:
@@ -389,25 +390,29 @@ def _validate_path_in_allowed_directory(filepath: str) -> str:
         Normalized absolute path if valid.
 
     Raises:
-        ValueError: If path is outside allowed directories.
+        ValueError: If path is outside allowed directories or invalid.
         FileNotFoundError: If file does not exist.
     """
-    # Normalize the path to resolve '..' and other tricks
-    # This is the recommended pattern from security guidelines
+    if not filepath:
+        raise ValueError("Error: Empty file path is not allowed")
+
+    # Normalize the path to resolve '..' and other tricks.
+    # This follows the recommended pattern: normalize, then verify prefix.
     normalized_path = os.path.normpath(os.path.abspath(filepath))
 
-    # Verify the file exists
-    if not os.path.isfile(normalized_path):
-        raise FileNotFoundError(
-            f"Error: File not found: {filepath}"
-        )
-
-    # Check against allowed directories
+    # Check against allowed directories BEFORE touching the filesystem.
     allowed_dirs = _get_allowed_upload_directories()
 
     for allowed_dir in allowed_dirs:
-        # Ensure we compare normalized paths
-        if normalized_path.startswith(allowed_dir + os.sep):
+        # Ensure we compare normalized absolute paths using commonpath.
+        common = os.path.commonpath([normalized_path, allowed_dir])
+        if common == allowed_dir:
+            # Only after confirming the path is within an allowed directory
+            # do we check that the file actually exists.
+            if not os.path.isfile(normalized_path):
+                raise FileNotFoundError(
+                    f"Error: File not found: {filepath}"
+                )
             return normalized_path
 
     # Path is not in any allowed directory
