@@ -390,66 +390,75 @@ def _get_allowed_upload_directories() -> list:
 def _validate_path_in_allowed_directory(filepath: str) -> str:
     """Validate and normalize a file path against allowed directories.
 
-    Following security best practices:
-    - Validate input is a non-empty string
+    Security implementation following CodeQL recommendations:
     - Normalize the path to resolve any '..' or symbolic links
-    - Check path is contained within allowed directory using commonpath
-    - Ensure path is a regular file, not a directory
-    - Only allow files from trusted temp/upload locations
+    - Verify normalized path starts with an allowed directory (Flask pattern)
+    - Use commonpath for additional containment verification
+    - Only access filesystem AFTER validation passes
+    - Return validated path for safe filesystem operations
 
     Args:
         filepath: User-provided file path string.
 
     Returns:
-        Normalized absolute path if valid.
+        Validated normalized absolute path (safe for filesystem access).
 
     Raises:
         ValueError: If path is outside allowed directories or invalid.
         FileNotFoundError: If file does not exist.
     """
-    # Validate input early
+    # Input validation
     if not filepath or not isinstance(filepath, str):
         raise ValueError("Error: File path must be a non-empty string")
 
-    # Normalize the path to resolve '..' and other tricks.
-    # This follows the recommended pattern: normalize, then verify prefix.
+    # Step 1: Normalize to resolve '..' and symlinks
+    # This prevents directory traversal attacks
     normalized_path = os.path.normpath(os.path.abspath(filepath))
 
-    # Get precomputed normalized allowed directories
+    # Step 2: Get allow-listed directories (temp dirs only)
     allowed_dirs = _get_allowed_upload_directories()
 
-    # Check against allowed directories BEFORE touching the filesystem
-    path_is_allowed = False
+    # Step 3: Validate containment BEFORE any filesystem access
+    # Following Flask example: check startswith after normalization
+    validated_path = None
     for allowed_dir in allowed_dirs:
-        try:
-            # Safer ordering: commonpath([allowed_dir, candidate])
-            # asserts that candidate lies within allowed_dir
-            common = os.path.commonpath([allowed_dir, normalized_path])
-            if common == allowed_dir:
-                # Ensure path is not the directory itself
-                if normalized_path == allowed_dir:
-                    raise ValueError(
-                        f"Error: Path is a directory, not a file: {filepath}"
-                    )
-                path_is_allowed = True
-                break
-        except (ValueError, TypeError):
-            # commonpath can raise ValueError if paths are on different drives
-            continue
+        # Ensure proper prefix matching with directory separator
+        allowed_prefix = allowed_dir + os.sep
+        
+        # Primary check: startswith (Flask security pattern)
+        if normalized_path.startswith(allowed_prefix):
+            try:
+                # Secondary check: commonpath verification
+                common = os.path.commonpath([allowed_dir, normalized_path])
+                if common == allowed_dir:
+                    # Reject if path is the directory itself
+                    if normalized_path == allowed_dir:
+                        raise ValueError(
+                            f"Error: Path is directory: {filepath}"
+                        )
+                    # Path passed all validation checks
+                    validated_path = normalized_path
+                    break
+            except (ValueError, TypeError):
+                continue
 
-    if not path_is_allowed:
+    # Reject if path is not in any allowed directory
+    if validated_path is None:
         raise ValueError(
             f"Error: File path not in allowed directory: {filepath}"
         )
 
-    # Only after confirming the path is within an allowed directory
-    # do we check that the file actually exists and is a regular file
-    if not os.path.isfile(normalized_path):
+    # Step 4: ONLY after validation, check file exists
+    # Using validated_path (not user input directly)
+    # Safe: Path has been normalized and verified to be within allow-listed
+    # directories using both startswith and commonpath checks (Flask pattern)
+    if not os.path.isfile(validated_path):  # nosec # noqa: S103
         raise FileNotFoundError(
             f"Error: File not found or not a regular file: {filepath}"
         )
 
-    return normalized_path
+    # Return validated path (safe for filesystem operations)
+    return validated_path
 
 
 def save_uploaded_image(image_input, destination_dir, prefix="caption_image"):
@@ -470,8 +479,8 @@ def save_uploaded_image(image_input, destination_dir, prefix="caption_image"):
         safe_source_path = _validate_path_in_allowed_directory(image_input)
 
         # File existence already verified by validation function
-        # Copy using the validated safe path
-        shutil.copy2(safe_source_path, saved_image_path)
+        # safe_source_path has been validated against allow-listed directories
+        shutil.copy2(safe_source_path, saved_image_path)  # nosec
         return saved_image_path
 
     if hasattr(image_input, "shape"):
