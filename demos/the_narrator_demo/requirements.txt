@@ -1,7 +1,7 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 
-openvino==2025.3.0
-openvino-genai==2025.3.0
+openvino==2025.4.0
+openvino-genai==2025.4.0
 huggingface-hub==0.34.4
 numpy==2.2.6
 opencv-python==4.11.0.86

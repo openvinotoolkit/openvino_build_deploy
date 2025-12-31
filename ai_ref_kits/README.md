@@ -84,7 +84,7 @@ This solution is designed to help automate checkout for retail businesses more e
 | Example industries                                 | Retail Customer Service, Smart Home Automation |
 | Demo                                               | [Code video](https://www.youtube.com/watch?v=9jnY9PJjYVk) |
 
-The Custom AI Assistant, powered by the OpenVINO™ toolkit, integrates voice-activated interfaces into various applications. It employs advanced models for speech recognition, natural language processing, and speech synthesis. Additionally, the agent leverages the capabilities of Large Language Models (LLMs) and Generative AI, enabling it to understand complex queries, generate coherent responses, and offer a more dynamic and interactive communication experience. These advanced AI technologies enhance the agent's ability to engage in natural, human-like conversations, making it ideal for applications in customer service and smart home automation.
+The Custom AI Assistant, powered by the OpenVINO™ toolkit, integrates voice-activated interfaces into various applications. It employs advanced models for speech recognition, natural language processing, and speech synthesis. Additionally, the assistant leverages the capabilities of Large Language Models (LLMs) and Generative AI, enabling it to understand complex queries, generate coherent responses, and offer a more dynamic and interactive communication experience. These advanced AI technologies enhance the assistant's ability to engage in natural, human-like conversations, making it ideal for applications in customer service and smart home automation.
 
 ### 🔦 Explainable AI
 ![explainable-ai](https://github.com/openvinotoolkit/openvino_notebooks/assets/138901786/14958589-433b-4617-b3ea-e2307fe6cb53)
