@@ -100,7 +100,7 @@ flight_finder:
   # Middleware Configuration
   middleware:
     trajectory:
-      included_types: ["Tool"]
+      included_types: ["Tool", "ChatModel"]
       pretty: true
       tool_prefix: "🔍 "
 
