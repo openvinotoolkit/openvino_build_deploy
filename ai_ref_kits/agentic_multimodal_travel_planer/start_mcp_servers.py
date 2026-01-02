@@ -4,6 +4,7 @@ This module manages MCP (Model Context Protocol) servers, providing
 functionality to start, stop, and download server scripts from GitHub.
 """
 
+import os
 import subprocess
 import sys
 import time
@@ -13,6 +14,9 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 
 import yaml
+from dotenv import find_dotenv, load_dotenv, set_key
+
+from utils.util import is_port_in_use, kill_processes_on_port
 
 CONFIG_PATH = Path("config/mcp_config.yaml")
 LOG_DIR = Path("logs")
@@ -30,7 +34,61 @@ GITHUB_MCP_URLS = {
     ),
 }
 
-from utils.util import is_port_in_use, kill_processes_on_port
+
+def check_and_set_api_key() -> bool:
+    """Check if SERP_API_KEY is set, prompt user if missing.
+    
+    Returns:
+        True if API key is available, False otherwise.
+    """
+    # Load existing .env file
+    load_dotenv()
+    
+    api_key = os.getenv("SERP_API_KEY")
+    
+    if api_key:
+        print("✓ SERP_API_KEY found in environment")
+        return True
+    
+    # Check if we need API key for any servers that will be started
+    # (This check happens later, but we can check here too)
+    print("\n⚠️  SERP_API_KEY not found in environment")
+    print("   The SERP API key is required for hotel and flight search functionality.")
+    print("   You can get a free API key from: https://serpapi.com/users/sign_up")
+    print()
+    
+    # Prompt user for API key
+    try:
+        user_input = input("Enter your SERP_API_KEY (or press Enter to skip): ").strip()
+        
+        if not user_input:
+            print("⚠️  Skipping API key setup. Hotel and flight search will not work.")
+            print("   You can set SERP_API_KEY later by:")
+            print("   1. Adding it to a .env file: SERP_API_KEY=your_key_here")
+            print("   2. Exporting it: export SERP_API_KEY=your_key_here")
+            return False
+        
+        # Save to .env file
+        env_path = find_dotenv()
+        if not env_path:
+            # Create .env file in current directory
+            env_path = Path.cwd() / ".env"
+            env_path.touch()
+        
+        set_key(env_path, "SERP_API_KEY", user_input)
+        os.environ["SERP_API_KEY"] = user_input
+        
+        print(f"✓ API key saved to {env_path}")
+        return True
+        
+    except (KeyboardInterrupt, EOFError):
+        print("\n⚠️  API key setup cancelled")
+        return False
+    except Exception as e:
+        print(f"✗ Error saving API key: {e}")
+        print("   You can manually set SERP_API_KEY in your environment")
+        return False
+
 
 def download_script_if_missing(name: str, script_path: Path) -> bool:
     """Download script from GitHub if it doesn't exist locally.
@@ -374,6 +432,19 @@ def main():
     if args.stop:
         stop_mcp_servers(targets, kill_all=args.kill)
         return
+
+    # Check for API key before starting servers (only if starting servers that need it)
+    # Check if any target servers require SERP_API_KEY
+    servers_needing_key = ["hotel_finder", "flight_finder", "ai_builder_mcp_hotel_finder", "ai_builder_mcp_flights"]
+    needs_api_key = any(
+        any(needle in name.lower() or needle in str(section.get("script", "")).lower() 
+            for needle in servers_needing_key)
+        for name, section in targets
+    )
+    
+    if needs_api_key:
+        check_and_set_api_key()
+        print()  # Add blank line for readability
 
     started: List[str] = []
     failed: List[str] = []
