@@ -216,12 +216,7 @@ Once you have your key, you can launch the MCP servers.
 
 ### Launch MCP servers
 
-Set your key
-```
-export SERP_API_KEY=***YOUR_KEY***
-```
-
-Run
+Run and note you will be required to add the KEY
 ```
 python start_mcp_servers.py
 ```
