@@ -17,7 +17,8 @@ from beeai_framework.adapters.a2a.agents.agent import A2AAgent
 from beeai_framework.memory import UnconstrainedMemory
 from dotenv import load_dotenv
 from utils.util import (
-    extract_agent_handoffs_from_log,
+    extract_agent_activities,
+    extract_response_text,
     run_async_in_thread,
     save_uploaded_image,
 )
@@ -69,105 +70,163 @@ class TravelRouterClient:
             print(f"Traceback: {traceback.format_exc()}")
             return False
 
-    async def chat(self, query: str) -> str:
-        """Process a query through the travel router.
+    async def chat_stream(self, query: str, abort_event=None):
+        """Get response from the A2A travel router agent with streaming status updates.
 
         Args:
             query: User query text to process.
+            abort_event: asyncio.Event to signal cancellation. When set, aborts the entire agent chain.
 
         Returns:
-            Response text from the agent.
+            tuple: (response_text, is_final) where response_text is the final response
+                   and is_final is always True for completed responses.
         """
         if not self.initialized:
             await self.initialize()
 
         if not self.initialized:
-            return (
-                "Error: Travel Router not available. Please check the agent "
-                "configuration."
-            )
+            return ("Error: Travel Router not available.", True)
 
         try:
-            # Call the travel router client
-            response = await self.client.run(query)
+            # Check if already cancelled
+            if abort_event and abort_event.is_set():
+                return ("Query cancelled.", True)
 
-            # Debug: print response structure
-            print(f"Response type: {type(response)}")
-            print(
-                f"Response attrs: "
-                f"{[a for a in dir(response) if not a.startswith('_')]}"
+            # Enable real A2A streaming with proper event observation
+            streaming_events = []
+            response = None
+
+            async def capture_events(data, event):
+                """Capture A2A streaming events."""
+                global workflow_steps, suppress_router_status
+                streaming_events.append((data, event))
+                print(f"A2A Event: {event.name} - {type(data)}")
+                
+                # Print debug info to UI logs
+                from beeai_framework.adapters.a2a.agents.events import (
+                    A2AAgentUpdateEvent
+                )
+                if isinstance(data, A2AAgentUpdateEvent):
+                    value = data.value
+                    
+                    # Extract task and status info
+                    if isinstance(value, tuple) and len(value) >= 2:
+                        task, status_update = value
+                        
+                        # Check for handoffs in task history
+                        if hasattr(task, 'history') and task.history:
+                            for msg in task.history:
+                                if hasattr(msg, 'parts') and msg.parts:
+                                    for part in msg.parts:
+                                        if hasattr(part, 'root'):
+                                            # Check for handoff tool calls
+                                            part_str = str(part.root)
+                                            if 'HandoffTool' in part_str or 'handoff' in part_str.lower():
+                                                print(f"Handoff detected in history: {part_str[:200]}")
+                        
+                        # Get agent name from metadata or default to Travel Router
+                        agent_name = "Travel Router"
+                        if hasattr(task, 'metadata') and task.metadata:
+                            if isinstance(task.metadata, dict):
+                                agent_name = task.metadata.get(
+                                    'agent_name', 
+                                    task.metadata.get('name', 'Travel Router')
+                                )
+                        
+                        # Extract state
+                        if hasattr(status_update, 'status') and hasattr(
+                            status_update.status, 'state'
+                        ):
+                            state = status_update.status.state.value
+                            is_final = getattr(status_update, 'final', False)
+                            
+                            # Skip Travel Router working status if suppressed (during handoff)
+                            if (suppress_router_status and 
+                                agent_name == "Travel Router" and 
+                                state in ['working', 'submitted']):
+                                return
+                            
+                            # Use animated icon for working/submitted states
+                            if state in ['working', 'submitted'] and not is_final:
+                                icon = "🔄"
+                                status_msg = f"{icon} {agent_name}: {state}"
+                            elif is_final or state == 'completed':
+                                icon = "✅"
+                                status_msg = f"{icon} {agent_name}: {state}"
+                                # Clear suppression when Travel Router completes or resumes
+                                if agent_name == "Travel Router":
+                                    suppress_router_status = False
+                            else:
+                                status_msg = f"🤖 {agent_name}: {state}"
+                            
+                            # Only remove temporary working/submitted status, keep all other events
+                            workflow_steps[:] = [
+                                step for step in workflow_steps 
+                                if not (f"🔄 {agent_name}:" in step and 
+                                       (": working" in step or ": submitted" in step))
+                            ]
+                            add_workflow_step(status_msg)
+
+            # Listen for streaming tokens using .on() pattern
+            response = await self.client.run(query).on(
+                "update", 
+                capture_events
             )
 
-            return self._extract_response_text(response)
+            # Process captured streaming events
+            final_text = None
+            for event_data, event_meta in streaming_events:
+                from beeai_framework.adapters.a2a.agents.events import A2AAgentUpdateEvent
+
+                if isinstance(event_data, A2AAgentUpdateEvent):
+                    value = event_data.value
+                    if isinstance(value, tuple) and len(value) >= 2:
+                        task, status_update = value
+
+                        # Update workflow with real-time status
+                        if hasattr(status_update, 'status') and hasattr(status_update.status, 'state'):
+                            state = status_update.status.state.value
+                            # Update global workflow state for UI, preserving handoffs
+                            from start_ui import workflow_steps
+                            # Keep handoffs, remove old status
+                            workflow_steps[:] = [step for step in workflow_steps if "Travel Router task" not in step]
+                            workflow_steps.append(f"🔄 Travel Router task {state}...")
+
+                        # Extract final message when complete
+                        if (hasattr(status_update, 'final') and status_update.final and
+                            hasattr(task, 'history') and task.history):
+                            for message in task.history:
+                                if (hasattr(message, 'role') and
+                                    str(message.role) == "Role.agent" and
+                                    hasattr(message, 'parts') and message.parts):
+                                    for part in message.parts:
+                                        if (hasattr(part, 'root') and
+                                            hasattr(part.root, 'text') and
+                                            part.root.text):
+                                            final_text = part.root.text
+                                            print(f"A2A Final: {final_text[:50]}...")
+                                            break
+                            break
+
+            # Return final result
+            if final_text:
+                return (final_text, True)
+            elif response:
+                text = extract_response_text(response)
+                return (text, True)
+            else:
+                return ("No response received", True)
 
         except Exception as e:
-            print(f"Error with router agent: {e}")
-            print(f"Error traceback: {traceback.format_exc()}")
-            return f"Error processing request: {e}"
-
-    def _extract_response_text(self, response) -> str:
-        """Return the first text-like value available on the response."""
-
-        def _as_text(value):
-            if value is None:
-                return None
-            if isinstance(value, str):
-                return value
-            if isinstance(value, (list, tuple)):
-                for item in reversed(value):
-                    text = _as_text(item)
-                    if text:
-                        return text
-                return None
-            for attr in ("text", "content", "final_answer", "output"):
-                if hasattr(value, attr):
-                    text = _as_text(getattr(value, attr))
-                    if text:
-                        return text
-            return None
-
-        sources = (
-            (
-                "result.final_answer",
-                getattr(
-                    getattr(response, "result", None),
-                    "final_answer",
-                    None,
-                ),
-            ),
-            (
-                "state.final_answer",
-                getattr(
-                    getattr(response, "state", None),
-                    "final_answer",
-                    None,
-                ),
-            ),
-            ("final_answer", getattr(response, "final_answer", None)),
-            ("output", getattr(response, "output", None)),
-            ("last_message", getattr(response, "last_message", None)),
-            ("text", getattr(response, "text", None)),
-            ("messages[-1]", getattr(response, "messages", None)),
-        )
-
-        for label, candidate in sources:
-            text = _as_text(candidate)
-            if text:
-                print(f"Found in {label}: {text[:100]}...")
-                return text
-
-        fallback = str(response)
-        print(f"Fallback to str: {fallback[:100]}...")
-        return fallback if fallback else "No response received"
+            error_msg = f"Error communicating with Travel Router: {e}"
+            print(f"A2A Streaming Error: {error_msg}")
+            print(f"Traceback: {traceback.format_exc()}")
+            return (error_msg, True)
 
 
 # Example prompts for the UI
 EXAMPLES = [
     "Which city is shown in this image?",
-    "Describe what's in this image",
-    "How many people are in this photo?",
-    "What is this building?",
-    "Describe the scene in detail",
     "Give me flights from New York to Paris for March 1st to March 10th",
     "Give me hotels in Paris for March 1st to March 10th for 2 guests",
     (
@@ -182,6 +241,10 @@ stop_requested = False
 current_image_path = None
 log_cache = {}  # Cache for log file positions
 workflow_steps = []  # Track workflow steps
+thinking_indicators = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]  # Animation indicators
+indicator_index = 0  # Global animation state
+suppress_router_status = False  # Flag to suppress router working status after handoff
+abort_event = None  # Abort controller for cancelling agent
 
 
 def initialize_travel_router_client():
@@ -190,14 +253,7 @@ def initialize_travel_router_client():
     Returns:
         Initialized TravelRouterClient instance or None on failure.
     """
-    print("🔄 Initializing Travel Router Client...")
     try:
-        travel_router_port = os.getenv("TRAVEL_ROUTER_PORT", "9996")
-        print(
-            f"🔗 Connecting to Travel Router at "
-            f"http://127.0.0.1:{travel_router_port}"
-        )
-
         client = TravelRouterClient()
 
         # Initialize the client asynchronously
@@ -251,14 +307,19 @@ async def image_captioning(image_input):
 
 
 def stop_query():
-    """Stop the current query execution.
+    """Stop the current query execution by setting abort signal.
+    
+    This will propagate cancellation through the entire agent chain
+    (A2A client → router agent → travel agents).
 
     Returns:
         Tuple of (status message, chatbox messages, send_btn state,
                   stop_btn state, clear_btn state).
     """
-    global stop_requested
+    global stop_requested, abort_event
     stop_requested = True
+    if abort_event is not None:
+        abort_event.set()  # This aborts all agents in the chain
     return (
         "🛑 Stopping query...",
         chatbox_msg,
@@ -278,32 +339,55 @@ def add_workflow_step(step_text):
     import datetime
     timestamp = datetime.datetime.now().strftime("%H:%M:%S")
     workflow_steps.append(f"{timestamp} | {step_text}")
-    # Keep only last 20 steps
-    if len(workflow_steps) > 20:
+    # Keep only last 50 steps to show more workflow history
+    if len(workflow_steps) > 50:
         workflow_steps.pop(0)
 
 
-def extract_agent_handoffs():
-    """Extract agent handoff events from travel_router log."""
-    logs_dir = Path(__file__).parent / "logs"
-    travel_router_log = logs_dir / "travel_router.log"
-    return extract_agent_handoffs_from_log(travel_router_log, log_cache)
-
-
 def read_latest_logs():
-    """Display workflow steps.
+    """Display workflow steps with animation for handoff messages.
 
     Returns:
         Formatted markdown string with workflow steps.
     """
-    global workflow_steps
+    global workflow_steps, indicator_index
 
     if not workflow_steps:
         return "### 🤖 Agent Workflow\n\n_Waiting for activity..._"
 
-    # Format output
+    # Format output with animation for handoff messages
     log_content = "### 🤖 Agent Workflow\n\n"
-    log_content += '\n\n'.join(workflow_steps)
+
+    # Get current indicator and increment for next call
+    indicator = thinking_indicators[indicator_index % len(thinking_indicators)]
+    indicator_index += 1
+
+    animated_steps = []
+    for step in workflow_steps:
+        # Check if the step should be animated (contains 🔄 but not arrows or completed)
+        should_animate = "🔄" in step and "✓" not in step and "→" not in step
+        
+        if should_animate:
+            if "|" in step:
+                # Handle timestamp format: "HH:MM:SS | 🔄 Message..."
+                parts = step.split("|", 1)
+                timestamp = parts[0].strip()
+                message = parts[1].strip()
+                
+                # Check if message part starts with the icon to replace
+                if message.startswith("🔄"):
+                    base_message = message[1:]  # Remove the 🔄
+                    animated_steps.append(f"{timestamp} | {indicator}{base_message}")
+                else:
+                    # Icon might be elsewhere or not at start of message part
+                    animated_steps.append(step.replace("🔄", indicator))
+            else:
+                # No timestamp, direct replacement
+                animated_steps.append(step.replace("🔄", indicator))
+        else:
+            animated_steps.append(step)
+
+    log_content += '\n\n'.join(animated_steps)
 
     return log_content
 
@@ -364,13 +448,23 @@ async def run_agent_workflow(query: str):
                   send_btn state, stop_btn state, clear_btn state).
     """
     global chatbox_msg, travel_router_client, stop_requested
-    global current_image_path, workflow_steps, log_cache
+    global current_image_path, workflow_steps, log_cache, suppress_router_status
+    global abort_event
+
+    # Create abort controller for this query (can cancel entire agent chain)
+    abort_event = asyncio.Event()
+    stop_requested = False  # Reset stop flag
 
     # Clear workflow steps for new query
+    global workflow_steps, indicator_index
     workflow_steps = []
+    indicator_index = 0  # Reset animation state
+    suppress_router_status = False  # Reset suppression flag
 
-    # Mark current log position to only capture new handoffs
+    # Mark current log position for all logs to only capture new events
     logs_dir = Path(__file__).parent / "logs"
+    
+    # Reset cache for travel_router log (handoffs)
     travel_router_log = logs_dir / "travel_router.log"
     if travel_router_log.exists():
         cache_key = str(travel_router_log)
@@ -382,6 +476,20 @@ async def run_agent_workflow(query: str):
             }
         except Exception:
             pass
+    
+    # Reset cache for all agent logs (MCP tool calls)
+    for log_file in logs_dir.glob("*.log"):
+        if log_file.name == "travel_router.log":
+            continue
+        cache_key = str(log_file)
+        try:
+            current_size = log_file.stat().st_size
+            log_cache[cache_key] = {
+                'position': current_size,
+                'seen_tools': set()
+            }
+        except Exception:
+            pass
 
     # Create enhanced query that includes image path if available
     enhanced_query = query
@@ -390,7 +498,8 @@ async def run_agent_workflow(query: str):
         enhanced_query = f"{query} : <image_path> = <{current_image_path}> "
         add_workflow_step("📸 Image included in query")
 
-    chatbox_msg.append({"role": "user", "content": enhanced_query})
+    # Store original query in chatbox (not the enhanced version with metadata)
+    chatbox_msg.append({"role": "user", "content": query})
     stop_requested = False
 
     if travel_router_client is None or not travel_router_client.initialized:
@@ -406,7 +515,6 @@ async def run_agent_workflow(query: str):
         return
 
     try:
-        add_workflow_step("📤 Sending query to Travel Router")
         # Disable msg, send and clear, enable stop
         yield (
             read_latest_logs(),
@@ -420,7 +528,7 @@ async def run_agent_workflow(query: str):
         msg_text = f"Sending query to Travel Router: {enhanced_query}"
         print(msg_text, flush=True)
 
-        add_workflow_step("🤔 Travel Router is processing...")
+        # Initialize UI state
         yield (
             read_latest_logs(),
             chatbox_msg,
@@ -430,42 +538,118 @@ async def run_agent_workflow(query: str):
             gr.update(interactive=False),  # clear_btn disabled
         )
 
-        # Create task for chat and monitor for handoffs
-        chat_task = asyncio.create_task(
-            travel_router_client.chat(enhanced_query)
+        # Show thinking indicators while waiting for response
+        
+        # Start streaming in background
+        streaming_task = asyncio.create_task(
+            travel_router_client.chat_stream(enhanced_query, abort_event)
         )
+        
+        # Show animated thinking indicator while processing
+        while not streaming_task.done():
+            # Check for cancellation
+            if abort_event and abort_event.is_set():
+                streaming_task.cancel()
+                add_workflow_step("🛑 Query cancelled by user")
+                break
+            # Check for new agent activities (handoffs and MCP tool calls)
+            new_activities = extract_agent_activities(logs_dir, log_cache)
+            if new_activities:
+                for activity in new_activities:
+                    # Handle special markers
+                    if activity == "CLEAR_ROUTER_STATUS":
+                        # Remove Travel Router working/submitted status
+                        workflow_steps[:] = [
+                            step for step in workflow_steps 
+                            if not ("Travel Router:" in step and 
+                                   (": working" in step or ": submitted" in step))
+                        ]
+                    elif activity == "SUPPRESS_ROUTER_WORKING":
+                        # Set flag to suppress future router working status
+                        suppress_router_status = True
+                    elif activity == "CLEAR_SUPPRESS_ROUTER":
+                        # Clear suppression when router resumes
+                        suppress_router_status = False
+                    else:
+                        add_workflow_step(activity)
+            
+            # Yield UI update with animation
+            yield (
+                read_latest_logs(),
+                chatbox_msg,
+                gr.update(value="", interactive=False),
+                gr.update(interactive=False),
+                gr.update(interactive=True),
+                gr.update(interactive=False),
+            )
+            
+            # Wait a bit before next update
+            await asyncio.sleep(0.15)
+        
+        # Get the result
+        try:
+            response_text, is_final = await streaming_task
+        except asyncio.CancelledError:
+            response_text = "Query cancelled by user."
+            is_final = True
+        
+        # Check if cancelled
+        if abort_event and abort_event.is_set():
+            response_text = "Query cancelled by user."
+            add_workflow_step("🛑 Query cancelled")
+            chatbox_msg.append({"role": "assistant", "content": response_text})
+            yield (
+                read_latest_logs(),
+                chatbox_msg,
+                gr.update(value="", interactive=True),
+                gr.update(interactive=True),
+                gr.update(interactive=False),
+                gr.update(interactive=True),
+            )
+            return
 
-        # Poll for handoffs while waiting for response
-        while not chat_task.done():
-            await asyncio.sleep(0.2)  # Poll more frequently
-            new_handoffs = extract_agent_handoffs()
-            if new_handoffs:
-                for handoff in new_handoffs:
-                    add_workflow_step(handoff)
-                yield (
-                    read_latest_logs(),
-                    chatbox_msg,
-                    gr.update(value="", interactive=False),  # msg disabled
-                    gr.update(interactive=False),  # send_btn disabled
-                    gr.update(interactive=True),   # stop_btn enabled
-                    gr.update(interactive=False),  # clear_btn disabled
-                )
+        # Show complete response when agent finishes
+        if response_text:
+            # Remove trailing colon if present (UI formatting issue)
+            if isinstance(response_text, str) and response_text.rstrip().endswith(':'):
+                response_text = response_text.rstrip()[:-1].rstrip()
+            
+            # Add complete response
+            chatbox_msg.append({"role": "assistant", "content": response_text})
 
-        # Get the final response
-        response = await chat_task
-        # Remove trailing colon if present (UI formatting issue)
-        if isinstance(response, str) and response.rstrip().endswith(':'):
-            response = response.rstrip()[:-1].rstrip()
+            yield (
+                read_latest_logs(),
+                chatbox_msg,
+                gr.update(value="", interactive=False),
+                gr.update(interactive=False),
+                gr.update(interactive=True),
+                gr.update(interactive=False),
+            )
 
         # Give it a moment for logs to flush
         await asyncio.sleep(0.3)
 
-        # Check for any final handoffs multiple times
-        for _ in range(3):
-            final_handoffs = extract_agent_handoffs()
-            if final_handoffs:
-                for handoff in final_handoffs:
-                    add_workflow_step(handoff)
+        # Check for any final activities multiple times (catch delayed log writes)
+        for i in range(10):
+            final_activities = extract_agent_activities(logs_dir, log_cache)
+            if final_activities:
+                for activity in final_activities:
+                    # Handle special markers
+                    if activity == "CLEAR_ROUTER_STATUS":
+                        # Remove Travel Router working/submitted status
+                        workflow_steps[:] = [
+                            step for step in workflow_steps 
+                            if not ("Travel Router:" in step and 
+                                   (": working" in step or ": submitted" in step))
+                        ]
+                    elif activity == "SUPPRESS_ROUTER_WORKING":
+                        # Set flag to suppress future router working status
+                        suppress_router_status = True
+                    elif activity == "CLEAR_SUPPRESS_ROUTER":
+                        # Clear suppression when router resumes
+                        suppress_router_status = False
+                    else:
+                        add_workflow_step(activity)
                 yield (
                     read_latest_logs(),
                     chatbox_msg,
@@ -474,12 +658,10 @@ async def run_agent_workflow(query: str):
                     gr.update(interactive=True),   # stop_btn enabled
                     gr.update(interactive=False),  # clear_btn disabled
                 )
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.2)  # Longer delay to catch activities
 
-        add_workflow_step("✅ Received response from Travel Router")
 
-        # Add response to chat history
-        chatbox_msg.append({"role": "assistant", "content": response})
+        # Response already added to chat history above
 
         # Return final result - re-enable msg, send and clear, disable stop
         yield (
@@ -565,7 +747,7 @@ def create_gradio_interface():
                 log_window = gr.Markdown(
                     value=read_latest_logs(),
                     label="Agent Workflow",
-                    height=300
+                    height=600
                 )
 
         # Register listeners
