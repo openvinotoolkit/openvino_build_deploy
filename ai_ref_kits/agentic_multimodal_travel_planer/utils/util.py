@@ -256,7 +256,7 @@ def load_config(agent_name: str):
                 tools.append(tool)
     # Handle tools as dict (legacy MCP format) - skip for now, will be handled externally
     elif isinstance(tools_config, dict):
-        print(f"Detected MCP tools configuration - tools will be provided externally")
+        print("Detected MCP tools configuration - tools will be provided externally")
         pass
     
     # If this is a supervisor agent, create HandoffTools for supervised agents
@@ -502,10 +502,17 @@ def save_uploaded_image(image_input, destination_dir, prefix="caption_image"):
 def extract_agent_handoffs_from_log(
     log_path, cache: Dict[str, Dict[str, Iterable]]
 ):
-    """Parse agent handoff events from a log file using a cache."""
+    """Parse agent handoff events from a log file using a cache.
+    
+    Automatically extracts the source agent name from the log filename,
+    making it work with any agent (not just Travel Router).
+    """
     log_path = Path(log_path)
     if not log_path.exists():
         return []
+
+    # Extract source agent name from log filename (e.g., "travel_router.log" -> "Travel Router")
+    source_agent_name = log_path.stem.replace("_", " ").title()
 
     cache_key = str(log_path)
     cache.setdefault(cache_key, {"position": 0, "seen_handoffs": set()})
@@ -527,19 +534,44 @@ def extract_agent_handoffs_from_log(
                     line = line.strip()
                     if "--> 🔍 HandoffTool[" in line:
                         parts = line.split("HandoffTool[")[1].split("]")
-                        agent_name = parts[0]
-                        handoff_id = f"{agent_name}_start"
+                        target_agent_name = parts[0].replace("_", " ").title()
+                        handoff_id = f"{target_agent_name}_start"
                         if handoff_id not in seen_handoffs:
+                            # Mark to clear source agent working status and suppress future ones
                             new_steps.append(
-                                f"🔄 Delegating to {agent_name}..."
+                                "CLEAR_ROUTER_STATUS"
+                            )
+                            new_steps.append(
+                                "SUPPRESS_ROUTER_WORKING"
+                            )
+                            new_steps.append(
+                                f"🤝 Handoff → {target_agent_name} Agent"
+                            )
+                            new_steps.append(
+                                f"&nbsp;&nbsp;&nbsp;&nbsp;⏸️  {source_agent_name}: waiting"
+                            )
+                            new_steps.append(
+                                f"&nbsp;&nbsp;&nbsp;&nbsp;⚙️  {target_agent_name} Agent: processing..."
                             )
                             seen_handoffs.add(handoff_id)
                     elif "<-- 🔍 HandoffTool[" in line:
                         parts = line.split("HandoffTool[")[1].split("]")
-                        agent_name = parts[0]
-                        handoff_id = f"{agent_name}_complete"
+                        target_agent_name = parts[0].replace("_", " ").title()
+                        handoff_id = f"{target_agent_name}_complete"
                         if handoff_id not in seen_handoffs:
-                            new_steps.append(f"✅ {agent_name} completed")
+                            new_steps.append(
+                                f"&nbsp;&nbsp;&nbsp;&nbsp;← ✅ Handoff from {target_agent_name} Agent: completed"
+                            )
+                            new_steps.append(
+                                f"▶️  {source_agent_name}: resumed"
+                            )
+                            new_steps.append(
+                                f"⚙️  {source_agent_name}: processing..."
+                            )
+                            # Clear suppression when source agent resumes so "completed" can show
+                            new_steps.append(
+                                "CLEAR_SUPPRESS_ROUTER"
+                            )
                             seen_handoffs.add(handoff_id)
 
                 entry["position"] = handle.tell()
@@ -549,4 +581,95 @@ def extract_agent_handoffs_from_log(
     return new_steps
 
 
+def extract_mcp_tool_calls_from_logs(
+    logs_dir, cache: Dict[str, Dict[str, Iterable]]
+):
+    """Extract MCP tool calls from all agent logs.
+    
+    This function automatically discovers all agent log files and extracts
+    MCP tool calls. New agents are automatically supported when their log
+    files are added to the logs directory.
+    
+    Args:
+        logs_dir: Path to the logs directory
+        cache: Cache dictionary to track file positions and seen events
+        
+    Returns:
+        List of formatted workflow step strings
+    """
+    logs_dir = Path(logs_dir)
+    if not logs_dir.exists():
+        return []
+    
+    new_steps = []
+    
+    # Discover all agent log files (excluding travel_router.log)
+    for log_file in logs_dir.glob("*.log"):
+        if log_file.name == "travel_router.log":
+            continue
+            
+        agent_name = log_file.stem.replace("_", " ").title()
+        cache_key = str(log_file)
+        cache.setdefault(cache_key, {"position": 0, "seen_tools": set()})
+        
+        entry = cache[cache_key]
+        
+        try:
+            file_size = log_file.stat().st_size
+            last_position = entry["position"]
+            seen_tools = entry["seen_tools"]
+            
+            if file_size > last_position:
+                with open(
+                    log_file, "r", encoding="utf-8", errors="ignore"
+                ) as handle:
+                    handle.seek(last_position)
+                    for line in handle:
+                        line = line.strip()
+                        
+                        # Extract MCP tool start events
+                        if "--> 🔍 MCPTool[" in line:
+                            parts = line.split("MCPTool[")[1].split("]")
+                            tool_name = parts[0]
+                            tool_id = f"{agent_name}_{tool_name}_start"
+                            
+                            if tool_id not in seen_tools:
+                                # Format tool name nicely
+                                display_tool = tool_name.replace("_", " ").title()
+                                # Simplify tool names
+                                display_tool = display_tool.replace(" Tool", "")
+                                new_steps.append(
+                                    f"&nbsp;&nbsp;&nbsp;&nbsp;📡 {agent_name} calling MCP: {display_tool}"
+                                )
+                                seen_tools.add(tool_id)
+                        
+                        # Extract MCP tool completion events
+                        elif "<-- 🔍 MCPTool[" in line:
+                            parts = line.split("MCPTool[")[1].split("]")
+                            tool_name = parts[0]
+                            status = parts[1].strip("[").strip("]")
+                            tool_id = f"{agent_name}_{tool_name}_complete"
+                            
+                            if tool_id not in seen_tools:
+                                display_tool = tool_name.replace("_", " ").title()
+                                display_tool = display_tool.replace(" Tool", "")
+                                
+                                if "success" in status:
+                                    new_steps.append(
+                                        f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;✓ MCP response received"
+                                    )
+                                    new_steps.append(
+                                        f"&nbsp;&nbsp;&nbsp;&nbsp;⚙️  {agent_name}: processing response..."
+                                    )
+                                else:
+                                    new_steps.append(
+                                        f"&nbsp;&nbsp;&nbsp;&nbsp;❌ MCP: {display_tool} failed"
+                                    )
+                                seen_tools.add(tool_id)
+                    
+                    entry["position"] = handle.tell()
+        except Exception:
+            pass
+    
+    return new_steps
 
