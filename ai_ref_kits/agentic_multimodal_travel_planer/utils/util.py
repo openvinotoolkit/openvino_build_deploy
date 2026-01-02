@@ -467,6 +467,10 @@ def save_uploaded_image(image_input, destination_dir, prefix="caption_image"):
     Security: Validates source paths using path normalization to prevent
     path traversal attacks. Only allows uploads from trusted directories.
     """
+    # Handle None input (e.g., when image is deleted in UI)
+    if image_input is None:
+        return None
+    
     destination_dir = Path(destination_dir)
     destination_dir.mkdir(parents=True, exist_ok=True)
 
