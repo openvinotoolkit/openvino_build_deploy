@@ -33,6 +33,12 @@ from beeai_framework.adapters.a2a.serve.server import (
     A2AServer,
     A2AServerConfig,
 )
+
+try:
+    import a2a.types as a2a_types
+    A2A_AVAILABLE = True
+except ImportError:
+    A2A_AVAILABLE = False
 from beeai_framework.backend import ChatModel, ChatModelParameters
 from beeai_framework.memory import UnconstrainedMemory
 from beeai_framework.middleware.trajectory import GlobalTrajectoryMiddleware
@@ -310,15 +316,28 @@ class ServerManager:
     """Manages A2A server creation and lifecycle"""
 
     def create_server(self, agent, config):
-        """Create and configure the A2A server"""
-        return A2AServer(
+        """Create and configure the A2A server with streaming capabilities"""
+        server = A2AServer(
             config=A2AServerConfig(port=config['port']),
             memory_manager=LRUMemoryManager(
                 maxsize=config['memory_size']
             )
-        ).register(
-            agent, name=config['name'], description=config['description']
         )
+
+        # Enable streaming capabilities if A2A is available
+        if A2A_AVAILABLE:
+            capabilities = a2a_types.AgentCapabilities(streaming=True)
+            return server.register(
+                agent,
+                name=config['name'],
+                description=config['description'],
+                capabilities=capabilities,
+                send_trajectory=True
+            )
+        else:
+            return server.register(
+                agent, name=config['name'], description=config['description']
+            )
 
 # =============================================================================
 # UTILITY FUNCTIONS
