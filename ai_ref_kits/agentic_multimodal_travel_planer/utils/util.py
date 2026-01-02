@@ -673,3 +673,75 @@ def extract_mcp_tool_calls_from_logs(
     
     return new_steps
 
+
+def extract_response_text(response) -> str:
+    """Extract text from BeeAI A2A agent response.
+    
+    Args:
+        response: A2A agent response object
+        
+    Returns:
+        Extracted text string
+    """
+    try:
+        # Try the most common response structure for A2A agents
+        if hasattr(response, 'output') and response.output:
+            for msg in response.output:
+                if hasattr(msg, 'text'):
+                    return msg.text
+                elif hasattr(msg, 'content'):
+                    return msg.content
+
+        # For streaming events, try to extract text content
+        if hasattr(response, 'value') and hasattr(response.value, 'text'):
+            return response.value.text
+
+        # Fallback to string representation
+        return str(response)
+    except Exception as e:
+        print(f"Error extracting response text: {e}")
+        return f"Response received (could not extract text: {type(response)})"
+
+
+def extract_agent_handoffs(logs_dir, cache: Dict[str, Dict[str, Iterable]]):
+    """Extract agent handoff events from travel_router log.
+    
+    Args:
+        logs_dir: Path to logs directory
+        cache: Cache dictionary to track file positions and seen events
+        
+    Returns:
+        List of formatted workflow step strings
+    """
+    logs_dir = Path(logs_dir)
+    travel_router_log = logs_dir / "travel_router.log"
+    return extract_agent_handoffs_from_log(travel_router_log, cache)
+
+
+def extract_agent_activities(logs_dir, cache: Dict[str, Dict[str, Iterable]]):
+    """Extract all agent activities: handoffs and MCP tool calls.
+    
+    This function discovers all agent logs and extracts:
+    - Handoffs from travel_router to other agents
+    - MCP tool calls from all agents (flight_finder, hotel_finder, etc.)
+    
+    Args:
+        logs_dir: Path to logs directory
+        cache: Cache dictionary to track file positions and seen events
+        
+    Returns:
+        List of formatted workflow step strings
+    """
+    logs_dir = Path(logs_dir)
+    
+    activities = []
+    
+    # Extract handoffs from travel_router
+    activities.extend(extract_agent_handoffs(logs_dir, cache))
+    
+    # Extract MCP tool calls from all agent logs
+    activities.extend(extract_mcp_tool_calls_from_logs(logs_dir, cache))
+    
+    return activities
+
+
