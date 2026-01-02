@@ -288,6 +288,13 @@ async def image_captioning(image_input):
     Returns:
         Status message string.
     """
+    global current_image_path
+    
+    # Handle None input (e.g., when image is deleted in UI)
+    if image_input is None:
+        current_image_path = None
+        return "Image cleared"
+    
     project_root = Path(__file__).parent.parent
     tmp_dir = project_root / "tmp_files"
 
@@ -297,11 +304,13 @@ async def image_captioning(image_input):
             destination_dir=tmp_dir,
             prefix="caption_image",
         )
+        if saved_image_path is None:
+            current_image_path = None
+            return "Image cleared"
         print(f"✅ Image saved to {saved_image_path}", flush=True)
     except Exception as exc:
         return str(exc)
 
-    global current_image_path
     current_image_path = str(saved_image_path)
     return "✅ Image uploaded successfully"
 
