@@ -356,7 +356,7 @@ class HalloweenTheme(Theme):
 
         self.assets = self._load_assets(["pumpkin"])
 
-        self.model_precision = "FP16-INT8"
+        self.model_precision = "FP16"
         self.device = device
         self.point_score_threshold = 0.25
 
@@ -371,20 +371,20 @@ class HalloweenTheme(Theme):
         self.load_models(device)
 
     def load_models(self, device: str):
-        self.pose_estimation_model = self._load_model("human-pose-estimation-0001", self.model_precision, device)
+        self.pose_estimation_model = self._load_model("human-pose-estimation-0005", self.model_precision, device)
 
     def run_inference(self, frame: np.ndarray) -> Any:
-        pe_input, pe_output_pafs, pe_output_heatmaps = self.pose_estimation_model.input(0), self.pose_estimation_model.output("Mconv7_stage2_L1"), self.pose_estimation_model.output("Mconv7_stage2_L2")
+        pe_input, pe_output_heatmaps, pe_output_embeddings = self.pose_estimation_model.input(0), self.pose_estimation_model.output("heatmaps"), self.pose_estimation_model.output("embeddings")
         height, width = list(pe_input.shape)[2:4]
 
         input_img = self.__preprocess_image(frame, width, height)
 
         results = self.pose_estimation_model([input_img])
-        pafs = results[pe_output_pafs]
+        embeddings = results[pe_output_embeddings]
         heatmaps = results[pe_output_heatmaps]
 
         # Get poses from network results.
-        poses, scores = self.__process_results(frame, pafs, heatmaps)
+        poses, scores = self.__process_results(frame, embeddings, heatmaps)
         poses, scores = self._smooth_detections(poses, scores)
         # add additional points to skeletons
         poses = [self.__add_artificial_points(pose, self.point_score_threshold) for pose in poses]
@@ -558,7 +558,7 @@ class HalloweenTheme(Theme):
         input_img = input_img.transpose((2, 0, 1))[np.newaxis, ...]
         return input_img
 
-    def __process_results(self, img, pafs, heatmaps):
+    def __process_results(self, img, embeddings, heatmaps):
         def heatmap_nms(heatmaps, pooled_heatmaps):
             return heatmaps * (heatmaps == pooled_heatmaps)
 
@@ -594,7 +594,7 @@ class HalloweenTheme(Theme):
         nms_heatmaps = heatmap_nms(heatmaps, pooled_heatmaps)
 
         # Decode poses.
-        poses, scores = self.decoder(heatmaps, nms_heatmaps, pafs)
+        poses, scores = self.decoder(heatmaps, nms_heatmaps, embeddings)
         output_shape = list(self.pose_estimation_model.output(index=0).partial_shape)
         output_scale = img.shape[1] / output_shape[3].get_length(), img.shape[0] / output_shape[2].get_length()
         # Multiply coordinates by a scaling factor.
