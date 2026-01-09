@@ -1,6 +1,6 @@
 gradio==5.49.1
-beeai-framework==0.1.74
-beeai-framework[a2a]==0.1.74
+beeai-framework==0.1.75
+beeai-framework[a2a]==0.1.75
 uvicorn==0.37.0
 PyYAML==6.0.1
 fastapi==0.115.5
