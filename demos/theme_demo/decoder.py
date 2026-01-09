@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.ndimage import maximum_filter
 
 
 # code from https://github.com/openvinotoolkit/open_model_zoo/blob/9296a3712069e688fe64ea02367466122c8e8a3b/demos/common/python/models/open_pose.py#L135
@@ -260,3 +261,359 @@ class OpenPoseDecoder:
             coco_keypoints.append(keypoints)
             scores.append(person_score * max(0, (pose[-1] - 1)))  # -1 for 'neck'
         return np.asarray(coco_keypoints), np.asarray(scores)
+
+
+# Associative Embedding decoder for human-pose-estimation-0005 model
+# Reference: https://github.com/openvinotoolkit/open_model_zoo/blob/master/demos/common/python/model_zoo/model_api/models/hpe_associative_embedding.py
+class AssociativeEmbeddingDecoder:
+    """
+    Decoder for associative embedding-based pose estimation.
+    Groups detected keypoints into individual poses using embedding similarity.
+    
+    Input format:
+    - Heatmaps: shape (1, 17, H, W) - keypoint location probabilities for 17 COCO joints
+    - Embeddings: shape (1, 17, H, W, 1) - associative embedding values for grouping
+    - NMS pre-applied: negative values in heatmaps indicate filtered locations
+    
+    Output format:
+    - List of poses: array of shape (N, 17, 3) where N is number of detected people
+    - Each keypoint: (x, y, score) coordinates and confidence
+    """
+    
+    def __init__(self, num_joints=17, max_points=100, score_threshold=0.25, 
+                 delta=0.5, tag_threshold=1.0, detection_threshold=0.1,
+                 max_num_people=30, adjust=True):
+        """
+        Args:
+            num_joints: Number of keypoint types (17 for COCO)
+            max_points: Maximum keypoints to extract per joint type
+            score_threshold: Minimum score for a keypoint to be considered
+            delta: Offset adjustment for keypoint localization
+            tag_threshold: Maximum embedding distance for keypoints to be grouped
+            detection_threshold: Minimum mean score for a pose to be kept
+            max_num_people: Maximum number of people to detect
+            adjust: Whether to apply sub-pixel refinement
+        """
+        self.num_joints = num_joints
+        self.max_points = max_points
+        self.score_threshold = score_threshold
+        self.delta = delta
+        self.tag_threshold = tag_threshold
+        self.detection_threshold = detection_threshold
+        self.max_num_people = max_num_people
+        self.adjust = adjust
+    
+    def __call__(self, heatmaps, embeddings):
+        """
+        Decode poses from heatmaps and embeddings.
+        
+        Args:
+            heatmaps: Keypoint heatmaps, shape (1, 17, H, W)
+            embeddings: Associative embeddings, shape (1, 17, H, W, 1)
+        
+        Returns:
+            poses: Array of shape (N, 17, 3) with keypoints (x, y, score)
+            scores: Array of shape (N,) with pose confidence scores
+        """
+        batch_size = heatmaps.shape[0]
+        assert batch_size == 1, 'Batch size of 1 only supported'
+        
+        # Remove batch dimension
+        heatmaps = heatmaps[0]  # (17, H, W)
+        embeddings = embeddings[0]  # (17, H, W, 1)
+        
+        # Extract keypoint candidates from heatmaps
+        all_keypoints, all_tags = self._extract_keypoints(heatmaps, embeddings)
+        
+        # Group keypoints into poses using embedding similarity
+        poses, scores = self._group_keypoints(all_keypoints, all_tags)
+        
+        return poses, scores
+    
+    def _extract_keypoints(self, heatmaps, embeddings):
+        """
+        Extract keypoint candidates from heatmaps and their embedding tags.
+        Handles pre-applied NMS (negative values are suppressed).
+        
+        Args:
+            heatmaps: shape (num_joints, H, W)
+            embeddings: shape (num_joints, H, W, 1)
+        
+        Returns:
+            all_keypoints: List of arrays, each (N, 4) with [x, y, score, joint_id]
+            all_tags: List of arrays, each (N,) with embedding values
+        """
+        num_joints, h, w = heatmaps.shape
+        
+        all_keypoints = []
+        all_tags = []
+        
+        for joint_id in range(num_joints):
+            heatmap = heatmaps[joint_id]
+            embedding = embeddings[joint_id, :, :, 0]  # (H, W)
+            
+            # Handle NMS pre-applied: only consider non-negative values
+            # Negative values indicate suppressed locations
+            valid_mask = heatmap >= 0
+            heatmap_valid = np.where(valid_mask, heatmap, 0)
+            
+            # Find local maxima above threshold
+            candidates = self._find_peaks(heatmap_valid)
+            
+            if len(candidates) == 0:
+                all_keypoints.append(np.empty((0, 4), dtype=np.float32))
+                all_tags.append(np.empty(0, dtype=np.float32))
+                continue
+            
+            # Extract top candidates
+            y_coords, x_coords = candidates
+            scores = heatmap_valid[y_coords, x_coords]
+            
+            # Filter by score threshold
+            valid_idx = scores > self.score_threshold
+            x_coords = x_coords[valid_idx]
+            y_coords = y_coords[valid_idx]
+            scores = scores[valid_idx]
+            
+            # Limit to max_points
+            if len(scores) > self.max_points:
+                top_idx = np.argsort(scores)[-self.max_points:]
+                x_coords = x_coords[top_idx]
+                y_coords = y_coords[top_idx]
+                scores = scores[top_idx]
+            
+            # Apply sub-pixel refinement if enabled
+            if self.adjust and len(x_coords) > 0:
+                x_coords, y_coords = self._refine_coordinates(
+                    heatmap_valid, x_coords, y_coords, w, h
+                )
+            
+            # Apply delta offset
+            if self.delta > 0:
+                x_coords = x_coords.astype(np.float32) + self.delta
+                y_coords = y_coords.astype(np.float32) + self.delta
+                x_coords = np.clip(x_coords, 0, w - 1)
+                y_coords = np.clip(y_coords, 0, h - 1)
+            
+            # Extract embeddings for these keypoints
+            tags = embedding[y_coords.astype(int), x_coords.astype(int)]
+            
+            # Pack keypoints: [x, y, score, joint_id]
+            n = len(x_coords)
+            keypoints = np.zeros((n, 4), dtype=np.float32)
+            keypoints[:, 0] = x_coords
+            keypoints[:, 1] = y_coords
+            keypoints[:, 2] = scores
+            keypoints[:, 3] = joint_id
+            
+            all_keypoints.append(keypoints)
+            all_tags.append(tags)
+        
+        return all_keypoints, all_tags
+    
+    def _find_peaks(self, heatmap):
+        """
+        Find local maxima in heatmap using non-maximum suppression.
+        
+        Args:
+            heatmap: 2D array (H, W)
+        
+        Returns:
+            Tuple of (y_coords, x_coords) for peak locations
+        """
+        # Apply maximum filter to find local maxima
+        max_filtered = maximum_filter(heatmap, size=3, mode='constant')
+        
+        # Peaks are locations where value equals max filtered value
+        peaks = (heatmap == max_filtered) & (heatmap > 0)
+        
+        # Get coordinates
+        y_coords, x_coords = np.where(peaks)
+        
+        return y_coords, x_coords
+    
+    def _refine_coordinates(self, heatmap, x, y, w, h):
+        """
+        Apply sub-pixel refinement to keypoint locations.
+        
+        Args:
+            heatmap: 2D array (H, W)
+            x, y: Keypoint coordinates (arrays)
+            w, h: Heatmap dimensions
+        
+        Returns:
+            Refined (x, y) coordinates
+        """
+        x = x.astype(np.float32)
+        y = y.astype(np.float32)
+        
+        # Find valid points (not on border)
+        valid = (x > 0) & (x < w - 1) & (y > 0) & (y < h - 1)
+        
+        if not np.any(valid):
+            return x, y
+        
+        x_valid = x[valid].astype(int)
+        y_valid = y[valid].astype(int)
+        
+        # Compute gradients for sub-pixel refinement
+        dx = np.sign(heatmap[y_valid, x_valid + 1] - heatmap[y_valid, x_valid - 1]) * 0.25
+        dy = np.sign(heatmap[y_valid + 1, x_valid] - heatmap[y_valid - 1, x_valid]) * 0.25
+        
+        x[valid] = x[valid] + dx
+        y[valid] = y[valid] + dy
+        
+        return x, y
+    
+    def _group_keypoints(self, all_keypoints, all_tags):
+        """
+        Group keypoints into individual poses using embedding similarity.
+        
+        Args:
+            all_keypoints: List of keypoint arrays per joint type
+            all_tags: List of embedding arrays per joint type
+        
+        Returns:
+            poses: Array of shape (N, 17, 3) with (x, y, score) per keypoint
+            scores: Array of shape (N,) with pose confidence scores
+        """
+        # Collect all detected keypoints with their tags
+        all_detections = []
+        for joint_id in range(self.num_joints):
+            keypoints = all_keypoints[joint_id]
+            tags = all_tags[joint_id]
+            
+            for i in range(len(keypoints)):
+                all_detections.append({
+                    'joint_id': int(keypoints[i, 3]),
+                    'x': keypoints[i, 0],
+                    'y': keypoints[i, 1],
+                    'score': keypoints[i, 2],
+                    'tag': tags[i]
+                })
+        
+        if len(all_detections) == 0:
+            return np.empty((0, 17, 3), dtype=np.float32), np.empty(0, dtype=np.float32)
+        
+        # Group detections by embedding similarity
+        poses = self._match_by_tag(all_detections)
+        
+        # Convert to output format
+        return self._format_poses(poses)
+    
+    def _match_by_tag(self, detections):
+        """
+        Match keypoints by embedding similarity to form poses.
+        
+        Args:
+            detections: List of detection dicts with keys: joint_id, x, y, score, tag
+        
+        Returns:
+            List of pose dicts, each containing keypoints for one person
+        """
+        if len(detections) == 0:
+            return []
+        
+        # Group detections by joint type
+        joint_detections = [[] for _ in range(self.num_joints)]
+        for det in detections:
+            joint_detections[det['joint_id']].append(det)
+        
+        # Initialize poses list
+        poses = []
+        
+        # Use greedy matching: start with highest-scoring detections
+        # and build poses by finding compatible keypoints
+        used = set()
+        
+        # Sort all detections by score
+        sorted_dets = sorted(detections, key=lambda x: x['score'], reverse=True)
+        
+        for det in sorted_dets:
+            det_id = id(det)
+            if det_id in used or len(poses) >= self.max_num_people:
+                continue
+            
+            # Start a new pose with this detection
+            pose = {i: None for i in range(self.num_joints)}
+            pose[det['joint_id']] = det
+            pose_tag = det['tag']
+            used.add(det_id)
+            
+            # Try to add compatible keypoints from other joint types
+            for joint_id in range(self.num_joints):
+                if joint_id == det['joint_id']:
+                    continue
+                
+                # Find best matching detection for this joint
+                best_det = None
+                best_dist = float('inf')
+                
+                for candidate in joint_detections[joint_id]:
+                    cand_id = id(candidate)
+                    if cand_id in used:
+                        continue
+                    
+                    # Compute embedding distance
+                    tag_dist = abs(candidate['tag'] - pose_tag)
+                    
+                    if tag_dist < best_dist and tag_dist < self.tag_threshold:
+                        best_dist = tag_dist
+                        best_det = candidate
+                
+                # Add best match to pose
+                if best_det is not None:
+                    pose[joint_id] = best_det
+                    used.add(id(best_det))
+                    # Update pose tag as running average
+                    pose_tag = (pose_tag + best_det['tag']) / 2
+            
+            poses.append(pose)
+        
+        return poses
+    
+    def _format_poses(self, poses):
+        """
+        Convert pose dictionaries to output array format.
+        
+        Args:
+            poses: List of pose dicts
+        
+        Returns:
+            poses_array: Array of shape (N, 17, 3)
+            scores_array: Array of shape (N,)
+        """
+        if len(poses) == 0:
+            return np.empty((0, 17, 3), dtype=np.float32), np.empty(0, dtype=np.float32)
+        
+        poses_list = []
+        scores_list = []
+        
+        for pose in poses:
+            # Build pose array: (17, 3) with [x, y, score]
+            pose_array = np.zeros((self.num_joints, 3), dtype=np.float32)
+            
+            num_valid = 0
+            total_score = 0.0
+            
+            for joint_id in range(self.num_joints):
+                if pose[joint_id] is not None:
+                    det = pose[joint_id]
+                    pose_array[joint_id, 0] = det['x']
+                    pose_array[joint_id, 1] = det['y']
+                    pose_array[joint_id, 2] = det['score']
+                    num_valid += 1
+                    total_score += det['score']
+                # else: remains [0, 0, 0] for missing keypoints
+            
+            # Filter poses with too few keypoints or low score
+            if num_valid > 0:
+                mean_score = total_score / num_valid
+                if mean_score >= self.detection_threshold and num_valid >= 3:
+                    poses_list.append(pose_array)
+                    scores_list.append(mean_score * num_valid)  # Weighted by number of joints
+        
+        if len(poses_list) == 0:
+            return np.empty((0, 17, 3), dtype=np.float32), np.empty(0, dtype=np.float32)
+        
+        return np.array(poses_list, dtype=np.float32), np.array(scores_list, dtype=np.float32)
