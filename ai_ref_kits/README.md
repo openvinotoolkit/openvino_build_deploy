@@ -15,6 +15,8 @@
 	- [🔦 Explainable AI](#-explainable-ai)
    	- [🎨 Multimodal AI Visual Generator](#-multimodal-ai-visual-generator)
 	- [💬 Conversational AI Chatbot](#-conversational-ai-chatbot)
+	- [🛒 AI Insight Agent with RAG](#-AI-Insight-Agent-with-RAG)
+    - [🗺 Agentic Travel Planner](#-agentic-travel-planner)
 
 - [Troubleshooting and Resources](#troubleshooting-and-resources)
 
@@ -113,10 +115,29 @@ Multimodal AI Visual Generator is a generative AI reference kit that transforms 
 |--------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Related AI concepts                                    | Speech Recognition, Natural Language Understanding, Large Language Models (LLMs), Retrieval Augmented Generation (RAG), Speech Synthesis, Generative AI |
 | Example industries                                     | Tourism                                                                                                                                                 |
-| Demo                                                   |                                                                                                                                                         |
 
 The Conversational AI Chatbot is an open-source, voice-driven chat agent that answers spoken questions with meaningful, spoken responses.  It can be configured to respond in any type of scenario or context. 
 This kit demonstrates the AI Chatbot’s capabilities by simulating the experience of talking to a hotel concierge.
+
+### 🛒 AI Insight Agent with RAG
+[![agentic_llm_rag](https://github.com/user-attachments/assets/0471ab91-ded5-4a5f-8d8e-5432f1b4b45c)](agentic-llm-rag)
+
+| [AI Insight Agent with RAG](agentic_llm_rag) |                                                                                                                                                         |
+|--------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Related AI concepts                                    | Natural Language Understanding, Large Language Models (LLMs), Retrieval Augmented Generation (RAG), Agentic AI, Generative AI |
+| Example industries                                     | Retail                                                                                                                                                 |
+
+The AI Insight Agent with RAG uses Large Language Models (LLMs) and Retrieval-Augmented Generation (RAG) to interpret user prompts, engage in meaningful dialogue, perform calculations, use RAG techniques to improve its knowledge and interact with the user to add items to a virtual shopping cart.
+
+### 🗺 Agentic Travel Planner
+[![agentic_travel_planner](https://github.com/user-attachments/assets/f2139810-8871-45e4-9f74-333f2e904956)](agentic_multimodal_travel_planer)
+
+| [Agentic Travel Planner](agentic_multimodal_travel_planer) |                                                                                                                              |
+|-------------------------------------|------------------------------------------------------------------------------------------------------------------------------|
+| Related AI concepts                 | Large Language Models (LLMs), Vision Language Models (VLMs), Retrieval Augmented Generation (RAG), Agentic AI, Generative AI |
+| Example industries                  | Tourism                                                                                                                      |
+
+The Agentic Travel Planner leverages Large Language Models (LLMs), Vision Language Models (VLMs), and Retrieval-Augmented Generation (RAG) to create personalized travel itineraries. It interprets attached images, conducts research, and generates detailed plans, and including accommodations, all tailored to the user's interests.
 
 ## Troubleshooting and Resources
 - Open a [discussion topic](https://github.com/openvinotoolkit/openvino_build_deploy/discussions)
