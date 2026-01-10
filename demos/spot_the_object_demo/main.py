@@ -7,7 +7,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-from supervision import BoxCornerAnnotator, LabelAnnotator, TraceAnnotator, LineZoneAnnotator, LineZone, ByteTrack, \
+from supervision import BoxCornerAnnotator, MaskAnnotator, LabelAnnotator, TraceAnnotator, LineZoneAnnotator, LineZone, ByteTrack, \
     Point, Detections, Color, ColorLookup, DetectionsSmoother
 from supervision.annotators.base import BaseAnnotator
 from ultralytics import YOLOE, YOLO, YOLOWorld
@@ -56,11 +56,12 @@ def load_annotators(size: tuple[int, int]) -> tuple[list[BaseAnnotator], LineZon
     trace_annotator = TraceAnnotator(thickness=box_annotator.thickness, color_lookup=ColorLookup.TRACK)
     line_zone_annotator = LineZoneAnnotator(thickness=box_annotator.thickness, color=Color.RED, text_scale=label_annotator.text_scale,
                                             display_in_count=False, custom_out_text="Count")
+    mask_annotator = MaskAnnotator(color_lookup=ColorLookup.TRACK)
 
     tracker = ByteTrack()
     smoother = DetectionsSmoother(length=3)
 
-    return [box_annotator, label_annotator, trace_annotator, line_zone_annotator], line_zone, tracker, smoother
+    return [box_annotator, label_annotator, trace_annotator, line_zone_annotator, mask_annotator], line_zone, tracker, smoother
 
 
 def add_box_margin(box: tuple[int], frame_size: tuple[int], margin_ratio: float = 0.15) -> tuple[int]:
