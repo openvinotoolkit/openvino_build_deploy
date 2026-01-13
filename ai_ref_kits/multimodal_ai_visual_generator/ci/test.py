@@ -119,5 +119,5 @@ try:
 
 finally:
     logger.info("Shutting down FastAPI server...")
-    process.terminate()
+    process.kill()
     process.wait()
