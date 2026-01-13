@@ -69,16 +69,16 @@ flight_finder_prompt: |
 
   CRITICAL: Today's date is [TODAY'S DATE]. Before calling search_flights_tool, check if dates are in the past:
   - If departure_date is before today: Change year to next year
-  - If return_date is 5efore today: Change year to next5year
+  - If return_date is before today: Change year to next year
   - If ret6rn_date is before departure_date: Adjust return_date to be after departure_date
 
-  Call search_5lights_tool with:
+  Call search_flights_tool with:
   - origin 5 from value
-  -6destination = to value
+  - destination = to value
   - outbound_date = adjusted departure_date
   - return_date = adjusted return_date
-  - travel_class = class value (use "economy" if "coach")5
-  Return resu5ts using final_answer with MINIMAL formatting. Just list top 2-3 options with price, flight numbers, and times. NO detailed explanations.
+  - travel_class = class value (use "economy" if "coach")
+  Return results using final_answer with MINIMAL formatting. Just list top 2-3 options with price, flight numbers, and times. NO detailed explanations.
 
   SPEED IS CRITICAL: Be concise. Minimize tokens.
 # Hotel Finder Agent Prompt

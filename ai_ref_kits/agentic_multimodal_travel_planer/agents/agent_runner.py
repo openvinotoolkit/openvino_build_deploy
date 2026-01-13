@@ -20,6 +20,7 @@ from contextlib import AsyncExitStack
 import requests
 import yaml
 import re
+import ast
 
 from mcp.client.sse import sse_client
 from mcp.client.session import ClientSession
@@ -28,6 +29,40 @@ from beeai_framework.agents.requirement import RequirementAgent
 from beeai_framework.agents.requirement.requirements.conditional import (
     ConditionalRequirement,
 )
+
+
+def safe_eval_lambda(lambda_str: str):
+    """
+    Safely evaluate lambda expressions with restricted globals to prevent code injection.
+    Only allows safe builtins and the re module needed for validation logic.
+    """
+    # Parse and check AST for dangerous operations
+    try:
+        tree = ast.parse(lambda_str, mode='eval')
+    except SyntaxError as e:
+        raise ValueError(f"Invalid lambda syntax: {e}")
+    
+    # Check for dangerous function calls
+    dangerous_names = {'__import__', 'exec', 'eval', 'open', 'compile', 'globals', 'locals', 
+                      'vars', 'dir', 'input', '__builtins__', 'getattr', 'setattr', 'delattr'}
+    
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name) and node.id in dangerous_names:
+            raise ValueError(f"Unsafe function or name not allowed: {node.id}")
+        if isinstance(node, ast.Attribute) and node.attr in dangerous_names:
+            raise ValueError(f"Unsafe attribute access not allowed: {node.attr}")
+    
+    # Create a minimal safe namespace
+    safe_globals = {
+        '__builtins__': {},
+        'any': any,
+        'all': all,
+        'len': len,
+        'hasattr': hasattr,
+        'isinstance': isinstance,
+        're': re,
+    }
+    return eval(lambda_str, safe_globals, {})
 from beeai_framework.adapters.a2a.agents.agent import A2AAgent
 from beeai_framework.adapters.a2a.serve.server import (
     A2AServer,
@@ -181,9 +216,8 @@ class AgentFactory:
                     kwargs = {k: v for k, v in r.items() if k != "tool_name"}
                     # Evaluate string lambdas in custom_checks to callable functions
                     if "custom_checks" in kwargs and isinstance(kwargs["custom_checks"], list):
-                        import re
                         kwargs["custom_checks"] = [
-                            eval(check) if isinstance(check, str) else check
+                            safe_eval_lambda(check) if isinstance(check, str) else check
                             for check in kwargs["custom_checks"]
                         ]
                     requirements.append(ConditionalRequirement(
