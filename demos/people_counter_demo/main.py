@@ -61,7 +61,7 @@ def load_zones(json_path: str) -> List[np.ndarray]:
     return [np.array(zone["points"], np.int32) for zone in zones_dict.values()]
 
 
-def get_annotators(json_path: str, resolution_wh: Tuple[int, int], colorful: bool = False) -> Tuple[List, List, List, List, List]:
+def get_annotators(json_path: str, colorful: bool = False) -> Tuple[List, List, List, List, List]:
     # list of points
     polygons = load_zones(json_path)
 
@@ -172,7 +172,7 @@ def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", c
     player = utils.VideoPlayer(video_path, size=(1920, 1080), fps=60, flip=flip)
 
     # get zones, and zone and box annotators for zones
-    zones, zone_annotators, box_annotators, masks_annotators, label_annotators = get_annotators(json_path=zones_config_file, resolution_wh=(player.width, player.height), colorful=colorful)
+    zones, zone_annotators, box_annotators, masks_annotators, label_annotators = get_annotators(json_path=zones_config_file, colorful=colorful)
     category_id = CATEGORIES.index(category)
 
     # object counter
@@ -255,8 +255,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--stream', default="0", type=str, help="Path to a video file or the webcam number")
     parser.add_argument("--model_name", type=str, default="yolo11n", help="Model version to be converted",
-                        choices=["yolov8n", "yolov8s", "yolov8m", "yolov8l", "yolov8x", "yolov8n-seg", "yolov8s-seg", "yolov8m-seg", "yolov8l-seg", "yolov8x-seg",
-                                 "yolo11n", "yolo11s", "yolo11m", "yolo11l", "yolo11x", "yolo11n-seg", "yolo11s-seg", "yolo11m-seg", "yolo11l-seg", "yolo11x-seg"])
+                        choices=["yolo26n", "yolo26s", "yolo26m", "yolo26l", "yolo26x", "yolo26n-seg", "yolo26s-seg", "yolo26m-seg", "yolo26l-seg", "yolo26x-seg",
+                                 "yolo11n", "yolo11s", "yolo11m", "yolo11l", "yolo11x", "yolo11n-seg", "yolo11s-seg", "yolo11m-seg", "yolo11l-seg", "yolo11x-seg",
+                                 "yolov8n", "yolov8s", "yolov8m", "yolov8l", "yolov8x", "yolov8n-seg", "yolov8s-seg", "yolov8m-seg", "yolov8l-seg", "yolov8x-seg"])
     parser.add_argument("--model_dir", type=str, default="model", help="Directory to place the model in")
     parser.add_argument('--category', type=str, default="person", choices=CATEGORIES, help="The category to detect (from COCO dataset)")
     parser.add_argument('--zones_config_file', type=str, default="zones.json", help="Path to the zone config file (json)")
