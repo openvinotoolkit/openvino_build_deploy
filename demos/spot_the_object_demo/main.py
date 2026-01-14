@@ -186,8 +186,9 @@ if __name__ == '__main__':
     parser.add_argument('--class_name', default="hazelnut", type=str, help="The class name to detect")
     parser.add_argument('--aux_classes', nargs='+', default=["nut", "brown ball"], type=str, help="Auxiliary classes supporting the detection of the main class")
     parser.add_argument('--device', default="AUTO", type=str, help="Device to run inference on")
-    parser.add_argument("--detection_model", type=str, default="yolov8m-worldv2", help="Model for object detection",
+    parser.add_argument("--detection_model", type=str, default="yoloe-26m-seg", help="Model for object detection",
                         choices=["yolov8s-world", "yolov8s-worldv2", "yolov8m-world", "yolov8m-worldv2", "yolov8l-world", "yolov8l-worldv2", "yolov8x-world", "yolov8x-worldv2",
+                                 "yoloe-26n-seg", "yoloe-26s-seg", "yoloe-26m-seg", "yoloe-26l-seg", "yoloe-26x-seg",
                                  "yoloe-11s-seg", "yoloe-11m-seg", "yoloe-11l-seg", "yoloe-v8s-seg", "yoloe-v8m-seg", "yoloe-v8l-seg"])
     parser.add_argument("--flip", type=bool, default=True, help="Mirror input video")
 
