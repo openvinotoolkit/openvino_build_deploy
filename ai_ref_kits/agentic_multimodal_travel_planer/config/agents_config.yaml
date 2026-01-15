@@ -60,6 +60,7 @@ travel_router:
         - "lambda state: any(re.search(r'\\b(hotel|hotels|accommodation|accommodations|stay|staying|room|rooms|lodging|reservation|book.*hotel|check.?in|check.?out|checkin|checkout)\\b', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text'))"
         - "lambda state: any(re.search(r'\\b(yes|correct|ok|sure|go ahead|proceed|that\\'s right|right|confirmed)\\b', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text') and hasattr(msg, 'role') and msg.role == 'user')"
     - tool_name: "image_captioning"
+      max_invocations: 1
       custom_checks:
         - "lambda state: any(re.search(r'<image_path>\\s*=\\s*<[^>]+>', msg.text) for msg in state.memory.messages if hasattr(msg, 'text') and hasattr(msg, 'role') and msg.role == 'user')" 
 
