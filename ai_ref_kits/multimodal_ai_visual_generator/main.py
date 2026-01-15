@@ -221,7 +221,7 @@ def generate_image(request: PromptRequest):
     prompt = request.prompt
     height = 512
     width = 512
-    seed = random.randint(0, np.iinfo(np.int32).max)
+    seed = random.randint(0, np.iinfo(np.int32).max)  #nosec B311
     steps = 4
 
     logger.info(f"Generating image for prompt: '{prompt}' with seed: {seed}")
