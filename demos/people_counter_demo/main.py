@@ -42,13 +42,14 @@ def convert(model_name: str, model_dir: Path) -> tuple[Path, Path]:
     if not ov_model_path.exists():
         ov_model_path = yolo_model.export(format="openvino", dynamic=False, half=True)
     if not ov_int8_model_path.exists():
-        ov_int8_model_path = yolo_model.export(format="openvino", dynamic=False, half=True, int8=True, data="coco128.yaml")
+        dataset = f"coco128-seg.yaml" if "seg" in model_name else "coco128.yaml"
+        ov_int8_model_path = yolo_model.export(format="openvino", dynamic=False, half=True, int8=True, data=dataset)
     return Path(ov_model_path), Path(ov_int8_model_path)
 
 
 def get_model(model_path: Path, verbose: bool = False):
     # compile the model with YOLO
-    model = YOLO(model_path, task="detect", verbose=verbose)
+    model = YOLO(model_path, verbose=verbose)
     return model
 
 
@@ -196,7 +197,6 @@ def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", c
             break
         # Get the results.
         frame = np.array(frame)
-        f_height, f_width = frame.shape[:2]
 
         # inference + timing
         result = model(frame, device=f"intel:{device_type}", verbose=False)[0]
