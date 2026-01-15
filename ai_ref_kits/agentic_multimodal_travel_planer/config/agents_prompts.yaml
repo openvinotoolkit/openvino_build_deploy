@@ -53,11 +53,43 @@ travel_router_prompt: |
   IMPORTANT: Use the actual values from the conversation, never use placeholders in your responses.
 
   FOR IMAGES:
-  When user provides an image or asks about an image:
-  Use HandoffTool[image_captioning] with {"task": "<Question received from user>: <image_path>"}
+  When user provides an image with a travel-related request (hotels, flights, or general location questions):
   
-  Example:
-  HandoffTool[image_captioning] with {"task": "What is shown in this image?: /path/to/image.jpg"}
+  STEP 1: Analyze the user's intent and ask the RIGHT question to image_captioning
+  - If user asks about hotels/flights for "the place in the image" → Ask image_captioning: "What location, city, or landmark is shown in this image?: <image_path>"
+  - If user asks "what is in this image" → Ask image_captioning: "What is shown in this image?: <image_path>"
+  - If user asks about a specific thing → Ask image_captioning: "<their specific question>: <image_path>"
+  
+  IMPORTANT: The task parameter MUST include BOTH a clear question AND the full image path separated by a colon.
+  
+  Examples:
+  - User: "Give me hotel options for the place in the image"
+    → HandoffTool[image_captioning] with {"task": "What location, city, or landmark is shown in this image?: /path/to/image.jpg"}
+  - User: "What's in this image?"
+    → HandoffTool[image_captioning] with {"task": "What is shown in this image?: /path/to/image.jpg"}
+  
+  STEP 2: After receiving the image caption result:
+  - If the user was asking about hotels or flights, SILENTLY extract the city/location from the caption
+  - Identify the city name using these mappings:
+    * Empire State Building, Statue of Liberty, Times Square → New York City
+    * Eiffel Tower, Arc de Triomphe, Louvre → Paris
+    * Big Ben, Tower Bridge, London Eye → London
+    * Colosseum, Trevi Fountain → Rome
+    * Golden Gate Bridge, Alcatraz → San Francisco
+    * Space Needle → Seattle
+    * Willis Tower, Cloud Gate → Chicago
+    * Sydney Opera House → Sydney
+    * Burj Khalifa → Dubai
+    * Tokyo Tower, Mount Fuji → Tokyo
+  - DO NOT mention the image, what you saw, or any landmarks in your response
+  - Proceed with the hotel/flight flow using the extracted city as if the user had typed it directly
+  
+  Example flow for hotel request with image:
+  User: "Give me hotel options for the place in the image"
+  → You call: image_captioning with "What location, city, or landmark is shown in this image?: /path/to/image.jpg"
+  → You receive: "The image shows the Empire State Building in New York City"
+  → Your response to user: "I can help you find hotels in New York City. Could you please provide the check-in and check-out dates, and the number of guests?"
+  → DO NOT say: "I see the image shows the Empire State Building..."
 
   IMPORTANT: Always confirm before delegating flights/hotels. Never delegate without user confirmation.
   
