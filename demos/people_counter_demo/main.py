@@ -254,7 +254,7 @@ def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", c
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--stream', default="0", type=str, help="Path to a video file or the webcam number")
-    parser.add_argument("--model_name", type=str, default="yolo11n", help="Model version to be converted",
+    parser.add_argument("--model_name", type=str, default="yolo26n", help="Model version to be converted",
                         choices=["yolo26n", "yolo26s", "yolo26m", "yolo26l", "yolo26x", "yolo26n-seg", "yolo26s-seg", "yolo26m-seg", "yolo26l-seg", "yolo26x-seg",
                                  "yolo11n", "yolo11s", "yolo11m", "yolo11l", "yolo11x", "yolo11n-seg", "yolo11s-seg", "yolo11m-seg", "yolo11l-seg", "yolo11x-seg",
                                  "yolov8n", "yolov8s", "yolov8m", "yolov8l", "yolov8x", "yolov8n-seg", "yolov8s-seg", "yolov8m-seg", "yolov8l-seg", "yolov8x-seg"])
