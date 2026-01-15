@@ -46,6 +46,7 @@ travel_router:
   # Requirements with custom_checks to validate info before delegating
   requirements:
     - tool_name: "flight_finder"
+      max_invocations: 1
       custom_checks:
         - "lambda state: not any(re.search(r'\\b(hotel|hotels|accommodation|accommodations|stay|staying|room|rooms|lodging|check.?in|check.?out|checkin|checkout)\\b', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text'))"
         - "lambda state: any(re.search(r'\\b(yes|correct|ok|sure|go ahead|proceed|that\\'s right|right|confirmed)\\b', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text') and hasattr(msg, 'role') and msg.role == 'user') or any(re.search(r'\\b(from|departure|leaving|origin|flying from)\\s+[A-Z][a-z]{2,}|^[A-Z][a-z]{2,}\\s+(to|destination)', msg.text) for msg in state.memory.messages if hasattr(msg, 'text') and hasattr(msg, 'role') and msg.role == 'user')"
@@ -54,6 +55,7 @@ travel_router:
         - "lambda state: any(re.search(r'\\b(yes|correct|ok|sure|go ahead|proceed|that\\'s right|right|confirmed)\\b', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text') and hasattr(msg, 'role') and msg.role == 'user') or any(re.search(r'\\b(return|returning|inbound|back|come back|march|april|may|june|july|august|september|october|november|december|january|february|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text') and hasattr(msg, 'role') and msg.role == 'user')"
         - "lambda state: any(re.search(r'\\b(yes|correct|ok|sure|go ahead|proceed|that\\'s right|right|confirmed)\\b', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text') and hasattr(msg, 'role') and msg.role == 'user') or any(re.search(r'\\b(economy|business|first|coach)\\b', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text') and hasattr(msg, 'role') and msg.role == 'user')"
     - tool_name: "hotel_finder"
+      max_invocations: 1
       custom_checks:
         - "lambda state: any(re.search(r'\\b(hotel|hotels|accommodation|accommodations|stay|staying|room|rooms|lodging|reservation|book.*hotel|check.?in|check.?out|checkin|checkout)\\b', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text'))"
         - "lambda state: any(re.search(r'\\b(yes|correct|ok|sure|go ahead|proceed|that\\'s right|right|confirmed)\\b', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text') and hasattr(msg, 'role') and msg.role == 'user')"
