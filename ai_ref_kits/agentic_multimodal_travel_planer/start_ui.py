@@ -292,10 +292,10 @@ class TravelRouterClient:
 # Example prompts for the UI
 EXAMPLES = [
     "Which city is shown in this image?",
-    "Give me flights from Milan to Rome for March 1st to March 10th",
+    "Give me flights from Milan to Berlin for March 1st to March 10th",
     "Give me hotels in Milan for March 1st to March 10th for 2 guests",
     (
-        "Give me flights from Milan to Rome for March 1st to March 10th "
+        "Give me flights from Milan to Berlin for March 1st to March 10th "
         "in business class"
     ),
 ]
