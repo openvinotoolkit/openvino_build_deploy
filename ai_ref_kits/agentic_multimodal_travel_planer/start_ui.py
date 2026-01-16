@@ -8,14 +8,22 @@ a chat interface.
 
 import asyncio
 import concurrent.futures
+import datetime
 import os
 import traceback
 from pathlib import Path
 
 import gradio as gr
-from beeai_framework.adapters.a2a.agents.agent import A2AAgent
-from beeai_framework.memory import UnconstrainedMemory
 from dotenv import load_dotenv
+
+from beeai_framework.adapters.a2a.agents.agent import A2AAgent
+from beeai_framework.adapters.a2a.agents.events import A2AAgentUpdateEvent
+from beeai_framework.agents.requirement.events import (
+    RequirementAgentFinalAnswerEvent
+)
+from beeai_framework.memory import UnconstrainedMemory
+
+from utils.streaming_citation_parser import StreamingCitationParser
 from utils.util import (
     extract_agent_activities,
     extract_response_text,
@@ -70,16 +78,18 @@ class TravelRouterClient:
             print(f"Traceback: {traceback.format_exc()}")
             return False
 
-    async def chat_stream(self, query: str, abort_event=None):
-        """Get response from the A2A travel router agent with streaming status updates.
+    async def chat_stream(self, query: str, abort_event=None, on_token=None):
+        """Get response from the A2A travel router agent with streaming updates.
 
         Args:
             query: User query text to process.
-            abort_event: asyncio.Event to signal cancellation. When set, aborts the entire agent chain.
+            abort_event: asyncio.Event to signal cancellation.
+            on_token: Callback function for streaming tokens.
 
         Returns:
-            tuple: (response_text, is_final) where response_text is the final response
-                   and is_final is always True for completed responses.
+            tuple: (response_text, is_final) where response_text is the final
+                   response and is_final is always True for completed
+                   responses.
         """
         if not self.initialized:
             await self.initialize()
@@ -95,24 +105,58 @@ class TravelRouterClient:
             # Enable real A2A streaming with proper event observation
             streaming_events = []
             response = None
+            citation_parser = StreamingCitationParser()
+            last_processed_length = 0
 
             async def capture_events(data, event):
                 """Capture A2A streaming events."""
                 global workflow_steps, suppress_router_status
+                nonlocal last_processed_length
                 streaming_events.append((data, event))
-                print(f"A2A Event: {event.name} - {type(data)}")
-                
+
+                if event.name == "final_answer":
+                    if isinstance(data, RequirementAgentFinalAnswerEvent):
+                        if data.delta:
+                            clean_text, _ = citation_parser.process_chunk(
+                                data.delta
+                            )
+                            if clean_text and on_token:
+                                on_token(clean_text)
+                    return
+
                 # Print debug info to UI logs
-                from beeai_framework.adapters.a2a.agents.events import (
-                    A2AAgentUpdateEvent
-                )
                 if isinstance(data, A2AAgentUpdateEvent):
                     value = data.value
-                    
+
                     # Extract task and status info
                     if isinstance(value, tuple) and len(value) >= 2:
                         task, status_update = value
-                        
+
+                        # Try to extract streaming text from task history
+                        if hasattr(task, 'history') and task.history:
+                            # Look at the last message
+                            last_msg = task.history[-1]
+                            if hasattr(last_msg, 'parts') and last_msg.parts:
+                                current_text = ""
+                                for part in last_msg.parts:
+                                    if (hasattr(part, 'root') and
+                                            hasattr(part.root, 'text')):
+                                        current_text += part.root.text or ""
+
+                                # If text grew, calculate delta
+                                if len(current_text) > last_processed_length:
+                                    delta = current_text[
+                                        last_processed_length:
+                                    ]
+                                    last_processed_length = len(current_text)
+
+                                    # Process delta through parser
+                                    clean_text, _ = (
+                                        citation_parser.process_chunk(delta)
+                                    )
+                                    if clean_text and on_token:
+                                        on_token(clean_text)
+
                         # Check for handoffs in task history
                         if hasattr(task, 'history') and task.history:
                             for msg in task.history:
@@ -121,99 +165,120 @@ class TravelRouterClient:
                                         if hasattr(part, 'root'):
                                             # Check for handoff tool calls
                                             part_str = str(part.root)
-                                            if 'HandoffTool' in part_str or 'handoff' in part_str.lower():
-                                                print(f"Handoff detected in history: {part_str[:200]}")
-                        
+                                            if ('HandoffTool' in part_str or
+                                                    'handoff' in
+                                                    part_str.lower()):
+                                                print(
+                                                    "Handoff detected in "
+                                                    f"history: {part_str[:200]}"
+                                                )
+
                         # Get agent name from metadata or default to Travel Router
                         agent_name = "Travel Router"
                         if hasattr(task, 'metadata') and task.metadata:
                             if isinstance(task.metadata, dict):
                                 agent_name = task.metadata.get(
-                                    'agent_name', 
+                                    'agent_name',
                                     task.metadata.get('name', 'Travel Router')
                                 )
-                        
+
                         # Extract state
                         if hasattr(status_update, 'status') and hasattr(
                             status_update.status, 'state'
                         ):
                             state = status_update.status.state.value
                             is_final = getattr(status_update, 'final', False)
-                            
-                            # Skip Travel Router working status if suppressed (during handoff)
-                            if (suppress_router_status and 
-                                agent_name == "Travel Router" and 
-                                state in ['working', 'submitted']):
+
+                            # Skip Travel Router working status if suppressed
+                            if (suppress_router_status and
+                                    agent_name == "Travel Router" and
+                                    state in ['working', 'submitted']):
                                 return
-                            
+
                             # Use animated icon for working/submitted states
-                            if state in ['working', 'submitted'] and not is_final:
+                            if (state in ['working', 'submitted'] and
+                                    not is_final):
                                 icon = "🔄"
                                 status_msg = f"{icon} {agent_name}: {state}"
                             elif is_final or state == 'completed':
                                 icon = "✅"
                                 status_msg = f"{icon} {agent_name}: {state}"
-                                # Clear suppression when Travel Router completes or resumes
+                                # Clear suppression when Travel Router completes
                                 if agent_name == "Travel Router":
                                     suppress_router_status = False
                             else:
                                 status_msg = f"🤖 {agent_name}: {state}"
-                            
-                            # Only remove temporary working/submitted status, keep all other events
+
+                            # Only remove temporary working/submitted status
                             workflow_steps[:] = [
-                                step for step in workflow_steps 
-                                if not (f"🔄 {agent_name}:" in step and 
-                                       (": working" in step or ": submitted" in step))
+                                step for step in workflow_steps
+                                if not (f"🔄 {agent_name}:" in step and
+                                        (": working" in step or
+                                         ": submitted" in step))
                             ]
                             add_workflow_step(status_msg)
 
             # Listen for streaming tokens using .on() pattern
             response = await self.client.run(query).on(
-                "update", 
+                "update",
+                capture_events
+            ).on(
+                "final_answer",
                 capture_events
             )
 
+            # Flush any remaining text in parser
+            final_chunk = citation_parser.finalize()
+            if final_chunk and on_token:
+                on_token(final_chunk)
+
             # Process captured streaming events
             final_text = None
-            for event_data, event_meta in streaming_events:
-                from beeai_framework.adapters.a2a.agents.events import A2AAgentUpdateEvent
-
+            for event_data, _ in streaming_events:
                 if isinstance(event_data, A2AAgentUpdateEvent):
                     value = event_data.value
                     if isinstance(value, tuple) and len(value) >= 2:
                         task, status_update = value
 
                         # Update workflow with real-time status
-                        if hasattr(status_update, 'status') and hasattr(status_update.status, 'state'):
+                        if (hasattr(status_update, 'status') and
+                                hasattr(status_update.status, 'state')):
                             state = status_update.status.state.value
-                            # Update global workflow state for UI, preserving handoffs
-                            from start_ui import workflow_steps
+                            # Update global workflow state for UI
                             # Keep handoffs, remove old status
-                            workflow_steps[:] = [step for step in workflow_steps if "Travel Router task" not in step]
-                            workflow_steps.append(f"🔄 Travel Router task {state}...")
+                            workflow_steps[:] = [
+                                step for step in workflow_steps
+                                if "Travel Router task" not in step
+                            ]
+                            workflow_steps.append(
+                                f"🔄 Travel Router task {state}..."
+                            )
 
                         # Extract final message when complete
-                        if (hasattr(status_update, 'final') and status_update.final and
-                            hasattr(task, 'history') and task.history):
+                        if (hasattr(status_update, 'final') and
+                                status_update.final and
+                                hasattr(task, 'history') and task.history):
                             for message in task.history:
                                 if (hasattr(message, 'role') and
-                                    str(message.role) == "Role.agent" and
-                                    hasattr(message, 'parts') and message.parts):
+                                        str(message.role) == "Role.agent" and
+                                        hasattr(message, 'parts') and
+                                        message.parts):
                                     for part in message.parts:
                                         if (hasattr(part, 'root') and
-                                            hasattr(part.root, 'text') and
-                                            part.root.text):
+                                                hasattr(part.root, 'text') and
+                                                part.root.text):
                                             final_text = part.root.text
-                                            print(f"A2A Final: {final_text[:50]}...")
                                             break
                             break
 
             # Return final result
+            if response:
+                text = extract_response_text(response)
+                if text:
+                    return (text, True)
+
             if final_text:
                 return (final_text, True)
-            elif response:
-                text = extract_response_text(response)
-                return (text, True)
             else:
                 return ("No response received", True)
 
@@ -242,9 +307,9 @@ stop_requested = False
 current_image_path = None
 log_cache = {}  # Cache for log file positions
 workflow_steps = []  # Track workflow steps
-thinking_indicators = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]  # Animation indicators
+thinking_indicators = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
 indicator_index = 0  # Global animation state
-suppress_router_status = False  # Flag to suppress router working status after handoff
+suppress_router_status = False  # Suppress router working status after handoff
 abort_event = None  # Abort controller for cancelling agent
 
 
@@ -290,12 +355,12 @@ async def image_captioning(image_input):
         Status message string.
     """
     global current_image_path
-    
+
     # Handle None input (e.g., when image is deleted in UI)
     if image_input is None:
         current_image_path = None
         return "Image cleared"
-    
+
     project_root = Path(__file__).parent.parent
     tmp_dir = project_root / "tmp_files"
 
@@ -318,7 +383,7 @@ async def image_captioning(image_input):
 
 def stop_query():
     """Stop the current query execution by setting abort signal.
-    
+
     This will propagate cancellation through the entire agent chain
     (A2A client → router agent → travel agents).
 
@@ -346,7 +411,6 @@ def add_workflow_step(step_text):
         step_text: Text describing the workflow step.
     """
     global workflow_steps
-    import datetime
     timestamp = datetime.datetime.now().strftime("%H:%M:%S")
     workflow_steps.append(f"{timestamp} | {step_text}")
     # Keep only last 50 steps to show more workflow history
@@ -374,20 +438,23 @@ def read_latest_logs():
 
     animated_steps = []
     for step in workflow_steps:
-        # Check if the step should be animated (contains 🔄 but not arrows or completed)
+        # Check if the step should be animated
+        # (contains 🔄 but not arrows or completed)
         should_animate = "🔄" in step and "✓" not in step and "→" not in step
-        
+
         if should_animate:
             if "|" in step:
                 # Handle timestamp format: "HH:MM:SS | 🔄 Message..."
                 parts = step.split("|", 1)
                 timestamp = parts[0].strip()
                 message = parts[1].strip()
-                
+
                 # Check if message part starts with the icon to replace
                 if message.startswith("🔄"):
                     base_message = message[1:]  # Remove the 🔄
-                    animated_steps.append(f"{timestamp} | {indicator}{base_message}")
+                    animated_steps.append(
+                        f"{timestamp} | {indicator}{base_message}"
+                    )
                 else:
                     # Icon might be elsewhere or not at start of message part
                     animated_steps.append(step.replace("🔄", indicator))
@@ -473,7 +540,7 @@ async def run_agent_workflow(query: str):
 
     # Mark current log position for all logs to only capture new events
     logs_dir = Path(__file__).parent / "logs"
-    
+
     # Reset cache for travel_router log (handoffs)
     travel_router_log = logs_dir / "travel_router.log"
     if travel_router_log.exists():
@@ -486,7 +553,7 @@ async def run_agent_workflow(query: str):
             }
         except Exception:
             pass
-    
+
     # Reset cache for all agent logs (MCP tool calls)
     for log_file in logs_dir.glob("*.log"):
         if log_file.name == "travel_router.log":
@@ -549,14 +616,39 @@ async def run_agent_workflow(query: str):
         )
 
         # Show thinking indicators while waiting for response
-        
+
+        # Add placeholder for streaming
+        chatbox_msg.append({"role": "assistant", "content": "..."})
+
+        stream_state = {"started": False}
+
+        def on_token(text):
+            # print(f"DEBUG on_token: {text}")
+            if chatbox_msg and chatbox_msg[-1]["role"] == "assistant":
+                if not stream_state["started"]:
+                    chatbox_msg[-1]["content"] = ""
+                    stream_state["started"] = True
+                chatbox_msg[-1]["content"] += text
+
         # Start streaming in background
         streaming_task = asyncio.create_task(
-            travel_router_client.chat_stream(enhanced_query, abort_event)
+            travel_router_client.chat_stream(
+                enhanced_query, abort_event, on_token=on_token
+            )
         )
-        
+
         # Show animated thinking indicator while processing
+        loading_idx = 0
         while not streaming_task.done():
+            # Update chat bubble animation if streaming hasn't started
+            if (not stream_state["started"] and chatbox_msg and
+                    chatbox_msg[-1]["role"] == "assistant"):
+                indicator = thinking_indicators[
+                    loading_idx % len(thinking_indicators)
+                ]
+                chatbox_msg[-1]["content"] = f"{indicator}"
+                loading_idx += 1
+
             # Check for cancellation
             if abort_event and abort_event.is_set():
                 streaming_task.cancel()
@@ -570,9 +662,10 @@ async def run_agent_workflow(query: str):
                     if activity == "CLEAR_ROUTER_STATUS":
                         # Remove Travel Router working/submitted status
                         workflow_steps[:] = [
-                            step for step in workflow_steps 
-                            if not ("Travel Router:" in step and 
-                                   (": working" in step or ": submitted" in step))
+                            step for step in workflow_steps
+                            if not ("Travel Router:" in step and
+                                    (": working" in step or
+                                     ": submitted" in step))
                         ]
                     elif activity == "SUPPRESS_ROUTER_WORKING":
                         # Set flag to suppress future router working status
@@ -582,32 +675,41 @@ async def run_agent_workflow(query: str):
                         suppress_router_status = False
                     else:
                         add_workflow_step(activity)
-            
+
             # Yield UI update with animation
+            # Create a copy of chatbox_msg to ensure Gradio detects the change
             yield (
                 read_latest_logs(),
-                chatbox_msg,
+                list(chatbox_msg),
                 gr.update(value="", interactive=False),
                 gr.update(interactive=False),
                 gr.update(interactive=True),
                 gr.update(interactive=False),
             )
-            
+
             # Wait a bit before next update
             await asyncio.sleep(0.15)
-        
+
         # Get the result
         try:
             response_text, is_final = await streaming_task
         except asyncio.CancelledError:
             response_text = "Query cancelled by user."
             is_final = True
-        
+
         # Check if cancelled
         if abort_event and abort_event.is_set():
             response_text = "Query cancelled by user."
             add_workflow_step("🛑 Query cancelled")
-            chatbox_msg.append({"role": "assistant", "content": response_text})
+            if chatbox_msg and chatbox_msg[-1]["role"] == "assistant":
+                if not stream_state["started"]:
+                    chatbox_msg[-1]["content"] = response_text
+                else:
+                    chatbox_msg[-1]["content"] += f"\n\n{response_text}"
+            else:
+                chatbox_msg.append(
+                    {"role": "assistant", "content": response_text}
+                )
             yield (
                 read_latest_logs(),
                 chatbox_msg,
@@ -621,11 +723,17 @@ async def run_agent_workflow(query: str):
         # Show complete response when agent finishes
         if response_text:
             # Remove trailing colon if present (UI formatting issue)
-            if isinstance(response_text, str) and response_text.rstrip().endswith(':'):
+            if (isinstance(response_text, str) and
+                    response_text.rstrip().endswith(':')):
                 response_text = response_text.rstrip()[:-1].rstrip()
-            
-            # Add complete response
-            chatbox_msg.append({"role": "assistant", "content": response_text})
+
+            # Add or update complete response
+            if chatbox_msg and chatbox_msg[-1]["role"] == "assistant":
+                chatbox_msg[-1]["content"] = response_text
+            else:
+                chatbox_msg.append(
+                    {"role": "assistant", "content": response_text}
+                )
 
             yield (
                 read_latest_logs(),
@@ -648,9 +756,10 @@ async def run_agent_workflow(query: str):
                     if activity == "CLEAR_ROUTER_STATUS":
                         # Remove Travel Router working/submitted status
                         workflow_steps[:] = [
-                            step for step in workflow_steps 
-                            if not ("Travel Router:" in step and 
-                                   (": working" in step or ": submitted" in step))
+                            step for step in workflow_steps
+                            if not ("Travel Router:" in step and
+                                    (": working" in step or
+                                     ": submitted" in step))
                         ]
                     elif activity == "SUPPRESS_ROUTER_WORKING":
                         # Set flag to suppress future router working status
@@ -670,7 +779,6 @@ async def run_agent_workflow(query: str):
                 )
             await asyncio.sleep(0.2)  # Longer delay to catch activities
 
-
         # Response already added to chat history above
 
         # Return final result - re-enable msg, send and clear, disable stop
@@ -686,7 +794,14 @@ async def run_agent_workflow(query: str):
     except Exception as e:
         error_msg = f"Error communicating with Travel Router: {e}"
         add_workflow_step(f"❌ Error: {str(e)[:50]}")
-        chatbox_msg.append({"role": "assistant", "content": error_msg})
+        if chatbox_msg and chatbox_msg[-1]["role"] == "assistant":
+            # If we were showing the placeholder, overwrite it
+            if not stream_state.get("started", False):
+                chatbox_msg[-1]["content"] = error_msg
+            else:
+                chatbox_msg[-1]["content"] += f"\n\n{error_msg}"
+        else:
+            chatbox_msg.append({"role": "assistant", "content": error_msg})
         # Re-enable msg, send and clear, disable stop
         yield (
             read_latest_logs(),

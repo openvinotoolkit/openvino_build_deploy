@@ -10,39 +10,59 @@ This script can run:
 - All agents can be run in daemon mode for background operation
 """
 
-import sys
-from pathlib import Path
 import argparse
+import ast
 import asyncio
 import multiprocessing
 import os
+import re
+import sys
 from contextlib import AsyncExitStack
+from pathlib import Path
+from typing import Any
+
 import requests
 import yaml
-import re
-import ast
-
-from mcp.client.sse import sse_client
 from mcp.client.session import ClientSession
+from mcp.client.sse import sse_client
+from typing_extensions import override
+
+# Add parent directory to path for imports (before local imports!)
+# noqa: E402
+sys.path.append(str(Path(__file__).parent.parent))
+from utils.util import load_config  # noqa: E402
 
 try:
+    import a2a.server.agent_execution as a2a_agent_execution
+    import a2a.server.tasks as a2a_server_tasks
     import a2a.types as a2a_types
+    import a2a.utils as a2a_utils
     A2A_AVAILABLE = True
 except ImportError:
     A2A_AVAILABLE = False
 
 from beeai_framework.adapters.a2a.agents.agent import A2AAgent
+from beeai_framework.adapters.a2a.serve.executors.tool_calling_agent_executor import (
+    ToolCallingAgentExecutor,
+)
 from beeai_framework.adapters.a2a.serve.server import (
     A2AServer,
     A2AServerConfig,
+    A2AServerMetadata,
+    _create_agent_card,
 )
 from beeai_framework.agents.requirement import RequirementAgent
+from beeai_framework.agents.requirement.events import (
+    RequirementAgentFinalAnswerEvent,
+)
 from beeai_framework.agents.requirement.requirements.conditional import (
     ConditionalRequirement,
 )
 from beeai_framework.backend import ChatModel, ChatModelParameters
+from beeai_framework.emitter import Emitter, EventMeta
 from beeai_framework.memory import UnconstrainedMemory
 from beeai_framework.middleware.trajectory import GlobalTrajectoryMiddleware
+from beeai_framework.serve import MemoryManager
 from beeai_framework.serve.utils import LRUMemoryManager
 from beeai_framework.tools import Tool
 from beeai_framework.tools.handoff import HandoffTool
@@ -51,25 +71,30 @@ from beeai_framework.tools.mcp import MCPTool
 
 def safe_eval_lambda(lambda_str: str):
     """
-    Safely evaluate lambda expressions with restricted globals to prevent code injection.
-    Only allows safe builtins and the re module needed for validation logic.
+    Safely evaluate lambda expressions with restricted globals to prevent
+    code injection. Only allows safe builtins and the re module needed for
+    validation logic.
     """
     # Parse and check AST for dangerous operations
     try:
         tree = ast.parse(lambda_str, mode='eval')
     except SyntaxError as e:
         raise ValueError(f"Invalid lambda syntax: {e}")
-    
+
     # Check for dangerous function calls
-    dangerous_names = {'__import__', 'exec', 'eval', 'open', 'compile', 'globals', 'locals', 
-                      'vars', 'dir', 'input', '__builtins__', 'getattr', 'setattr', 'delattr'}
-    
+    dangerous_names = {
+        '__import__', 'exec', 'eval', 'open', 'compile', 'globals', 'locals',
+        'vars', 'dir', 'input', '__builtins__', 'getattr', 'setattr', 'delattr'
+    }
+
     for node in ast.walk(tree):
         if isinstance(node, ast.Name) and node.id in dangerous_names:
             raise ValueError(f"Unsafe function or name not allowed: {node.id}")
         if isinstance(node, ast.Attribute) and node.attr in dangerous_names:
-            raise ValueError(f"Unsafe attribute access not allowed: {node.attr}")
-    
+            raise ValueError(
+                f"Unsafe attribute access not allowed: {node.attr}"
+            )
+
     # Create a minimal safe namespace
     safe_globals = {
         '__builtins__': {},
@@ -83,9 +108,69 @@ def safe_eval_lambda(lambda_str: str):
     return eval(lambda_str, safe_globals, {})
 
 
-# Add parent directory to path for imports (before local imports!)
-sys.path.append(str(Path(__file__).parent.parent))   # noqa: E402
-from utils.util import load_config  # noqa: E402
+# =============================================================================
+# CUSTOM EXECUTOR FOR STREAMING
+# =============================================================================
+
+class StreamingRequirementAgentExecutor(ToolCallingAgentExecutor):
+    """Custom executor that listens to final_answer events and streams updates"""
+
+    @override
+    async def _process_events(
+        self,
+        emitter: Emitter,
+        context: a2a_agent_execution.RequestContext,
+        updater: a2a_server_tasks.TaskUpdater,
+    ) -> None:
+        await super()._process_events(emitter, context, updater)
+
+        # Accumulate text for streaming
+        accumulated_text = ""
+
+        async def process_final_answer(
+            data: RequirementAgentFinalAnswerEvent, event: EventMeta
+        ) -> None:
+            nonlocal accumulated_text
+            if data.delta:
+                accumulated_text += data.delta
+
+                await updater.start_work(
+                    a2a_utils.new_agent_parts_message(
+                        parts=[
+                            a2a_types.Part(
+                                root=a2a_types.TextPart(text=accumulated_text)
+                            )
+                        ]
+                    ),
+                )
+
+        emitter.on("final_answer", process_final_answer)
+
+
+def _streaming_requirement_agent_factory(
+    agent: RequirementAgent,
+    *,
+    metadata: A2AServerMetadata | None = None,
+    memory_manager: MemoryManager
+) -> ToolCallingAgentExecutor:
+    return StreamingRequirementAgentExecutor(
+        agent=agent,
+        agent_card=_create_agent_card(metadata or {}, agent),
+        memory_manager=memory_manager,
+        send_trajectory=(
+            metadata.get("send_trajectory", None)
+            if metadata is not None else None
+        ),
+    )
+
+
+# Register the custom factory
+if A2A_AVAILABLE:
+    A2AServer.register_factory(
+        RequirementAgent,
+        _streaming_requirement_agent_factory,
+        override=True
+    )
 
 # =============================================================================
 # MCP TOOLS MANAGEMENT
@@ -96,7 +181,10 @@ class MCPToolsManager:
     """Manages MCP server connections and tool discovery"""
 
     async def setup_mcp_tools_with_stack(self, config, stack):
-        """Setup MCP tools using AsyncExitStack for proper connection management. If the connection fails, the error is caught and the loop continues to the next server."""
+        """Setup MCP tools using AsyncExitStack for proper connection
+        management. If the connection fails, the error is caught and the loop
+        continues to the next server.
+        """
         mcp_config = config.get('mcp_config')
         if not mcp_config:
             return []
@@ -157,7 +245,7 @@ class AgentFactory:
             config['llm_model'],
             ChatModelParameters(
                 temperature=config['llm_temperature'],
-                stream=True 
+                stream=True
             )
         )
         llm.tool_choice_support = {"auto", "none"}
@@ -177,7 +265,6 @@ class AgentFactory:
                 prefix_by_type={Tool: middleware_config['tool_prefix']}
             ))
 
-        
         # Handle tool configuration
         # If tools are provided externally (MCP tools), use them
         # Otherwise, check if tools is a list in config
@@ -215,10 +302,12 @@ class AgentFactory:
                 )
                 if tool_instance:
                     kwargs = {k: v for k, v in r.items() if k != "tool_name"}
-                    # Evaluate string lambdas in custom_checks to callable functions
-                    if "custom_checks" in kwargs and isinstance(kwargs["custom_checks"], list):
+                    # Evaluate string lambdas in custom_checks to callable
+                    if ("custom_checks" in kwargs and
+                            isinstance(kwargs["custom_checks"], list)):
                         kwargs["custom_checks"] = [
-                            safe_eval_lambda(check) if isinstance(check, str) else check
+                            safe_eval_lambda(check)
+                            if isinstance(check, str) else check
                             for check in kwargs["custom_checks"]
                         ]
                     requirements.append(ConditionalRequirement(
@@ -244,12 +333,11 @@ class AgentFactory:
         available_agents, agent_cards = self._discover_supervised_agents(
             config
         )
-        
+
         print("***********CREATING SUPERVISOR AGENT***********")
         # Create supervisor tools (HandoffTools)
         supervisor_tools = []
-        for agent_name, agent_instance in available_agents.items(
-        ):
+        for agent_name, agent_instance in available_agents.items():
             agent_description = agent_cards.get(agent_name, {}).get(
                 "description", agent_name
             )
@@ -496,4 +584,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
