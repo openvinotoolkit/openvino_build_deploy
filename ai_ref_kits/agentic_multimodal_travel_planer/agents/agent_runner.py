@@ -25,10 +25,28 @@ import ast
 from mcp.client.sse import sse_client
 from mcp.client.session import ClientSession
 
+try:
+    import a2a.types as a2a_types
+    A2A_AVAILABLE = True
+except ImportError:
+    A2A_AVAILABLE = False
+
+from beeai_framework.adapters.a2a.agents.agent import A2AAgent
+from beeai_framework.adapters.a2a.serve.server import (
+    A2AServer,
+    A2AServerConfig,
+)
 from beeai_framework.agents.requirement import RequirementAgent
 from beeai_framework.agents.requirement.requirements.conditional import (
     ConditionalRequirement,
 )
+from beeai_framework.backend import ChatModel, ChatModelParameters
+from beeai_framework.memory import UnconstrainedMemory
+from beeai_framework.middleware.trajectory import GlobalTrajectoryMiddleware
+from beeai_framework.serve.utils import LRUMemoryManager
+from beeai_framework.tools import Tool
+from beeai_framework.tools.handoff import HandoffTool
+from beeai_framework.tools.mcp import MCPTool
 
 
 def safe_eval_lambda(lambda_str: str):
@@ -63,28 +81,11 @@ def safe_eval_lambda(lambda_str: str):
         're': re,
     }
     return eval(lambda_str, safe_globals, {})
-from beeai_framework.adapters.a2a.agents.agent import A2AAgent
-from beeai_framework.adapters.a2a.serve.server import (
-    A2AServer,
-    A2AServerConfig,
-)
 
-try:
-    import a2a.types as a2a_types
-    A2A_AVAILABLE = True
-except ImportError:
-    A2A_AVAILABLE = False
-from beeai_framework.backend import ChatModel, ChatModelParameters
-from beeai_framework.memory import UnconstrainedMemory
-from beeai_framework.middleware.trajectory import GlobalTrajectoryMiddleware
-from beeai_framework.serve.utils import LRUMemoryManager
-from beeai_framework.tools import Tool
-from beeai_framework.tools.handoff import HandoffTool
-from beeai_framework.tools.mcp import MCPTool
 
 # Add parent directory to path for imports (before local imports!)
 sys.path.append(str(Path(__file__).parent.parent))   # noqa: E402
-from utils.util import load_config
+from utils.util import load_config  # noqa: E402
 
 # =============================================================================
 # MCP TOOLS MANAGEMENT
