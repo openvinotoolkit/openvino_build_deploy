@@ -1,5 +1,5 @@
 import argparse
-import subprocess
+import subprocess  #nosec B404
 import platform
 from pathlib import Path
 import os
