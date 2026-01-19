@@ -121,65 +121,18 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-## Step 1: Getting the LLMs for agents ready with OpenVINO model Server (OVMS)
+## Step 1: Getting the LLMs/VLM for agents ready with OpenVINO model Server (OVMS)
 
-### Docker Installation
+### OPTION 1: Linux
+
+#### Docker Installation
 For installation instructions, refer to the [official Docker documentation for Ubuntu](https://docs.docker.com/engine/install/ubuntu/).
 
-### Get OpenVINO Model Server image
-Once you have Docker installed on your machine, pull the OpenVINO Model Server image:
+#### Download images and Run models
+Once you have Docker installed on your machine, run the following script which will download the images and start the containers:
 ```
-docker pull openvino/model_server:latest
-```
-
-### Download optimized models 
-
-OpenVINO Model Server will serve your models. In this example you will use two models: an LLM and a VLM.
-
-Create your folder:
-```
-sudo mkdir -p $(pwd)/models
-sudo chown -R $(id -u):$(id -g) $(pwd)/models
-chmod -R 755 $(pwd)/models   
-```
-
-Agent LLM: **Qwen3-8B**
-```
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-ov --task text_generation --tool_parser hermes3
-```
-
-Vision Language Model (VLM): **Phi-3.5-vision-instruct-int4-ov**
-```
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest  \
---pull --model_repository_path /models --source_model OpenVINO/Phi-3.5-vision-instruct-int4-ov --task text_generation --pipeline_type VLM
-```
-
-### Start OpenVINO Model Server 
-Once you have your models, your next step is to start the services. 
-
-LLM
-```
-docker run -d --user $(id -u):$(id -g) --rm \
-  -p 8001:8000 \
-  -v $(pwd)/models:/models openvino/model_server:latest \
-  --rest_port 8000 \
-  --model_repository_path /models \
-  --source_model OpenVINO/Qwen3-8B-int4-ov \
-  --tool_parser hermes3 \
-  --cache_size 2 \
-  --task text_generation \
-  --enable_prefix_caching true
-```
-
-VLM
-```
-docker run -d --rm \
-  -p 8002:8000 \
-  -v $(pwd)/models:/models:ro \
-  openvino/model_server:latest \
-  --rest_port 8000 \
-  --model_name OpenVINO/Phi-3.5-vision-instruct-int4-ov \
-  --model_path /models/OpenVINO/Phi-3.5-vision-instruct-int4-ov
+chmod +x download_and_run_models_linux.sh
+.download_and_run_models_linux.sh
 ```
 
 ### Verify the services are running
@@ -196,7 +149,7 @@ CONTAINER ID   IMAGE                          COMMAND                  CREATED  
 a962a7695b1f   openvino/model_server:latest   "/ovms/bin/ovms --re…"   3 days ago    Up 3 days    0.0.0.0:8002->8000/tcp, [::]:8002->8000/tcp   agitated_galois
 ```
 
-Your LLM is now running and ready to be used by the agents.
+### OPTION 2: Windows (TBC)
 
 ## Step 2: Start the MCP servers
 
