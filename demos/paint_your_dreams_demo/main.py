@@ -233,7 +233,7 @@ async def generate_images(model_name: str, device: str, image_size: int, adapter
 
     while True:
         if randomize_seed:
-            seed = random.randint(0, MAX_SEED)
+            seed = random.randint(0, MAX_SEED)  #nosec B311
 
         start_time = time.perf_counter()
         if input_image is not None:
@@ -400,7 +400,7 @@ def build_ui() -> gr.Interface:
         ).then(swap_buttons_highlighting, outputs=[start_button, stop_button])
 
         # rand the prompt
-        random_prompt_button.click(lambda: gr.Text(value=random.choice(examples_t2i)), outputs=prompt_text)
+        random_prompt_button.click(lambda: gr.Text(value=random.choice(examples_t2i)), outputs=prompt_text)  #nosec B311
 
         # switch between image2image and text2image
         t2i_button.click(swap_buttons_highlighting, outputs=[t2i_button, i2i_button]).then(lambda: gr.Image(visible=False), outputs=input_image)
@@ -408,7 +408,7 @@ def build_ui() -> gr.Interface:
 
         # clicking stop
         stop_button.click(stop)
-        randomize_seed_button.click(lambda _: random.randint(0, MAX_SEED), inputs=seed_slider, outputs=seed_slider)
+        randomize_seed_button.click(lambda _: random.randint(0, MAX_SEED), inputs=seed_slider, outputs=seed_slider)  #nosec B311
 
     return demo
 

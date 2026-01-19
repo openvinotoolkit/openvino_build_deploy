@@ -1,4 +1,4 @@
-import subprocess
+import subprocess  #nosec B404
 import time
 import requests
 import sys
@@ -119,5 +119,5 @@ try:
 
 finally:
     logger.info("Shutting down FastAPI server...")
-    process.terminate()
+    process.kill()
     process.wait()
