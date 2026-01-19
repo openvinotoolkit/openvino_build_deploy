@@ -60,7 +60,7 @@ def load_chat_model(model_name: str, token: str = None) -> OpenVINOGenAILLM:
     if token is not None:
         os.environ["HUGGING_FACE_HUB_TOKEN"] = token
 
-    ov_config = {"PERFORMANCE_HINT": "LATENCY", "CACHE_DIR": ""}
+    ov_config = {"PERFORMANCE_HINT": "LATENCY", "CACHE_DIR": "", "NUM_STREAMS": 1, "INFERENCE_NUM_THREADS": 1}
     # load llama model and its tokenizer
     if not model_path.exists():
         log.info(f"Downloading {model_name}... It may take up to 1h depending on your Internet connection and model size.")     
