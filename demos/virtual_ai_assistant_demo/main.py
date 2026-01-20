@@ -54,7 +54,7 @@ def get_available_devices() -> Set[str]:
 
 def load_chat_model(model_name: str, token: str = None) -> OpenVINOGenAILLM:
     model_path = MODEL_DIR / model_name    
-
+    log.info(f"model_path: {model_path}")
     # tokenizers are disabled anyway, this allows to avoid warning
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     if token is not None:
@@ -361,7 +361,7 @@ if __name__ == "__main__":
     log.getLogger().setLevel(log.INFO)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--chat_model", type=str, default="meta-llama/Llama-3.2-3B-Instruct", help="Path/name of the chat model")
+    parser.add_argument("--chat_model", type=str, default="meta-llama/Llama-3.2-1B", help="Path/name of the chat model")
     parser.add_argument("--embedding_model", type=str, default="BAAI/bge-small-en-v1.5", help="Path/name of the model for embeddings")
     parser.add_argument("--reranker_model", type=str, default="BAAI/bge-reranker-base", help="Path/name of the reranker model")
     parser.add_argument("--personality", type=str, default="healthcare_personality.yaml", help="Path to the YAML file with chatbot personality")
