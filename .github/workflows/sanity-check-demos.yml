@@ -68,6 +68,7 @@ jobs:
         with:
           script: main.py
           project: ${{ matrix.subproject }}
+          args: ${{ contains(matrix.os, 'arm') && '--chat_model=meta-llama/Llama-3.2-1B-Instruct' || '' }}
 
   webcam:
     needs: find-subprojects

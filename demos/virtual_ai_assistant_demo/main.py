@@ -54,7 +54,7 @@ def get_available_devices() -> Set[str]:
 
 def load_chat_model(model_name: str, token: str = None) -> OpenVINOGenAILLM:
     model_path = MODEL_DIR / model_name    
-    log.info(f"model_path: {model_path}")
+
     # tokenizers are disabled anyway, this allows to avoid warning
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     if token is not None:
@@ -78,18 +78,13 @@ def load_chat_model(model_name: str, token: str = None) -> OpenVINOGenAILLM:
             log.info(f"Loading and quantizing {model_name} to INT4...")
             log.info(f"Quantizing {model_name} to INT4... It may take significant amount of time depending on your machine power.")
             quant_config = OVWeightQuantizationConfig(bits=4, sym=False, ratio=0.8, quant_method="awq", group_size=128, dataset="wikitext2")
-            log.info(f"OVWeightQuantizationConfig is created")
             chat_model = OVModelForCausalLM.from_pretrained(model_name, export=True, compile=False, quantization_config=quant_config,
                                                             token=token, trust_remote_code=True, library_name="transformers")
-            log.info(f"OVModelForCausalLM.from_pretrained is passed")
             chat_model.save_pretrained(model_path)
-            log.info(f"save_pretrained is passed")
 
     device = "GPU" if "GPU" in get_available_devices() else "CPU"
 
-    log.info(f"OpenVINOGenAILLM before")
     llm = OpenVINOGenAILLM(model_path=str(model_path), device=device, config=ov_config)
-    log.info(f"OpenVINOGenAILLM passed")
 
     # change number of tokens to be generated in one step
     llm._streamer.tokens_len = 1
@@ -99,7 +94,6 @@ def load_chat_model(model_name: str, token: str = None) -> OpenVINOGenAILLM:
     llm.config.temperature = 0.7
     llm.config.top_k = 50
     llm.config.top_p = 0.95
-    log.info(f"load_chat_model passed")
 
     return llm
 
@@ -361,7 +355,7 @@ if __name__ == "__main__":
     log.getLogger().setLevel(log.INFO)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--chat_model", type=str, default="meta-llama/Llama-3.2-1B-Instruct", help="Path/name of the chat model")
+    parser.add_argument("--chat_model", type=str, default="meta-llama/Llama-3.2-3B-Instruct", help="Path/name of the chat model")
     parser.add_argument("--embedding_model", type=str, default="BAAI/bge-small-en-v1.5", help="Path/name of the model for embeddings")
     parser.add_argument("--reranker_model", type=str, default="BAAI/bge-reranker-base", help="Path/name of the reranker model")
     parser.add_argument("--personality", type=str, default="healthcare_personality.yaml", help="Path to the YAML file with chatbot personality")
