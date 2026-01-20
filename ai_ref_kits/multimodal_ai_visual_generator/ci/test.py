@@ -1,3 +1,4 @@
+import argparse
 import subprocess  #nosec B404
 import time
 import requests
@@ -20,11 +21,16 @@ from convert_and_optimize_llm import convert_chat_model
 from convert_and_optimize_text2image import convert_image_model
 
 # ----- Configuration -----
+parser = argparse.ArgumentParser()
+parser.add_argument("--llm-model-type", type=str, default="tiny-llama-1b-chat", help="LLM model type")
+parser.add_argument("--image-model-type", type=str, default="lcm", help="Image model type")
+parser.add_argument("--precision", type=str, default="int4", help="Model precision")
+args = parser.parse_args()
 
 MODEL_DIR = Path("models")
-LLM_MODEL_TYPE = "tiny-llama-1b-chat"
-IMAGE_MODEL_TYPE = "lcm"
-PRECISION = "fp16"
+LLM_MODEL_TYPE = args.llm_model_type
+IMAGE_MODEL_TYPE = args.image_model_type
+PRECISION = args.precision
 LOG_FILE = Path("gradio_log.txt")
 
 # ----- Step 1: Export Models if Needed (will handle download internally) -----
