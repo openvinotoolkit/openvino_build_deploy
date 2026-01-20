@@ -77,7 +77,7 @@ def load_chat_model(model_name: str, token: str = None) -> OpenVINOGenAILLM:
         else:
             log.info(f"Loading and quantizing {model_name} to INT4...")
             log.info(f"Quantizing {model_name} to INT4... It may take significant amount of time depending on your machine power.")
-            quant_config = OVWeightQuantizationConfig(bits=4, sym=False, ratio=0.8, quant_method="awq", group_size=128, dataset="wikitext2")
+            quant_config = OVWeightQuantizationConfig(bits=8, sym=False, ratio=0.8, quant_method="awq", group_size=128, dataset="wikitext2")
             log.info(f"OVWeightQuantizationConfig is created")
             chat_model = OVModelForCausalLM.from_pretrained(model_name, export=True, compile=False, quantization_config=quant_config,
                                                             token=token, trust_remote_code=True, library_name="transformers")
