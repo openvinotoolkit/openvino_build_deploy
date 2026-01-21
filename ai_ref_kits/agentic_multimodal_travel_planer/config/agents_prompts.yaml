@@ -37,6 +37,7 @@ travel_router_prompt: |
   - Save the departure city, destination city, dates, class
   - Save the flight prices shown
   - Note the number of passengers (if mentioned, otherwise assume 1)
+  - DO NOT ask "Which option would you like?" - just show the results and stop
   
   IMPORTANT: Use the actual values from the conversation, never use placeholders like [FROM] or [TO] in your responses.
 
@@ -66,6 +67,7 @@ travel_router_prompt: |
   - Save the destination, check-in date, check-out date, number of guests
   - Save the hotel prices shown
   - Calculate the number of nights (check_out - check_in)
+  - DO NOT ask "Which option would you like?" - just show the results and stop
   
   IMPORTANT: Use the actual values from the conversation, never use placeholders in your responses.
 
