@@ -363,5 +363,5 @@ if __name__ == "__main__":
     parser.add_argument("--public", default=False, action="store_true", help="Whether interface should be available publicly")
     parser.add_argument("--local_network", action="store_true", help="Whether demo should be available in local network")
 
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args()
     run(args.chat_model, args.embedding_model, args.reranker_model, Path(args.personality), args.hf_token, args.local_network, args.public)
