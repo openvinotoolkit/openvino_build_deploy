@@ -69,12 +69,8 @@ jobs:
         id: determine-script
         shell: bash
         run: |
-          test_arg=""
-          if [[ "${{ matrix.os }}" == *"arm"* ]]; then
-            test_arg=" --precision=fp16"
-          fi
           if [[ -f "${{ matrix.subproject }}/ci/test.py" ]]; then
-            echo "script=ci/test.py${test_arg}" >> "$GITHUB_ENV"
+            echo "script=ci/test.py" >> "$GITHUB_ENV"
           else
             echo "script=main.py" >> "$GITHUB_ENV"
           fi
