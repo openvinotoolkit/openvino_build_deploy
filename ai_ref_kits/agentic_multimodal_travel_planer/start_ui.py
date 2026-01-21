@@ -569,11 +569,16 @@ async def run_agent_workflow(query: str):
             pass
 
     # Create enhanced query that includes image path if available
+    # Only include image path ONCE - clear it after first use to prevent
+    # repeated image_captioning calls
     enhanced_query = query
     if current_image_path:
         # Include a clear text hint so router can parse image_path
         enhanced_query = f"{query} : <image_path> = <{current_image_path}> "
         add_workflow_step("📸 Image included in query")
+        # Clear the image path after first use - the agent should remember
+        # the extracted city from memory, not re-analyze the image
+        current_image_path = None
 
     # Store original query in chatbox (not the enhanced version with metadata)
     chatbox_msg.append({"role": "user", "content": query})

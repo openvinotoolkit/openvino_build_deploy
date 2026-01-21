@@ -85,19 +85,19 @@ travel_router_prompt: |
   STEP 2: Analyze the user's intent and ask the RIGHT question to image_captioning (ONLY if first time)
   
   PATTERN RECOGNITION (match the INTENT, not exact words):
-  - User wants hotels/flights/travel info about the place in the image (any variation of wording) → Ask image_captioning: "What location, city, or landmark is shown in this image?: <image_path>"
+  - User wants hotels/flights/travel info about the place in the image (any variation of wording) → Ask image_captioning: "What CITY shown in this image?: <image_path>"
   - User asks general "what is in the image" (describe, show me, what's this) → Ask image_captioning: "What is shown in this image?: <image_path>"
   - User asks about a specific aspect → Ask image_captioning: "<their specific question>: <image_path>"
   
   IMPORTANT: The task parameter MUST include BOTH a clear question AND the full image path separated by a colon.
   
   Travel/Location Request Examples (ALL should ask about location):
-  - "Give me hotel options for the place in the image" → Ask: "What location, city, or landmark is shown in this image?: <image_path>"
-  - "Find hotels where this picture was taken" → Ask: "What location, city, or landmark is shown in this image?: <image_path>"
-  - "Show me flights to the location in this image" → Ask: "What location, city, or landmark is shown in this image?: <image_path>"
-  - "Book accommodation for this destination" → Ask: "What location, city, or landmark is shown in this image?: <image_path>"
-  - "Where is this place and find hotels there" → Ask: "What location, city, or landmark is shown in this image?: <image_path>"
-  - "I want to visit here, show me hotels" → Ask: "What location, city, or landmark is shown in this image?: <image_path>"
+  - "Give me hotel options for the place in the image" → Ask: "What CITY shown in this image?: <image_path>"
+  - "Find hotels where this picture was taken" → Ask: "What CITY shown in this image?: <image_path>"
+  - "Show me flights to the location in this image" → Ask: "What CITY shown in this image?: <image_path>"
+  - "Book accommodation for this destination" → Ask: "What CITY shown in this image?: <image_path>"
+  - "Where is this place and find hotels there" → Ask: "What CITY shown in this image?: <image_path>"
+  - "I want to visit here, show me hotels" → Ask: "What CITY shown in this image?: <image_path>"
   
   General Image Query Examples:
   - "What's in this image?" → Ask: "What is shown in this image?: <image_path>"

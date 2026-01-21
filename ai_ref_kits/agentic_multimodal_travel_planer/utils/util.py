@@ -211,11 +211,11 @@ def load_config(agent_name: str):
     config_dir = Path(__file__).parent.parent / "config"
     
     # Load agent config
-    with open(config_dir / "agents_config.yaml", 'r') as f:
+    with open(config_dir / "agents_config.yaml", 'r',encoding="utf-8") as f:
         agents_config = yaml.safe_load(f)
     
     # Load prompts config
-    with open(config_dir / "agents_prompts.yaml", 'r') as f:
+    with open(config_dir / "agents_prompts.yaml", 'r',encoding="utf-8") as f:
         prompts_config = yaml.safe_load(f)
     
     # Get agent specific config

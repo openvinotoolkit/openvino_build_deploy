@@ -43,13 +43,13 @@ def start_agent(name, config):
 
     try:
         # Start process with output redirected to log file (unbuffered)
-        with open(log_file, "w", buffering=1) as log:
+        with open(log_file, "w",encoding="utf-8", buffering=1) as log:
             proc = subprocess.Popen(
                 [sys.executable, "-u", str(AGENT_RUNNER), "--agent", name],
                 stdout=log,
                 stderr=subprocess.STDOUT,
                 start_new_session=True,
-                env={**os.environ, "PYTHONUNBUFFERED": "1"},
+                env={**os.environ, "PYTHONUNBUFFERED": "1","PYTHONIOENCODING":"utf-8"},
             )
 
         # Wait for agent to be ready by monitoring log output
@@ -68,7 +68,7 @@ def start_agent(name, config):
 
             # Read new log content
             if log_file.exists():
-                with open(log_file, "r") as f:
+                with open(log_file, "r",encoding="utf-8") as f:
                     f.seek(log_position)
                     new_content = f.read()
                     log_position = f.tell()
@@ -118,7 +118,7 @@ def main():
         print(f"Config file not found: {CONFIG_PATH}")
         sys.exit(1)
 
-    with open(CONFIG_PATH, "r") as file:
+    with open(CONFIG_PATH, "r", encoding="utf-8") as file:
         config = yaml.safe_load(file) or {}
 
     # Separate supervisor from other agents
