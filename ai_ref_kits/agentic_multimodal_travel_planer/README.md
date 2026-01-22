@@ -123,7 +123,7 @@ pip install -r requirements.txt
 
 ## Step 1: Getting the LLMs/VLM for agents ready with OpenVINO model Server (OVMS)
 
-### OPTION 1: Linux
+### OPTION 1: Linux (Docker)
 
 #### Docker Installation
 For installation instructions, refer to the [official Docker documentation for Ubuntu](https://docs.docker.com/engine/install/ubuntu/).
@@ -132,7 +132,7 @@ For installation instructions, refer to the [official Docker documentation for U
 Once you have Docker installed on your machine, run the following script which will download the images and start the containers:
 ```
 chmod +x download_and_run_models_linux.sh
-.download_and_run_models_linux.sh
+./download_and_run_models_linux.sh
 ```
 
 ### Verify the services are running
@@ -149,7 +149,16 @@ CONTAINER ID   IMAGE                          COMMAND                  CREATED  
 a962a7695b1f   openvino/model_server:latest   "/ovms/bin/ovms --re…"   3 days ago    Up 3 days    0.0.0.0:8002->8000/tcp, [::]:8002->8000/tcp   agitated_galois
 ```
 
-### OPTION 2: Windows (TBC)
+### OPTION 2: Windows (Binary)
+
+#### Download images and Run models using Binaries
+Run the following command:
+
+```
+./download_and_run_models_Windows.bat
+```
+
+NOTE: If you are using Windows, you may need to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe) 
 
 ## Step 2: Start the MCP servers
 
