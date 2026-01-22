@@ -7,13 +7,13 @@ optimum-intel==1.25.2
 nncf==2.18.0
 
 # Model + Tokenizer Management
-transformers==4.53.3
+transformers==4.57.6
 diffusers==0.33.1
 huggingface-hub==0.30.2
-sentencepiece==0.2.0
+sentencepiece==0.2.1
 protobuf==6.31.1
 peft==0.15.2
-torch==2.8.0
+torch==2.10.0+cpu
 
 # Streamlit Frontend
 streamlit==1.45.0
