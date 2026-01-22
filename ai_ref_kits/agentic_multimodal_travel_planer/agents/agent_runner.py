@@ -347,44 +347,47 @@ class AgentFactory:
                 target=agent_instance
             ))
 
-        # Combine MCP tools with HandoffTools if provided
+        # Get regular tools from config (like ScratchpadTool, ThinkTool, etc.)
+        regular_tools = []
+        tools_from_config = config.get('tools', [])
+        if isinstance(tools_from_config, list):
+            for tool in tools_from_config:
+                # Skip HandoffTool instances - those are created above
+                # Also skip string markers like 'FinalAnswerTool'
+                if isinstance(tool, Tool) and not isinstance(tool, HandoffTool):
+                    regular_tools.append(tool)
+
+        # Combine: regular tools + MCP tools + HandoffTools
+        all_tools = regular_tools
         if mcp_tools:
-            all_tools = mcp_tools + supervisor_tools
-            print(
-                f"Supervisor using {len(mcp_tools)} MCP tools + "
-                f"{len(supervisor_tools)} HandoffTools = "
-                f"{len(all_tools)} total tools"
-            )
+            all_tools = all_tools + mcp_tools
+        all_tools = all_tools + supervisor_tools
+
+        print(
+            f"Supervisor using {len(regular_tools)} regular tools + "
+            f"{len(mcp_tools) if mcp_tools else 0} MCP tools + "
+            f"{len(supervisor_tools)} HandoffTools = "
+            f"{len(all_tools)} total tools"
+        )
+        if regular_tools:
+            print("  Regular tools:")
+            for i, tool in enumerate(regular_tools, 1):
+                tool_type = type(tool).__name__
+                print(f"    {i}. {tool.name} ({tool_type})")
+        if mcp_tools:
             print("  MCP tools:")
             for i, tool in enumerate(mcp_tools, 1):
                 tool_type = type(tool).__name__
                 print(f"    {i}. {tool.name} ({tool_type})")
-            print("  HandoffTools:")
-            for i, tool in enumerate(supervisor_tools, 1):
-                tool_type = type(tool).__name__
-                # Show target agent info - get URL/name, fallback to string
-                target_info = (
-                    getattr(tool._target, 'url', None)
-                    or getattr(tool._target, 'name', None)
-                    or str(tool._target)
-                )
-                print(f"    {i}. {tool.name} ({tool_type}) -> {target_info}")
-        else:
-            all_tools = supervisor_tools
-            print(
-                f"Supervisor using {len(supervisor_tools)} "
-                f"HandoffTools (no MCP tools)"
+        print("  HandoffTools:")
+        for i, tool in enumerate(supervisor_tools, 1):
+            tool_type = type(tool).__name__
+            target_info = (
+                getattr(tool._target, 'url', None)
+                or getattr(tool._target, 'name', None)
+                or str(tool._target)
             )
-            print("  HandoffTools:")
-            for i, tool in enumerate(supervisor_tools, 1):
-                tool_type = type(tool).__name__
-                # Show target agent info - get URL/name, fallback to string
-                target_info = (
-                    getattr(tool._target, 'url', None)
-                    or getattr(tool._target, 'name', None)
-                    or str(tool._target)
-                )
-                print(f"    {i}. {tool.name} ({tool_type}) -> {target_info}")
+            print(f"    {i}. {tool.name} ({tool_type}) -> {target_info}")
 
         return self._create_regular_agent(config, all_tools)
 
@@ -440,8 +443,13 @@ class ServerManager:
 
     def create_server(self, agent, config):
         """Create and configure the A2A server with streaming capabilities"""
+        # Configure server with host to ensure agent card uses correct URL
+        server_config = A2AServerConfig(
+            port=config['port'],
+            host="127.0.0.1"  # Use 127.0.0.1 instead of 0.0.0.0 for agent card URL
+        )
         server = A2AServer(
-            config=A2AServerConfig(port=config['port']),
+            config=server_config,
             memory_manager=LRUMemoryManager(
                 maxsize=config['memory_size']
             )
@@ -455,7 +463,7 @@ class ServerManager:
                 name=config['name'],
                 description=config['description'],
                 capabilities=capabilities,
-                send_trajectory=True
+                send_trajectory=True,
             )
         else:
             return server.register(
