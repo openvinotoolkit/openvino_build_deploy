@@ -161,7 +161,7 @@ def build_ui():
         def swap_buttons_highlighting():
             return gr.Button(variant="primary"), gr.Button(variant="secondary")
 
-        # rand the topic
+        # randomize the topic
         random_topic_button.click(lambda: gr.Text(value=random.choice(examples)), outputs=topic_text)  #nosec B311
 
         # clicking stop

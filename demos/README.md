@@ -66,6 +66,19 @@ The demo generates images in a reasonable time (seconds) on Intel hardware.
 | Platforms                                     | Client (CPU, GPU), Cloud (CPU, GPU)                        |
 | Owner                                         | [@adrianboguszewski](https://github.com/adrianboguszewski) |
 
+### 🖋 Infinite Quill
+
+The demo generates stories (text) in endless loop.
+
+[![image](https://github.com/user-attachments/assets/7382e9e0-f6ef-4f5c-bb75-c8953ee8c36e)](infinite_quill_demo)
+
+| [Infinite Quill](infinite_quill_demo) |                                                            |
+|---------------------------------------|------------------------------------------------------------|
+| Related AI concepts                   | LLM, GenAI, Qwen, Gemma                                    |
+| Platforms                             | Client (CPU, GPU, NPU), Cloud (CPU, GPU)                   |
+| Owner                                 | [@adrianboguszewski](https://github.com/adrianboguszewski) |
+
+
 ### 🏥 Virtual AI Assistant
 
 The demo works as a virtual AI assistant. The default personality is a healthcare assistant, whose task is to greet the patient and summarize the patient's condition based on the conversation and uploaded examination report.
