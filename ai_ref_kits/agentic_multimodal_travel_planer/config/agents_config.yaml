@@ -31,7 +31,9 @@ travel_router:
   # Tools Configuration (supervisor specific)
   tools:
     - name: "ThinkTool"
-      enabled: true  # Disable it if you want to improve response time, tool for planning
+      enabled: False  # Disable it if you want to improve response time, tool for planning
+    - name: "ScratchpadTool"
+      enabled: true  # Working memory to track actions and avoid repeating them
     - name: "HandoffTool"
       enabled: true
       auto_discovered: true 
@@ -43,24 +45,26 @@ travel_router:
       pretty: true
       tool_prefix: "🔍 "
 
-  # Requirements with custom_checks to validate info before delegating
+  # Requirements - Force workflow: scratchpad first, STRICT confirmation required
   requirements:
+    - tool_name: "scratchpad"
+      force_at_step: 1  # MUST call scratchpad first every turn
     - tool_name: "flight_finder"
-      max_invocations: 1
+      max_invocations: 3
       custom_checks:
+        # Block flight_finder if asking about hotels
         - "lambda state: not any(re.search(r'\\b(hotel|hotels|accommodation|accommodations|stay|staying|room|rooms|lodging|check.?in|check.?out|checkin|checkout)\\b', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text'))"
-        - "lambda state: any(re.search(r'\\b(yes|correct|ok|sure|go ahead|proceed|that\\'s right|right|confirmed)\\b', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text') and hasattr(msg, 'role') and msg.role == 'user') or any(re.search(r'\\b(from|departure|leaving|origin|flying from)\\s+[A-Z][a-z]{2,}|^[A-Z][a-z]{2,}\\s+(to|destination)', msg.text) for msg in state.memory.messages if hasattr(msg, 'text') and hasattr(msg, 'role') and msg.role == 'user')"
-        - "lambda state: any(re.search(r'\\b(yes|correct|ok|sure|go ahead|proceed|that\\'s right|right|confirmed)\\b', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text') and hasattr(msg, 'role') and msg.role == 'user') or any(re.search(r'\\b(to|destination|going|arriving|flying to)\\s+[A-Z][a-z]{2,}|[A-Z][a-z]{2,}\\s+(from|departure)', msg.text) for msg in state.memory.messages if hasattr(msg, 'text') and hasattr(msg, 'role') and msg.role == 'user')"
-        - "lambda state: any(re.search(r'\\b(yes|correct|ok|sure|go ahead|proceed|that\\'s right|right|confirmed)\\b', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text') and hasattr(msg, 'role') and msg.role == 'user') or any(re.search(r'\\b(\\d{4}-\\d{2}-\\d{2}|\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4}|(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\\s+\\d{1,2}|\\d{1,2}\\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*|march|april|may|june|july|august|september|october|november|december|january|february)', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text') and hasattr(msg, 'role') and msg.role == 'user')"
-        - "lambda state: any(re.search(r'\\b(yes|correct|ok|sure|go ahead|proceed|that\\'s right|right|confirmed)\\b', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text') and hasattr(msg, 'role') and msg.role == 'user') or any(re.search(r'\\b(return|returning|inbound|back|come back|march|april|may|june|july|august|september|october|november|december|january|february|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text') and hasattr(msg, 'role') and msg.role == 'user')"
-        - "lambda state: any(re.search(r'\\b(yes|correct|ok|sure|go ahead|proceed|that\\'s right|right|confirmed)\\b', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text') and hasattr(msg, 'role') and msg.role == 'user') or any(re.search(r'\\b(economy|business|first|coach)\\b', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text') and hasattr(msg, 'role') and msg.role == 'user')"
+        # ONLY allow if user explicitly confirmed with yes/ok/sure/proceed
+        - "lambda state: any(re.search(r'\\b(yes|correct|ok|sure|go ahead|proceed|that\\'s right|right|confirmed)\\b', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text') and hasattr(msg, 'role') and msg.role == 'user')"
     - tool_name: "hotel_finder"
-      max_invocations: 1
+      max_invocations: 3
       custom_checks:
+        # Ensure conversation mentions hotels
         - "lambda state: any(re.search(r'\\b(hotel|hotels|accommodation|accommodations|stay|staying|room|rooms|lodging|reservation|book.*hotel|check.?in|check.?out|checkin|checkout)\\b', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text'))"
+        # ONLY allow if user explicitly confirmed with yes/ok/sure/proceed
         - "lambda state: any(re.search(r'\\b(yes|correct|ok|sure|go ahead|proceed|that\\'s right|right|confirmed)\\b', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text') and hasattr(msg, 'role') and msg.role == 'user')"
     - tool_name: "image_captioning"
-      max_invocations: 1
+      max_invocations: 3
       custom_checks:
         - "lambda state: any(re.search(r'<image_path>\\s*=\\s*<[^>]+>', msg.text) for msg in state.memory.messages if hasattr(msg, 'text') and hasattr(msg, 'role') and msg.role == 'user')" 
 
@@ -111,7 +115,7 @@ flight_finder:
   requirements:
     - tool_name: "search_flights"
       force_at_step: 1
-      max_invocations: 2
+      max_invocations: 1
 
 # Hotel Finder Agent Configuration
 # Hotel Finder Agent Configuration

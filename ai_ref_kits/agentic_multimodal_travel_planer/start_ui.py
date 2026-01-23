@@ -477,11 +477,22 @@ def reset_all_agent_memories():
     # a new conversation session with the server-side agent
     if travel_router_client:
         try:
+            # Send reset command to clear server-side scratchpad
+            try:
+                # Use asyncio to call the async chat_stream method
+                async def send_reset():
+                    await travel_router_client.chat_stream("RESET_SCRATCHPAD")
+                
+                asyncio.run(send_reset())
+                print("✅ Server-side scratchpad cleared")
+            except Exception as e:
+                print(f"⚠️  Error clearing scratchpad: {e}")
+            
             # Create new memory instance
-            travel_router_client.memory = UnconstrainedMemory()
-            # Reinitialize the A2AAgent client with fresh memory
             travel_router_port = os.getenv("TRAVEL_ROUTER_PORT", "9996")
             travel_router_url = f"http://127.0.0.1:{travel_router_port}"
+            travel_router_client.memory = UnconstrainedMemory()
+            # Reinitialize the A2AAgent client with fresh memory
             travel_router_client.client = A2AAgent(
                 url=travel_router_url,
                 memory=travel_router_client.memory
