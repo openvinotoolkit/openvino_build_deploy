@@ -24,17 +24,21 @@ TIMEOUT=1800
 OVMS_IMAGE="openvino/model_server:latest"
 GPU_ARGS=""
 TARGET_DEVICE_ARG=""
+INTEL_GPUS=0
 
 for r in /dev/dri/render*; do
-  [ -e "$r" ] || continue
-  if [ -f "/sys/class/drm/$(basename "$r")/device/vendor" ] &&
-     grep -q "0x8086" "/sys/class/drm/$(basename "$r")/device/vendor"; then
-    OVMS_IMAGE="openvino/model_server:latest-gpu"
-    GPU_ARGS="--device=/dev/dri --group-add=$(stat -c '%g' "$r")"
-    TARGET_DEVICE_ARG="--target_device GPU"
-    break
-  fi
+  v="/sys/class/drm/$(basename "$r")/device/vendor"
+  [ -f "$v" ] && grep -q 0x8086 "$v" || continue
+
+  INTEL_GPUS=$((INTEL_GPUS+1))
+  GID="$(stat -c '%g' "$r")"
 done
+
+[ "$INTEL_GPUS" -gt 0 ] && {
+  OVMS_IMAGE="openvino/model_server:latest-gpu"
+  GPU_ARGS="--device=/dev/dri --group-add=${GID}"
+  TARGET_DEVICE_ARG="--target_device GPU.$([ "$INTEL_GPUS" -gt 1 ] && echo 1 || echo 0)"
+}
 
 # --------------------------------------------------
 # Helper: wait for OVMS readiness with progress
@@ -107,7 +111,9 @@ docker run -d \
   --source_model "${LLM_MODEL}" \
   --task text_generation \
   --tool_parser hermes3 \
-  ${TARGET_DEVICE_ARG}
+  --log_level DEBUG \
+  ${TARGET_DEVICE_ARG} \
+  
 
 docker run -d \
   ${GPU_ARGS} \
@@ -124,8 +130,9 @@ docker run -d \
   --model_name "${VLM_MODEL}" \
   --task text_generation \
   --pipeline_type VLM \
-  ${TARGET_DEVICE_ARG} \
-  --log_level DEBUG
+  --log_level DEBUG \
+  ${TARGET_DEVICE_ARG} 
+  
 
 # --------------------------------------------------
 # Wait for readiness (PARALLEL)
