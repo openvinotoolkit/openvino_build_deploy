@@ -4,7 +4,9 @@ import logging as log
 import os
 import random
 import sys
+import time
 from pathlib import Path
+from typing import AsyncGenerator
 
 import gradio as gr
 import openvino_genai as genai
@@ -25,6 +27,7 @@ MODELS = [
 stop_generating: bool = False
 ov_pipelines: dict = {}
 generated_text_buffer: str = ""
+generated_tokens: int = 0
 
 
 async def download_model(model_name: str) -> None:
@@ -57,19 +60,20 @@ async def stop() -> None:
 
 
 def streamer(subword: str) -> genai.StreamingStatus:
-    global generated_text_buffer, stop_generating
+    global generated_text_buffer, generated_tokens, stop_generating
 
     if stop_generating:
         return genai.StreamingStatus.CANCEL
 
     if "<think>" not in subword and "</think>" not in subword:
         generated_text_buffer += subword
+        generated_tokens += 1
 
     return genai.StreamingStatus.RUNNING
 
 
-async def generate_text(model_name: str, device: str, topic: str, endless_generation: bool):
-    global stop_generating, generated_text_buffer
+async def generate_text(model_name: str, device: str, topic: str, endless_generation: bool) -> AsyncGenerator[tuple[str, float], None]:
+    global stop_generating, generated_text_buffer, generated_tokens
     stop_generating = False
 
     device = device.split(":")[0]  # Extract device type (e.g., "CPU", "GPU")
@@ -89,23 +93,27 @@ async def generate_text(model_name: str, device: str, topic: str, endless_genera
             break
 
         generated_text_buffer = ""
+        generated_tokens = 0
 
         # run blocking code in a thread
-        generation_task = asyncio.create_task(asyncio.to_thread(ov_pipeline.generate, [prompt], config, streamer))
+        generation_task = asyncio.create_task(asyncio.to_thread(ov_pipeline.generate, prompt, config, streamer))
 
+        start_time = time.perf_counter()
         while not generation_task.done():
             if stop_generating:
                 break
 
-            yield generated_text_buffer
+            processing_time = time.perf_counter() - start_time
+            yield generated_text_buffer, round(generated_tokens / processing_time, 2)
 
             # small delay necessary for streaming
-            await asyncio.sleep(0.01)
+            await asyncio.sleep(0.1)
 
         # wait for the generation to finish if it hasn't
         await generation_task
 
-        yield generated_text_buffer  # final output
+        processing_time = time.perf_counter() - start_time
+        yield generated_text_buffer, round(generated_tokens / processing_time, 2)  # final output
 
         generated_stories_count += 1
 
@@ -135,7 +143,7 @@ def build_ui():
                 random_topic_button = gr.Button("Random topic", variant="secondary", scale=1)
             output_textbox = gr.Textbox(label="Story", lines=30, autoscroll=True, interactive=False)
             with gr.Row():
-                result_time_label = gr.Text("", label="Inference time", type="text")
+                tps_text = gr.Text("", label="Tokens/s", type="text")
             with gr.Row(equal_height=True):
                 model_dropdown = gr.Dropdown(choices=model_choices, value=initial_model, label="Model", interactive=True, scale=2)
                 device_dropdown = gr.Dropdown(choices=available_devices, value=available_devices[0], interactive=True,
@@ -167,7 +175,7 @@ def build_ui():
         ).then(
             generate_text,
             inputs=[model_dropdown, device_dropdown, topic_text, endless_checkbox],
-            outputs=[output_textbox]
+            outputs=[output_textbox, tps_text]
         ).then(swap_buttons_highlighting, outputs=[start_button, stop_button])
 
     return demo
