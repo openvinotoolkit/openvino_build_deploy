@@ -205,7 +205,6 @@ def progress(step, num_steps, latent) -> bool:
 async def generate_images(model_name: str, device: str, image_size: int, adapter_model_name: str, adapter_alpha: float, input_image_mask: np.ndarray, prompt: str, seed: int,
                           guidance_scale: float, num_inference_steps: int, strength: float, randomize_seed: bool, endless_generation: bool, stack_images: bool) -> tuple[np.ndarray, float]:
     global stop_generating, current_pipeline_configuration, ov_pipelines
-    stop_generating = not endless_generation
 
     pipeline_config = {
         "model_name": model_name,
@@ -234,7 +233,11 @@ async def generate_images(model_name: str, device: str, image_size: int, adapter
         image_mask = cv2.resize(image_mask, (image_size, image_size), interpolation=cv2.INTER_NEAREST)
         image_mask = cv2.cvtColor(image_mask, cv2.COLOR_GRAY2BGR)
 
+    stop_generating = False
     while True:
+        if stop_generating:
+            break
+
         if randomize_seed:
             seed = random.randint(0, MAX_SEED)  #nosec B311
 
@@ -275,7 +278,7 @@ async def generate_images(model_name: str, device: str, image_size: int, adapter
         stacked_images = np.hstack(results)
         yield stacked_images, round(processing_time, 5)
 
-        if stop_generating:
+        if not endless_generation:
             break
 
         # small delay necessary for endless generation
