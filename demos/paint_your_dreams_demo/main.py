@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import collections
 import logging as log
 import os
 import random
@@ -33,6 +34,8 @@ SAFETY_CHECKER_MODEL_NAME = "Falconsai/nsfw_image_detection"
 safety_checker: Optional[Pipeline] = None
 
 ov_pipelines = {}
+
+results = collections.deque(maxlen=4)
 
 stop_generating: bool = True
 
@@ -200,7 +203,7 @@ def progress(step, num_steps, latent) -> bool:
 
 
 async def generate_images(model_name: str, device: str, image_size: int, adapter_model_name: str, adapter_alpha: float, input_image_mask: np.ndarray, prompt: str, seed: int,
-                          guidance_scale: float, num_inference_steps: int, strength: float, randomize_seed: bool, endless_generation: bool) -> tuple[np.ndarray, float]:
+                          guidance_scale: float, num_inference_steps: int, strength: float, randomize_seed: bool, endless_generation: bool, stack_images: bool) -> tuple[np.ndarray, float]:
     global stop_generating, current_pipeline_configuration, ov_pipelines
     stop_generating = not endless_generation
 
@@ -263,9 +266,14 @@ async def generate_images(model_name: str, device: str, image_size: int, adapter
 
         utils.draw_ov_watermark(result, size=0.60)
 
+        if not stack_images:
+            results.clear()
+        results.append(result.copy())
+
         processing_time = end_time - start_time
 
-        yield result, round(processing_time, 5)
+        stacked_images = np.hstack(results)
+        yield stacked_images, round(processing_time, 5)
 
         if stop_generating:
             break
@@ -333,10 +341,12 @@ def build_ui() -> gr.Interface:
                         adapter_alpha_slider = gr.Slider(label="LoRA Alpha", minimum=0.0, maximum=1.0, step=0.05, value=0.5, visible=False)
                     with gr.Row(equal_height=True):
                         device_dropdown = gr.Dropdown(choices=available_devices, value=available_devices[0], label="Inference device", scale=4)
-                        endless_checkbox = gr.Checkbox(label="Generate endlessly", value=False)
                         with gr.Column(scale=1):
-                            start_button = gr.Button("Start generation", variant="primary")
-                            stop_button = gr.Button("Stop generation", variant="secondary")
+                            endless_checkbox = gr.Checkbox(label="Generate endlessly", value=False)
+                            stack_checkbox = gr.Checkbox(label="Stack images", value=False)
+                        with gr.Column(scale=1):
+                            start_button = gr.Button("Start generating", variant="primary")
+                            stop_button = gr.Button("Stop generating", variant="secondary")
 
             with gr.Accordion("Advanced options", open=False):
                 with gr.Row():
@@ -395,7 +405,7 @@ def build_ui() -> gr.Interface:
         ).then(
             generate_images,
             inputs=[model_dropdown, device_dropdown, image_size_slider, adapter_dropdown, adapter_alpha_slider, input_image, prompt_text, seed_slider, guidance_scale_slider,
-                    num_inference_steps_slider, strength_slider, randomize_seed_checkbox, endless_checkbox],
+                    num_inference_steps_slider, strength_slider, randomize_seed_checkbox, endless_checkbox, stack_checkbox],
             outputs=[result_img, result_time_label]
         ).then(swap_buttons_highlighting, outputs=[start_button, stop_button])
 
@@ -403,7 +413,7 @@ def build_ui() -> gr.Interface:
         random_prompt_button.click(lambda: gr.Text(value=random.choice(examples_t2i)), outputs=prompt_text)  #nosec B311
 
         # switch between image2image and text2image
-        t2i_button.click(swap_buttons_highlighting, outputs=[t2i_button, i2i_button]).then(lambda: gr.Image(visible=False), outputs=input_image)
+        t2i_button.click(swap_buttons_highlighting, outputs=[t2i_button, i2i_button]).then(lambda: gr.Image(visible=False, value=None), outputs=input_image)
         i2i_button.click(swap_buttons_highlighting, outputs=[i2i_button, t2i_button]).then(lambda: gr.Image(visible=True), outputs=input_image)
 
         # clicking stop
