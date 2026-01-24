@@ -75,10 +75,12 @@ def _create_tool(tool_config, agent_config=None):
     """Create a tool instance based on configuration"""
     from beeai_framework.tools.think import ThinkTool
     from beeai_framework.tools.weather import OpenMeteoTool
+    from utils.scratchpad_tool import ScratchpadTool
     
     tool_map = {
         'ThinkTool': ThinkTool,
         'OpenMeteoTool': OpenMeteoTool,
+        'ScratchpadTool': ScratchpadTool,
         'FinalAnswerTool': None,  # FinalAnswerTool is built into RequirementAgent
     }
     
