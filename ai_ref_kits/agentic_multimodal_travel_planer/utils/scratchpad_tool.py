@@ -186,7 +186,7 @@ class ScratchpadTool(Tool):
             session_id: Session identifier.
 
         Returns:
-            Formatted scratchpad content string.
+            Formatted scratchpad content string with validation warnings.
         """
         entries = self._get_entries(session_id)
         if not entries:
@@ -198,8 +198,23 @@ class ScratchpadTool(Tool):
         result = "=== AGENT SCRATCHPAD ===\n\n"
         result += "\n\n".join(f"[{i}] {entry}" for i, entry in
                               enumerate(entries, 1))
-        logger.info(f"ScratchpadTool[{session_id}]: READ - {len(entries)} "
-                    f"entries")
+        
+        # Add validation warnings for missing required fields
+        entry_text = entries[0] if entries else ""
+        warnings = []
+        
+        # Check if this looks like flight data (has departure_date or return_date but missing departure_city)
+        if ('departure_date:' in entry_text or 'return_date:' in entry_text) and 'departure_city:' not in entry_text:
+            warnings.append("\n\n⚠️ WARNING: departure_city is MISSING for flights! You MUST ask: 'What is your departure city?' before proceeding.")
+        
+        # Check if this looks like hotel data (has check_in_date but missing guests)
+        if 'check_in_date:' in entry_text and 'guests:' not in entry_text:
+            warnings.append("\n\n⚠️ WARNING: guests field is MISSING for hotels! Add 'guests: 1' as default.")
+        
+        result += "".join(warnings)
+        
+        logger.info(f"ScratchpadTool[{session_id}]: READ - {len(entries)} entries" + 
+                   (f" with {len(warnings)} warnings" if warnings else ""))
         self._log_operation("read", session_id,
                            result=f"{len(entries)} entries")
         return result
@@ -264,6 +279,13 @@ class ScratchpadTool(Tool):
         Merges key-value pairs with existing entries to avoid duplicates.
         If entry contains key-value pairs (format: "key: value"), it will
         update existing entries with the same keys.
+        
+        Automatically adds missing date field aliases to support both flights
+        and hotels:
+        - If check_in_date exists, adds departure_date with same value
+        - If departure_date exists, adds check_in_date with same value
+        - If check_out_date exists, adds return_date with same value
+        - If return_date exists, adds check_out_date with same value
 
         Args:
             entry: Content to add/update.
@@ -276,6 +298,23 @@ class ScratchpadTool(Tool):
         new_pairs = self._parse_key_value_pairs(entry)
 
         if new_pairs:
+            # Automatically add missing date field aliases
+            if 'check_in_date' in new_pairs and 'departure_date' not in new_pairs:
+                new_pairs['departure_date'] = new_pairs['check_in_date']
+                logger.info(f"ScratchpadTool: Auto-added departure_date = {new_pairs['departure_date']}")
+            
+            if 'departure_date' in new_pairs and 'check_in_date' not in new_pairs:
+                new_pairs['check_in_date'] = new_pairs['departure_date']
+                logger.info(f"ScratchpadTool: Auto-added check_in_date = {new_pairs['check_in_date']}")
+            
+            if 'check_out_date' in new_pairs and 'return_date' not in new_pairs:
+                new_pairs['return_date'] = new_pairs['check_out_date']
+                logger.info(f"ScratchpadTool: Auto-added return_date = {new_pairs['return_date']}")
+            
+            if 'return_date' in new_pairs and 'check_out_date' not in new_pairs:
+                new_pairs['check_out_date'] = new_pairs['return_date']
+                logger.info(f"ScratchpadTool: Auto-added check_out_date = {new_pairs['check_out_date']}")
+            
             # Merge with existing entries
             entries[:] = self._merge_entries(entries, new_pairs)
             result = f"Updated scratchpad: {', '.join(f'{k}: {v}' for k, v in new_pairs.items())}"
