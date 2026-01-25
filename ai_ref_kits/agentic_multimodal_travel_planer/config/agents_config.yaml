@@ -52,17 +52,13 @@ travel_router:
     - tool_name: "flight_finder"
       max_invocations: 3
       custom_checks:
-        # Block flight_finder if asking about hotels
-        - "lambda state: not any(re.search(r'\\b(hotel|hotels|accommodation|accommodations|stay|staying|room|rooms|lodging|check.?in|check.?out|checkin|checkout)\\b', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text'))"
-        # ONLY allow if user explicitly confirmed with yes/ok/sure/proceed
-        - "lambda state: any(re.search(r'\\b(yes|correct|ok|sure|go ahead|proceed|that\\'s right|right|confirmed)\\b', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text') and hasattr(msg, 'role') and msg.role == 'user')"
+        - "lambda state: (lambda user_msgs, assistant_msgs: (len(user_msgs) > 0 and re.search(r'\\b(yes|y|ok|okay|sure|proceed|confirm|go\\s+ahead)\\b', user_msgs[-1].text, re.I) and any(any(hasattr(c, 'tool_name') and c.tool_name == 'final_answer' and hasattr(c, 'args') and re.search(r'\\bflight\\b', c.args, re.I) and re.search(r'proceed', c.args, re.I) and re.search(r'\\?', c.args) for c in m.content) for m in assistant_msgs)))([m for m in state.memory.messages if hasattr(m, 'role') and m.role == 'user' and hasattr(m, 'text')], [m for m in state.memory.messages if hasattr(m, 'role') and m.role == 'assistant' and hasattr(m, 'content')])"
+        - "lambda state: any(('departure_city:' in c.result and 'destination:' in c.result and 'departure_date:' in c.result and 'return_date:' in c.result and 'class:' in c.result) for m in state.memory.messages if hasattr(m, 'content') for c in m.content if hasattr(c, 'tool_name') and c.tool_name == 'scratchpad' and hasattr(c, 'result'))"
     - tool_name: "hotel_finder"
       max_invocations: 3
       custom_checks:
-        # Ensure conversation mentions hotels
-        - "lambda state: any(re.search(r'\\b(hotel|hotels|accommodation|accommodations|stay|staying|room|rooms|lodging|reservation|book.*hotel|check.?in|check.?out|checkin|checkout)\\b', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text'))"
-        # ONLY allow if user explicitly confirmed with yes/ok/sure/proceed
-        - "lambda state: any(re.search(r'\\b(yes|correct|ok|sure|go ahead|proceed|that\\'s right|right|confirmed)\\b', msg.text.lower()) for msg in state.memory.messages if hasattr(msg, 'text') and hasattr(msg, 'role') and msg.role == 'user')"
+        - "lambda state: (lambda user_msgs, assistant_msgs: (len(user_msgs) > 0 and re.search(r'\\b(yes|y|ok|okay|sure|proceed|confirm|go\\s+ahead)\\b', user_msgs[-1].text, re.I) and any(any(hasattr(c, 'tool_name') and c.tool_name == 'final_answer' and hasattr(c, 'args') and re.search(r'\\bhotel\\b', c.args, re.I) and re.search(r'proceed', c.args, re.I) and re.search(r'\\?', c.args) for c in m.content) for m in assistant_msgs)))([m for m in state.memory.messages if hasattr(m, 'role') and m.role == 'user' and hasattr(m, 'text')], [m for m in state.memory.messages if hasattr(m, 'role') and m.role == 'assistant' and hasattr(m, 'content')])"
+        - "lambda state: any(('destination:' in c.result and 'check_in_date:' in c.result and 'check_out_date:' in c.result and 'guests:' in c.result) for m in state.memory.messages if hasattr(m, 'content') for c in m.content if hasattr(c, 'tool_name') and c.tool_name == 'scratchpad' and hasattr(c, 'result'))"
     - tool_name: "image_captioning"
       max_invocations: 3
       custom_checks:
@@ -164,7 +160,7 @@ hotel_finder:
 
   # BeeAI rules requirements, useful to force agent behaviour
   requirements:
-    - tool_name: "search_hotels"
+    - tool_name: "search_hotel_tool"
       force_at_step: 1
       max_invocations: 2
 
@@ -195,7 +191,7 @@ image_captioning:
   
   # Requirements - Force tool usage
   requirements:
-    - tool_name: "ingest_videos"
+    - tool_name: "image_captioning"
       force_at_step: 1
       max_invocations: 1
   # Tools Configuration (MCP-based)
