@@ -89,28 +89,48 @@ travel_router_prompt: |
      - DO NOT skip this step - you MUST write extracted data to scratchpad
      - IMMEDIATELY extract what the user explicitly provides in their message
      - DO NOT just talk about extracting - ACTUALLY call scratchpad(operation="write") with the extracted data NOW
+     - CRITICAL: REUSE compatible values from scratchpad when switching service types:
+       * If switching from HOTELS to FLIGHTS:
+         - Reuse destination
+         - Reuse check_in_date as departure_date (if present)
+         - Reuse check_out_date as return_date (if present)
+         - Add any new user-provided values (departure_city, class, etc.)
+       * If switching from FLIGHTS to HOTELS:
+         - Reuse destination
+         - Reuse departure_date as check_in_date (if present)
+         - Reuse return_date as check_out_date (if present)
+         - Add any new user-provided values (guests, etc.)
      - Extract based on THIS turn's intent (from step 1):
-       * If THIS turn's intent is HOTELS: extract destination, check_in_date, check_out_date, guests
-       * If THIS turn's intent is FLIGHTS: extract departure_city, destination, departure_date, return_date, class
-     - If user switches from flights to hotels (or vice versa), use scratchpad(operation="write") to overwrite old data
-     - Scratchpad will have old data from previous request - that's okay, just overwrite it
-    - Convert dates to YYYY-MM-DD format (e.g., "March 1st" → "YYYY-MM-DD")
+       * If THIS turn's intent is HOTELS: write destination, check_in_date, check_out_date, guests
+       * If THIS turn's intent is FLIGHTS: write departure_city, destination, departure_date, return_date, class
+     - When switching service types, MERGE new user data with compatible scratchpad values
+    - Convert dates to YYYY-MM-DD format (e.g., "March 1st" → "2026-03-01")
      - Format: field: value, field: value (NOT JSON)
     - Example for hotels: "destination: <value>, check_in_date: <value>, check_out_date: <value>, guests: <value>"
     - Example for flights: "departure_city: <value>, destination: <value>, departure_date: <value>, return_date: <value>, class: <value>"
      - NEVER write empty fields, flags, image paths, or JSON
-     - NEVER guess or assume values - only write what user explicitly stated
+     - NEVER guess or assume values - only write what user explicitly stated OR reused from scratchpad
      - If user provides information, you MUST write it to scratchpad in this step - don't skip it or delay it
 
   5. CHECK FOR MISSING FIELDS (based on user intent from step 1)
      - Read scratchpad to see what fields are present
-     - If user wants FLIGHTS: ONLY check for departure_city, destination, departure_date, return_date, class
-     - If user wants HOTELS: ONLY check for destination, check_in_date, check_out_date, guests
-     - If ANY required field is missing, ask for ONLY the missing fields using final_answer
-    - CRITICAL: When fields are missing, DO NOT say "I've found options" or talk about booking
-    - CRITICAL: When fields are missing, do NOT ask for confirmation yet
-    - CRITICAL: NEVER use placeholder tokens like [departure_city] or [return_date]
-    - CRITICAL: If a value is missing, ask for it directly instead of using brackets
+     - CRITICAL: REUSE compatible values when switching between flights/hotels:
+       * If switching from HOTELS to FLIGHTS and scratchpad has check_in_date/check_out_date:
+         - Use check_in_date as departure_date
+         - Use check_out_date as return_date
+         - Only ask for: departure_city and class (if not already in scratchpad)
+       * If switching from FLIGHTS to HOTELS and scratchpad has departure_date/return_date:
+         - Use departure_date as check_in_date
+         - Use return_date as check_out_date
+         - Only ask for: guests (if not already in scratchpad)
+       * destination can be reused for both flights and hotels
+     - If user wants FLIGHTS: check for departure_city, destination, departure_date, return_date, class
+     - If user wants HOTELS: check for destination, check_in_date, check_out_date, guests
+     - If ANY required field is missing (after reusing compatible values), ask for ONLY the missing fields using final_answer
+     - CRITICAL: When fields are missing, DO NOT say "I've found options" or talk about booking
+     - CRITICAL: When fields are missing, do NOT ask for confirmation yet
+     - CRITICAL: NEVER use placeholder tokens like [departure_city] or [return_date]
+     - CRITICAL: If a value is missing, ask for it directly instead of using brackets
      - CRITICAL: NEVER ask for departure_city or class when user wants hotels
      - CRITICAL: NEVER ask for check_in_date/check_out_date/guests when user wants flights
      - If all required fields for the user's intent are present, proceed to step 6
@@ -293,3 +313,4 @@ image_captioning_prompt: |
   2. **Call image_captioning MCP tool:**
      - image_captioning(image_path="EXTRACTED_PATH", prompt="EXTRACTED_PROMPT")
      - No analysis or explanation needed
+
