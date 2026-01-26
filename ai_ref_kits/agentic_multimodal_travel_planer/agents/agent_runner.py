@@ -552,15 +552,10 @@ class AgentRunner:
             self.agent_instance = agent  # Store agent reference
             server = self.server_manager.create_server(agent, config)
 
-            process = multiprocessing.Process(target=server.serve)
-            process.start()
-
             try:
-                while process.is_alive():
-                    await asyncio.sleep(1)
-            except (KeyboardInterrupt, asyncio.CancelledError):
-                process.terminate()
-                process.join()
+                await asyncio.to_thread(server.serve)
+            except KeyboardInterrupt:
+                print(f"\n{agent_name} stopped")
 
     def get_available_agents(self):
         """Get list of available agents"""
