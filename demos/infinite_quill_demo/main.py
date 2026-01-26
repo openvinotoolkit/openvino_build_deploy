@@ -196,5 +196,5 @@ if __name__ == '__main__':
     parser.add_argument("--local_network", action="store_true", help="Whether demo should be available in local network")
     parser.add_argument("--public", default=False, action="store_true", help="Whether interface should be available publicly")
 
-    args = parser.parse_args()
+    args = parser.parse_known_args()
     run_demo(args.local_network, args.public)
