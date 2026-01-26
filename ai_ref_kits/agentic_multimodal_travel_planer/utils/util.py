@@ -320,22 +320,59 @@ def kill_processes_on_port(port: int) -> None:
     Args:
         port: The port number to clear.
     """
-    try:
-        result = subprocess.run(
-            ["lsof", "-t", f"-i:{port}"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if result.stdout.strip():
-            pids = result.stdout.strip().split("\n")
-            for pid in pids:
-                if pid:
-                    subprocess.run(["kill", "-9", pid], check=False)
+    import platform
+    
+    if platform.system() == "Windows":
+        # Windows: Use netstat to find PIDs, then taskkill
+        try:
+            # Find processes listening on the port
+            result = subprocess.run(
+                ["netstat", "-ano"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if result.returncode == 0:
+                pids = set()
+                for line in result.stdout.splitlines():
+                    if f":{port}" in line and "LISTENING" in line:
+                        # Extract PID (last column)
+                        parts = line.split()
+                        if len(parts) >= 5:
+                            pid = parts[-1]
+                            if pid.isdigit():
+                                pids.add(pid)
+                
+                # Kill each process
+                for pid in pids:
+                    subprocess.run(
+                        ["taskkill", "/F", "/PID", pid],
+                        capture_output=True,
+                        check=False,
+                    )
                     print(f"Killed process {pid} on port {port}")
-    except FileNotFoundError:
-        # lsof not available; best effort skip
-        pass
+        except Exception as e:
+            print(f"Warning: Failed to kill processes on port {port}: {e}")
+    else:
+        # Unix/Linux: Use lsof and kill
+        try:
+            result = subprocess.run(
+                ["lsof", "-t", f"-i:{port}"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if result.stdout.strip():
+                pids = result.stdout.strip().split("\n")
+                for pid in pids:
+                    if pid:
+                        subprocess.run(["kill", "-9", pid], check=False)
+                        print(f"Killed process {pid} on port {port}")
+        except FileNotFoundError:
+            # lsof not available; best effort skip
+            pass
+        except Exception as e:
+            print(f"Warning: Failed to kill processes on port {port}: {e}")
 
 
 def run_async_in_thread(
