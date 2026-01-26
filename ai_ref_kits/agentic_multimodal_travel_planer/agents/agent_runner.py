@@ -13,7 +13,6 @@ This script can run:
 import argparse
 import ast
 import asyncio
-import multiprocessing
 import os
 import re
 import sys
