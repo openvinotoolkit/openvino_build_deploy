@@ -229,7 +229,7 @@ travel_router_prompt: |
 
 # Flight Finder Agent Prompt
 flight_finder_prompt: |
-  You search for flights. You will receive: departure_city, destination, departure_date, return_date, class
+  You search for flights. You will receive: departure_city, destination, departure_date, return_date, class, ALWAYS DEFAULT TO ADULTS = 1
 
   CRITICAL: You MUST receive ALL required fields (departure_city, destination, departure_date, return_date, class) from the handoff input.
   - If ANY field is missing or empty, respond with final_answer: "I need all flight details: departure city, destination, departure date, return date, and class. Please provide the missing information."
