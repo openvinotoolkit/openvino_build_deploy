@@ -2,6 +2,9 @@
 
 [![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/LICENSE.txt)
 
+> [!NOTE]
+> The code in this repository is provided "as is" and is for demonstration and educational purposes only. It is explicitly not intended for use in a production environment. 
+
 Welcome to the **Build and Deploy AI Solutions** repository! This repository contains pre-built components and code samples designed to accelerate the development and deployment of **production-grade AI** applications across various industries, including retail, healthcare, gaming, manufacturing, and more. With the OpenVINO™ Toolkit from Intel, you can enhance the capabilities of both Intel and non-Intel hardware to meet your specific needs.
 
 > Material and dependencies are self-contained, so you can get started building easily.
@@ -30,9 +33,6 @@ This directory contains interactive demos aimed at demonstrating how OpenVINO pe
 
 ### [Desktop Applications](apps): User-Friendly AI Applications with OpenVINO
 Discover interactive desktop applications using OpenVINO as an engine for AI inference.
-
-### [Workshops](workshops): Guided Content to Get Started Building
-Explored guided content our team created and demonstrated at events.
 
 ### [Wiki](https://github.com/openvinotoolkit/openvino_build_deploy/wiki): Step-by-step Instructions
 Explore instructions on [setup for the AI PC](https://github.com/openvinotoolkit/openvino_build_deploy/wiki/AI-PC-Setup), including [performance monitoring](https://github.com/openvinotoolkit/openvino_build_deploy/wiki/Steps-to-Setup-Performance-Monitor-for-AI-PC-(Windows)) and more.

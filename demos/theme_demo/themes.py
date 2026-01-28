@@ -9,8 +9,7 @@ import cv2
 import numpy as np
 import openvino as ov
 
-from decoder import OpenPoseDecoder
-from numpy.lib.stride_tricks import as_strided
+from decoder import AssociativeEmbeddingDecoder
 
 SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "utils")
 sys.path.append(os.path.dirname(SCRIPT_DIR))
@@ -76,6 +75,264 @@ class Theme(abc.ABC):
         box2_area = w2 * h2
         union_area = box1_area + box2_area.T - inter_area
         return inter_area / (union_area + 1e-6)
+
+
+class HalloweenTheme(Theme):
+    def __init__(self, device: str = "CPU"):
+        super().__init__()
+        self.default_skeleton = ((15, 13), (13, 11), (16, 14), (14, 12), (11, 12), (5, 6), (5, 7), (6, 8), (7, 9), (8, 10),
+                    (1, 2), (0, 1), (0, 2), (1, 3), (2, 4), (17, 18), (20, 21), (23, 24), (26, 27), (29, 30))
+
+        self.assets = self._load_assets(["pumpkin"])
+
+        self.model_precision = "FP16"
+        self.device = device
+        self.point_score_threshold = 0.25
+
+        self.decoder = AssociativeEmbeddingDecoder()
+        self.pose_estimation_model = None
+
+        self.tracked_poses = {}
+        self.next_pose_id = 0
+        self.smoothing_tau = 0.1
+        self.matching_threshold = 80 # pixels, for centroid matching
+
+        self.load_models(device)
+
+    def load_models(self, device: str):
+        self.device = device
+        self.pose_estimation_model = self._load_model("human-pose-estimation-0005", self.model_precision, device)
+
+    def run_inference(self, frame: np.ndarray) -> Any:
+        pe_input, pe_output_heatmaps, pe_output_embeddings = self.pose_estimation_model.input(0), self.pose_estimation_model.output("heatmaps"), self.pose_estimation_model.output("embeddings")
+        height, width = list(pe_input.shape)[2:4]
+
+        input_img = self.__preprocess_image(frame, width, height)
+
+        results = self.pose_estimation_model([input_img])
+        embeddings = results[pe_output_embeddings]
+        heatmaps = results[pe_output_heatmaps]
+
+        # Get poses from network results.
+        poses, scores = self.__process_results(frame, embeddings, heatmaps)
+        poses, scores = self._smooth_detections(poses, scores)
+        # add additional points to skeletons
+        poses = [self.__add_artificial_points(pose, self.point_score_threshold) for pose in poses]
+        return list(zip(poses, scores))
+
+    def _smooth_detections(self, poses, scores):
+        now = time.time()
+
+        if len(poses) == 0:
+            self.tracked_poses = {}
+            return [], []
+
+        curr_centroids = [
+            np.mean(pose[pose[:, 2] > self.point_score_threshold, :2], axis=0)
+            if np.any(pose[:, 2] > self.point_score_threshold)
+            else np.zeros(2)
+            for pose in poses
+        ]
+
+        tracked_ids = list(self.tracked_poses.keys())
+        tracked_centroids = [self.tracked_poses[tid]['centroid'] for tid in tracked_ids]
+
+        matches = []
+        matched_tracked = set()
+        matched_current = set()
+        if tracked_ids:
+            dists = np.linalg.norm(np.expand_dims(tracked_centroids, 1) - np.expand_dims(curr_centroids, 0), axis=2)
+            for t_idx, tid in enumerate(tracked_ids):
+                c_idx = np.argmin(dists[t_idx])
+                if dists[t_idx, c_idx] < self.matching_threshold and c_idx not in matched_current:
+                    matches.append((tid, c_idx))
+                    matched_tracked.add(tid)
+                    matched_current.add(c_idx)
+
+        # ===== masked exponential smoothing =====
+        for tid, c_idx in matches:
+            prev = self.tracked_poses[tid]
+            dt = now - prev['last_update']
+            alpha = np.exp(-dt / self.smoothing_tau)
+
+            prev_pose = prev['pose']
+            curr_pose = poses[c_idx]
+
+            # validity masks (per keypoint)
+            prev_valid = prev_pose[:, 2] > self.point_score_threshold
+            curr_valid = curr_pose[:, 2] > self.point_score_threshold
+
+            smoothed_pose = prev_pose.copy()
+
+            both_valid = prev_valid & curr_valid
+            only_curr = ~prev_valid & curr_valid
+            # only_prev → keep previous
+            # neither → remain unchanged (likely zeros)
+
+            # smooth x,y
+            smoothed_pose[both_valid, :2] = (prev_pose[both_valid, :2] * alpha + curr_pose[both_valid, :2] * (1 - alpha))
+
+            # smooth score
+            smoothed_pose[both_valid, 2] = (prev_pose[both_valid, 2] * alpha + curr_pose[both_valid, 2] * (1 - alpha))
+
+            # reinitialize newly visible keypoints
+            smoothed_pose[only_curr] = curr_pose[only_curr]
+
+            # smooth global score only if valid
+            if prev['score'] > 0 and scores[c_idx] > 0:
+                smoothed_score = prev['score'] * alpha + scores[c_idx] * (1 - alpha)
+            elif scores[c_idx] > 0:
+                smoothed_score = scores[c_idx]
+            else:
+                smoothed_score = prev['score']
+
+            self.tracked_poses[tid].update({
+                'pose': smoothed_pose,
+                'score': smoothed_score,
+                'centroid': curr_centroids[c_idx],
+                'last_update': now
+            })
+
+        # ===== add new tracks =====
+        for c_idx, centroid in enumerate(curr_centroids):
+            if c_idx not in matched_current:
+                tid = self.next_pose_id
+                self.next_pose_id += 1
+                self.tracked_poses[tid] = {
+                    'pose': poses[c_idx].copy(),
+                    'score': scores[c_idx],
+                    'centroid': centroid,
+                    'last_update': now
+                }
+
+        # ===== remove unmatched tracks =====
+        for tid in tracked_ids:
+            if tid not in matched_tracked:
+                del self.tracked_poses[tid]
+
+        smoothed_poses = [track['pose'] for track in self.tracked_poses.values()]
+        smoothed_scores = [track['score'] for track in self.tracked_poses.values()]
+        return smoothed_poses, smoothed_scores
+
+    def draw_results(self, image: np.ndarray, poses: Any) -> np.ndarray:
+        img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        img = cv2.multiply(img, 0.5)
+        img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+
+        if len(poses) == 0:
+            return img
+
+        face_size_scale = 2.2
+        left_eye = 1
+        right_eye = 2
+        left_ear = 3
+        right_ear = 4
+
+        for pose, score in poses:
+            points = pose[:, :2].astype(np.int32)
+            points_scores = pose[:, 2]
+
+            out_thickness = img.shape[0] // 100
+            if points_scores[1] > self.point_score_threshold and points_scores[2] > self.point_score_threshold:
+                out_thickness = max(2, abs(points[left_eye, 0] - points[right_eye, 0]) // 5)
+            in_thickness = out_thickness // 2
+
+            img_limbs = np.copy(img)
+            # Draw limbs.
+            for i, j in self.default_skeleton:
+                if i < len(points_scores) and j < len(points_scores) and points_scores[i] > self.point_score_threshold and \
+                        points_scores[j] > self.point_score_threshold:
+                    cv2.line(img_limbs, tuple(points[i]), tuple(points[j]), color=(0, 0, 0), thickness=out_thickness,
+                             lineType=cv2.LINE_AA)
+                    cv2.line(img_limbs, tuple(points[i]), tuple(points[j]), color=(255, 255, 255),
+                             thickness=in_thickness, lineType=cv2.LINE_AA)
+            # Draw joints.
+            for i, (p, v) in enumerate(zip(points, points_scores)):
+                if v > self.point_score_threshold:
+                    cv2.circle(img_limbs, tuple(p), 1, color=(0, 0, 0), thickness=2 * out_thickness,
+                               lineType=cv2.LINE_AA)
+                    cv2.circle(img_limbs, tuple(p), 1, color=(255, 255, 255), thickness=2 * in_thickness,
+                               lineType=cv2.LINE_AA)
+
+            cv2.addWeighted(img, 0.3, img_limbs, 0.7, 0, dst=img)
+
+            # if left eye and right eye and left ear or right ear are visible
+            if points_scores[left_eye] > self.point_score_threshold and points_scores[right_eye] > self.point_score_threshold:
+                # visible left ear and right ear
+                if points_scores[left_ear] > self.point_score_threshold and points_scores[right_ear] > self.point_score_threshold:
+                    face_width = np.linalg.norm(points[left_ear] - points[right_ear]) * face_size_scale
+                    face_center = (points[left_ear] + points[right_ear]) // 2
+                # visible left ear and right eye
+                elif points_scores[left_ear] > self.point_score_threshold and points_scores[right_eye] > self.point_score_threshold:
+                    face_width = np.linalg.norm(points[left_ear] - points[right_eye]) * face_size_scale
+                    face_center = (points[left_ear] + points[right_eye]) // 2
+                # visible right ear and left eye
+                elif points_scores[left_eye] > self.point_score_threshold and points_scores[right_ear] > self.point_score_threshold:
+                    face_width = np.linalg.norm(points[left_eye] - points[right_ear]) * face_size_scale
+                    face_center = (points[left_eye] + points[right_ear]) // 2
+                # visible left eye and right eye
+                else:
+                    face_width = np.linalg.norm(points[left_eye] - points[right_eye]) * face_size_scale * 2
+                    face_center = (points[left_eye] + points[right_eye]) // 2
+
+                face_width = max(1.0, face_width)
+                scale = face_width / self.assets["pumpkin"].shape[1]
+                pumpkin_face = cv2.resize(self.assets["pumpkin"], None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+
+                # left-top and right-bottom points
+                x1, y1 = face_center[0] - pumpkin_face.shape[1] // 2, face_center[1] - pumpkin_face.shape[0] * 2 // 3
+                x2, y2 = face_center[0] + pumpkin_face.shape[1] // 2, face_center[1] + pumpkin_face.shape[0] // 3
+
+                # face image to be overlayed
+                face_crop = img[max(0, y1):min(y2, img.shape[0]), max(0, x1):min(x2, img.shape[1])]
+                # overlay
+                pumpkin_face = pumpkin_face[max(0, -y1):max(0, -y1) + face_crop.shape[0],
+                               max(0, -x1):max(0, -x1) + face_crop.shape[1]]
+                # alpha channel to blend images
+                alpha_pumpkin = pumpkin_face[:, :, 3:4] / 255.0
+                alpha_bg = 1.0 - alpha_pumpkin
+
+                # blend images
+                face_crop[:] = (alpha_pumpkin * pumpkin_face)[:, :, :3] + alpha_bg * face_crop
+
+        return img
+
+    def __add_artificial_points(self, pose, point_score_threshold):
+        # neck, bellybutton, ribs
+        neck = (pose[5] + pose[6]) / 2
+        bellybutton = (pose[11] + pose[12]) / 2
+        if neck[2] > point_score_threshold and bellybutton[2] > point_score_threshold:
+            rib_1_center = (neck + bellybutton) / 2
+            rib_1_left = (pose[5] + bellybutton) / 2
+            rib_1_right = (pose[6] + bellybutton) / 2
+            rib_2_center = (neck + rib_1_center) / 2
+            rib_2_left = (pose[5] + rib_1_left) / 2
+            rib_2_right = (pose[6] + rib_1_right) / 2
+            rib_3_center = (neck + rib_2_center) / 2
+            rib_3_left = (pose[5] + rib_2_left) / 2
+            rib_3_right = (pose[6] + rib_2_right) / 2
+            rib_4_center = (rib_1_center + rib_2_center) / 2
+            rib_4_left = (rib_1_left + rib_2_left) / 2
+            rib_4_right = (rib_1_right + rib_2_right) / 2
+            new_points = [neck, bellybutton, rib_1_center, rib_1_left, rib_1_right, rib_2_center, rib_2_left, rib_2_right,
+                          rib_3_center, rib_3_left, rib_3_right, rib_4_center, rib_4_left, rib_4_right]
+            pose = np.vstack([pose, new_points])
+        return pose
+
+    def __preprocess_image(self, img, width, height):
+        input_img = cv2.resize(img, (width, height), interpolation=cv2.INTER_AREA)
+        input_img = input_img.transpose((2, 0, 1))[np.newaxis, ...]
+        return input_img
+
+    def __process_results(self, img, embeddings, heatmaps):
+        # decode poses using associative embedding decoder.
+        # NMS is pre-applied in the model (negative values indicate suppressed locations).
+        poses, scores = self.decoder(heatmaps, embeddings)
+        output_shape = list(self.pose_estimation_model.output(index=0).partial_shape)
+        output_scale = img.shape[1] / output_shape[3].get_length(), img.shape[0] / output_shape[2].get_length()
+        # multiply coordinates by a scaling factor.
+        poses[:, :, :2] *= output_scale
+        return poses, scores
 
 
 class ChristmasTheme(Theme):
@@ -321,7 +578,7 @@ class ChristmasTheme(Theme):
             # overlay
             mask_img = mask_img[max(0, -y1):max(0, -y1) + face_crop.shape[0],
                        max(0, -x1):max(0, -x1) + face_crop.shape[1]]
-            
+
             # alpha channel to blend images
             alpha_mask = mask_img[:, :, 3:4] / 255.0
             alpha_bg = 1.0 - alpha_mask
@@ -346,260 +603,6 @@ class ChristmasTheme(Theme):
                         offset_coeffs=(0.5, 0.33))
         # draw nose
         self._draw_mask(img, self.assets["reindeer_nose"], landmarks[4], box[2:], scale=0.25)
-
-
-class HalloweenTheme(Theme):
-    def __init__(self, device: str = "CPU"):
-        super().__init__()
-        self.default_skeleton = ((15, 13), (13, 11), (16, 14), (14, 12), (11, 12), (5, 6), (5, 7), (6, 8), (7, 9), (8, 10),
-                    (1, 2), (0, 1), (0, 2), (1, 3), (2, 4), (17, 18), (20, 21), (23, 24), (26, 27), (29, 30))
-
-        self.assets = self._load_assets(["pumpkin"])
-
-        self.model_precision = "FP16-INT8"
-        self.device = device
-        self.point_score_threshold = 0.25
-
-        self.decoder = OpenPoseDecoder()
-        self.pose_estimation_model = None
-
-        self.tracked_poses = {}
-        self.next_pose_id = 0
-        self.smoothing_tau = 0.1
-        self.matching_threshold = 80 # pixels, for centroid matching
-
-        self.load_models(device)
-
-    def load_models(self, device: str):
-        self.pose_estimation_model = self._load_model("human-pose-estimation-0001", self.model_precision, device)
-
-    def run_inference(self, frame: np.ndarray) -> Any:
-        pe_input, pe_output_pafs, pe_output_heatmaps = self.pose_estimation_model.input(0), self.pose_estimation_model.output("Mconv7_stage2_L1"), self.pose_estimation_model.output("Mconv7_stage2_L2")
-        height, width = list(pe_input.shape)[2:4]
-
-        input_img = self.__preprocess_image(frame, width, height)
-
-        results = self.pose_estimation_model([input_img])
-        pafs = results[pe_output_pafs]
-        heatmaps = results[pe_output_heatmaps]
-
-        # Get poses from network results.
-        poses, scores = self.__process_results(frame, pafs, heatmaps)
-        poses, scores = self._smooth_detections(poses, scores)
-        # add additional points to skeletons
-        poses = [self.__add_artificial_points(pose, self.point_score_threshold) for pose in poses]
-        return list(zip(poses, scores))
-
-    def _smooth_detections(self, poses, scores):
-        now = time.time()
-
-        if len(poses) == 0:
-            self.tracked_poses = {}
-            return [], []
-
-        curr_centroids = [np.mean([pt[:2] for pt in pose if pt[2] > self.point_score_threshold], axis=0) if np.any(pose[:,2] > self.point_score_threshold) else np.zeros(2) for pose in poses]
-
-        # Prepare tracked centroids
-        tracked_ids = list(self.tracked_poses.keys())
-        tracked_centroids = [self.tracked_poses[tid]['centroid'] for tid in tracked_ids]
-
-        # Matching (using L2 distance between centroids)
-        matches = []
-        matched_tracked = set()
-        matched_current = set()
-        if tracked_ids:
-            dists = np.linalg.norm(np.expand_dims(tracked_centroids,1)-np.expand_dims(curr_centroids,0), axis=2)
-            for t_idx, tid in enumerate(tracked_ids):
-                c_idx = np.argmin(dists[t_idx])
-                if dists[t_idx, c_idx] < self.matching_threshold and c_idx not in matched_current:
-                    matches.append((tid, c_idx))
-                    matched_tracked.add(tid)
-                    matched_current.add(c_idx)
-
-        # Update matched tracks
-        for tid, c_idx in matches:
-            prev = self.tracked_poses[tid]
-            dt = now - prev['last_update']
-            alpha = np.exp(-dt / self.smoothing_tau)
-            smoothed_pose = prev['pose'] * alpha + poses[c_idx] * (1 - alpha)
-            smoothed_score = prev['score'] * alpha + scores[c_idx] * (1 - alpha)
-            centroid = curr_centroids[c_idx]
-            self.tracked_poses[tid].update({'pose': smoothed_pose, 'score': smoothed_score, 'centroid': centroid, 'last_update': now})
-
-        # Add new tracks
-        for c_idx, centroid in enumerate(curr_centroids):
-            if c_idx not in matched_current:
-                tid = self.next_pose_id
-                self.next_pose_id += 1
-                self.tracked_poses[tid] = {
-                    'pose': poses[c_idx].copy(),
-                    'score': scores[c_idx],
-                    'centroid': centroid,
-                    'last_update': now
-                }
-
-        # Remove old tracks
-        for tid in tracked_ids:
-            if tid not in matched_tracked:
-                del self.tracked_poses[tid]
-
-        # Output
-        smoothed_poses = [track['pose'] for track in self.tracked_poses.values()]
-        smoothed_scores = [track['score'] for track in self.tracked_poses.values()]
-        return smoothed_poses, smoothed_scores
-
-    def draw_results(self, image: np.ndarray, poses: Any) -> np.ndarray:
-        img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        img = cv2.multiply(img, 0.5)
-        img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-
-        if len(poses) == 0:
-            return img
-
-        for pose, score in poses:
-            points = pose[:, :2].astype(np.int32)
-            points_scores = pose[:, 2]
-
-            out_thickness = img.shape[0] // 100
-            if points_scores[5] > self.point_score_threshold and points_scores[6] > self.point_score_threshold:
-                out_thickness = max(2, abs(points[5, 0] - points[6, 0]) // 15)
-            in_thickness = out_thickness // 2
-
-            img_limbs = np.copy(img)
-            # Draw limbs.
-            for i, j in self.default_skeleton:
-                if i < len(points_scores) and j < len(points_scores) and points_scores[i] > self.point_score_threshold and \
-                        points_scores[j] > self.point_score_threshold:
-                    cv2.line(img_limbs, tuple(points[i]), tuple(points[j]), color=(0, 0, 0), thickness=out_thickness,
-                             lineType=cv2.LINE_AA)
-                    cv2.line(img_limbs, tuple(points[i]), tuple(points[j]), color=(255, 255, 255),
-                             thickness=in_thickness, lineType=cv2.LINE_AA)
-            # Draw joints.
-            for i, (p, v) in enumerate(zip(points, points_scores)):
-                if v > self.point_score_threshold:
-                    cv2.circle(img_limbs, tuple(p), 1, color=(0, 0, 0), thickness=2 * out_thickness,
-                               lineType=cv2.LINE_AA)
-                    cv2.circle(img_limbs, tuple(p), 1, color=(255, 255, 255), thickness=2 * in_thickness,
-                               lineType=cv2.LINE_AA)
-
-            cv2.addWeighted(img, 0.3, img_limbs, 0.7, 0, dst=img)
-
-            face_size_scale = 2.2
-            left_ear = 3
-            right_ear = 4
-            left_eye = 1
-            right_eye = 2
-            # if left eye and right eye and left ear or right ear are visible
-            if points_scores[left_eye] > self.point_score_threshold and points_scores[
-                right_eye] > self.point_score_threshold and (
-                    points_scores[left_ear] > self.point_score_threshold or points_scores[
-                right_ear] > self.point_score_threshold):
-                # visible left ear and right ear
-                if points_scores[left_ear] > self.point_score_threshold and points_scores[right_ear] > self.point_score_threshold:
-                    face_width = np.linalg.norm(points[left_ear] - points[right_ear]) * face_size_scale
-                    face_center = (points[left_ear] + points[right_ear]) // 2
-                # visible left ear and right eye
-                elif points_scores[left_ear] > self.point_score_threshold and points_scores[
-                    right_eye] > self.point_score_threshold:
-                    face_width = np.linalg.norm(points[left_ear] - points[right_eye]) * face_size_scale
-                    face_center = (points[left_ear] + points[right_eye]) // 2
-                # visible right ear and left eye
-                elif points_scores[left_eye] > self.point_score_threshold and points_scores[
-                    right_ear] > self.point_score_threshold:
-                    face_width = np.linalg.norm(points[left_eye] - points[right_ear]) * face_size_scale
-                    face_center = (points[left_eye] + points[right_ear]) // 2
-
-                face_width = max(1.0, face_width)
-                scale = face_width / self.assets["pumpkin"].shape[1]
-                pumpkin_face = cv2.resize(self.assets["pumpkin"], None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
-
-                # left-top and right-bottom points
-                x1, y1 = face_center[0] - pumpkin_face.shape[1] // 2, face_center[1] - pumpkin_face.shape[0] * 2 // 3
-                x2, y2 = face_center[0] + pumpkin_face.shape[1] // 2, face_center[1] + pumpkin_face.shape[0] // 3
-
-                # face image to be overlayed
-                face_crop = img[max(0, y1):min(y2, img.shape[0]), max(0, x1):min(x2, img.shape[1])]
-                # overlay
-                pumpkin_face = pumpkin_face[max(0, -y1):max(0, -y1) + face_crop.shape[0],
-                               max(0, -x1):max(0, -x1) + face_crop.shape[1]]
-                # alpha channel to blend images
-                alpha_pumpkin = pumpkin_face[:, :, 3:4] / 255.0
-                alpha_bg = 1.0 - alpha_pumpkin
-
-                # blend images
-                face_crop[:] = (alpha_pumpkin * pumpkin_face)[:, :, :3] + alpha_bg * face_crop
-
-        return img
-
-    def __add_artificial_points(self, pose, point_score_threshold):
-        # neck, bellybutton, ribs
-        neck = (pose[5] + pose[6]) / 2
-        bellybutton = (pose[11] + pose[12]) / 2
-        if neck[2] > point_score_threshold and bellybutton[2] > point_score_threshold:
-            rib_1_center = (neck + bellybutton) / 2
-            rib_1_left = (pose[5] + bellybutton) / 2
-            rib_1_right = (pose[6] + bellybutton) / 2
-            rib_2_center = (neck + rib_1_center) / 2
-            rib_2_left = (pose[5] + rib_1_left) / 2
-            rib_2_right = (pose[6] + rib_1_right) / 2
-            rib_3_center = (neck + rib_2_center) / 2
-            rib_3_left = (pose[5] + rib_2_left) / 2
-            rib_3_right = (pose[6] + rib_2_right) / 2
-            rib_4_center = (rib_1_center + rib_2_center) / 2
-            rib_4_left = (rib_1_left + rib_2_left) / 2
-            rib_4_right = (rib_1_right + rib_2_right) / 2
-            new_points = [neck, bellybutton, rib_1_center, rib_1_left, rib_1_right, rib_2_center, rib_2_left, rib_2_right,
-                          rib_3_center, rib_3_left, rib_3_right, rib_4_center, rib_4_left, rib_4_right]
-            pose = np.vstack([pose, new_points])
-        return pose
-
-    def __preprocess_image(self, img, width, height):
-        input_img = cv2.resize(img, (width, height), interpolation=cv2.INTER_AREA)
-        input_img = input_img.transpose((2, 0, 1))[np.newaxis, ...]
-        return input_img
-
-    def __process_results(self, img, pafs, heatmaps):
-        def heatmap_nms(heatmaps, pooled_heatmaps):
-            return heatmaps * (heatmaps == pooled_heatmaps)
-
-        # 2D pooling in numpy (from: https://stackoverflow.com/a/54966908/1624463)
-        def pool2d(A, kernel_size, stride, padding, pool_mode="max"):
-            # Padding
-            A = np.pad(A, padding, mode="constant")
-
-            # Window view of A
-            output_shape = (
-                (A.shape[0] - kernel_size) // stride + 1,
-                (A.shape[1] - kernel_size) // stride + 1,
-            )
-            kernel_size = (kernel_size, kernel_size)
-            A_w = as_strided(
-                A,
-                shape=output_shape + kernel_size,
-                strides=(stride * A.strides[0], stride * A.strides[1]) + A.strides
-            )
-            A_w = A_w.reshape(-1, *kernel_size)
-
-            # Return the result of pooling.
-            if pool_mode == "max":
-                return A_w.max(axis=(1, 2)).reshape(output_shape)
-            elif pool_mode == "avg":
-                return A_w.mean(axis=(1, 2)).reshape(output_shape)
-
-        # This processing comes from
-        # https://github.com/openvinotoolkit/open_model_zoo/blob/master/demos/common/python/models/open_pose.py
-        pooled_heatmaps = np.array(
-            [[pool2d(h, kernel_size=3, stride=1, padding=1, pool_mode="max") for h in heatmaps[0]]]
-        )
-        nms_heatmaps = heatmap_nms(heatmaps, pooled_heatmaps)
-
-        # Decode poses.
-        poses, scores = self.decoder(heatmaps, nms_heatmaps, pafs)
-        output_shape = list(self.pose_estimation_model.output(index=0).partial_shape)
-        output_scale = img.shape[1] / output_shape[3].get_length(), img.shape[0] / output_shape[2].get_length()
-        # Multiply coordinates by a scaling factor.
-        poses[:, :, :2] *= output_scale
-        return poses, scores
 
 
 class EasterTheme(ChristmasTheme):
@@ -651,7 +654,7 @@ class WildTheme(ChristmasTheme):
         for (score, box), landmarks, emotion in detections:
             # Calculate face size
             face_size = max(box[2], box[3])  # width or height, whichever is larger
-            
+
             # Draw bear for faces larger than 1/8 of frame width, raccoon for smaller faces
             if face_size > image.shape[1] / 8:
                 self.__draw_bear(image, landmarks, box)
@@ -662,12 +665,12 @@ class WildTheme(ChristmasTheme):
 
     def __draw_bear(self, image, landmarks, box):
         # Draw bear face using landmarks for positioning
-        self._draw_mask(image, self.assets["bear"], 
-                       np.mean(landmarks[:4], axis=0, dtype=np.int32),  # Use eye landmarks for positioning
-                       box[2:], scale=2.2, offset_coeffs=(0.5, 0.5))
+        self._draw_mask(image, self.assets["bear"],
+                        np.mean(landmarks[:4], axis=0, dtype=np.int32),  # Use eye landmarks for positioning
+                        box[2:], scale=2.2, offset_coeffs=(0.5, 0.5))
 
     def __draw_raccoon(self, image, landmarks, box):
         # Draw raccoon face using landmarks for positioning
-        self._draw_mask(image, self.assets["raccoon"], 
-                       np.mean(landmarks[:4], axis=0, dtype=np.int32),  # Use eye landmarks for positioning
-                       box[2:], scale=2.2, offset_coeffs=(0.5, 0.5))
+        self._draw_mask(image, self.assets["raccoon"],
+                        np.mean(landmarks[:4], axis=0, dtype=np.int32),  # Use eye landmarks for positioning
+                        box[2:], scale=2.2, offset_coeffs=(0.5, 0.5))

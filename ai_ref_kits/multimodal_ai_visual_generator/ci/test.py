@@ -1,4 +1,4 @@
-import subprocess
+import subprocess  #nosec B404
 import time
 import requests
 import sys
@@ -24,7 +24,7 @@ from convert_and_optimize_text2image import convert_image_model
 MODEL_DIR = Path("models")
 LLM_MODEL_TYPE = "tiny-llama-1b-chat"
 IMAGE_MODEL_TYPE = "lcm"
-PRECISION = "int4"
+PRECISION = "fp16"
 LOG_FILE = Path("gradio_log.txt")
 
 # ----- Step 1: Export Models if Needed (will handle download internally) -----
@@ -119,5 +119,5 @@ try:
 
 finally:
     logger.info("Shutting down FastAPI server...")
-    process.terminate()
+    process.kill()
     process.wait()

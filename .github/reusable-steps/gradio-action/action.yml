@@ -5,6 +5,9 @@ inputs:
     required: true
   project:
     required: true
+  args:
+    required: false
+    default: ""
 
 runs:
   using: 'composite'
@@ -18,7 +21,7 @@ runs:
         touch gradio_log.txt
     
         # Start the Gradio app once, unbuffered, and capture its PID
-        python -u ${{ inputs.script }} > >(tee -a gradio_log.txt) 2>&1 &
+        python -u ${{ inputs.script }} ${{ inputs.args }} > >(tee -a gradio_log.txt) 2>&1 &
         app_pid=$!
         echo "Started app with PID: $app_pid"
     
