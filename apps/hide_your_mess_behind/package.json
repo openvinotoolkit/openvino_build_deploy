@@ -50,7 +50,7 @@
   },
   "devDependencies": {
     "electron": "^37.3.1",
-    "electron-builder": "^26.0.18"
+    "electron-builder": "^26.6.0"
   },
   "dependencies": {
     "@napi-rs/canvas": "^0.1.73",
