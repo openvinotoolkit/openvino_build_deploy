@@ -199,22 +199,7 @@ class ScratchpadTool(Tool):
         result += "\n\n".join(f"[{i}] {entry}" for i, entry in
                               enumerate(entries, 1))
         
-        # Add validation warnings for missing required fields
-        entry_text = entries[0] if entries else ""
-        warnings = []
-        
-        # Check if this looks like flight data (has departure_date or return_date but missing departure_city)
-        if ('departure_date:' in entry_text or 'return_date:' in entry_text) and 'departure_city:' not in entry_text:
-            warnings.append("\n\n⚠️ WARNING: departure_city is MISSING for flights! You MUST ask: 'What is your departure city?' before proceeding.")
-        
-        # Check if this looks like hotel data (has check_in_date but missing guests)
-        if 'check_in_date:' in entry_text and 'guests:' not in entry_text:
-            warnings.append("\n\n⚠️ WARNING: guests field is MISSING for hotels! Add 'guests: 1' as default.")
-        
-        result += "".join(warnings)
-        
-        logger.info(f"ScratchpadTool[{session_id}]: READ - {len(entries)} entries" + 
-                   (f" with {len(warnings)} warnings" if warnings else ""))
+        logger.info(f"ScratchpadTool[{session_id}]: READ - {len(entries)} entries")
         self._log_operation("read", session_id,
                            result=f"{len(entries)} entries")
         return result
