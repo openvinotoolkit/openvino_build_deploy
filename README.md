@@ -34,8 +34,8 @@ This directory contains interactive demos aimed at demonstrating how OpenVINO pe
 ### [Desktop Applications](apps): User-Friendly AI Applications with OpenVINO
 Discover interactive desktop applications using OpenVINO as an engine for AI inference.
 
-### [Workshops](workshops): Guided Content to Get Started Building
-Explored guided content our team created and demonstrated at events.
+### [OpenVINO training notebooks](trainings): Notebooks teaching various OpenVINO features
+Learn how to use OpenVINO for Computer Vision, Visual GenAI, and LLMs.
 
 ### [Wiki](https://github.com/openvinotoolkit/openvino_build_deploy/wiki): Step-by-step Instructions
 Explore instructions on [setup for the AI PC](https://github.com/openvinotoolkit/openvino_build_deploy/wiki/AI-PC-Setup), including [performance monitoring](https://github.com/openvinotoolkit/openvino_build_deploy/wiki/Steps-to-Setup-Performance-Monitor-for-AI-PC-(Windows)) and more.
