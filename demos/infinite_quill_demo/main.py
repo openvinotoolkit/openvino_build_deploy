@@ -84,6 +84,9 @@ async def generate_text(model_name: str, device: str, topic: str, endless_genera
 
     prompt = f"/no_think Write a short story about {topic}. Don't use dialogues. Don't output anything else except the story."
 
+    yield "Model downloading and loading...", 0.0
+    await asyncio.sleep(0.1)
+
     ov_pipeline = await load_pipeline(model_name, device)
 
     stories_to_generate = 2**31 if endless_generation else 1
