@@ -14,7 +14,7 @@ travel_router:
     temperature: 0.0  # Faster, more deterministic
     api_key: "unused"
     api_base: "http://127.0.0.1:8001/v3"
-    max_tokens: 256  
+    max_tokens: 1024  
   
   # Memory Configuration
   memory_size: 20  
@@ -31,7 +31,7 @@ travel_router:
   # Tools Configuration (supervisor specific)
   tools:
     - name: "ThinkTool"
-      enabled: False  # Disable it if you want to improve response time, tool for planning
+      enabled: True  # Disable it if you want to improve response time, tool for planning
     - name: "ScratchpadTool"
       enabled: true  # Working memory to track actions and avoid repeating them
     - name: "HandoffTool"
@@ -52,13 +52,17 @@ travel_router:
     - tool_name: "flight_finder"
       max_invocations: 3
       custom_checks:
-        - "lambda state: (lambda user_msgs, assistant_msgs: (len(user_msgs) > 0 and re.search(r'\\b(yes|y|ok|okay|sure|proceed|confirm|go\\s+ahead)\\b', user_msgs[-1].text, re.I) and any(any(hasattr(c, 'tool_name') and c.tool_name == 'final_answer' and hasattr(c, 'args') and re.search(r'\\bflight\\b', c.args, re.I) and re.search(r'proceed', c.args, re.I) and re.search(r'\\?', c.args) for c in m.content) for m in assistant_msgs)))([m for m in state.memory.messages if hasattr(m, 'role') and m.role == 'user' and hasattr(m, 'text')], [m for m in state.memory.messages if hasattr(m, 'role') and m.role == 'assistant' and hasattr(m, 'content')])"
-        - "lambda state: any(('departure_city:' in c.result and 'destination:' in c.result and 'departure_date:' in c.result and 'return_date:' in c.result and 'class:' in c.result) for m in state.memory.messages if hasattr(m, 'content') for c in m.content if hasattr(c, 'tool_name') and c.tool_name == 'scratchpad' and hasattr(c, 'result'))"
+        # Check 1: Must have "status: confirmed" AND "mode: flights" in scratchpad
+        - "lambda state: any(('status:' in c.result and 'confirmed' in c.result and 'mode:' in c.result and 'flights' in c.result) for m in state.memory.messages if hasattr(m, 'content') for c in m.content if hasattr(c, 'tool_name') and c.tool_name == 'scratchpad' and hasattr(c, 'result'))"
+        # Check 2: All required flight fields must be filled (not TO_BE_UPDATED)
+        - "lambda state: any(('departure_city:' in c.result and 'destination:' in c.result and 'departure_date:' in c.result and 'return_date:' in c.result and 'class:' in c.result and 'TO_BE_UPDATED' not in c.result.split('mode:')[0]) for m in state.memory.messages if hasattr(m, 'content') for c in m.content if hasattr(c, 'tool_name') and c.tool_name == 'scratchpad' and hasattr(c, 'result'))"
     - tool_name: "hotel_finder"
       max_invocations: 3
       custom_checks:
-        - "lambda state: (lambda user_msgs, assistant_msgs: (len(user_msgs) > 0 and re.search(r'\\b(yes|y|ok|okay|sure|proceed|confirm|go\\s+ahead)\\b', user_msgs[-1].text, re.I) and any(any(hasattr(c, 'tool_name') and c.tool_name == 'final_answer' and hasattr(c, 'args') and re.search(r'\\bhotel\\b', c.args, re.I) and re.search(r'proceed', c.args, re.I) and re.search(r'\\?', c.args) for c in m.content) for m in assistant_msgs)))([m for m in state.memory.messages if hasattr(m, 'role') and m.role == 'user' and hasattr(m, 'text')], [m for m in state.memory.messages if hasattr(m, 'role') and m.role == 'assistant' and hasattr(m, 'content')])"
-        - "lambda state: any(('destination:' in c.result and 'check_in_date:' in c.result and 'check_out_date:' in c.result and 'guests:' in c.result) for m in state.memory.messages if hasattr(m, 'content') for c in m.content if hasattr(c, 'tool_name') and c.tool_name == 'scratchpad' and hasattr(c, 'result'))"
+        # Check 1: Must have "status: confirmed" AND "mode: hotels" in scratchpad
+        - "lambda state: any(('status:' in c.result and 'confirmed' in c.result and 'mode:' in c.result and 'hotels' in c.result) for m in state.memory.messages if hasattr(m, 'content') for c in m.content if hasattr(c, 'tool_name') and c.tool_name == 'scratchpad' and hasattr(c, 'result'))"
+        # Check 2: All required hotel fields must be filled (not TO_BE_UPDATED)
+        - "lambda state: any(('destination:' in c.result and 'check_in_date:' in c.result and 'check_out_date:' in c.result and 'guests:' in c.result and 'TO_BE_UPDATED' not in c.result.split('mode:')[0]) for m in state.memory.messages if hasattr(m, 'content') for c in m.content if hasattr(c, 'tool_name') and c.tool_name == 'scratchpad' and hasattr(c, 'result'))"
     - tool_name: "image_captioning"
       max_invocations: 3
       custom_checks:

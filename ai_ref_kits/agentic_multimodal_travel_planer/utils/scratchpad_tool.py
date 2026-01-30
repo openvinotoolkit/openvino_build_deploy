@@ -1,3 +1,6 @@
+# Copyright 2025 © BeeAI a Series of LF Projects, LLC
+# SPDX-License-Identifier: Apache-2.0
+
 """
 Agent Scratchpad Tool - Allows agents to track their reasoning and actions.
 
@@ -8,16 +11,25 @@ This tool provides a working memory (scratchpad) where agents can:
 - Avoid repeating actions
 """
 
-import logging
+import asyncio
+import re
+import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Optional
-from pydantic import BaseModel, Field
-from beeai_framework.tools import Tool, ToolRunOptions, StringToolOutput
+from typing import ClassVar
+
 from beeai_framework.context import RunContext
 from beeai_framework.emitter import Emitter
+from beeai_framework.logger import Logger
+from beeai_framework.tools import (
+    StringToolOutput,
+    Tool,
+    ToolInputValidationError,
+    ToolRunOptions,
+)
+from pydantic import BaseModel, Field
 
-logger = logging.getLogger(__name__)
+logger = Logger(__name__)
 
 LOGS_DIR = Path(__file__).parent.parent / "logs"
 SCRATCHPAD_LOG_FILE = LOGS_DIR / "scratchpad.log"
@@ -35,55 +47,121 @@ class ScratchpadInput(BaseModel):
         ),
         enum=["read", "write", "append", "clear"],
     )
-    content: Optional[str] = Field(
+    content: str | None = Field(
         default=None,
         description=(
-            "Content to write/append (required for 'write' and 'append' "
-            "operations)"
+            "Content to write/append (required for 'write' and 'append' " "operations)"
         ),
     )
 
 
 class ScratchpadTool(Tool):
-    """Tool for managing agent scratchpad (working memory)."""
+    """Tool for managing agent scratchpad (working memory).
 
-    _scratchpads: Dict[str, list] = {}
+    Supports two types of content:
+    1. Key-Value Pairs: Automatically consolidated into a single entry
+       - Format: "key: value, another_key: another_value"
+       - Duplicate keys are updated with latest values
+       - Results in ONE entry containing all key-value pairs
+       - Special handling for travel dates: automatically creates aliases
+         (departure_date ↔ check_in_date, return_date ↔ check_out_date)
 
-    def __init__(self, session_id: Optional[str] = None):
-        """Initialize scratchpad tool.
+    2. Plain Text: Appended as separate entries
+       - Format: Any text without colons
+       - Each write creates a new list entry
 
-        Args:
-            session_id: Optional session identifier (deprecated, not used).
-                        Session ID is now extracted from RunContext.
-        """
+    This design allows structured state management (key-value) while
+    preserving free-form notes (plain text) as separate items.
+
+    Design Note (Lifecycle Management):
+    This tool uses a class-level dictionary (`_scratchpads`) for storage. In a
+    long-running process, this dictionary can grow indefinitely. Consumers
+    should ensure that `clear_session(session_id)` is called when a session
+    or agent run is complete to prevent memory leaks. For distributed
+    deployments, consider a persistent external store instead.
+    """
+
+    _scratchpads: ClassVar[dict[str, list[str]]] = {}
+    _lock: ClassVar[asyncio.Lock] = asyncio.Lock()
+    _allowed_keys: ClassVar[set[str]] = {
+        "destination",
+        "departure_city",
+        "departure_date",
+        "return_date",
+        "check_in_date",
+        "check_out_date",
+        "guests",
+        "class",
+        "intent",
+        "mode",
+        "status",
+        "confirmation",
+        "confirmed",
+        "previous_handoff",
+        "previous_result",
+        "previous_handoff_result",
+        "handoff_result",
+    }
+
+    def __init__(self) -> None:
+        """Initialize scratchpad tool."""
         super().__init__()
         self.middlewares = []
 
-    @staticmethod
-    def _ensure_session(session_id: str) -> None:
+    @classmethod
+    def _ensure_session(cls, session_id: str) -> None:
         """Ensure a session exists in scratchpads."""
-        if session_id not in ScratchpadTool._scratchpads:
-            ScratchpadTool._scratchpads[session_id] = []
+        if session_id not in cls._scratchpads:
+            cls._scratchpads[session_id] = []
 
-    def _get_session_id(self, context: Optional[RunContext] = None) -> str:
-        """Extract session ID from context.
+    def _get_session_id(self, context: RunContext | None = None) -> str:
+        """Extract session ID from context for each tool invocation.
 
-        Always returns "default" to maintain a single persistent scratchpad
-        across all requests, ensuring information is retained between interactions.
+        Each conversation gets its own scratchpad, automatically isolated
+        from other conversations. This eliminates the need for manual clearing
+        between travel planning sessions.
+
+        The session ID is extracted fresh from the RunContext on each call,
+        ensuring that different conversations (with different contexts) get
+        different scratchpads.
 
         Args:
-            context: Run context (not used, maintained for compatibility).
+            context: Run context to extract session identifier from.
 
         Returns:
-            Session ID string (always "default").
+            Session ID string for data isolation.
         """
-        # Use a single persistent session for all operations
-        # This ensures the scratchpad persists across HTTP requests
-        return "default"
+        session_id = None
 
-    def _log_operation(self, operation: str, session_id: str,
-                       content: Optional[str] = None,
-                       result: Optional[str] = None) -> None:
+        # Prefer A2A context_id (stable across messages in the same conversation)
+        try:
+            from beeai_framework.adapters.a2a.serve import context as a2a_context
+
+            a2a_ctx = a2a_context._storage.get(None)
+            if a2a_ctx and hasattr(a2a_ctx, 'context_id') and a2a_ctx.context_id:
+                session_id = str(a2a_ctx.context_id)
+        except Exception:
+            pass
+
+        # Fallback to group_id if A2A context not available
+        if not session_id and context and hasattr(context, "group_id") and context.group_id:
+            session_id = str(context.group_id)
+
+        # Generate unique session ID if none found
+        if not session_id:
+            session_id = f"session_{uuid.uuid4().hex[:16]}"
+            logger.warning(f"No stable session ID available, generated: {session_id}")
+
+        logger.debug(f"Scratchpad using session: {session_id}")
+        return session_id
+
+    def _log_operation(
+        self,
+        operation: str,
+        session_id: str,
+        content: str | None = None,
+        result: str | None = None,
+    ) -> None:
         """Write scratchpad operation to log file.
 
         Logs only the current state of the scratchpad for this session,
@@ -98,13 +176,13 @@ class ScratchpadTool(Tool):
         try:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             entries = self._scratchpads.get(session_id, [])
-            
+
             # Read existing log file
             log_lines = []
             if SCRATCHPAD_LOG_FILE.exists():
                 with open(SCRATCHPAD_LOG_FILE, "r", encoding="utf-8") as f:
                     log_lines = f.readlines()
-            
+
             # Remove old entries for this session (keep other sessions)
             filtered_lines = []
             skip_until_separator = False
@@ -125,7 +203,7 @@ class ScratchpadTool(Tool):
                 else:
                     # Keep this line
                     filtered_lines.append(line)
-            
+
             # Append new entry for this session
             with open(SCRATCHPAD_LOG_FILE, "w", encoding="utf-8") as f:
                 f.writelines(filtered_lines)
@@ -159,15 +237,18 @@ class ScratchpadTool(Tool):
         )
 
     @property
-    def input_schema(self) -> type[BaseModel]:
+    def input_schema(self) -> type[ScratchpadInput]:
         """Input schema for the tool."""
         return ScratchpadInput
 
     def _create_emitter(self) -> Emitter:
         """Create emitter for the tool."""
-        return Emitter()
+        return Emitter.root().child(
+            namespace=["tool", "scratchpad"],
+            creator=self,
+        )
 
-    def _get_entries(self, session_id: str) -> list:
+    def _get_entries(self, session_id: str) -> list[str]:
         """Get scratchpad entries for a session.
 
         Args:
@@ -186,7 +267,7 @@ class ScratchpadTool(Tool):
             session_id: Session identifier.
 
         Returns:
-            Formatted scratchpad content string with validation warnings.
+            Formatted scratchpad content string.
         """
         entries = self._get_entries(session_id)
         if not entries:
@@ -196,22 +277,34 @@ class ScratchpadTool(Tool):
             return result
 
         result = "=== AGENT SCRATCHPAD ===\n\n"
-        result += "\n\n".join(f"[{i}] {entry}" for i, entry in
-                              enumerate(entries, 1))
-        
+        result += "\n\n".join(f"[{i}] {entry}" for i, entry in enumerate(entries, 1))
+
         logger.info(f"ScratchpadTool[{session_id}]: READ - {len(entries)} entries")
-        self._log_operation("read", session_id,
-                           result=f"{len(entries)} entries")
+        self._log_operation("read", session_id, result=f"{len(entries)} entries")
         return result
 
     @staticmethod
     def _parse_key_value_pairs(content: str) -> dict:
         """Parse key-value pairs from scratchpad content.
 
-        Handles formats like:
-        - "key: value"
-        - "key1: value1, key2: value2"
-        - "key: value, key2: value2, key3: value3"
+        Uses regex to correctly handle values containing commas, which prevents
+        incorrectly splitting "item: milk, bread, eggs" into separate entries.
+
+        Format Examples:
+        - Simple: "key: value" → {"key": "value"}
+        - Multiple: "key1: val1, key2: val2" → {"key1": "val1", "key2": "val2"}
+        - Comma in value: "item: milk, bread, key2: val2" → {"item": "milk, bread", "key2": "val2"}
+        - Hyphenated keys: "Content-Type: json, user-id: 123" → {"Content-Type": "json", "user-id": "123"}
+
+        Implementation Note:
+        A simple split-by-comma approach fails when values contain commas.
+        The regex pattern works by:
+        1. Matching any characters except ':' as the key: ([^:]+)
+        2. Matching the colon separator: :
+        3. Capturing everything until the next "key:" pattern or end: (.*?)(?=...)
+
+        This ensures commas within values are preserved while correctly
+        identifying multiple key-value pairs separated by commas.
 
         Args:
             content: Content string to parse.
@@ -220,27 +313,85 @@ class ScratchpadTool(Tool):
             Dictionary of key-value pairs.
         """
         pairs = {}
-        # Split by comma, but be careful with commas inside values
-        parts = [p.strip() for p in content.split(',')]
-        for part in parts:
-            if ':' in part:
-                key, value = part.split(':', 1)
-                key = key.strip()
-                value = value.strip()
-                if key and value:
-                    pairs[key] = value
+        special_result_keys = ("handoff_result", "previous_handoff_result", "previous_result")
+
+        # If a result key is present, treat it as the final field and capture
+        # the rest of the content verbatim to avoid splitting on commas/colons.
+        lower_content = content.lower()
+        special_match = None
+        for key in special_result_keys:
+            pattern_key = re.compile(rf"(^|,\\s*){re.escape(key)}\\s*:", re.IGNORECASE)
+            match = pattern_key.search(content)
+            if match:
+                key_start = match.start() + len(match.group(1))
+                value_start = match.end()
+                special_match = (key, key_start, value_start)
+                break
+
+        if special_match:
+            result_key, start_idx, value_start = special_match
+            prefix = content[:start_idx].strip().rstrip(",")
+            result_value = content[value_start:].strip()
+            if prefix:
+                pairs.update(ScratchpadTool._parse_key_value_pairs(prefix))
+            if result_value:
+                pairs[result_key] = result_value
+            return pairs
+
+        # Regex breakdown:
+        # ([^:]+)           - Capture key (any chars except colon)
+        # :\s*              - Match colon and optional whitespace
+        # (.*?)             - Capture value (non-greedy)
+        # (?=               - Lookahead (doesn't consume characters):
+        #   \s*,\s*[^:]+:   - Next key-value pair (comma, then key:)
+        #   |               - OR
+        #   \s*$            - End of string
+        # )
+        pattern = re.compile(r"([^:]+):\s*(.*?)(?=\s*,\s*[^:]+:|\s*$)")
+
+        for match in pattern.finditer(content):
+            key = match.group(1).strip().strip(" ,")
+            value = match.group(2).strip()
+            # Remove trailing commas and extra whitespace from values
+            value = value.rstrip(", ").strip()
+            if not key or not value:
+                continue
+
+            key_lower = key.lower()
+            if key_lower not in ScratchpadTool._allowed_keys:
+                continue
+
+            pairs[key_lower] = value
+
         return pairs
 
     @staticmethod
-    def _merge_entries(entries: list, new_pairs: dict) -> list:
+    def _merge_entries(entries: list[str], new_pairs: dict) -> list[str]:
         """Merge new key-value pairs into existing entries.
+
+        IMPORTANT BEHAVIOR:
+        This method consolidates ALL key-value pairs (existing + new) into a
+        SINGLE entry. This means the returned list will contain at most ONE
+        consolidated entry, not multiple separate entries.
+
+        Design Rationale:
+        - Key-value pairs represent structured state that should be merged
+        - Each key appears only once with its latest value
+        - Prevents duplicate keys and maintains a single source of truth
+        - Example: Writing "city: Boston" then "date: 2025-01-28" results in
+          ONE entry: "city: Boston, date: 2025-01-28"
+
+        This is different from non-key-value entries (plain text) which are
+        appended as separate list items.
 
         Args:
             entries: List of existing scratchpad entries.
             new_pairs: Dictionary of new key-value pairs to merge.
 
         Returns:
-            Updated list of entries (consolidated).
+            Updated list with a SINGLE consolidated entry containing all
+            key-value pairs (old + new), with new values overriding old
+            values for duplicate keys. Returns empty list if no valid pairs.
         """
         # Parse all existing entries into a single dict
         consolidated = {}
@@ -248,68 +399,89 @@ class ScratchpadTool(Tool):
             pairs = ScratchpadTool._parse_key_value_pairs(entry)
             consolidated.update(pairs)
 
-        # Merge new pairs (new values override old ones)
+        # Merge new pairs (new values override old ones for duplicate keys)
         consolidated.update(new_pairs)
 
         # Convert back to entry format
         if consolidated:
-            # Create a single consolidated entry
-            entry_str = ', '.join(f"{k}: {v}" for k, v in consolidated.items())
+            # Create a single consolidated entry containing all pairs
+            entry_str = ", ".join(f"{k}: {v}" for k, v in consolidated.items())
             return [entry_str]
         return []
 
     def _write_scratchpad(self, entry: str, session_id: str) -> str:
         """Add or update entry in the scratchpad.
 
-        Merges key-value pairs with existing entries to avoid duplicates.
-        If entry contains key-value pairs (format: "key: value"), it will
-        update existing entries with the same keys.
-        
-        Automatically adds missing date field aliases to support both flights
-        and hotels:
-        - If check_in_date exists, adds departure_date with same value
-        - If departure_date exists, adds check_in_date with same value
-        - If check_out_date exists, adds return_date with same value
-        - If return_date exists, adds check_out_date with same value
+        Behavior depends on entry format:
+
+        1. Key-Value Pairs (contains ":"):
+           - Parsed and merged with existing key-value pairs
+           - Results in a SINGLE consolidated entry
+           - New values override old values for duplicate keys
+           - Special travel planner feature: Automatically adds date field aliases
+             to support both flights and hotels:
+             * check_in_date ↔ departure_date
+             * check_out_date ↔ return_date
+
+        2. Plain Text (no ":"):
+           - Appended as a new separate entry
+           - Multiple plain text entries can exist
+
+        This design ensures structured state (key-value) remains consolidated
+        while allowing free-form notes (plain text) to accumulate.
 
         Args:
             entry: Content to add/update.
             session_id: Session identifier.
 
         Returns:
-            Success message.
+            Success message describing the action taken.
         """
         entries = self._get_entries(session_id)
         new_pairs = self._parse_key_value_pairs(entry)
 
         if new_pairs:
-            # Automatically add missing date field aliases
-            if 'check_in_date' in new_pairs and 'departure_date' not in new_pairs:
-                new_pairs['departure_date'] = new_pairs['check_in_date']
-                logger.info(f"ScratchpadTool: Auto-added departure_date = {new_pairs['departure_date']}")
-            
-            if 'departure_date' in new_pairs and 'check_in_date' not in new_pairs:
-                new_pairs['check_in_date'] = new_pairs['departure_date']
-                logger.info(f"ScratchpadTool: Auto-added check_in_date = {new_pairs['check_in_date']}")
-            
-            if 'check_out_date' in new_pairs and 'return_date' not in new_pairs:
-                new_pairs['return_date'] = new_pairs['check_out_date']
-                logger.info(f"ScratchpadTool: Auto-added return_date = {new_pairs['return_date']}")
-            
-            if 'return_date' in new_pairs and 'check_out_date' not in new_pairs:
-                new_pairs['check_out_date'] = new_pairs['return_date']
-                logger.info(f"ScratchpadTool: Auto-added check_out_date = {new_pairs['check_out_date']}")
-            
+            # Travel planner specific: Automatically add missing date field aliases
+            if "check_in_date" in new_pairs and "departure_date" not in new_pairs:
+                new_pairs["departure_date"] = new_pairs["check_in_date"]
+                logger.info(
+                    f"ScratchpadTool: Auto-added departure_date = "
+                    f"{new_pairs['departure_date']}"
+                )
+
+            if "departure_date" in new_pairs and "check_in_date" not in new_pairs:
+                new_pairs["check_in_date"] = new_pairs["departure_date"]
+                logger.info(
+                    f"ScratchpadTool: Auto-added check_in_date = "
+                    f"{new_pairs['check_in_date']}"
+                )
+
+            if "check_out_date" in new_pairs and "return_date" not in new_pairs:
+                new_pairs["return_date"] = new_pairs["check_out_date"]
+                logger.info(
+                    f"ScratchpadTool: Auto-added return_date = "
+                    f"{new_pairs['return_date']}"
+                )
+
+            if "return_date" in new_pairs and "check_out_date" not in new_pairs:
+                new_pairs["check_out_date"] = new_pairs["return_date"]
+                logger.info(
+                    f"ScratchpadTool: Auto-added check_out_date = "
+                    f"{new_pairs['check_out_date']}"
+                )
+
             # Merge with existing entries
             entries[:] = self._merge_entries(entries, new_pairs)
-            result = f"Updated scratchpad: {', '.join(f'{k}: {v}' for k, v in new_pairs.items())}"
+            # Since we just merged new_pairs (which is not empty), entries will have content
+            result = f"Updated scratchpad to: {entries[0]}"
         else:
             # If no key-value pairs found, append as-is (for non-structured entries)
             entries.append(entry)
             result = f"Added to scratchpad: {entry}"
 
-        logger.info(f"ScratchpadTool[{session_id}]: WRITE - "
-                   f"{len(entries)} total entries")
+        logger.info(
+            f"ScratchpadTool[{session_id}]: WRITE - " f"{len(entries)} total entries"
+        )
         self._log_operation("write", session_id, content=entry, result=result)
         return result
 
@@ -327,8 +499,7 @@ class ScratchpadTool(Tool):
         if not entries:
             result = "No entry to append to. Use 'write' first."
             logger.info(f"ScratchpadTool[{session_id}]: APPEND - No entries")
-            self._log_operation("append", session_id, content=text,
-                               result=result)
+            self._log_operation("append", session_id, content=text, result=result)
             return result
 
         entries[-1] += f" {text}"
@@ -349,17 +520,17 @@ class ScratchpadTool(Tool):
         entries_count = len(self._get_entries(session_id))
         self._scratchpads[session_id] = []
         result = "Scratchpad cleared."
-        logger.info(f"ScratchpadTool[{session_id}]: CLEAR - "
-                    f"{entries_count} entries")
-        self._log_operation("clear", session_id,
-                           result=f"Cleared {entries_count} entries")
+        logger.info(
+            f"ScratchpadTool[{session_id}]: CLEAR - " f"{entries_count} entries"
+        )
+        self._log_operation("clear", session_id, result=f"Cleared {entries_count} entries")
         return result
 
     async def _run(
         self,
         input: ScratchpadInput,
-        options: Optional[ToolRunOptions] = None,
-        context: Optional[RunContext] = None,
+        options: ToolRunOptions | None = None,
+        context: RunContext | None = None,
     ) -> StringToolOutput:
         """Execute scratchpad operation.
 
@@ -371,50 +542,47 @@ class ScratchpadTool(Tool):
         Returns:
             StringToolOutput with the result of the operation.
         """
-        # Get session ID (always "default" for persistent storage)
         session_id = self._get_session_id(context)
         operation = input.operation.lower().strip()
         content = input.content
 
-        logger.info(f"ScratchpadTool[{session_id}]: operation='{operation}', "
-                   f"content='{content}'")
-
-        if not operation:
-            error_msg = (
-                "Error: 'operation' parameter is required. "
-                "Use 'read', 'write', 'append', or 'clear'."
-            )
-            return StringToolOutput(result=error_msg)
-
-        # Operation handlers
-        handlers = {
-            "read": lambda: self._read_scratchpad(session_id),
-            "write": lambda: (
-                self._write_scratchpad(content, session_id)
-                if content
-                else "Error: 'write' operation requires 'content' parameter."
-            ),
-            "append": lambda: (
-                self._append_scratchpad(content, session_id)
-                if content
-                else "Error: 'append' operation requires 'content' parameter."
-            ),
-            "clear": lambda: self._clear_scratchpad(session_id),
-        }
-
-        handler = handlers.get(operation)
-        if handler:
-            result = handler()
-            return StringToolOutput(result=result)
-
-        error_msg = (
-            f"Unknown operation: {operation}. "
-            "Use 'read', 'write', 'append', or 'clear'."
+        logger.info(
+            f"ScratchpadTool[{session_id}]: operation='{operation}', "
+            f"content='{content}'"
         )
-        return StringToolOutput(result=error_msg)
+
+        result = None
+        async with ScratchpadTool._lock:
+            if operation in ("write", "append") and not content:
+                self._raise_input_validation_error(
+                    f"'{operation}' operation requires 'content' parameter."
+                )
+
+            handlers = {
+                "read": lambda: self._read_scratchpad(session_id),
+                "write": lambda: self._write_scratchpad(content, session_id),
+                "append": lambda: self._append_scratchpad(content, session_id),
+                "clear": lambda: self._clear_scratchpad(session_id),
+            }
+
+            # Operation is validated by Pydantic enum, so key existence is guaranteed
+            result = handlers[operation]()
+
+        return StringToolOutput(result=result)
+
+    def _raise_input_validation_error(self, message: str) -> None:
+        """Raise a ToolInputValidationError with the given message.
+
+        Args:
+            message: Error message to include in the exception.
+
+        Raises:
+            ToolInputValidationError: Always raised with the provided message.
+        """
+        raise ToolInputValidationError(message)
 
     @classmethod
-    def get_scratchpad_for_session(cls, session_id: str) -> list:
+    def get_scratchpad_for_session(cls, session_id: str) -> list[str]:
         """Get scratchpad entries for a specific session.
 
         Args:
@@ -423,14 +591,15 @@ class ScratchpadTool(Tool):
         Returns:
             List of scratchpad entries.
         """
-        return cls._scratchpads.get(session_id, [])
+        return cls._scratchpads.get(session_id, []).copy()
 
     @classmethod
-    def clear_session(cls, session_id: str) -> None:
+    async def clear_session(cls, session_id: str) -> None:
         """Clear scratchpad for a specific session.
 
         Args:
             session_id: Session identifier.
         """
-        if session_id in cls._scratchpads:
-            cls._scratchpads[session_id] = []
+        async with cls._lock:
+            if session_id in cls._scratchpads:
+                cls._scratchpads[session_id] = []

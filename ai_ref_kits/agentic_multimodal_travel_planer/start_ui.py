@@ -163,15 +163,32 @@ class TravelRouterClient:
                                 if hasattr(msg, 'parts') and msg.parts:
                                     for part in msg.parts:
                                         if hasattr(part, 'root'):
-                                            # Check for handoff tool calls
-                                            part_str = str(part.root)
-                                            if ('HandoffTool' in part_str or
-                                                    'handoff' in
-                                                    part_str.lower()):
-                                                print(
-                                                    "Handoff detected in "
-                                                    f"history: {part_str[:200]}"
-                                                )
+                                            tool_name = None
+                                            tool_call_id = None
+                                            tool_type = None
+                                            root = part.root
+
+                                            if isinstance(root, dict):
+                                                tool_name = root.get("tool_name")
+                                                tool_call_id = root.get("id")
+                                                tool_type = root.get("type")
+                                            else:
+                                                if hasattr(root, "tool_name"):
+                                                    tool_name = root.tool_name
+                                                if hasattr(root, "id"):
+                                                    tool_call_id = root.id
+                                                if hasattr(root, "type"):
+                                                    tool_type = root.type
+
+                                            # Only log actual handoff tool calls once
+                                            if tool_type == "tool-call" and tool_name:
+                                                if tool_name != "scratchpad":
+                                                    if tool_call_id not in seen_tool_calls:
+                                                        seen_tool_calls.add(tool_call_id)
+                                                        print(
+                                                            "Handoff detected in "
+                                                            f"history: tool={tool_name}, id={tool_call_id}"
+                                                        )
 
                         # Get agent name from metadata or default to Travel Router
                         agent_name = "Travel Router"
@@ -311,6 +328,7 @@ thinking_indicators = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "
 indicator_index = 0  # Global animation state
 suppress_router_status = False  # Suppress router working status after handoff
 abort_event = None  # Abort controller for cancelling agent
+seen_tool_calls = set()  # Track tool call IDs to avoid duplicate logs
 
 
 def initialize_travel_router_client():
@@ -470,53 +488,52 @@ def read_latest_logs():
 
 
 def reset_all_agent_memories():
-    """Reset memory for travel router and all supervised agents."""
+    """Reset memory for travel router and all supervised agents.
+    
+    Creates a new conversation session by reinitializing the A2AAgent client
+    with fresh memory. Each new conversation automatically gets its own
+    isolated scratchpad, so no manual clearing is needed.
+    """
     global travel_router_client
-    # Reinitialize the travel router client to create a fresh session
-    # This creates a new A2AAgent with fresh memory, effectively starting
-    # a new conversation session with the server-side agent
     if travel_router_client:
         try:
-            # Send reset command to clear server-side scratchpad
-            try:
-                # Use asyncio to call the async chat_stream method
-                async def send_reset():
-                    await travel_router_client.chat_stream("RESET_SCRATCHPAD")
-                
-                asyncio.run(send_reset())
-                print("✅ Server-side scratchpad cleared")
-            except Exception as e:
-                print(f"⚠️  Error clearing scratchpad: {e}")
-            
-            # Create new memory instance
+            # Create new memory instance and reinitialize client
+            # This starts a fresh conversation with a new session ID
             travel_router_port = os.getenv("TRAVEL_ROUTER_PORT", "9996")
             travel_router_url = f"http://127.0.0.1:{travel_router_port}"
             travel_router_client.memory = UnconstrainedMemory()
             # Reinitialize the A2AAgent client with fresh memory
+            # The new client will create a new conversation session,
+            # which automatically gets its own isolated scratchpad
             travel_router_client.client = A2AAgent(
                 url=travel_router_url,
                 memory=travel_router_client.memory
             )
-            print("✅ Travel Router client reinitialized with fresh memory")
+            print("✅ New conversation started with fresh memory and scratchpad")
         except Exception as e:
             print(f"⚠️  Error reinitializing client: {e}")
     print("✅ All agent memories cleared")
 
 
 def clear_all():
-    """Clear all chat history and reset state.
+    """Clear all chat history and start a new conversation.
+    
+    Resets the UI state and creates a new conversation session.
+    Each new conversation automatically gets its own isolated scratchpad,
+    preventing data leakage between different travel planning sessions.
 
     Returns:
         Tuple of (empty log window, empty chatbox).
     """
     global chatbox_msg, travel_router_client, stop_requested
-    global current_image_path, workflow_steps
-    # Clear chatbox messages and memory
+    global current_image_path, workflow_steps, seen_tool_calls
+    # Clear chatbox messages and UI state
     chatbox_msg = []
     stop_requested = False
     current_image_path = None
     workflow_steps = []
-    # Reset agent memories
+    seen_tool_calls = set()
+    # Start new conversation (which automatically gets a fresh scratchpad)
     try:
         reset_all_agent_memories()
     except Exception as e:
@@ -537,6 +554,7 @@ async def run_agent_workflow(query: str):
     """
     global chatbox_msg, travel_router_client, stop_requested
     global current_image_path, workflow_steps, log_cache, suppress_router_status
+    global seen_tool_calls
     global abort_event
 
     # Create abort controller for this query (can cancel entire agent chain)
@@ -548,6 +566,7 @@ async def run_agent_workflow(query: str):
     workflow_steps = []
     indicator_index = 0  # Reset animation state
     suppress_router_status = False  # Reset suppression flag
+    seen_tool_calls = set()
 
     # Mark current log position for all logs to only capture new events
     logs_dir = Path(__file__).parent / "logs"
@@ -578,6 +597,19 @@ async def run_agent_workflow(query: str):
             }
         except Exception:
             pass
+
+    # Validate query is not empty
+    if not query or not query.strip():
+        print("⚠️  Empty query received, ignoring")
+        yield (
+            read_latest_logs(),
+            chatbox_msg,
+            gr.update(value="", interactive=True),   # msg cleared and enabled
+            gr.update(interactive=True),   # send_btn enabled
+            gr.update(interactive=False),  # stop_btn disabled
+            gr.update(interactive=True),   # clear_btn enabled
+        )
+        return
 
     # Create enhanced query that includes image path if available
     # Only include image path ONCE - clear it after first use to prevent

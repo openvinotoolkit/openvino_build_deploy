@@ -114,6 +114,25 @@ def safe_eval_lambda(lambda_str: str):
 class StreamingRequirementAgentExecutor(ToolCallingAgentExecutor):
     """Custom executor that listens to final_answer events and streams updates"""
 
+    async def execute(self, context, event_queue) -> None:
+        # Store context_id in A2A context storage so tools can access it
+        try:
+            from beeai_framework.adapters.a2a.serve import context as a2a_context
+            
+            # Create a simple context holder
+            class A2AContextHolder:
+                def __init__(self, context_id):
+                    self.context_id = context_id
+            
+            # Store it in the context storage
+            holder = A2AContextHolder(context.context_id)
+            a2a_context._storage.set(holder)
+        except Exception:
+            pass
+        
+        # Call parent execute
+        await super().execute(context, event_queue)
+
     @override
     async def _process_events(
         self,
