@@ -1,0 +1,222 @@
+# Agents Configuration File
+
+# Travel Router Agent Configuration (Supervisor)
+travel_router:
+  name: "travel_router"
+  description: "Intelligent travel coordinator that provides accurate, realistic travel information by consulting specialized agents"
+  port: 9996
+  role: "Travel Coordinator Supervisor"
+  enabled: true
+  
+  # LLM Configuration for Travel Router
+  llm:
+    model: "openai:OpenVINO/Qwen3-8B-int4-ov"
+    temperature: 0.0  # Faster, more deterministic
+    api_key: "unused"
+    api_base: "http://127.0.0.1:8001/v3"
+    max_tokens: 1024  
+  
+  # Memory Configuration
+  memory_size: 20  
+  
+  # Supervised Agents Configuration. It means that the travel_router agent can delegate to the following agents.
+  supervised_agents:
+    - name: "hotel_finder"
+      url: "http://127.0.0.1:9999"
+    - name: "flight_finder"
+      url: "http://127.0.0.1:9998"
+    - name: "image_captioning"
+      url: "http://127.0.0.1:9997"
+  
+  # Tools Configuration (supervisor specific)
+  tools:
+    - name: "ThinkTool"
+      enabled: True  # Disable it if you want to improve response time, tool for planning
+    - name: "ScratchpadTool"
+      enabled: true  # Working memory to track actions and avoid repeating them
+    - name: "HandoffTool"
+      enabled: true
+      auto_discovered: true 
+  
+  # Middleware Configuration
+  middleware:
+    trajectory:
+      included_types: ["Tool"]
+      pretty: true
+      tool_prefix: "🔍 "
+
+  # Requirements - Force workflow: scratchpad first, STRICT confirmation required
+  requirements:
+    - tool_name: "scratchpad"
+      force_at_step: 1  # MUST call scratchpad first every turn
+    - tool_name: "flight_finder"
+      max_invocations: 3
+      custom_checks:
+        # Check 1: Must have "status: confirmed" AND "mode: flights" in scratchpad
+        - "lambda state: any(('status:' in c.result and 'confirmed' in c.result and 'mode:' in c.result and 'flights' in c.result) for m in state.memory.messages if hasattr(m, 'content') for c in m.content if hasattr(c, 'tool_name') and c.tool_name == 'scratchpad' and hasattr(c, 'result'))"
+        # Check 2: All required flight fields must be filled (not TO_BE_UPDATED)
+        - "lambda state: any(('departure_city:' in c.result and 'destination:' in c.result and 'departure_date:' in c.result and 'return_date:' in c.result and 'class:' in c.result and 'TO_BE_UPDATED' not in c.result.split('mode:')[0]) for m in state.memory.messages if hasattr(m, 'content') for c in m.content if hasattr(c, 'tool_name') and c.tool_name == 'scratchpad' and hasattr(c, 'result'))"
+    - tool_name: "hotel_finder"
+      max_invocations: 3
+      custom_checks:
+        # Check 1: Must have "status: confirmed" AND "mode: hotels" in scratchpad
+        - "lambda state: any(('status:' in c.result and 'confirmed' in c.result and 'mode:' in c.result and 'hotels' in c.result) for m in state.memory.messages if hasattr(m, 'content') for c in m.content if hasattr(c, 'tool_name') and c.tool_name == 'scratchpad' and hasattr(c, 'result'))"
+        # Check 2: All required hotel fields must be filled (not TO_BE_UPDATED)
+        - "lambda state: any(('destination:' in c.result and 'check_in_date:' in c.result and 'check_out_date:' in c.result and 'guests:' in c.result and 'TO_BE_UPDATED' not in c.result.split('mode:')[0]) for m in state.memory.messages if hasattr(m, 'content') for c in m.content if hasattr(c, 'tool_name') and c.tool_name == 'scratchpad' and hasattr(c, 'result'))"
+    - tool_name: "image_captioning"
+      max_invocations: 3
+      custom_checks:
+        - "lambda state: any(re.search(r'<image_path>\\s*=\\s*<[^>]+>', msg.text) for msg in state.memory.messages if hasattr(msg, 'text') and hasattr(msg, 'role') and msg.role == 'user')" 
+
+
+# Flight Finder Agent Configuration
+flight_finder:
+  name: "flight_finder"
+  description: "Specialized agent for flight search"
+  port: 9998
+  role: "Flight Search Specialist"
+  enabled: true
+
+  llm:
+    model: "openai:OpenVINO/Qwen3-8B-int4-ov"
+    temperature: 0.0  
+    api_key: "unused"
+    api_base: "http://127.0.0.1:8001/v3"
+    max_tokens: 256  
+  
+  mcp_config:
+    servers:
+      - name: "Flight_search_api"
+        url: "http://127.0.0.1:3002"
+        protocol: "sse"
+        description: "Flight search"
+        enabled: true 
+  
+  # Memory Configuration
+  memory_size: 5
+  
+  # Tools Configuration
+  tools:
+    - name: "ThinkTool"
+      enabled: false  # Disable for speed
+    - name: "mcp_tools"
+      enabled: true
+    - name: "FinalAnswerTool"
+      enabled: true 
+  
+  # Middleware Configuration
+  middleware:
+    trajectory:
+      included_types: ["Tool", "ChatModel"]
+      pretty: true
+      tool_prefix: "🔍 "
+
+  # BeeAI rules requirements, useful to force agent behaviour
+  requirements:
+    - tool_name: "search_flights"
+      force_at_step: 1
+      max_invocations: 1
+
+# Hotel Finder Agent Configuration
+# Hotel Finder Agent Configuration
+hotel_finder:
+  name: "hotel_finder"
+  description: "Specialized agent for hotel search with access to hotel search tools"
+  port: 9999
+  role: "Hotel Search Specialist"
+  enabled: true
+
+  # LLM Configuration
+  llm:
+    model: "openai:OpenVINO/Qwen3-8B-int4-ov"
+    temperature: 0.0  # Faster, more deterministic
+    api_key: "unused"
+    api_base: "http://127.0.0.1:8001/v3"
+    max_tokens: 256  
+  
+  mcp_config:
+    servers:
+      - name: "Hotel Search Tool"
+        url: "http://127.0.0.1:3001"
+        protocol: "sse"
+        description: "Hotel search tool to get prices and accomodation places"
+        enabled: true 
+
+  
+  # Memory Configuration
+  memory_size: 5
+  
+  # Tools Configuration
+  tools:
+    - name: "ThinkTool"
+      enabled: false  # Disabled for speed 
+    - name: "mcp_tools"
+      enabled: true
+    - name: "FinalAnswerTool"
+      enabled: true 
+  
+  # Middleware Configuration (For console logging)
+  middleware:
+    trajectory:
+      included_types: ["Tool", "ChatModel"]
+      pretty: true
+      tool_prefix: "🔍 "
+
+  # BeeAI rules requirements, useful to force agent behaviour
+  requirements:
+    - tool_name: "search_hotel_tool"
+      force_at_step: 1
+      max_invocations: 2
+
+# Video Analysis Agent Configuration
+image_captioning:
+  name: "image_captioning"
+  description: "Image captioning agent with 2 core tools: image ingestion and image captioning"
+  port: 9997
+  role: "Video Analysis Specialist"
+  enabled: true
+  # LLM Configuration for Video Search
+  llm:
+    model: "openai:OpenVINO/Qwen3-8B-int4-ov"
+    temperature: 0.0  
+    api_key: "unused"
+    api_base: "http://127.0.0.1:8001/v3"
+    max_tokens: 256  
+ 
+  # MCP Configuration for image captioning
+  mcp_config:
+    url: "http://localhost:3003"
+    protocol: "sse"
+    description: "Image captioning tool to get captions for images"
+    enabled: true 
+  
+  # Memory Configuration
+  memory_size: 5
+  
+  # Requirements - Force tool usage
+  requirements:
+    - tool_name: "image_captioning"
+      force_at_step: 1
+      max_invocations: 1
+  # Tools Configuration (MCP-based)
+  tools:
+    type: "mcp_tools"
+    source: "mcp_server"
+  
+  # Middleware Configuration
+  middleware:
+    trajectory:
+      enabled: false  # Video agent doesn't use trajectory middleware
+
+###########################################################
+# EXAMPLE FOR HELPER RULES FOR AGENTS 
+# Explore https://framework.beeai.dev/modules/agents/requirement-agent to know more about the requirements
+###########################################################
+# requirements:
+#   - tool_name: "list_hotels"
+#     force_at_step: 1
+#     max_invocations: 2
+#   - tool_name: "search_hotels"
+#     only_after: ["list_hotels"]
+#   - tool_name: "search_flights"
+#     max_invocations: 0 
