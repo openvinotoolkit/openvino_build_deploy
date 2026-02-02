@@ -5,6 +5,6 @@ uvicorn==0.37.0
 PyYAML==6.0.1
 fastapi==0.115.5
 python-dotenv==1.1.0
-mcp==1.10.1
+mcp==1.23.0
 google-search-results==2.4.2
 openai==2.8.0
