@@ -6,6 +6,10 @@ This app demonstrates how to use the OpenVINO toolkit in NodeJS to blur the back
 
 There are 2 possible ways to run the app - using executable or source code in NodeJS.
 
+Find out more about Hide Your Mess Behind app here:
+* [🗞️Article on Medium](https://medium.com/openvino-toolkit/how-to-create-a-desktop-application-in-electronjs-with-openvino-18f83a51223b)
+* [📺Conference Presentation](https://www.youtube.com/watch?v=DRawhhhcRLY)
+
 ## Running the app using executable file
 
 ### Installers
