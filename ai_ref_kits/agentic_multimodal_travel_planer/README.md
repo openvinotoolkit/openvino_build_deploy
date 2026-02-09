@@ -168,7 +168,9 @@ This example uses three MCP servers that the agents will consume:
 - Image captioning: generates captions for images
 
 ### Get your SerpAPI key
-Flight and travel agents use an external API for hotel and flight search. Obtain an API key from SerpAPI.
+The flight and travel agents rely on an external API to search for flights and hotels. To enable this, you’ll need an API key from SerpAPI.
+
+You can sign up for a free API key, which includes 250 requests per month and does not require a credit card. You’ll only need to upgrade if you plan to exceed the free monthly limit.
 
 1. Go to https://serpapi.com/
 2. Navigate to "Your Private API Key"
