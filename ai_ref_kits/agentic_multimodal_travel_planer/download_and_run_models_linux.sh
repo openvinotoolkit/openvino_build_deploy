@@ -2,7 +2,7 @@
 set -e
 
 # --------------------------------------------------
-# Config
+# Default Config
 # --------------------------------------------------
 MODELS_DIR="$(pwd)/models"
 UID_GID="$(id -u):$(id -g)"
@@ -17,6 +17,98 @@ LLM_PORT=8001
 VLM_PORT=8002
 
 TIMEOUT=1800
+
+# --------------------------------------------------
+# Parse command line arguments
+# --------------------------------------------------
+show_help() {
+  cat << EOF
+Usage: $0 [OPTIONS]
+
+Options:
+  -h, --help              Show this help message
+  -s, --stop              Stop and remove running containers
+  
+Configuration:
+  --llm-model MODEL       LLM model to use (default: ${LLM_MODEL})
+  --vlm-model MODEL       VLM model to use (default: ${VLM_MODEL})
+  --llm-container NAME    LLM container name (default: ${LLM_CONTAINER})
+  --vlm-container NAME    VLM container name (default: ${VLM_CONTAINER})
+  --llm-port PORT         LLM server port (default: ${LLM_PORT})
+  --vlm-port PORT         VLM server port (default: ${VLM_PORT})
+  --models-dir DIR        Models directory (default: ${MODELS_DIR})
+  --timeout SECONDS       Timeout in seconds (default: ${TIMEOUT})
+
+Examples:
+  # Start with defaults
+  $0
+
+  # Use different models
+  $0 --llm-model "OpenVINO/Llama-3.1-8B-int4-ov" --vlm-model "OpenVINO/LLaVA-NeXT-7B-int4-ov"
+
+  # Use different ports
+  $0 --llm-port 9001 --vlm-port 9002
+
+  # Stop containers
+  $0 --stop
+
+Without options, the script will start the model servers with default configuration.
+EOF
+}
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -h|--help)
+      show_help
+      exit 0
+      ;;
+    -s|--stop)
+      echo "Stopping OpenVINO Model Server containers..."
+      docker stop "${LLM_CONTAINER}" "${VLM_CONTAINER}" 2>/dev/null || true
+      docker rm "${LLM_CONTAINER}" "${VLM_CONTAINER}" 2>/dev/null || true
+      echo "✓ Containers stopped and removed"
+      exit 0
+      ;;
+    --llm-model)
+      LLM_MODEL="$2"
+      shift 2
+      ;;
+    --vlm-model)
+      VLM_MODEL="$2"
+      shift 2
+      ;;
+    --llm-container)
+      LLM_CONTAINER="$2"
+      shift 2
+      ;;
+    --vlm-container)
+      VLM_CONTAINER="$2"
+      shift 2
+      ;;
+    --llm-port)
+      LLM_PORT="$2"
+      shift 2
+      ;;
+    --vlm-port)
+      VLM_PORT="$2"
+      shift 2
+      ;;
+    --models-dir)
+      MODELS_DIR="$2"
+      shift 2
+      ;;
+    --timeout)
+      TIMEOUT="$2"
+      shift 2
+      ;;
+    *)
+      echo "Unknown option: $1"
+      echo "Run '$0 --help' for usage information."
+      exit 1
+      ;;
+  esac
+done
 
 # --------------------------------------------------
 # Detect Intel GPU
@@ -41,6 +133,30 @@ done
 }
 
 # --------------------------------------------------
+# Progress bar helpers
+# --------------------------------------------------
+TOTAL_STEPS=5
+CURRENT_STEP=0
+
+show_progress() {
+  local step_name="$1"
+  CURRENT_STEP=$((CURRENT_STEP + 1))
+  local percent=$((CURRENT_STEP * 100 / TOTAL_STEPS))
+  local filled=$((percent / 2))
+  local empty=$((50 - filled))
+  
+  printf "\r\033[K"  # Clear line
+  printf "Progress: ["
+  printf "%${filled}s" | tr ' ' '='
+  printf "%${empty}s" | tr ' ' ' '
+  printf "] %3d%% - %s" "$percent" "$step_name"
+  
+  if [ "$CURRENT_STEP" -eq "$TOTAL_STEPS" ]; then
+    printf "\n"
+  fi
+}
+
+# --------------------------------------------------
 # Helper: wait for OVMS readiness with progress
 # --------------------------------------------------
 wait_for_ready() {
@@ -48,11 +164,12 @@ wait_for_ready() {
   local start_ts
   start_ts=$(date +%s)
   local last_hash=""
-
-  echo "Waiting for ${container}..."
+  local spinner=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
+  local spin_idx=0
 
   while true; do
     if ! docker ps -q -f name="^${container}$" >/dev/null; then
+      echo ""
       echo "ERROR: ${container} exited before becoming ready"
       docker logs "${container}" || true
       exit 1
@@ -61,32 +178,77 @@ wait_for_ready() {
     logs="$(docker logs --tail 100 "${container}" 2>&1 || true)"
     hash="$(printf '%s' "${logs}" | sha1sum | awk '{print $1}')"
 
+    # Show spinner while waiting
+    printf "\r  ${spinner[$spin_idx]} Waiting for ${container}..."
+    spin_idx=$(( (spin_idx + 1) % 10 ))
+
     if [[ "${hash}" != "${last_hash}" ]]; then
-      printf '%s\n' "${logs}" \
-        | grep -E "Downloading|Fetching|Cloning|Loading|Initializing|OpenVINO|HuggingFace" \
-        | sed "s/^/[${container}] /" || true
+      # Show relevant log lines
+      local recent_logs
+      recent_logs=$(printf '%s\n' "${logs}" \
+        | grep -E "Downloading|Fetching|Cloning|Loading|Initializing|model loaded" \
+        | tail -1 || true)
+      if [ -n "$recent_logs" ]; then
+        printf "\r\033[K  ℹ %s\n" "$recent_logs"
+      fi
       last_hash="${hash}"
     fi
 
     if grep -q "REST server listening on port" <<< "${logs}"; then
-      echo "${container} is ready"
+      printf "\r\033[K  ✓ ${container} is ready\n"
       return 0
     fi
 
     if (( $(date +%s) - start_ts > TIMEOUT )); then
+      echo ""
       echo "ERROR: timeout waiting for ${container}"
       docker logs "${container}" || true
       exit 1
     fi
 
-    sleep 2
+    sleep 0.5
   done
 }
 
 # --------------------------------------------------
+# Show Configuration
+# --------------------------------------------------
+echo ""
+echo "=============================================="
+echo "  OpenVINO Model Server Setup"
+echo "=============================================="
+echo ""
+echo "Configuration:"
+echo "  LLM Model:     ${LLM_MODEL}"
+echo "  VLM Model:     ${VLM_MODEL}"
+echo "  LLM Container: ${LLM_CONTAINER}"
+echo "  VLM Container: ${VLM_CONTAINER}"
+echo "  LLM Port:      ${LLM_PORT}"
+echo "  VLM Port:      ${VLM_PORT}"
+echo "  Models Dir:    ${MODELS_DIR}"
+echo "  Timeout:       ${TIMEOUT}s"
+echo ""
+
+# --------------------------------------------------
+# Update agents_config.yaml
+# --------------------------------------------------
+CONFIG_FILE="$(dirname "$0")/config/agents_config.yaml"
+if [ -f "${CONFIG_FILE}" ]; then
+  # Update all api_base URLs with the current LLM port
+  sed -i.bak "s|api_base: \"http://127.0.0.1:[0-9]*/v3\"|api_base: \"http://127.0.0.1:${LLM_PORT}/v3\"|g" "${CONFIG_FILE}"
+  # Update model names
+  sed -i.bak "s|model: \"openai:OpenVINO/[^\"]*\"|model: \"openai:${LLM_MODEL}\"|g" "${CONFIG_FILE}"
+  echo "✓ Updated agents_config.yaml with current configuration"
+else
+  echo "⚠ config/agents_config.yaml not found"
+fi
+
+# --------------------------------------------------
 # Prep
 # --------------------------------------------------
-docker pull "${OVMS_IMAGE}"
+
+show_progress "Pulling Docker image..."
+docker pull "${OVMS_IMAGE}" >/dev/null 2>&1
 
 mkdir -p "${MODELS_DIR}"
 chown -R "${UID_GID}" "${MODELS_DIR}" 2>/dev/null || true
@@ -97,6 +259,7 @@ docker rm -f "${LLM_CONTAINER}" "${VLM_CONTAINER}" >/dev/null 2>&1 || true
 # --------------------------------------------------
 # Run containers
 # --------------------------------------------------
+show_progress "Starting LLM container..."
 docker run -d \
   ${GPU_ARGS} \
   --name "${LLM_CONTAINER}" \
@@ -113,8 +276,9 @@ docker run -d \
   --tool_parser hermes3 \
   --log_level DEBUG \
   ${TARGET_DEVICE_ARG} \
-  
+  >/dev/null 2>&1
 
+show_progress "Starting VLM container..."
 docker run -d \
   ${GPU_ARGS} \
   --name "${VLM_CONTAINER}" \
@@ -131,12 +295,15 @@ docker run -d \
   --task text_generation \
   --pipeline_type VLM \
   --log_level DEBUG \
-  ${TARGET_DEVICE_ARG} 
-  
+  ${TARGET_DEVICE_ARG} \
+  >/dev/null 2>&1
 
 # --------------------------------------------------
 # Wait for readiness (PARALLEL)
 # --------------------------------------------------
+show_progress "Waiting for containers to be ready..."
+echo ""
+
 wait_for_ready "${LLM_CONTAINER}" &
 PID_LLM=$!
 
@@ -146,14 +313,21 @@ PID_VLM=$!
 wait "${PID_LLM}"
 wait "${PID_VLM}"
 
+show_progress "Setup complete!"
+
 # --------------------------------------------------
 # Final status
 # --------------------------------------------------
 echo ""
 echo "=============================================="
-echo "OpenVINO Model Server is running on:"
-echo "----------------------------------------------"
-echo "LLM : http://localhost:${LLM_PORT}"
-echo "VLM : http://localhost:${VLM_PORT}"
+echo "  ✓ OpenVINO Model Server Ready!"
+echo "=============================================="
+echo ""
+echo "Services available at:"
+echo "  • LLM Server: http://localhost:${LLM_PORT}"
+echo "  • VLM Server: http://localhost:${VLM_PORT}"
+echo ""
+echo "To stop the servers, run:"
+echo "  $0 --stop"
 echo "=============================================="
 echo ""
