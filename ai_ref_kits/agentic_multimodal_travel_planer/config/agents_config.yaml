@@ -87,7 +87,7 @@ flight_finder:
   mcp_config:
     servers:
       - name: "Flight_search_api"
-        url: "http://127.0.0.1:3002"
+        url: "http://127.0.0.1:3020"
         protocol: "sse"
         description: "Flight search"
         enabled: true 
@@ -137,7 +137,7 @@ hotel_finder:
   mcp_config:
     servers:
       - name: "Hotel Search Tool"
-        url: "http://127.0.0.1:3001"
+        url: "http://127.0.0.1:3010"
         protocol: "sse"
         description: "Hotel search tool to get prices and accomodation places"
         enabled: true 
@@ -185,7 +185,7 @@ image_captioning:
  
   # MCP Configuration for image captioning
   mcp_config:
-    url: "http://localhost:3003"
+    url: "http://localhost:3030"
     protocol: "sse"
     description: "Image captioning tool to get captions for images"
     enabled: true 
