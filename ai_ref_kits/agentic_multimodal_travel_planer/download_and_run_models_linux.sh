@@ -17,6 +17,7 @@ LLM_PORT=8001
 VLM_PORT=8002
 
 TIMEOUT=1800
+DEVICE=""  # Empty = auto-detect Intel GPU, "CPU" to force CPU, or "GPU", "GPU.0", "GPU.1" etc.
 
 # --------------------------------------------------
 # Parse command line arguments
@@ -38,16 +39,26 @@ Configuration:
   --vlm-port PORT         VLM server port (default: ${VLM_PORT})
   --models-dir DIR        Models directory (default: ${MODELS_DIR})
   --timeout SECONDS       Timeout in seconds (default: ${TIMEOUT})
+  --device DEVICE         Device: CPU, GPU, GPU.0, GPU.1, etc. (default: auto-detect)
 
 Examples:
-  # Start with defaults
+  # Start with defaults (auto-detect Intel GPU)
   $0
+
+  # Force CPU
+  $0 --device CPU
+
+  # Force first GPU
+  $0 --device GPU.0
+
+  # Use second GPU
+  $0 --device GPU.1
 
   # Use different models
   $0 --llm-model "OpenVINO/Llama-3.1-8B-int4-ov" --vlm-model "OpenVINO/LLaVA-NeXT-7B-int4-ov"
 
-  # Use different ports
-  $0 --llm-port 9001 --vlm-port 9002
+  # Combine options
+  $0 --device GPU.0 --llm-port 9001
 
   # Stop containers
   $0 --stop
@@ -102,6 +113,15 @@ while [[ $# -gt 0 ]]; do
       TIMEOUT="$2"
       shift 2
       ;;
+    --device)
+      DEVICE=$(echo "$2" | tr '[:lower:]' '[:upper:]')
+      # Validate: CPU, GPU, GPU.0, GPU.1, etc.
+      if [[ ! "${DEVICE}" =~ ^(CPU|GPU(\.[0-9]+)?)$ ]]; then
+        echo "Error: Invalid device '${DEVICE}'. Must be CPU, GPU, GPU.0, GPU.1, etc."
+        exit 1
+      fi
+      shift 2
+      ;;
     *)
       echo "Unknown option: $1"
       echo "Run '$0 --help' for usage information."
@@ -126,11 +146,41 @@ for r in /dev/dri/render*; do
   GID="$(stat -c '%g' "$r")"
 done
 
-[ "$INTEL_GPUS" -gt 0 ] && {
+# Configure device based on flag or auto-detect
+if [[ -z "${DEVICE}" ]]; then
+  # No flag: auto-detect (current behavior)
+  if [ "$INTEL_GPUS" -gt 0 ]; then
+    OVMS_IMAGE="openvino/model_server:latest-gpu"
+    GPU_ARGS="--device=/dev/dri --group-add=${GID}"
+    TARGET_DEVICE_ARG="--target_device GPU.$([ "$INTEL_GPUS" -gt 1 ] && echo 1 || echo 0)"
+    ACTUAL_DEVICE="GPU (auto-detected)"
+  else
+    ACTUAL_DEVICE="CPU (no GPU detected)"
+  fi
+elif [[ "${DEVICE}" == "CPU" ]]; then
+  # Force CPU
+  TARGET_DEVICE_ARG="--target_device CPU"
+  ACTUAL_DEVICE="CPU (forced)"
+elif [[ "${DEVICE}" =~ ^GPU(\.[0-9]+)?$ ]]; then
+  # Force GPU with optional index
+  if [ "$INTEL_GPUS" -eq 0 ]; then
+    echo "ERROR: GPU requested but no Intel GPU detected"
+    exit 1
+  fi
   OVMS_IMAGE="openvino/model_server:latest-gpu"
   GPU_ARGS="--device=/dev/dri --group-add=${GID}"
-  TARGET_DEVICE_ARG="--target_device GPU.$([ "$INTEL_GPUS" -gt 1 ] && echo 1 || echo 0)"
-}
+  
+  # Extract GPU index if specified (e.g., GPU.1 -> 1)
+  if [[ "${DEVICE}" == *"."* ]]; then
+    GPU_INDEX="${DEVICE#*.}"
+    TARGET_DEVICE_ARG="--target_device GPU.${GPU_INDEX}"
+    ACTUAL_DEVICE="GPU.${GPU_INDEX} (forced)"
+  else
+    # Just "GPU" - use first available
+    TARGET_DEVICE_ARG="--target_device GPU.0"
+    ACTUAL_DEVICE="GPU.0 (forced)"
+  fi
+fi
 
 # --------------------------------------------------
 # Progress bar helpers

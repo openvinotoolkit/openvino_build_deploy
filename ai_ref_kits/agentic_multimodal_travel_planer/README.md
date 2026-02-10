@@ -158,19 +158,69 @@ CONTAINER ID   IMAGE                          COMMAND                  CREATED  
 424634ea10fe   openvino/model_server:latest   "/ovms/bin/ovms --re…"   3 days ago    Up 3 days    0.0.0.0:8001->8000/tcp, [::]:8001->8000/tcp   competent_ganguly9
 a962a7695b1f   openvino/model_server:latest   "/ovms/bin/ovms --re…"   3 days ago    Up 3 days    0.0.0.0:8002->8000/tcp, [::]:8002->8000/tcp   agitated_galois
 ```
-### Customization options 
-The script also provides a stop command which will stop and remove the models containers:
-```
+#### Customization Options 
+
+##### Stop the Model Servers
+
+To stop and remove the running containers:
+```bash
 ./download_and_run_models_linux.sh --stop
 ```
-You have the option to configure different models.  
-**NOTE**  The peformance may vary depending on the size of the model you select. We HIGHLY recommend using OpenVINO optimized models from the [OpenVINO Hugging Face public repository](https://huggingface.co/OpenVINO/models).
-```
-  # Use different models
-  ./download_and_run_models_linux.sh -llm-model "OpenVINO/Llama-3.1-8B-int4-ov" --vlm-model "OpenVINO/LLaVA-NeXT-7B-int4-ov"
 
-  # Use different ports
-  ./download_and_run_models_linux.sh--llm-port 9001 --vlm-port 9002
+##### Use Different Models
+
+You can specify custom models for both LLM and VLM:
+
+```bash
+# Use different models
+./download_and_run_models_linux.sh \
+  --llm-model "OpenVINO/Llama-3.1-8B-int4-ov" \
+  --vlm-model "OpenVINO/LLaVA-NeXT-7B-int4-ov"
+```
+
+> **Note:** Performance may vary depending on model size. We **highly recommend** using OpenVINO-optimized models from the [OpenVINO Hugging Face repository](https://huggingface.co/OpenVINO/models).
+
+##### Use Custom Ports
+
+Change the default ports (8001 for LLM, 8002 for VLM):
+
+```bash
+./download_and_run_models_linux.sh --llm-port 9001 --vlm-port 9002
+```
+
+##### Device Selection
+
+By default, the script **auto-detects Intel GPUs** and uses them if available, otherwise falls back to CPU. You can force specific hardware:
+
+```bash
+# Force CPU
+./download_and_run_models_linux.sh --device CPU
+
+# Force first GPU
+./download_and_run_models_linux.sh --device GPU.0
+
+# Force second GPU
+./download_and_run_models_linux.sh --device GPU.1
+```
+
+##### Combine Multiple Options
+
+You can combine any of the above options:
+
+```bash
+# Example: Use specific GPU, custom port, and different model
+./download_and_run_models_linux.sh \
+  --device GPU.0 \
+  --llm-port 9001 \
+  --llm-model "OpenVINO/Llama-3.1-8B-int4-ov"
+```
+
+##### View All Options
+
+For a complete list of available options:
+
+```bash
+./download_and_run_models_linux.sh --help
 ```
 
 ### OPTION 2: Windows (Binary)
