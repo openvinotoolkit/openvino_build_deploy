@@ -18,6 +18,8 @@ VLM_PORT=8002
 
 TIMEOUT=1800
 DEVICE=""  # Empty = auto-detect Intel GPU, "CPU" to force CPU, or "GPU", "GPU.0", "GPU.1" etc.
+LLM_DEVICE=""  # Separate device for LLM (overrides DEVICE if set)
+VLM_DEVICE=""  # Separate device for VLM (overrides DEVICE if set)
 
 # --------------------------------------------------
 # Parse command line arguments
@@ -39,20 +41,25 @@ Configuration:
   --vlm-port PORT         VLM server port (default: ${VLM_PORT})
   --models-dir DIR        Models directory (default: ${MODELS_DIR})
   --timeout SECONDS       Timeout in seconds (default: ${TIMEOUT})
-  --device DEVICE         Device: CPU, GPU, GPU.0, GPU.1, etc. (default: auto-detect)
+  --device DEVICE         Device for both LLM and VLM: CPU, GPU, GPU.0, GPU.1, etc. (default: auto-detect)
+  --llm-device DEVICE     Device for LLM only (overrides --device)
+  --vlm-device DEVICE     Device for VLM only (overrides --device)
 
 Examples:
   # Start with defaults (auto-detect Intel GPU)
   $0
 
-  # Force CPU
+  # Force CPU for both LLM and VLM
   $0 --device CPU
 
-  # Force first GPU
+  # Force first GPU for both
   $0 --device GPU.0
 
-  # Use second GPU
-  $0 --device GPU.1
+  # LLM on GPU, VLM on CPU
+  $0 --llm-device GPU.0 --vlm-device CPU
+
+  # LLM on first GPU, VLM on second GPU
+  $0 --llm-device GPU.0 --vlm-device GPU.1
 
   # Use different models
   $0 --llm-model "OpenVINO/Llama-3.1-8B-int4-ov" --vlm-model "OpenVINO/LLaVA-NeXT-7B-int4-ov"
@@ -122,6 +129,22 @@ while [[ $# -gt 0 ]]; do
       fi
       shift 2
       ;;
+    --llm-device)
+      LLM_DEVICE=$(echo "$2" | tr '[:lower:]' '[:upper:]')
+      if [[ ! "${LLM_DEVICE}" =~ ^(CPU|GPU(\.[0-9]+)?)$ ]]; then
+        echo "Error: Invalid LLM device '${LLM_DEVICE}'. Must be CPU, GPU, GPU.0, GPU.1, etc."
+        exit 1
+      fi
+      shift 2
+      ;;
+    --vlm-device)
+      VLM_DEVICE=$(echo "$2" | tr '[:lower:]' '[:upper:]')
+      if [[ ! "${VLM_DEVICE}" =~ ^(CPU|GPU(\.[0-9]+)?)$ ]]; then
+        echo "Error: Invalid VLM device '${VLM_DEVICE}'. Must be CPU, GPU, GPU.0, GPU.1, etc."
+        exit 1
+      fi
+      shift 2
+      ;;
     *)
       echo "Unknown option: $1"
       echo "Run '$0 --help' for usage information."
@@ -146,40 +169,69 @@ for r in /dev/dri/render*; do
   GID="$(stat -c '%g' "$r")"
 done
 
-# Configure device based on flag or auto-detect
-if [[ -z "${DEVICE}" ]]; then
-  # No flag: auto-detect (current behavior)
-  if [ "$INTEL_GPUS" -gt 0 ]; then
-    OVMS_IMAGE="openvino/model_server:latest-gpu"
-    GPU_ARGS="--device=/dev/dri --group-add=${GID}"
-    TARGET_DEVICE_ARG="--target_device GPU.$([ "$INTEL_GPUS" -gt 1 ] && echo 1 || echo 0)"
-    ACTUAL_DEVICE="GPU (auto-detected)"
-  else
-    ACTUAL_DEVICE="CPU (no GPU detected)"
-  fi
-elif [[ "${DEVICE}" == "CPU" ]]; then
-  # Force CPU
-  TARGET_DEVICE_ARG="--target_device CPU"
-  ACTUAL_DEVICE="CPU (forced)"
-elif [[ "${DEVICE}" =~ ^GPU(\.[0-9]+)?$ ]]; then
-  # Force GPU with optional index
-  if [ "$INTEL_GPUS" -eq 0 ]; then
-    echo "ERROR: GPU requested but no Intel GPU detected"
-    exit 1
-  fi
-  OVMS_IMAGE="openvino/model_server:latest-gpu"
-  GPU_ARGS="--device=/dev/dri --group-add=${GID}"
+# Helper function to configure device
+configure_device() {
+  local device_spec="$1"
+  local device_arg=""
+  local device_name=""
+  local needs_gpu=false
   
-  # Extract GPU index if specified (e.g., GPU.1 -> 1)
-  if [[ "${DEVICE}" == *"."* ]]; then
-    GPU_INDEX="${DEVICE#*.}"
-    TARGET_DEVICE_ARG="--target_device GPU.${GPU_INDEX}"
-    ACTUAL_DEVICE="GPU.${GPU_INDEX} (forced)"
-  else
-    # Just "GPU" - use first available
-    TARGET_DEVICE_ARG="--target_device GPU.0"
-    ACTUAL_DEVICE="GPU.0 (forced)"
+  if [[ -z "${device_spec}" ]]; then
+    # Auto-detect
+    if [ "$INTEL_GPUS" -gt 0 ]; then
+      needs_gpu=true
+      device_arg="--target_device GPU.$([ "$INTEL_GPUS" -gt 1 ] && echo 1 || echo 0)"
+      device_name="GPU (auto)"
+    else
+      device_name="CPU (no GPU)"
+    fi
+  elif [[ "${device_spec}" == "CPU" ]]; then
+    device_arg="--target_device CPU"
+    device_name="CPU"
+  elif [[ "${device_spec}" =~ ^GPU(\.[0-9]+)?$ ]]; then
+    if [ "$INTEL_GPUS" -eq 0 ]; then
+      echo "ERROR: GPU requested but no Intel GPU detected"
+      exit 1
+    fi
+    needs_gpu=true
+    if [[ "${device_spec}" == *"."* ]]; then
+      GPU_INDEX="${device_spec#*.}"
+      device_arg="--target_device GPU.${GPU_INDEX}"
+      device_name="GPU.${GPU_INDEX}"
+    else
+      device_arg="--target_device GPU.0"
+      device_name="GPU.0"
+    fi
   fi
+  
+  echo "${needs_gpu}|${device_arg}|${device_name}"
+}
+
+# Configure LLM device (use LLM_DEVICE if set, otherwise fall back to DEVICE)
+LLM_CONFIG=$(configure_device "${LLM_DEVICE:-${DEVICE}}")
+LLM_NEEDS_GPU=$(echo "$LLM_CONFIG" | cut -d'|' -f1)
+LLM_TARGET_DEVICE_ARG=$(echo "$LLM_CONFIG" | cut -d'|' -f2)
+LLM_ACTUAL_DEVICE=$(echo "$LLM_CONFIG" | cut -d'|' -f3)
+
+# Configure VLM device (use VLM_DEVICE if set, otherwise fall back to DEVICE)
+VLM_CONFIG=$(configure_device "${VLM_DEVICE:-${DEVICE}}")
+VLM_NEEDS_GPU=$(echo "$VLM_CONFIG" | cut -d'|' -f1)
+VLM_TARGET_DEVICE_ARG=$(echo "$VLM_CONFIG" | cut -d'|' -f2)
+VLM_ACTUAL_DEVICE=$(echo "$VLM_CONFIG" | cut -d'|' -f3)
+
+# Determine which image to use (GPU image if either needs GPU)
+if [[ "${LLM_NEEDS_GPU}" == "true" ]] || [[ "${VLM_NEEDS_GPU}" == "true" ]]; then
+  OVMS_IMAGE="openvino/model_server:latest-gpu"
+fi
+
+# GPU args for containers that need GPU
+LLM_GPU_ARGS=""
+VLM_GPU_ARGS=""
+if [[ "${LLM_NEEDS_GPU}" == "true" ]]; then
+  LLM_GPU_ARGS="--device=/dev/dri --group-add=${GID}"
+fi
+if [[ "${VLM_NEEDS_GPU}" == "true" ]]; then
+  VLM_GPU_ARGS="--device=/dev/dri --group-add=${GID}"
 fi
 
 # --------------------------------------------------
@@ -270,7 +322,9 @@ echo "=============================================="
 echo ""
 echo "Configuration:"
 echo "  LLM Model:     ${LLM_MODEL}"
+echo "  LLM Device:    ${LLM_ACTUAL_DEVICE}"
 echo "  VLM Model:     ${VLM_MODEL}"
+echo "  VLM Device:    ${VLM_ACTUAL_DEVICE}"
 echo "  LLM Container: ${LLM_CONTAINER}"
 echo "  VLM Container: ${VLM_CONTAINER}"
 echo "  LLM Port:      ${LLM_PORT}"
@@ -311,7 +365,7 @@ docker rm -f "${LLM_CONTAINER}" "${VLM_CONTAINER}" >/dev/null 2>&1 || true
 # --------------------------------------------------
 show_progress "Starting LLM container..."
 docker run -d \
-  ${GPU_ARGS} \
+  ${LLM_GPU_ARGS} \
   --name "${LLM_CONTAINER}" \
   --user "${UID_GID}" \
   -e https_proxy="${https_proxy}" \
@@ -325,12 +379,12 @@ docker run -d \
   --task text_generation \
   --tool_parser hermes3 \
   --log_level DEBUG \
-  ${TARGET_DEVICE_ARG} \
+  ${LLM_TARGET_DEVICE_ARG} \
   >/dev/null 2>&1
 
 show_progress "Starting VLM container..."
 docker run -d \
-  ${GPU_ARGS} \
+  ${VLM_GPU_ARGS} \
   --name "${VLM_CONTAINER}" \
   --user "${UID_GID}" \
   -e https_proxy="${https_proxy}" \
@@ -345,7 +399,7 @@ docker run -d \
   --task text_generation \
   --pipeline_type VLM \
   --log_level DEBUG \
-  ${TARGET_DEVICE_ARG} \
+  ${VLM_TARGET_DEVICE_ARG} \
   >/dev/null 2>&1
 
 # --------------------------------------------------
