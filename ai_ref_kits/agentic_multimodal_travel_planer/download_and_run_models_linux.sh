@@ -156,6 +156,7 @@ done
 # --------------------------------------------------
 # Detect Intel GPU
 # --------------------------------------------------
+# TODO : ADD SUPPORT FOR INTEL NPU
 OVMS_IMAGE="openvino/model_server:latest"
 GPU_ARGS=""
 TARGET_DEVICE_ARG=""
