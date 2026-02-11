@@ -2,7 +2,7 @@
 """Sanity checks for agentic multimodal travel planner.
 
 Checks covered:
-1) LLM/docker sanity: launcher script wiring and --help validation.
+1) Live LLM sanity: OVMS endpoints and a real completion response.
 2) MCP sanity: startup manager can launch mock MCP servers on configured ports.
 3) Agent sanity: agent manager can launch mock agent runners on configured ports.
 """
@@ -81,41 +81,51 @@ def _http_post_json(url: str, body: dict, timeout: int = 60) -> dict:
         raise RuntimeError(f"POST failed for {url}: {exc}") from exc
 
 
-def check_llm_docker_sanity() -> None:
-    script_path = PROJECT_ROOT / "download_and_run_models_linux.sh"
-    _assert(script_path.exists(), f"Missing file: {script_path}")
+def _load_yaml(path: Path) -> dict:
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    return data if isinstance(data, dict) else {}
 
-    script_text = script_path.read_text(encoding="utf-8")
+
+def _strip_model_provider_prefix(model_name: str) -> str:
+    # BeeAI config can use "openai:<model_id>".
+    if model_name.startswith("openai:"):
+        return model_name.split(":", 1)[1]
+    return model_name
+
+
+def _resolve_llm_vlm_targets_from_config() -> tuple[str, str, str]:
+    agents_cfg = _load_yaml(PROJECT_ROOT / "config" / "agents_config.yaml")
+    mcp_cfg = _load_yaml(PROJECT_ROOT / "config" / "mcp_config.yaml")
+
+    travel_router = agents_cfg.get("travel_router", {})
+    llm_cfg = travel_router.get("llm", {}) if isinstance(travel_router, dict) else {}
+    image_mcp = mcp_cfg.get("image_mcp", {})
+
     _assert(
-        'OVMS_IMAGE="openvino/model_server:latest"' in script_text,
-        "Docker launcher does not define OVMS image.",
+        isinstance(llm_cfg, dict) and llm_cfg.get("api_base"),
+        "Missing required config: travel_router.llm.api_base in agents_config.yaml",
     )
     _assert(
-        "docker run -d" in script_text and "docker pull" in script_text,
-        "Docker launcher does not include expected docker commands.",
+        isinstance(llm_cfg, dict) and llm_cfg.get("model"),
+        "Missing required config: travel_router.llm.model in agents_config.yaml",
+    )
+    _assert(
+        isinstance(image_mcp, dict) and image_mcp.get("ovms_base_url"),
+        "Missing required config: image_mcp.ovms_base_url in mcp_config.yaml",
     )
 
-    help_result = _run(["bash", str(script_path), "--help"], cwd=PROJECT_ROOT)
-    _assert(
-        help_result.returncode == 0,
-        f"Docker launcher --help failed: {help_result.stderr.strip()}",
-    )
-    _assert(
-        "--llm-model" in help_result.stdout and "--vlm-model" in help_result.stdout,
-        "Docker launcher help text is missing expected options.",
-    )
-
-    print("LLM/docker sanity checks passed.")
+    llm_base = str(llm_cfg["api_base"]).rstrip("/")
+    llm_model = _strip_model_provider_prefix(str(llm_cfg["model"]))
+    vlm_base = str(image_mcp["ovms_base_url"]).rstrip("/")
+    return llm_base, vlm_base, llm_model
 
 
 def check_live_llm_sanity() -> None:
-    llm_base = os.getenv("LLM_BASE_URL", "http://127.0.0.1:8001/v3").rstrip("/")
-    vlm_base = os.getenv("VLM_BASE_URL", "http://127.0.0.1:8002/v3").rstrip("/")
-    llm_model = os.getenv("LLM_MODEL_ID", "OpenVINO/Qwen3-8B-int4-ov")
+    llm_base, vlm_base, llm_model = _resolve_llm_vlm_targets_from_config()
 
     # Basic health endpoints.
-    llm_models = _http_get_json(f"{llm_base}/models")
-    vlm_models = _http_get_json(f"{vlm_base}/models")
+    llm_models = _http_get_json(f"{llm_base}/v3/models")
+    vlm_models = _http_get_json(f"{vlm_base}/v3/models")
     _assert(
         isinstance(llm_models.get("data"), list),
         "LLM /models endpoint did not return expected payload.",
@@ -315,6 +325,40 @@ def _wait_for_ports(ports: list[int], timeout_s: int = 120) -> None:
     _assert(not pending, f"Timed out waiting for ports: {sorted(pending)}")
 
 
+def _mcp_ports_from_config() -> list[int]:
+    mcp_cfg_path = PROJECT_ROOT / "config" / "mcp_config.yaml"
+    mcp_cfg = _load_yaml(mcp_cfg_path)
+    return [
+        int(section.get("mcp_port"))
+        for section in mcp_cfg.values()
+        if isinstance(section, dict) and section.get("mcp_port")
+    ]
+
+
+def _agent_ports_from_config() -> list[int]:
+    agents_cfg_path = PROJECT_ROOT / "config" / "agents_config.yaml"
+    agents_cfg = _load_yaml(agents_cfg_path)
+    return [
+        int(section.get("port"))
+        for section in agents_cfg.values()
+        if isinstance(section, dict) and section.get("enabled", True) and section.get("port")
+    ]
+
+
+def check_mcp_services_up() -> None:
+    ports = _mcp_ports_from_config()
+    _assert(ports, "No MCP ports found in mcp_config.yaml")
+    _wait_for_ports(ports, timeout_s=120)
+    print(f"MCP ports are up: {ports}")
+
+
+def check_agent_services_up() -> None:
+    ports = _agent_ports_from_config()
+    _assert(ports, "No enabled agent ports found in agents_config.yaml")
+    _wait_for_ports(ports, timeout_s=120)
+    print(f"Agent ports are up: {ports}")
+
+
 def _query_travel_router(query: str, router_url: str) -> str:
     from beeai_framework.adapters.a2a.agents.agent import A2AAgent
     from beeai_framework.memory import UnconstrainedMemory
@@ -328,27 +372,34 @@ def _query_travel_router(query: str, router_url: str) -> str:
     return asyncio.run(_run_query())
 
 
-def check_live_router_query() -> None:
-    mcp_cfg_path = PROJECT_ROOT / "config" / "mcp_config.yaml"
-    agents_cfg_path = PROJECT_ROOT / "config" / "agents_config.yaml"
-    mcp_cfg = yaml.safe_load(mcp_cfg_path.read_text(encoding="utf-8")) or {}
-    agents_cfg = yaml.safe_load(agents_cfg_path.read_text(encoding="utf-8")) or {}
-
-    mcp_ports = [
-        int(section.get("mcp_port"))
-        for section in mcp_cfg.values()
-        if isinstance(section, dict) and section.get("mcp_port")
-    ]
-    agent_ports = [
-        int(section.get("port"))
-        for section in agents_cfg.values()
-        if isinstance(section, dict) and section.get("enabled", True) and section.get("port")
-    ]
-
-    query = os.getenv("TRAVEL_ROUTER_TEST_QUERY", "Reply with exactly OK.")
-    expected_token = os.getenv("TRAVEL_ROUTER_EXPECTED_TOKEN", "ok").lower()
-    router_port = int(os.getenv("TRAVEL_ROUTER_PORT", "9996"))
+def check_live_router_query_on_running_stack() -> None:
+    agents_cfg = _load_yaml(PROJECT_ROOT / "config" / "agents_config.yaml")
+    query = "Reply with exactly OK."
+    expected_token = "ok"
+    router_cfg = agents_cfg.get("travel_router", {})
+    _assert(
+        isinstance(router_cfg, dict) and router_cfg.get("port"),
+        "Missing required config: travel_router.port in agents_config.yaml",
+    )
+    router_port = int(router_cfg["port"])
     router_url = f"http://127.0.0.1:{router_port}"
+    check_mcp_services_up()
+    check_agent_services_up()
+    response_text = _query_travel_router(query=query, router_url=router_url)
+    print(f"Travel router response: {response_text}")
+    _assert(
+        expected_token in response_text.lower(),
+        (
+            f"Travel router response did not include expected token "
+            f"'{expected_token}'."
+        ),
+    )
+    print("Live travel router query sanity passed.")
+
+
+def check_live_router_query() -> None:
+    mcp_ports = _mcp_ports_from_config()
+    agent_ports = _agent_ports_from_config()
 
     try:
         start_mcp = _run([sys.executable, "start_mcp_servers.py"], cwd=PROJECT_ROOT)
@@ -361,16 +412,7 @@ def check_live_router_query() -> None:
         if agent_ports:
             _wait_for_ports(agent_ports, timeout_s=120)
 
-        response_text = _query_travel_router(query=query, router_url=router_url)
-        print(f"Travel router response: {response_text}")
-        _assert(
-            expected_token in response_text.lower(),
-            (
-                f"Travel router response did not include expected token "
-                f"'{expected_token}'."
-            ),
-        )
-        print("Live travel router query sanity passed.")
+        check_live_router_query_on_running_stack()
     finally:
         _run([sys.executable, "start_agents.py", "--stop"], cwd=PROJECT_ROOT)
         _run(
@@ -381,17 +423,26 @@ def check_live_router_query() -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Sanity checks for travel planner kit")
-    parser.add_argument(
-        "--skip-docker",
-        action="store_true",
-        help="Skip LLM/docker launcher checks",
-    )
+    parser.add_argument("--check-ovms", action="store_true", help="Check live OVMS LLM/VLM endpoints")
+    parser.add_argument("--check-mcp", action="store_true", help="Check MCP services are up from config ports")
+    parser.add_argument("--check-agents", action="store_true", help="Check enabled agents are up from config ports")
+    parser.add_argument("--check-overall", action="store_true", help="Send a query to travel_router and validate response")
     args = parser.parse_args()
 
-    if not args.skip_docker:
-        check_llm_docker_sanity()
-    if _env_truthy("LIVE_LLM_CHECK", "false"):
+    if args.check_ovms:
         check_live_llm_sanity()
+        return
+    if args.check_mcp:
+        check_mcp_services_up()
+        return
+    if args.check_agents:
+        check_agent_services_up()
+        return
+    if args.check_overall:
+        check_live_router_query_on_running_stack()
+        return
+
+    check_live_llm_sanity()
     if _env_truthy("LIVE_ROUTER_QUERY", "false"):
         check_live_router_query()
     else:

@@ -148,13 +148,7 @@ jobs:
         timeout-minutes: 20
         env:
           SERP_API_KEY: ${{ secrets.SERP_API_KEY }}
-          LIVE_LLM_CHECK: ${{ matrix.os == 'ubuntu-24.04' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
           LIVE_ROUTER_QUERY: ${{ matrix.os == 'ubuntu-24.04' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
-          LLM_MODEL_ID: OpenVINO/Qwen3-8B-int4-ov
-          LLM_BASE_URL: http://127.0.0.1:8001/v3
-          VLM_BASE_URL: http://127.0.0.1:8002/v3
-          TRAVEL_ROUTER_TEST_QUERY: "Reply with exactly OK."
-          TRAVEL_ROUTER_EXPECTED_TOKEN: "ok"
         run: |
           cd ${{ matrix.subproject }}
           python ci/test.py
