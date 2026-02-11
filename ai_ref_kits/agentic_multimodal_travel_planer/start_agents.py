@@ -4,7 +4,7 @@ This module manages the lifecycle of multiple agents, starting worker agents
 before the supervisor agent to ensure proper dependency initialization.
 """
 import os
-import subprocess
+import subprocess  # nosec B404 - controlled argv lists, no shell=True usage
 import sys
 import time
 from pathlib import Path
