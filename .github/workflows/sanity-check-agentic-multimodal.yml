@@ -42,9 +42,6 @@ jobs:
         with:
           python: ${{ matrix.python }}
           project: ai_ref_kits/agentic_multimodal_travel_planer
-      - uses: ./.github/reusable-steps/setup-hugging-face
-        with:
-          hf_token: ${{ secrets.HF_TOKEN }}
       - name: Start OVMS
         shell: bash
         timeout-minutes: 45
