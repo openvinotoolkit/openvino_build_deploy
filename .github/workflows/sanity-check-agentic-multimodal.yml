@@ -1,0 +1,81 @@
+name: Sanity check (Agentic multimodal travel planner)
+
+on:
+  schedule:
+    - cron: "30 2 * * *"
+  pull_request:
+    branches: [master]
+    paths:
+      - ".github/workflows/sanity-check-agentic-multimodal.yml"
+      - ".github/reusable-steps/**"
+      - "ai_ref_kits/agentic_multimodal_travel_planer/**"
+  push:
+    branches: [master]
+    paths:
+      - ".github/workflows/sanity-check-agentic-multimodal.yml"
+      - ".github/reusable-steps/**"
+      - "ai_ref_kits/agentic_multimodal_travel_planer/**"
+  workflow_dispatch:
+    inputs:
+      live_checks:
+        description: "Run live OVMS + router query checks"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  agentic-sanity:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/reusable-steps/setup-os
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: ./.github/reusable-steps/setup-python
+        with:
+          python: ${{ matrix.python }}
+          project: ai_ref_kits/agentic_multimodal_travel_planer
+      - uses: ./.github/reusable-steps/setup-hugging-face
+        with:
+          hf_token: ${{ secrets.HF_TOKEN }}
+      - name: Start OVMS for live checks
+        if: ${{ github.event_name == 'schedule' || github.event.inputs.live_checks == 'true' }}
+        shell: bash
+        timeout-minutes: 45
+        run: |
+          cd ai_ref_kits/agentic_multimodal_travel_planer
+          bash download_and_run_models_linux.sh --device CPU --timeout 2400
+      - name: Run agentic sanity test
+        shell: bash
+        timeout-minutes: 30
+        env:
+          SERP_API_KEY: ${{ secrets.SERP_API_KEY }}
+          LIVE_LLM_CHECK: ${{ github.event_name == 'schedule' || github.event.inputs.live_checks == 'true' }}
+          LIVE_ROUTER_QUERY: ${{ github.event_name == 'schedule' || github.event.inputs.live_checks == 'true' }}
+          LLM_MODEL_ID: OpenVINO/Qwen3-8B-int4-ov
+          LLM_BASE_URL: http://127.0.0.1:8001/v3
+          VLM_BASE_URL: http://127.0.0.1:8002/v3
+          TRAVEL_ROUTER_TEST_QUERY: "Reply with exactly OK."
+          TRAVEL_ROUTER_EXPECTED_TOKEN: "ok"
+        run: |
+          cd ai_ref_kits/agentic_multimodal_travel_planer
+          python ci/test.py
+      - name: Stop OVMS
+        if: ${{ always() && (github.event_name == 'schedule' || github.event.inputs.live_checks == 'true') }}
+        shell: bash
+        run: |
+          cd ai_ref_kits/agentic_multimodal_travel_planer
+          bash download_and_run_models_linux.sh --stop
