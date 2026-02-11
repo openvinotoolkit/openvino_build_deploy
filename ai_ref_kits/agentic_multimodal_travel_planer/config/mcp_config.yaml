@@ -4,12 +4,12 @@ image_mcp:
   model_id: "OpenVINO/Phi-3.5-vision-instruct-int4-ov"
   ovms_base_url: "http://localhost:8002/v3"
   script: mcp_tools/image_captioning_mcp.py
-  mcp_port: 3003
+  mcp_port: 3030
 
 hotel_finder:
   script: mcp_tools/ai_builder_mcp_hotel_finder.py
-  mcp_port: 3001
+  mcp_port: 3010
 
 flight_finder:
-  mcp_port: 3002
+  mcp_port: 3020
   script: mcp_tools/ai_builder_mcp_flights.py

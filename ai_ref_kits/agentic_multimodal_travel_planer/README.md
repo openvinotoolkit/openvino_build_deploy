@@ -135,6 +135,16 @@ chmod +x download_and_run_models_linux.sh
 ./download_and_run_models_linux.sh
 ```
 
+The script PULL the models from Hugging Face and will start the docker containers for you. It might take few minutes, please wait until you see the following confirmation.
+```
+==============================================
+OpenVINO Model Server is running on:
+----------------------------------------------
+LLM : http://localhost:8001
+VLM : http://localhost:8002
+==============================================
+```
+
 ### Verify the services are running
 
 Run:
@@ -147,6 +157,70 @@ You should see the two models serving
 CONTAINER ID   IMAGE                          COMMAND                  CREATED       STATUS       PORTS                                         NAMES
 424634ea10fe   openvino/model_server:latest   "/ovms/bin/ovms --re…"   3 days ago    Up 3 days    0.0.0.0:8001->8000/tcp, [::]:8001->8000/tcp   competent_ganguly9
 a962a7695b1f   openvino/model_server:latest   "/ovms/bin/ovms --re…"   3 days ago    Up 3 days    0.0.0.0:8002->8000/tcp, [::]:8002->8000/tcp   agitated_galois
+```
+#### Customization Options 
+
+##### Stop the Model Servers
+
+To stop and remove the running containers:
+```bash
+./download_and_run_models_linux.sh --stop
+```
+
+##### Use Different Models
+
+You can specify custom models for both LLM and VLM:
+
+```bash
+# Use different models
+./download_and_run_models_linux.sh \
+  --llm-model "OpenVINO/Llama-3.1-8B-int4-ov" \
+  --vlm-model "OpenVINO/LLaVA-NeXT-7B-int4-ov"
+```
+
+> **Note:** Performance may vary depending on model size. We **highly recommend** using OpenVINO-optimized models from the [OpenVINO Hugging Face repository](https://huggingface.co/OpenVINO/models).
+
+##### Use Custom Ports
+
+Change the default ports (8001 for LLM, 8002 for VLM):
+
+```bash
+./download_and_run_models_linux.sh --llm-port 9001 --vlm-port 9002
+```
+
+##### Device Selection
+
+By default, the script **auto-detects Intel GPUs** and uses them if available, otherwise falls back to CPU. You can force specific hardware:
+
+```bash
+# Force CPU
+./download_and_run_models_linux.sh --device CPU
+
+# Force first GPU
+./download_and_run_models_linux.sh --device GPU.0
+
+# Force second GPU
+./download_and_run_models_linux.sh --device GPU.1
+```
+
+##### Combine Multiple Options
+
+You can combine any of the above options:
+
+```bash
+# Example: Use specific GPU, custom port, and different model
+./download_and_run_models_linux.sh \
+  --device GPU.0 \
+  --llm-port 9001 \
+  --llm-model "OpenVINO/Llama-3.1-8B-int4-ov"
+```
+
+##### View All Options
+
+For a complete list of available options:
+
+```bash
+./download_and_run_models_linux.sh --help
 ```
 
 ### OPTION 2: Windows (Binary)
@@ -168,7 +242,9 @@ This example uses three MCP servers that the agents will consume:
 - Image captioning: generates captions for images
 
 ### Get your SerpAPI key
-Flight and travel agents use an external API for hotel and flight search. Obtain an API key from SerpAPI.
+The flight and travel agents rely on an external API to search for flights and hotels. To enable this, you’ll need an API key from SerpAPI.
+
+You can sign up for a free API key, which includes 250 requests per month and does not require a credit card. You’ll only need to upgrade if you plan to exceed the free monthly limit.
 
 1. Go to https://serpapi.com/
 2. Navigate to "Your Private API Key"
