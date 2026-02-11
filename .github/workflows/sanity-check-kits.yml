@@ -25,6 +25,7 @@ jobs:
       python: ${{ steps.categorize-subprojects.outputs.python }}
       notebook: ${{ steps.categorize-subprojects.outputs.notebook }}
       mcp: ${{ steps.categorize-subprojects.outputs.mcp }}
+      agentic: ${{ steps.categorize-subprojects.outputs.agentic }}
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -102,7 +103,67 @@ jobs:
         with:
           python: ${{ matrix.python }}
           project: ${{ matrix.subproject }}
-      # todo more steps to be added here
+      - name: Run MCP sanity checks
+        shell: bash
+        timeout-minutes: 10
+        env:
+          SERP_API_KEY: ${{ secrets.SERP_API_KEY }}
+        run: |
+          cd ${{ matrix.subproject }}
+          python start_mcp_servers.py --help
+
+  agentic:
+    needs: find-subprojects
+    if: ${{ needs.find-subprojects.outputs.agentic != '[]' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-24.04, ubuntu-24.04-arm, windows-2025 ]
+        python: [ "3.11", "3.13" ]
+        subproject: ${{ fromJson(needs.find-subprojects.outputs.agentic) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/reusable-steps/setup-os
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: ./.github/reusable-steps/setup-python
+        with:
+          python: ${{ matrix.python }}
+          project: ${{ matrix.subproject }}
+      - uses: ./.github/reusable-steps/setup-hugging-face
+        with:
+          hf_token: ${{ secrets.HF_TOKEN }}
+      - name: Start OVMS for live LLM checks
+        if: ${{ matrix.os == 'ubuntu-24.04' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
+        shell: bash
+        timeout-minutes: 45
+        run: |
+          cd ${{ matrix.subproject }}
+          bash download_and_run_models_linux.sh --device CPU --timeout 2400
+      - name: Run agentic sanity family (llm + mcp + agents)
+        shell: bash
+        timeout-minutes: 20
+        env:
+          SERP_API_KEY: ${{ secrets.SERP_API_KEY }}
+          LIVE_LLM_CHECK: ${{ matrix.os == 'ubuntu-24.04' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
+          LIVE_ROUTER_QUERY: ${{ matrix.os == 'ubuntu-24.04' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
+          LLM_MODEL_ID: OpenVINO/Qwen3-8B-int4-ov
+          LLM_BASE_URL: http://127.0.0.1:8001/v3
+          VLM_BASE_URL: http://127.0.0.1:8002/v3
+          TRAVEL_ROUTER_TEST_QUERY: "Reply with exactly OK."
+          TRAVEL_ROUTER_EXPECTED_TOKEN: "ok"
+        run: |
+          cd ${{ matrix.subproject }}
+          python ci/test.py
+      - name: Stop OVMS
+        if: ${{ always() && matrix.os == 'ubuntu-24.04' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
+        shell: bash
+        run: |
+          cd ${{ matrix.subproject }}
+          bash download_and_run_models_linux.sh --stop
 
   webcam:
     needs: find-subprojects
