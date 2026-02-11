@@ -379,6 +379,7 @@ docker run -d \
   --source_model "${LLM_MODEL}" \
   --task text_generation \
   --tool_parser hermes3 \
+  --reasoning_parser qwen3 \
   --log_level DEBUG \
   ${LLM_TARGET_DEVICE_ARG} \
   >/dev/null 2>&1
