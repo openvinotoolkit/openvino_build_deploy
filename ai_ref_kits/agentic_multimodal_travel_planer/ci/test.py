@@ -124,8 +124,8 @@ def check_live_llm_sanity() -> None:
     llm_base, vlm_base, llm_model = _resolve_llm_vlm_targets_from_config()
 
     # Basic health endpoints.
-    llm_models = _http_get_json(f"{llm_base}/v3/models")
-    vlm_models = _http_get_json(f"{vlm_base}/v3/models")
+    llm_models = _http_get_json(f"{llm_base}/models")
+    vlm_models = _http_get_json(f"{vlm_base}/models")
     _assert(
         isinstance(llm_models.get("data"), list),
         "LLM /models endpoint did not return expected payload.",
