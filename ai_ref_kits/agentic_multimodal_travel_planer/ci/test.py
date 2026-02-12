@@ -78,6 +78,16 @@ def _http_post_json(url: str, body: dict, timeout: int = 60) -> dict:
         with urllib.request.urlopen(req, timeout=timeout) as response:
             payload = response.read().decode("utf-8")
             return json.loads(payload) if payload else {}
+    except urllib.error.HTTPError as exc:
+        details = ""
+        try:
+            details = exc.read().decode("utf-8", errors="replace")
+        except Exception:
+            details = ""
+        suffix = f" response={details}" if details else ""
+        raise RuntimeError(
+            f"POST failed for {url}: HTTP Error {exc.code}: {exc.reason}{suffix}"
+        ) from exc
     except urllib.error.URLError as exc:
         raise RuntimeError(f"POST failed for {url}: {exc}") from exc
 
@@ -148,8 +158,17 @@ def _resolve_llm_vlm_targets_from_config() -> tuple[str, str, str]:
     return llm_base, vlm_base, llm_model
 
 
+def _pick_model_from_models_endpoint(models_payload: dict, fallback_model: str) -> str:
+    data = models_payload.get("data")
+    if isinstance(data, list) and data:
+        first = data[0]
+        if isinstance(first, dict) and first.get("id"):
+            return str(first["id"])
+    return fallback_model
+
+
 def check_live_llm_sanity() -> None:
-    llm_base, vlm_base, llm_model = _resolve_llm_vlm_targets_from_config()
+    llm_base, vlm_base, configured_llm_model = _resolve_llm_vlm_targets_from_config()
 
     # Basic health endpoints.
     llm_models = _http_get_json(f"{llm_base}/models")
@@ -162,16 +181,28 @@ def check_live_llm_sanity() -> None:
         isinstance(vlm_models.get("data"), list),
         "VLM /models endpoint did not return expected payload.",
     )
+    llm_model = _pick_model_from_models_endpoint(llm_models, configured_llm_model)
 
     # Real minimal completion call against LLM endpoint.
-    completion_body = {
-        "model": llm_model,
-        "messages": [
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": "hello"},
-        ],
-        "stream": False,
-    }
+    completion_payload_candidates = [
+        {
+            "model": llm_model,
+            "messages": [
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": "hello"},
+            ],
+            "stream": False,
+            "max_tokens": 16,
+            "temperature": 0,
+        },
+        {
+            "model": llm_model,
+            "messages": [{"role": "user", "content": "hello"}],
+            "stream": False,
+            "max_tokens": 16,
+            "temperature": 0,
+        },
+    ]
     completion_candidates = [f"{llm_base}/chat/completions"]
     if llm_base.endswith("/v3"):
         completion_candidates.append(f"{llm_base[:-3]}/v1/chat/completions")
@@ -181,9 +212,24 @@ def check_live_llm_sanity() -> None:
         completion_candidates.append(f"{llm_base}/v1/chat/completions")
         completion_candidates.append(f"{llm_base}/v3/chat/completions")
 
-    completion = _http_post_json_with_404_fallback(
-        completion_candidates, completion_body
-    )
+    completion = None
+    last_error: RuntimeError | None = None
+    for payload in completion_payload_candidates:
+        try:
+            completion = _http_post_json_with_404_fallback(
+                completion_candidates, payload
+            )
+            break
+        except RuntimeError as exc:
+            # Try next payload shape if request was syntactically rejected.
+            if "HTTP Error 400" in str(exc):
+                last_error = exc
+                continue
+            raise
+    if completion is None:
+        if last_error:
+            raise last_error
+        raise RuntimeError("LLM completion failed with all payload candidates.")
     choices = completion.get("choices", [])
     _assert(isinstance(choices, list) and len(choices) > 0, "No LLM choices returned.")
     print("Live LLM sanity checks passed.")
