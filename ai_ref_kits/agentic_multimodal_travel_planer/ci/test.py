@@ -44,7 +44,7 @@ def _run(cmd: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess
     )
 
 
-def _is_port_open(port: int, host: str = "127.0.0.1") -> bool:
+def _is_port_open(port: int, host: str = "localhost") -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.settimeout(0.4)
         return sock.connect_ex((host, port)) == 0
@@ -173,7 +173,7 @@ def _write_mock_mcp_script(path: Path) -> None:
         parser.add_argument("--port", type=int, default=3000)
         args = parser.parse_args()
 
-        server = HTTPServer(("127.0.0.1", args.port), Handler)
+        server = HTTPServer(("localhost", args.port), Handler)
         print("MCP server started", flush=True)
         server.serve_forever()
         """
@@ -207,6 +207,7 @@ def _write_mock_agent_runner(path: Path) -> None:
             def log_message(self, format, *args):
                 return
 
+
         parser = argparse.ArgumentParser()
         parser.add_argument("--agent", required=True)
         args = parser.parse_args()
@@ -215,7 +216,7 @@ def _write_mock_agent_runner(path: Path) -> None:
         config = yaml.safe_load(cfg_file.read_text(encoding="utf-8")) or {}
         port = int(config[args.agent]["port"])
 
-        server = HTTPServer(("127.0.0.1", port), Handler)
+        server = HTTPServer(("localhost", port), Handler)
         print("Uvicorn running on mock server", flush=True)
         server.serve_forever()
         """
@@ -382,7 +383,7 @@ def check_live_router_query_on_running_stack() -> None:
         "Missing required config: travel_router.port in agents_config.yaml",
     )
     router_port = int(router_cfg["port"])
-    router_url = f"http://127.0.0.1:{router_port}"
+    router_url = f"http://localhost:{router_port}"
     check_mcp_services_up()
     check_agent_services_up()
     response_text = _query_travel_router(query=query, router_url=router_url)
