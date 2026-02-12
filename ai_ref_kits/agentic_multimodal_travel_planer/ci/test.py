@@ -20,6 +20,7 @@ import tempfile
 import textwrap
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -93,6 +94,16 @@ def _strip_model_provider_prefix(model_name: str) -> str:
     return model_name
 
 
+def _force_localhost(url: str) -> str:
+    parsed = urllib.parse.urlparse(url)
+    _assert(parsed.scheme in {"http", "https"}, f"Invalid URL scheme in config: {url}")
+    _assert(parsed.port is not None, f"URL must include explicit port in config: {url}")
+    netloc = f"localhost:{parsed.port}"
+    return urllib.parse.urlunparse(
+        (parsed.scheme, netloc, parsed.path, parsed.params, parsed.query, parsed.fragment)
+    )
+
+
 def _resolve_llm_vlm_targets_from_config() -> tuple[str, str, str]:
     agents_cfg = _load_yaml(PROJECT_ROOT / "config" / "agents_config.yaml")
     mcp_cfg = _load_yaml(PROJECT_ROOT / "config" / "mcp_config.yaml")
@@ -114,9 +125,9 @@ def _resolve_llm_vlm_targets_from_config() -> tuple[str, str, str]:
         "Missing required config: image_mcp.ovms_base_url in mcp_config.yaml",
     )
 
-    llm_base = str(llm_cfg["api_base"]).rstrip("/")
+    llm_base = _force_localhost(str(llm_cfg["api_base"]).rstrip("/"))
     llm_model = _strip_model_provider_prefix(str(llm_cfg["model"]))
-    vlm_base = str(image_mcp["ovms_base_url"]).rstrip("/")
+    vlm_base = _force_localhost(str(image_mcp["ovms_base_url"]).rstrip("/"))
     return llm_base, vlm_base, llm_model
 
 
