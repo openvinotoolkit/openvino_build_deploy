@@ -82,6 +82,23 @@ def _http_post_json(url: str, body: dict, timeout: int = 60) -> dict:
         raise RuntimeError(f"POST failed for {url}: {exc}") from exc
 
 
+def _http_post_json_with_404_fallback(
+    urls: list[str], body: dict, timeout: int = 60
+) -> dict:
+    last_404: RuntimeError | None = None
+    for url in urls:
+        try:
+            return _http_post_json(url, body, timeout=timeout)
+        except RuntimeError as exc:
+            if "HTTP Error 404" in str(exc):
+                last_404 = exc
+                continue
+            raise
+    if last_404:
+        raise last_404
+    raise RuntimeError("No completion endpoint candidates were provided.")
+
+
 def _load_yaml(path: Path) -> dict:
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     return data if isinstance(data, dict) else {}
@@ -147,16 +164,25 @@ def check_live_llm_sanity() -> None:
     )
 
     # Real minimal completion call against LLM endpoint.
-    completion = _http_post_json(
-        f"{llm_base}/chat/completions",
-        {
-            "model": llm_model,
-            "messages": [
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": "hello"},
-            ],
-            "stream": False,
-        },
+    completion_body = {
+        "model": llm_model,
+        "messages": [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "hello"},
+        ],
+        "stream": False,
+    }
+    completion_candidates = [f"{llm_base}/chat/completions"]
+    if llm_base.endswith("/v3"):
+        completion_candidates.append(f"{llm_base[:-3]}/v1/chat/completions")
+    elif llm_base.endswith("/v1"):
+        completion_candidates.append(f"{llm_base[:-3]}/v3/chat/completions")
+    else:
+        completion_candidates.append(f"{llm_base}/v1/chat/completions")
+        completion_candidates.append(f"{llm_base}/v3/chat/completions")
+
+    completion = _http_post_json_with_404_fallback(
+        completion_candidates, completion_body
     )
     choices = completion.get("choices", [])
     _assert(isinstance(choices, list) and len(choices) > 0, "No LLM choices returned.")
