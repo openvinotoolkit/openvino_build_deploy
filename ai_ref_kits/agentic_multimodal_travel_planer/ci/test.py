@@ -150,32 +150,17 @@ def _pick_model_from_models_endpoint(models_payload: dict, fallback_model: str) 
     return fallback_model
 
 
-def _url_encode_model_name(model_name: str) -> str:
-    return urllib.parse.quote(model_name, safe="")
-
-
-def _is_openai_route_unsupported(error_text: str) -> bool:
-    lowered = error_text.lower()
-    return (
-        "mediapipe graph definition" in lowered
-        or "invalid request url" in lowered
-        or "http error 404" in lowered
-    )
-
-
-def _check_model_ready(llm_base: str, llm_model: str) -> None:
-    status_url = f"{llm_base}/models/{_url_encode_model_name(llm_model)}"
-    status_payload = _http_get_json(status_url)
-    # Keep this permissive across OVMS versions; key fields vary by build.
-    _assert(
-        isinstance(status_payload, dict) and len(status_payload) > 0,
-        "LLM model status endpoint returned empty payload.",
-    )
-    print("LLM model status sanity checks passed.")
+def _ensure_v3_base(base_url: str) -> str:
+    base = base_url.rstrip("/")
+    if base.endswith("/v3"):
+        return base
+    return f"{base}/v3"
 
 
 def check_live_llm_sanity() -> None:
     llm_base, vlm_base, configured_llm_model = _resolve_llm_vlm_targets_from_config()
+    llm_base = _ensure_v3_base(llm_base)
+    vlm_base = _ensure_v3_base(vlm_base)
 
     # Basic health endpoints.
     llm_models = _http_get_json(f"{llm_base}/models")
@@ -191,7 +176,8 @@ def check_live_llm_sanity() -> None:
     llm_model = _pick_model_from_models_endpoint(llm_models, configured_llm_model)
 
     # Real minimal completion call against LLM endpoint.
-    completion_payload_candidates = [
+    completion = _http_post_json(
+        f"{llm_base}/chat/completions",
         {
             "model": llm_model,
             "messages": [
@@ -199,39 +185,8 @@ def check_live_llm_sanity() -> None:
                 {"role": "user", "content": "hello"},
             ],
             "stream": False,
-            "max_tokens": 16,
-            "temperature": 0,
         },
-        {
-            "model": llm_model,
-            "messages": [{"role": "user", "content": "hello"}],
-            "stream": False,
-            "max_tokens": 16,
-            "temperature": 0,
-        },
-    ]
-    completion_url = f"{llm_base}/chat/completions"
-    completion = None
-    last_error: RuntimeError | None = None
-    for payload in completion_payload_candidates:
-        try:
-            completion = _http_post_json(completion_url, payload)
-            break
-        except RuntimeError as exc:
-            # Try next payload shape if request was syntactically rejected.
-            if "HTTP Error 400" in str(exc):
-                last_error = exc
-                continue
-            raise
-    if completion is None:
-        if last_error:
-            # Some OVMS builds expose model APIs but not OpenAI chat routes.
-            # In that case, fall back to strict model-ready validation.
-            if _is_openai_route_unsupported(str(last_error)):
-                _check_model_ready(llm_base, llm_model)
-                return
-            raise last_error
-        raise RuntimeError("LLM completion failed with all payload candidates.")
+    )
     choices = completion.get("choices", [])
     _assert(isinstance(choices, list) and len(choices) > 0, "No LLM choices returned.")
     print("Live LLM sanity checks passed.")
