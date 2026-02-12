@@ -24,6 +24,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+from openai import OpenAI
 import yaml
 
 
@@ -175,19 +176,25 @@ def check_live_llm_sanity() -> None:
     )
     llm_model = _pick_model_from_models_endpoint(llm_models, configured_llm_model)
 
-    # Real minimal completion call against LLM endpoint.
-    completion = _http_post_json(
-        f"{llm_base}/chat/completions",
-        {
-            "model": llm_model,
-            "messages": [
+    # Use OpenAI-compatible SDK path to match real application behavior.
+    try:
+        client = OpenAI(base_url=llm_base, api_key="unused")
+        completion = client.chat.completions.create(
+            model=llm_model,
+            messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": "hello"},
             ],
-            "stream": False,
-        },
-    )
-    choices = completion.get("choices", [])
+            max_tokens=100,
+            extra_body={"top_k": 1},
+            stream=False,
+        )
+    except Exception as exc:
+        raise RuntimeError(
+            f"OpenAI SDK chat completion failed for {llm_base}: {exc}"
+        ) from exc
+
+    choices = completion.choices if hasattr(completion, "choices") else []
     _assert(isinstance(choices, list) and len(choices) > 0, "No LLM choices returned.")
     print("Live LLM sanity checks passed.")
 
