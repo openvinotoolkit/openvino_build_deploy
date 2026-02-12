@@ -151,9 +151,11 @@ def check_live_llm_sanity() -> None:
         f"{llm_base}/chat/completions",
         {
             "model": llm_model,
-            "messages": [{"role": "user", "content": "Reply with OK"}],
-            "max_tokens": 8,
-            "temperature": 0,
+            "messages": [
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": "hello"},
+            ],
+            "stream": False,
         },
     )
     choices = completion.get("choices", [])
