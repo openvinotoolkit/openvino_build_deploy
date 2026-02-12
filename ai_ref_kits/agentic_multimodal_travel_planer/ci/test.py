@@ -150,6 +150,30 @@ def _pick_model_from_models_endpoint(models_payload: dict, fallback_model: str) 
     return fallback_model
 
 
+def _url_encode_model_name(model_name: str) -> str:
+    return urllib.parse.quote(model_name, safe="")
+
+
+def _is_openai_route_unsupported(error_text: str) -> bool:
+    lowered = error_text.lower()
+    return (
+        "mediapipe graph definition" in lowered
+        or "invalid request url" in lowered
+        or "http error 404" in lowered
+    )
+
+
+def _check_model_ready(llm_base: str, llm_model: str) -> None:
+    status_url = f"{llm_base}/models/{_url_encode_model_name(llm_model)}"
+    status_payload = _http_get_json(status_url)
+    # Keep this permissive across OVMS versions; key fields vary by build.
+    _assert(
+        isinstance(status_payload, dict) and len(status_payload) > 0,
+        "LLM model status endpoint returned empty payload.",
+    )
+    print("LLM model status sanity checks passed.")
+
+
 def check_live_llm_sanity() -> None:
     llm_base, vlm_base, configured_llm_model = _resolve_llm_vlm_targets_from_config()
 
@@ -201,6 +225,11 @@ def check_live_llm_sanity() -> None:
             raise
     if completion is None:
         if last_error:
+            # Some OVMS builds expose model APIs but not OpenAI chat routes.
+            # In that case, fall back to strict model-ready validation.
+            if _is_openai_route_unsupported(str(last_error)):
+                _check_model_ready(llm_base, llm_model)
+                return
             raise last_error
         raise RuntimeError("LLM completion failed with all payload candidates.")
     choices = completion.get("choices", [])
