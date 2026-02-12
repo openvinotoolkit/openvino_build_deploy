@@ -163,13 +163,7 @@ def _collect_chat_model_candidates(
         if text and text not in candidates:
             candidates.append(text)
 
-    add(configured_model)
-    add(_strip_model_provider_prefix(configured_model))
-    if "/" in configured_model:
-        add(configured_model.rsplit("/", 1)[-1])
-    if "/" in _strip_model_provider_prefix(configured_model):
-        add(_strip_model_provider_prefix(configured_model).rsplit("/", 1)[-1])
-
+    # 1) Prefer model IDs explicitly returned by OVMS /models.
     data = models_payload.get("data")
     if isinstance(data, list):
         for item in data:
@@ -179,8 +173,15 @@ def _collect_chat_model_candidates(
                 if isinstance(item_id, str) and "/" in item_id:
                     add(item_id.rsplit("/", 1)[-1])
 
-    # Common OVMS/OpenAI API example alias.
-    add("llama3")
+    # 2) Fallback to configured names only if needed.
+    if not candidates:
+        add(configured_model)
+        add(_strip_model_provider_prefix(configured_model))
+        if "/" in configured_model:
+            add(configured_model.rsplit("/", 1)[-1])
+        if "/" in _strip_model_provider_prefix(configured_model):
+            add(_strip_model_provider_prefix(configured_model).rsplit("/", 1)[-1])
+
     return candidates
 
 
