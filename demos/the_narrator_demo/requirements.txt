@@ -5,7 +5,7 @@ openvino-genai==2025.4.0
 huggingface-hub==0.34.4
 numpy==2.2.6
 opencv-python==4.11.0.86
-pillow==11.3.0
+pillow==12.1.1
 transformers==4.53.3
 torch==2.8.0
 torchvision==0.23.0
