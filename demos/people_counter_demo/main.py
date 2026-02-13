@@ -182,8 +182,7 @@ def run(video_path: str, model_paths: Tuple[Path, Path], model_name: str = "", c
     processing_times = deque(maxlen=100)
 
     # Initialize the tracker with a higher max_age
-    # Use embedder=None to avoid PyTorch embedder import issues on Python 3.13
-    tracker = DeepSort(max_age=tracker_frames, n_init=3, embedder=None)
+    tracker = DeepSort(max_age=tracker_frames, n_init=3)
 
     title = "Press ESC to Exit"
     cv2.namedWindow(title, cv2.WINDOW_GUI_NORMAL)
