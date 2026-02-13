@@ -14,6 +14,8 @@ outputs:
     value: ${{ steps.group-subprojects.outputs.webcam }}
   mcp:
     value: ${{ steps.group-subprojects.outputs.mcp }}
+  agentic:
+    value: ${{ steps.group-subprojects.outputs.agentic }}
   js:
     value: ${{ steps.group-subprojects.outputs.js }}
 
@@ -29,6 +31,7 @@ runs:
         gradio=()
         webcam=()
         mcp=()
+        agentic=()
         js=()
 
         for dir in ${{ inputs.subprojects }}; do
@@ -36,6 +39,8 @@ runs:
             js+=("$dir")
           elif find "$dir" -maxdepth 1 -name "*.ipynb" | grep -q "."; then
             notebook+=("$dir")
+          elif [ -f "$dir/start_mcp_servers.py" ] && [ -f "$dir/start_agents.py" ] && [ -f "$dir/download_and_run_models_linux.sh" ]; then
+            agentic+=("$dir")
           elif [ -f "$dir/requirements.txt" ] && grep -q "mcp" "$dir/requirements.txt"; then
             mcp+=("$dir")
           elif [ -f "$dir/requirements.txt" ] && { grep -q "gradio" "$dir/requirements.txt" || grep -q "fastapi" "$dir/requirements.txt"; }; then  
@@ -52,6 +57,7 @@ runs:
         gradio_json=$(printf '%s\n' "${gradio[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
         webcam_json=$(printf '%s\n' "${webcam[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
         mcp_json=$(printf '%s\n' "${mcp[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+        agentic_json=$(printf '%s\n' "${agentic[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
         js_json=$(printf '%s\n' "${js[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
 
         echo "notebook=$notebook_json" >> $GITHUB_OUTPUT
@@ -59,6 +65,7 @@ runs:
         echo "gradio=$gradio_json" >> $GITHUB_OUTPUT
         echo "webcam=$webcam_json" >> $GITHUB_OUTPUT
         echo "mcp=$mcp_json" >> $GITHUB_OUTPUT
+        echo "agentic=$agentic_json" >> $GITHUB_OUTPUT
         echo "js=$js_json" >> $GITHUB_OUTPUT
     - name: Print subprojects to test
       shell: bash
@@ -68,4 +75,5 @@ runs:
         echo "Gradio subprojects: ${{ steps.group-subprojects.outputs.gradio }}"
         echo "Webcam subprojects: ${{ steps.group-subprojects.outputs.webcam }}"
         echo "MCP subprojects: ${{ steps.group-subprojects.outputs.mcp }}"
+        echo "Agentic stack subprojects: ${{ steps.group-subprojects.outputs.agentic }}"
         echo "JS subprojects: ${{ steps.group-subprojects.outputs.js }}"
