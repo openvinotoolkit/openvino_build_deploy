@@ -6,7 +6,7 @@ import asyncio
 import os
 import shutil
 import socket
-import subprocess
+import subprocess  # nosec B404 - controlled argv lists, no shell=True usage
 import time
 import yaml
 from datetime import datetime
