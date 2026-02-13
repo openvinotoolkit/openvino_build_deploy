@@ -268,4 +268,4 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     model_paths = convert(args.model_name, Path(args.model_dir))
-    run(args.stream, model_paths, args.model_name, args.category, args.zones_config_file, args.object_limit, args.tracker_frames, args.flip, args.colorful)
+    run(args.stream, model_paths, args.model_name, args.category, args.zones_config_file, args.object_limit, args.flip, args.tracker_frames, args.colorful)
