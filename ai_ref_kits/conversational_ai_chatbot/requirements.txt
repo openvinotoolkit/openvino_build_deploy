@@ -21,6 +21,7 @@ datasets==4.0.0
 librosa==0.10.2
 pyyaml==6.0.1
 pymupdf==1.26.3
+setutools==81.0.0
 
 gradio==5.35.0
 
