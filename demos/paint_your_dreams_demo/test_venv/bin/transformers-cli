@@ -1,0 +1,6 @@
+#!/home/runner/work/openvino_build_deploy/openvino_build_deploy/demos/paint_your_dreams_demo/test_venv/bin/python
+import sys
+from transformers.commands.transformers_cli import main_cli
+if __name__ == '__main__':
+    sys.argv[0] = sys.argv[0].removesuffix('.exe')
+    sys.exit(main_cli())

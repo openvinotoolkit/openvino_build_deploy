@@ -1,0 +1,6 @@
+#!/home/runner/work/openvino_build_deploy/openvino_build_deploy/demos/paint_your_dreams_demo/test_venv/bin/python
+import sys
+from markdown_it.cli.parse import main
+if __name__ == '__main__':
+    sys.argv[0] = sys.argv[0].removesuffix('.exe')
+    sys.exit(main())
