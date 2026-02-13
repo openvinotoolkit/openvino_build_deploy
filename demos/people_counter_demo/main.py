@@ -49,7 +49,7 @@ def convert(model_name: str, model_dir: Path) -> tuple[Path, Path]:
 
 def get_model(model_path: Path, verbose: bool = False):
     # compile the model with YOLO
-    model = YOLO(model_path, verbose=verbose)
+    model = YOLO(model_path, task='detect', verbose=verbose)
     return model
 
 
