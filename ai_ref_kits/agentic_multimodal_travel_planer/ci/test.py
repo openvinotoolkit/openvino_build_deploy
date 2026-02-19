@@ -598,37 +598,30 @@ def _query_supervisor_multi_turn(
             return await run_handle
 
         response_task = asyncio.create_task(_await_run())
-        ready_task = asyncio.create_task(response_ready.wait())
         done, pending = await asyncio.wait(
-            {response_task, ready_task},
-            return_when=asyncio.FIRST_COMPLETED,
+            {response_task},
             timeout=timeout_s,
         )
         for t in pending:
             t.cancel()
-        if ready_task in done:
+        if response_task not in done or response_task.cancelled():
+            raise RuntimeError(_timeout_msg(agent_url, timeout_s))
+        try:
+            response = response_task.result()
+        except Exception as exc:
+            raise RuntimeError(f"Supervisor run failed: {exc}") from exc
+        if parser:
+            final_chunk = parser.finalize()
+            if final_chunk:
+                text_chunks.append(final_chunk)
+        text = ""
+        if extract_response_text:
+            text = extract_response_text(response)
+        if not text and text_chunks:
             text = "".join(text_chunks).strip()
-            if text:
-                return text
-        if response_task in done and not response_task.cancelled():
-            try:
-                response = response_task.result()
-                if parser:
-                    final_chunk = parser.finalize()
-                    if final_chunk:
-                        text_chunks.append(final_chunk)
-                text = ""
-                if extract_response_text:
-                    text = extract_response_text(response)
-                if not text and text_chunks:
-                    text = "".join(text_chunks).strip()
-                if not text:
-                    text = last_text
-                if text:
-                    return text
-            except Exception:
-                pass
-        return "".join(text_chunks).strip() or last_text or "[No response]"
+        if not text:
+            text = last_text
+        return text or "[No response]"
 
     async def _run_all() -> str:
         nonlocal last_response
@@ -645,7 +638,12 @@ def _query_supervisor_multi_turn(
 
 
 def check_overall() -> None:
-    """Run end-to-end flows: Flight Finder and Hotel Finder via supervisor (with confirmation)."""
+    """Run end-to-end flows: Flight Finder and Hotel Finder via supervisor.
+
+    The supervisor always asks for confirmation before searching; we send the
+    initial prompt, then "yes" as the second message, and assert on the final
+    response (flight or hotel information).
+    """
     _assert(
         A2AAgent is not None and UnconstrainedMemory is not None,
         "Missing beeai_framework dependency for --check-overall.",
@@ -660,7 +658,8 @@ def check_overall() -> None:
     agent_url = f"http://127.0.0.1:{port}"
     timeout_s = _int_env("AGENT_QUERY_TIMEOUT_SECONDS", 600)
 
-    # Flight Finder: prompt -> supervisor asks confirmation -> send "yes" -> expect flight info
+    # Supervisor always asks for confirmation; we send prompt then "yes".
+    # Flight Finder: prompt -> confirmation requested -> "yes" -> expect flight info
     flight_prompt = "Give me flights from Milan to Berlin for March 1st to March 10th"
     print(f"Check overall (Flight Finder): {flight_prompt!r} -> yes", flush=True)
     flight_response = _query_supervisor_multi_turn(
@@ -672,7 +671,7 @@ def check_overall() -> None:
     )
     print("Flight Finder flow OK.", flush=True)
 
-    # Hotel Finder: prompt -> supervisor asks confirmation -> send "yes" -> expect hotel info
+    # Hotel Finder: prompt -> confirmation requested -> "yes" -> expect hotel info
     hotel_prompt = "Give me hotels in Milan for March 1st to March 10th for 2 guests"
     print(f"Check overall (Hotel Finder): {hotel_prompt!r} -> yes", flush=True)
     hotel_response = _query_supervisor_multi_turn(
