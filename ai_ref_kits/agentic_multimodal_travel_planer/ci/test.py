@@ -534,12 +534,156 @@ def _query_agent(query: str, agent_url: str, timeout_s: int = 60) -> str:
         ) from exc
 
 
-def check_overall_placeholder() -> None:
-    # Placeholder step kept to preserve workflow stage order.
-    print(
-        "Overall check placeholder: travel_router validation handled in "
-        "--check-agents."
+def _query_supervisor_multi_turn(
+    agent_url: str,
+    messages: list[str],
+    timeout_s: int = 300,
+) -> str:
+    """Send a sequence of messages to the supervisor (same session); return last response."""
+    _assert(
+        A2AAgent is not None and UnconstrainedMemory is not None,
+        "Missing beeai_framework dependency for agent queries.",
     )
+    if load_dotenv:
+        load_dotenv()
+    memory = UnconstrainedMemory()
+    client = A2AAgent(url=agent_url, memory=memory)
+    parser = StreamingCitationParser() if StreamingCitationParser else None
+    last_response = ""
+
+    async def _run_one(query: str) -> str:
+        nonlocal last_response
+        text_chunks = []
+        last_text = ""
+        last_processed_length = 0
+        response_ready = asyncio.Event()
+
+        async def capture_events(data: object, event: object) -> None:
+            nonlocal last_processed_length, last_text
+            event_name = getattr(event, "name", "unknown")
+            if (
+                event_name == "final_answer"
+                and RequirementAgentFinalAnswerEvent
+                and isinstance(data, RequirementAgentFinalAnswerEvent)
+                and getattr(data, "delta", None)
+            ):
+                _append_chunk(text_chunks, parser, data.delta)
+                response_ready.set()
+            if A2AAgentUpdateEvent and isinstance(data, A2AAgentUpdateEvent):
+                value = getattr(data, "value", None)
+                if isinstance(value, tuple) and len(value) >= 2:
+                    task = value[0]
+                    current_text = ""
+                    if getattr(task, "history", None):
+                        last_msg = task.history[-1]
+                        if getattr(last_msg, "parts", None):
+                            for part in last_msg.parts:
+                                root = getattr(part, "root", None)
+                                if root is not None and hasattr(root, "text"):
+                                    current_text += root.text or ""
+                    if len(current_text) > last_processed_length:
+                        delta = current_text[last_processed_length:]
+                        last_processed_length = len(current_text)
+                        last_text = current_text
+                        _append_chunk(text_chunks, parser, delta)
+                        response_ready.set()
+
+        run_handle = (
+            client.run(query)
+            .on("update", capture_events)
+            .on("final_answer", capture_events)
+        )
+
+        async def _await_run():
+            return await run_handle
+
+        response_task = asyncio.create_task(_await_run())
+        ready_task = asyncio.create_task(response_ready.wait())
+        done, pending = await asyncio.wait(
+            {response_task, ready_task},
+            return_when=asyncio.FIRST_COMPLETED,
+            timeout=timeout_s,
+        )
+        for t in pending:
+            t.cancel()
+        if ready_task in done:
+            text = "".join(text_chunks).strip()
+            if text:
+                return text
+        if response_task in done and not response_task.cancelled():
+            try:
+                response = response_task.result()
+                if parser:
+                    final_chunk = parser.finalize()
+                    if final_chunk:
+                        text_chunks.append(final_chunk)
+                text = ""
+                if extract_response_text:
+                    text = extract_response_text(response)
+                if not text and text_chunks:
+                    text = "".join(text_chunks).strip()
+                if not text:
+                    text = last_text
+                if text:
+                    return text
+            except Exception:
+                pass
+        return "".join(text_chunks).strip() or last_text or "[No response]"
+
+    async def _run_all() -> str:
+        nonlocal last_response
+        for msg in messages:
+            last_response = await _run_one(msg)
+        return last_response
+
+    try:
+        return asyncio.run(_run_all())
+    except Exception as exc:
+        raise RuntimeError(
+            f"Supervisor multi-turn failed for {agent_url}: {exc}"
+        ) from exc
+
+
+def check_overall() -> None:
+    """Run end-to-end flows: Flight Finder and Hotel Finder via supervisor (with confirmation)."""
+    _assert(
+        A2AAgent is not None and UnconstrainedMemory is not None,
+        "Missing beeai_framework dependency for --check-overall.",
+    )
+    agents_cfg = _load_yaml(AGENTS_CONFIG_PATH)
+    router_cfg = agents_cfg.get("travel_router", {})
+    _assert(
+        isinstance(router_cfg, dict) and router_cfg.get("port"),
+        "travel_router not found in agents_config.yaml",
+    )
+    port = int(router_cfg["port"])
+    agent_url = f"http://127.0.0.1:{port}"
+    timeout_s = _int_env("AGENT_QUERY_TIMEOUT_SECONDS", 600)
+
+    # Flight Finder: prompt -> supervisor asks confirmation -> send "yes" -> expect flight info
+    flight_prompt = "Give me flights from Milan to Berlin for March 1st to March 10th"
+    print(f"Check overall (Flight Finder): {flight_prompt!r} -> yes", flush=True)
+    flight_response = _query_supervisor_multi_turn(
+        agent_url, [flight_prompt, "yes"], timeout_s=timeout_s
+    )
+    _assert(
+        "flight" in flight_response.lower() or "milan" in flight_response.lower() or "berlin" in flight_response.lower(),
+        f"Flight Finder flow did not return flight information. Response: {flight_response[:500]!r}",
+    )
+    print("Flight Finder flow OK.", flush=True)
+
+    # Hotel Finder: prompt -> supervisor asks confirmation -> send "yes" -> expect hotel info
+    hotel_prompt = "Give me hotels in Milan for March 1st to March 10th for 2 guests"
+    print(f"Check overall (Hotel Finder): {hotel_prompt!r} -> yes", flush=True)
+    hotel_response = _query_supervisor_multi_turn(
+        agent_url, [hotel_prompt, "yes"], timeout_s=timeout_s
+    )
+    _assert(
+        "hotel" in hotel_response.lower() or "milan" in hotel_response.lower(),
+        f"Hotel Finder flow did not return hotel information. Response: {hotel_response[:500]!r}",
+    )
+    print("Hotel Finder flow OK.", flush=True)
+    print("Check overall passed.", flush=True)
 
 
 def main() -> None:
@@ -564,7 +708,7 @@ def main() -> None:
     parser.add_argument(
         "--check-overall",
         action="store_true",
-        help="Placeholder step for overall validation",
+        help="E2E flows: Flight Finder and Hotel Finder via supervisor (prompt -> confirm yes -> expect results)",
     )
     args = parser.parse_args()
 
@@ -578,14 +722,14 @@ def main() -> None:
         check_agent_services_up()
         return
     if args.check_overall:
-        check_overall_placeholder()
+        check_overall()
         return
 
     # Default behavior for local/manual usage: run the same staged checks.
     check_live_llm_sanity()
     check_mcp_services_up()
     check_agent_services_up()
-    check_overall_placeholder()
+    check_overall()
     print("All sanity checks passed.")
 
 
