@@ -26,6 +26,7 @@ MODELS = [
 
 stop_generating: bool = False
 ov_pipelines: dict = {}
+current_model: str = ""
 generated_text_buffer: str = ""
 generated_tokens: int = 0
 
@@ -73,7 +74,7 @@ def streamer(subword: str) -> genai.StreamingStatus:
 
 
 async def generate_text(model_name: str, device: str, topic: str, endless_generation: bool) -> AsyncGenerator[tuple[str, float], None]:
-    global stop_generating, generated_text_buffer, generated_tokens
+    global stop_generating, generated_text_buffer, generated_tokens, current_model
     stop_generating = False
 
     device = device.split(":")[0]  # Extract device type (e.g., "CPU", "GPU")
@@ -86,6 +87,10 @@ async def generate_text(model_name: str, device: str, topic: str, endless_genera
 
     yield "Model downloading and loading...", 0.0
     await asyncio.sleep(0.1)
+
+    if model_name != current_model:
+        current_model = model_name
+        ov_pipelines.clear()
 
     ov_pipeline = await load_pipeline(model_name, device)
 

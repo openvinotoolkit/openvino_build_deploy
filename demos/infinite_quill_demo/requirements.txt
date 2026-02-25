@@ -1,6 +1,6 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 
-openvino-genai==2025.4.1
+openvino-genai==2026.0
 huggingface-hub==0.36.0
 gradio==6.3.0
 qrcode[pil]==8.2
