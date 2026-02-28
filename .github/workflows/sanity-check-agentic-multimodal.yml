@@ -1,0 +1,102 @@
+name: Sanity check (Agentic multimodal travel planner)
+
+on:
+  schedule:
+    - cron: "30 2 * * *"
+  pull_request:
+    branches: [master]
+    paths:
+      - ".github/workflows/sanity-check-agentic-multimodal.yml"
+      - ".github/reusable-steps/**"
+      - "ai_ref_kits/agentic_multimodal_travel_planer/**"
+  push:
+    branches: [master]
+    paths:
+      - ".github/workflows/sanity-check-agentic-multimodal.yml"
+      - ".github/reusable-steps/**"
+      - "ai_ref_kits/agentic_multimodal_travel_planer/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  agentic-sanity:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/reusable-steps/setup-os
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: ./.github/reusable-steps/setup-python
+        with:
+          python: ${{ matrix.python }}
+          project: ai_ref_kits/agentic_multimodal_travel_planer
+      - name: Start OVMS
+        shell: bash
+        timeout-minutes: 45
+        run: |
+          cd ai_ref_kits/agentic_multimodal_travel_planer
+          bash download_and_run_models_linux.sh --device CPU --timeout 2400
+      - name: Check OVMS
+        shell: bash
+        run: |
+          cd ai_ref_kits/agentic_multimodal_travel_planer
+          echo "=== docker ps ==="
+          docker ps
+          echo "=== ovms-llm inspect ==="
+          docker inspect --format='{{json .State}}' ovms-llm || true
+          echo "=== ovms-vlm inspect ==="
+          docker inspect --format='{{json .State}}' ovms-vlm || true
+          python ci/test.py --check-ovms
+      - name: Start MCP
+        shell: bash
+        env:
+          SERP_API_KEY: ${{ secrets.SERP_API_KEY }}
+        run: |
+          cd ai_ref_kits/agentic_multimodal_travel_planer
+          python start_mcp_servers.py
+      - name: Check MCP
+        shell: bash
+        run: |
+          cd ai_ref_kits/agentic_multimodal_travel_planer
+          python ci/test.py --check-mcp
+      - name: Start agents
+        shell: bash
+        run: |
+          cd ai_ref_kits/agentic_multimodal_travel_planer
+          python start_agents.py
+      - name: Check agents
+        shell: bash
+        env:
+          AGENT_WARMUP_SECONDS: 15
+          AGENT_QUERY_TIMEOUT_SECONDS: 1000
+          AGENT_QUERY_RETRIES: 4
+          AGENT_QUERY_RETRY_SLEEP_SECONDS: 8
+        run: |
+          cd ai_ref_kits/agentic_multimodal_travel_planer
+          python ci/test.py --check-agents
+      - name: Check overall
+        shell: bash
+        timeout-minutes: 30
+        run: |
+          cd ai_ref_kits/agentic_multimodal_travel_planer
+          python ci/test.py --check-overall
+      - name: Stop OVMS, MCP and agents
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          cd ai_ref_kits/agentic_multimodal_travel_planer
+          python start_agents.py --stop
+          python start_mcp_servers.py --stop 
+          bash download_and_run_models_linux.sh --stop
