@@ -124,7 +124,7 @@ def respond(prompt: str, streamer: BaseStreamer | None = None) -> str:
     return chat_tokenizer.decode(tokens, skip_special_tokens=True)
 
 
-def get_conversation(history: List[List[str]]) -> str:
+def get_conversation(history: List) -> str:
     """
     Combines all messages into one string
 
@@ -139,11 +139,9 @@ def get_conversation(history: List[List[str]]) -> str:
         {"role": "user", "content": GREET_THE_CUSTOMER}
     ]
     # add prompts to the conversation
-    for user_prompt, assistant_response in history:
-        if user_prompt:
-            conversation.append({"role": "user", "content": user_prompt})
-        if assistant_response:
-            conversation.append({"role": "assistant", "content": assistant_response})
+    for msg in history:
+        if msg["content"]:
+            conversation.append({"role": msg["role"], "content": msg["content"]})
 
     # use a template specific to the model
     return chat_tokenizer.apply_chat_template(conversation, add_generation_prompt=True, tokenize=False)
@@ -156,11 +154,11 @@ def generate_initial_greeting() -> str:
     Returns:
         Generated greeting
     """
-    conv = get_conversation([[None, None]])
+    conv = get_conversation([])
     return respond(conv)
 
 
-def chat(history: List[List[str]]) -> List[List[str]]:
+def chat(history: List) -> List:
     """
     Chat function. It generates response based on a prompt
 
@@ -180,9 +178,9 @@ def chat(history: List[List[str]]) -> List[List[str]]:
     thread.start()
 
     # get token by token and merge to the final response
-    history[-1][1] = ""
+    history.append({"role": "assistant", "content": ""})
     for partial_text in chat_streamer:
-        history[-1][1] += partial_text
+        history[-1]["content"] += partial_text
         # "return" partial response
         yield history
 
@@ -190,7 +188,7 @@ def chat(history: List[List[str]]) -> List[List[str]]:
     thread.join()
 
 
-def transcribe(audio: Tuple[int, np.ndarray], conversation: List[List[str]]) -> List[List[str]]:
+def transcribe(audio: Tuple[int, np.ndarray], conversation: List) -> List:
     """
     Transcribe audio to text
 
@@ -216,10 +214,10 @@ def transcribe(audio: Tuple[int, np.ndarray], conversation: List[List[str]]) -> 
     thread = Thread(target=asr_model.generate, kwargs={"input_features": input_features, "streamer": text_streamer})
     thread.start()
 
-    conversation.append(["", None])
+    conversation.append({"role": "user", "content": ""})
     # get token by token and merge to the final response
     for partial_text in text_streamer:
-        conversation[-1][0] += partial_text
+        conversation[-1]["content"] += partial_text
         # "return" partial response
         yield conversation
 
@@ -241,9 +239,9 @@ def summarize(conversation: List) -> str:
     Returns:
         Summary
     """
-    conversation.append([SUMMARIZE_THE_CUSTOMER, None])
+    conversation.append({"role": "user", "content": SUMMARIZE_THE_CUSTOMER})
     for partial_summary in chat(conversation):
-        yield partial_summary[-1][1]
+        yield partial_summary[-1]["content"]
 
 
 def create_UI(initial_message: str) -> gr.Blocks:
@@ -271,7 +269,7 @@ def create_UI(initial_message: str) -> gr.Blocks:
             submit_audio_btn = gr.Button("Submit", variant="primary", scale=1, interactive=False)
 
         # chatbot
-        chatbot_ui = gr.Chatbot(value=[[None, initial_message]], label="Chatbot")
+        chatbot_ui = gr.Chatbot(value=[{"role": "assistant", "content": initial_message}], label="Chatbot")
 
         # summarize
         summarize_button = gr.Button("Summarize", variant="primary", interactive=False)
