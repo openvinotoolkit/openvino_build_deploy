@@ -22,5 +22,5 @@ datasets==4.0.0
 pymupdf==1.26.3
 pyyaml==6.0.1
 
-gradio==6.7.0
+gradio==5.35.0
 qrcode[pil]==8.2
