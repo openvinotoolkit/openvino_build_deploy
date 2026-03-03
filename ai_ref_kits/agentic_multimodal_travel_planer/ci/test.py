@@ -598,30 +598,60 @@ def _query_supervisor_multi_turn(
             return await run_handle
 
         response_task = asyncio.create_task(_await_run())
+        ready_task = asyncio.create_task(response_ready.wait())
         done, pending = await asyncio.wait(
-            {response_task},
+            {response_task, ready_task},
+            return_when=asyncio.FIRST_COMPLETED,
             timeout=timeout_s,
         )
+        if response_task in done and not response_task.cancelled():
+            try:
+                response = response_task.result()
+                if parser:
+                    final_chunk = parser.finalize()
+                    if final_chunk:
+                        text_chunks.append(final_chunk)
+                text = ""
+                if extract_response_text:
+                    text = extract_response_text(response)
+                if not text and text_chunks:
+                    text = "".join(text_chunks).strip()
+                if not text:
+                    text = last_text
+                if text:
+                    return text
+            except Exception:
+                pass
+        if ready_task in done:
+            text = "".join(text_chunks).strip() or last_text
+            if text:
+                # Give the run more time to complete (streaming may never "finish")
+                extra_s = min(120, timeout_s // 2)
+                done2, pending2 = await asyncio.wait(
+                    {response_task},
+                    timeout=extra_s,
+                )
+                if response_task in done2 and not response_task.cancelled():
+                    try:
+                        response = response_task.result()
+                        if parser:
+                            final_chunk = parser.finalize()
+                            if final_chunk:
+                                text_chunks.append(final_chunk)
+                        if extract_response_text:
+                            t = extract_response_text(response)
+                        else:
+                            t = "".join(text_chunks).strip() or last_text
+                        if t:
+                            return t
+                    except Exception:
+                        pass
+                for t in pending2:
+                    t.cancel()
+                return text
         for t in pending:
             t.cancel()
-        if response_task not in done or response_task.cancelled():
-            raise RuntimeError(_timeout_msg(agent_url, timeout_s))
-        try:
-            response = response_task.result()
-        except Exception as exc:
-            raise RuntimeError(f"Supervisor run failed: {exc}") from exc
-        if parser:
-            final_chunk = parser.finalize()
-            if final_chunk:
-                text_chunks.append(final_chunk)
-        text = ""
-        if extract_response_text:
-            text = extract_response_text(response)
-        if not text and text_chunks:
-            text = "".join(text_chunks).strip()
-        if not text:
-            text = last_text
-        return text or "[No response]"
+        raise RuntimeError(_timeout_msg(agent_url, timeout_s))
 
     async def _run_all() -> str:
         nonlocal last_response
