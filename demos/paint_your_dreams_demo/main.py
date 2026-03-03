@@ -223,13 +223,14 @@ async def generate_images(model_name: str, device: str, image_size: int, adapter
 
     input_image = None
     image_mask = None
-    if input_image_mask["background"] is not None:
+    if input_image_mask is not None and input_image_mask["background"] is not None:
         input_image = input_image_mask["background"][:, :, :3]
         image_mask = input_image_mask["layers"][0][:, :, 3:]
 
         # ensure image is square
         input_image = utils.crop_center(input_image)
         input_image = cv2.resize(input_image, (image_size, image_size))
+        image_mask = utils.crop_center(image_mask)
         image_mask = cv2.resize(image_mask, (image_size, image_size), interpolation=cv2.INTER_NEAREST)
         image_mask = cv2.cvtColor(image_mask, cv2.COLOR_GRAY2BGR)
 
@@ -324,12 +325,7 @@ def build_ui() -> gr.Interface:
             i2i_button = gr.Button("Image2Image", variant="secondary")
         with gr.Group():
             with gr.Row(equal_height=True):
-                prompt_text = gr.Text(
-                    label="Prompt",
-                    placeholder="Enter your prompt here",
-                    value=examples_t2i[0],
-                    scale=5
-                )
+                prompt_text = gr.Text(label="Prompt", placeholder="Enter your prompt here", value=examples_t2i[0], scale=5)
                 random_prompt_button = gr.Button("Random prompt", variant="secondary", scale=1)
             with gr.Row():
                 with gr.Column():
