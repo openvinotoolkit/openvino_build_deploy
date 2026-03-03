@@ -65,7 +65,7 @@ dreamlike_anime_config = {
 flux_config = {
     "guidance_scale_value": 8,
     "num_inference_steps": 4,
-    "strength_value": 0.2,
+    "strength_value": 0.25,
     "lora_adapters": [
         "prithivMLmods/Canopus-LoRA-Flux-FaceRealism",
         "AlekseyCalvin/Propaganda_Poster_Schnell_by_doctor_diffusion",
