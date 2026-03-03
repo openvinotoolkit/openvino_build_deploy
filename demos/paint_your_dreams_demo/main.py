@@ -325,7 +325,7 @@ def build_ui() -> gr.Interface:
             i2i_button = gr.Button("Image2Image", variant="secondary")
         with gr.Group():
             with gr.Row(equal_height=True):
-                prompt_text = gr.Text(label="Prompt", placeholder="Enter your prompt here", value=examples_t2i[0], scale=5)
+                prompt_text = gr.Text(label="Prompt", placeholder="Enter your prompt here", value=random.choice(examples_t2i), scale=5)
                 random_prompt_button = gr.Button("Random prompt", variant="secondary", scale=1)
             with gr.Row():
                 with gr.Column():
