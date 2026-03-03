@@ -686,7 +686,7 @@ def check_overall() -> None:
     )
     port = int(router_cfg["port"])
     agent_url = f"http://127.0.0.1:{port}"
-    timeout_s = _int_env("AGENT_QUERY_TIMEOUT_SECONDS", 600)
+    timeout_s = _int_env("AGENT_QUERY_TIMEOUT_SECONDS", 6000)
 
     # Supervisor always asks for confirmation; we send prompt then "yes".
     # Flight Finder: prompt -> confirmation requested -> "yes" -> expect flight info
