@@ -667,6 +667,18 @@ def _query_supervisor_multi_turn(
         ) from exc
 
 
+def _print_response_preview(label: str, response: str, max_chars: int = 1200) -> None:
+    """Print a truncated preview of the supervisor response for debugging."""
+    text = (response or "").strip()
+    if not text:
+        print(f"  [{label}] (empty response)", flush=True)
+        return
+    if len(text) <= max_chars:
+        print(f"  [{label}] response: {text}", flush=True)
+    else:
+        print(f"  [{label}] response ({len(text)} chars): {text[:max_chars]}...", flush=True)
+
+
 def check_overall() -> None:
     """Run end-to-end flows: Flight Finder and Hotel Finder via supervisor.
 
@@ -700,6 +712,7 @@ def check_overall() -> None:
         f"Flight Finder flow did not return flight information. Response: {flight_response[:500]!r}",
     )
     print("Flight Finder flow OK.", flush=True)
+    _print_response_preview("Flight Finder", flight_response)
 
     # Hotel Finder: prompt -> confirmation requested -> "yes" -> expect hotel info
     hotel_prompt = "Give me hotels in Milan for March 1st to March 10th for 2 guests"
@@ -712,6 +725,7 @@ def check_overall() -> None:
         f"Hotel Finder flow did not return hotel information. Response: {hotel_response[:500]!r}",
     )
     print("Hotel Finder flow OK.", flush=True)
+    _print_response_preview("Hotel Finder", hotel_response)
     print("Check overall passed.", flush=True)
 
 
