@@ -132,20 +132,26 @@ def _resolve_llm_vlm_targets_from_config() -> tuple[str, str, str]:
     image_mcp = mcp_cfg.get("image_mcp", {})
 
     _assert(
-        isinstance(llm_cfg, dict) and llm_cfg.get("api_base"),
-        "Missing required config: travel_router.llm.api_base in agents_config.yaml",
-    )
-    _assert(
-        isinstance(llm_cfg, dict) and llm_cfg.get("model"),
-        "Missing required config: travel_router.llm.model in agents_config.yaml",
+        isinstance(llm_cfg, dict),
+        "Missing required config: travel_router.llm in agents_config.yaml",
     )
     _assert(
         isinstance(image_mcp, dict) and image_mcp.get("ovms_base_url"),
         "Missing required config: image_mcp.ovms_base_url in mcp_config.yaml",
     )
 
-    llm_base = _force_localhost(str(llm_cfg["api_base"]).rstrip("/"))
-    llm_model = _strip_model_provider_prefix(str(llm_cfg["model"]))
+    # Env overrides for tests/CI: use small model / port without changing agents_config.yaml
+    api_base_raw = os.environ.get("AGENT_LLM_API_BASE_OVERRIDE")
+    if not api_base_raw and os.environ.get("AGENT_LLM_PORT_OVERRIDE"):
+        api_base_raw = f"http://127.0.0.1:{os.environ.get('AGENT_LLM_PORT_OVERRIDE').strip()}/v3"
+    if not api_base_raw and isinstance(llm_cfg, dict):
+        api_base_raw = llm_cfg.get("api_base")
+    model_raw = os.environ.get("AGENT_LLM_MODEL_OVERRIDE") or (llm_cfg.get("model") if isinstance(llm_cfg, dict) else None)
+    _assert(api_base_raw, "Missing travel_router.llm.api_base or AGENT_LLM_API_BASE_OVERRIDE")
+    _assert(model_raw, "Missing travel_router.llm.model or AGENT_LLM_MODEL_OVERRIDE")
+
+    llm_base = _force_localhost(str(api_base_raw).rstrip("/"))
+    llm_model = _strip_model_provider_prefix(str(model_raw))
     vlm_base = _force_localhost(str(image_mcp["ovms_base_url"]).rstrip("/"))
     return llm_base, vlm_base, llm_model
 
@@ -701,11 +707,8 @@ def check_overall() -> None:
     timeout_s = _int_env("AGENT_QUERY_TIMEOUT_SECONDS", 6000)
 
     # Supervisor always asks for confirmation; we send prompt then "yes".
-    # Flight Finder: explicit departure/return/class so supervisor returns options, not "need more details"
-    flight_prompt = (
-        "Give me economy flights from Milan (departure) to Berlin (destination), "
-        "departing March 1st and returning March 10th."
-    )
+    # Flight Finder: prompt -> confirmation requested -> "yes" -> expect flight info
+    flight_prompt = "Give me flights from Milan to Berlin for March 1st to March 10th"
     print(f"Check overall (Flight Finder): {flight_prompt!r} -> yes", flush=True)
     flight_response = _query_supervisor_multi_turn(
         agent_url, [flight_prompt, "yes"], timeout_s=timeout_s

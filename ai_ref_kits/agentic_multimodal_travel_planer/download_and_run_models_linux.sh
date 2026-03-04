@@ -15,6 +15,7 @@ VLM_CONTAINER="ovms-vlm"
 
 LLM_PORT=8001
 VLM_PORT=8002
+UPDATE_CONFIG=1
 
 TIMEOUT=1800
 DEVICE=""  # Empty = auto-detect Intel GPU, "CPU" to force CPU, or "GPU", "GPU.0", "GPU.1" etc.
@@ -44,6 +45,7 @@ Configuration:
   --device DEVICE         Device for both LLM and VLM: CPU, GPU, GPU.0, GPU.1, etc. (default: auto-detect)
   --llm-device DEVICE     Device for LLM only (overrides --device)
   --vlm-device DEVICE     Device for VLM only (overrides --device)
+  --no-update-config      Do not update agents_config.yaml (use with env overrides for tests)
 
 Examples:
   # Start with defaults (auto-detect Intel GPU)
@@ -144,6 +146,10 @@ while [[ $# -gt 0 ]]; do
         exit 1
       fi
       shift 2
+      ;;
+    --no-update-config)
+      UPDATE_CONFIG=0
+      shift
       ;;
     *)
       echo "Unknown option: $1"
@@ -335,8 +341,9 @@ echo "  Timeout:       ${TIMEOUT}s"
 echo ""
 
 # --------------------------------------------------
-# Update agents_config.yaml
+# Update agents_config.yaml (unless --no-update-config)
 # --------------------------------------------------
+if [ "${UPDATE_CONFIG:-1}" = "1" ]; then
 CONFIG_FILE="$(dirname "$0")/config/agents_config.yaml"
 if [ -f "${CONFIG_FILE}" ]; then
   # Update all api_base URLs with the current LLM port
@@ -346,6 +353,9 @@ if [ -f "${CONFIG_FILE}" ]; then
   echo "✓ Updated agents_config.yaml with current configuration"
 else
   echo "⚠ config/agents_config.yaml not found"
+fi
+else
+  echo "Skipping agents_config.yaml update (--no-update-config); set AGENT_LLM_MODEL_OVERRIDE and AGENT_LLM_API_BASE_OVERRIDE when starting agents."
 fi
 
 # --------------------------------------------------
