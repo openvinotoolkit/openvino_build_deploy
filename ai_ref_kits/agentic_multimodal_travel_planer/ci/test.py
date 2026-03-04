@@ -701,15 +701,26 @@ def check_overall() -> None:
     timeout_s = _int_env("AGENT_QUERY_TIMEOUT_SECONDS", 6000)
 
     # Supervisor always asks for confirmation; we send prompt then "yes".
-    # Flight Finder: prompt -> confirmation requested -> "yes" -> expect flight info
-    flight_prompt = "Give me flights from Milan to Berlin for March 1st to March 10th"
+    # Flight Finder: explicit departure/return/class so supervisor returns options, not "need more details"
+    flight_prompt = (
+        "Give me economy flights from Milan (departure) to Berlin (destination), "
+        "departing March 1st and returning March 10th."
+    )
     print(f"Check overall (Flight Finder): {flight_prompt!r} -> yes", flush=True)
     flight_response = _query_supervisor_multi_turn(
         agent_url, [flight_prompt, "yes"], timeout_s=timeout_s
     )
+    flight_lower = flight_response.lower()
     _assert(
-        "flight" in flight_response.lower() or "milan" in flight_response.lower() or "berlin" in flight_response.lower(),
-        f"Flight Finder flow did not return flight information. Response: {flight_response[:500]!r}",
+        ("missing information" not in flight_lower and "please provide the missing" not in flight_lower)
+        and (
+            "here are" in flight_lower
+            or "option" in flight_lower
+            or "$" in flight_response
+            or "€" in flight_response
+            or ("flight" in flight_lower and len(flight_response) > 80)
+        ),
+        f"Flight Finder did not return flight options (may have asked for more details). Response: {flight_response[:500]!r}",
     )
     print("Flight Finder flow OK.", flush=True)
     _print_response_preview("Flight Finder", flight_response)
