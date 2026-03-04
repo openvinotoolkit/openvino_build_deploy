@@ -137,6 +137,7 @@ jobs:
           cd ${{ matrix.subproject }}
           python ci/test.py --check-mcp
       - name: Start agents
+        id: start-agents
         shell: bash
         env:
           AGENT_LLM_MODEL_OVERRIDE: "OpenVINO/TinyLlama-1.1B-Chat-v1.0-fp16-ov"
@@ -144,6 +145,17 @@ jobs:
         run: |
           cd ${{ matrix.subproject }}
           python start_agents.py
+      - name: Show agent logs on failure
+        if: failure() && steps.start-agents.outcome == 'failure'
+        shell: bash
+        run: |
+          cd ${{ matrix.subproject }}
+          echo "=== Agent log files ==="
+          for f in logs/*.log 2>/dev/null; do
+            [ -f "$f" ] || continue
+            echo "--- $f ---"
+            cat "$f" || true
+          done
       - name: Check agents
         shell: bash
         env:
