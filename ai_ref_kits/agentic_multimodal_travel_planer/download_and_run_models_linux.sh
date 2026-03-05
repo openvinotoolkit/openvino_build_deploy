@@ -372,6 +372,17 @@ chmod -R 755 "${MODELS_DIR}"
 docker rm -f "${LLM_CONTAINER}" "${VLM_CONTAINER}" >/dev/null 2>&1 || true
 
 # --------------------------------------------------
+# LLM tool/reasoning parser (TinyLlama is Llama-based; use llama3)
+# --------------------------------------------------
+if echo "${LLM_MODEL}" | grep -qi "TinyLlama"; then
+  LLM_TOOL_PARSER="llama3"
+  LLM_REASONING_PARSER=""   # TinyLlama does not use qwen3 reasoning format
+else
+  LLM_TOOL_PARSER="hermes3"
+  LLM_REASONING_PARSER="qwen3"
+fi
+
+# --------------------------------------------------
 # Run containers
 # --------------------------------------------------
 show_progress "Starting LLM container..."
@@ -388,8 +399,8 @@ docker run -d \
   --model_repository_path /models \
   --source_model "${LLM_MODEL}" \
   --task text_generation \
-  --tool_parser hermes3 \
-  --reasoning_parser qwen3 \
+  --tool_parser ${LLM_TOOL_PARSER} \
+  ${LLM_REASONING_PARSER:+--reasoning_parser ${LLM_REASONING_PARSER}} \
   --log_level DEBUG \
   ${LLM_TARGET_DEVICE_ARG} \
   >/dev/null 2>&1
