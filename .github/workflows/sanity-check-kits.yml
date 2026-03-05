@@ -114,21 +114,31 @@ jobs:
         shell: pwsh
         run: |
           choco install -y vcredist-all --no-progress
-      - name: Debug OVMS binary (Windows)
+      - name: Download and debug OVMS binary (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           cd ${{ matrix.subproject }}
-          $ovmsExe = "ovms\ovms.exe"
-          if (Test-Path $ovmsExe) {
-            Write-Host "Binary exists: $ovmsExe"
-            $p = Start-Process -FilePath $ovmsExe -ArgumentList "--version" -Wait -PassThru -RedirectStandardOutput "ovms_version.txt" -RedirectStandardError "ovms_version_err.txt"
-            Write-Host "Exit code: $($p.ExitCode)"
-            if (Test-Path "ovms_version.txt")    { Get-Content "ovms_version.txt" }
-            if (Test-Path "ovms_version_err.txt") { Get-Content "ovms_version_err.txt" }
-          } else {
-            Write-Host "Binary NOT found at: $ovmsExe"
+          $OVMS_VERSION = "v2025.4"
+          $OVMS_DIR = "$PWD\ovms"
+          $PACKAGE_NAME = "ovms_windows_python_on.zip"
+          $DOWNLOAD_URL = "https://github.com/openvinotoolkit/model_server/releases/download/$OVMS_VERSION/$PACKAGE_NAME"
+          if (-not (Test-Path $OVMS_DIR)) {
+            Write-Host "Downloading OVMS package..."
+            Invoke-WebRequest -Uri $DOWNLOAD_URL -OutFile "ovms.zip"
+            Expand-Archive -Path "ovms.zip" -DestinationPath "$PWD" -Force
+            Remove-Item "ovms.zip"
+            Write-Host "Extracted."
           }
+          Write-Host "=== ovms directory contents ==="
+          Get-ChildItem $OVMS_DIR | Select-Object Name, Length
+          Write-Host "=== Running setupvars.bat ==="
+          cmd /c "$OVMS_DIR\setupvars.bat 2>&1"
+          Write-Host "=== Running ovms.exe --version ==="
+          $p = Start-Process -FilePath "$OVMS_DIR\ovms.exe" -ArgumentList "--version" -Wait -PassThru -NoNewWindow -RedirectStandardOutput "ovms_out.txt" -RedirectStandardError "ovms_err.txt"
+          Write-Host "Exit code: $($p.ExitCode)"
+          if (Test-Path "ovms_out.txt") { Get-Content "ovms_out.txt" }
+          if (Test-Path "ovms_err.txt") { Get-Content "ovms_err.txt" }
       - name: Start OVMS (Windows)
         if: runner.os == 'Windows'
         shell: cmd
