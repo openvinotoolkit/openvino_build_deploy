@@ -106,7 +106,7 @@ jobs:
         timeout-minutes: 45
         run: |
           cd ${{ matrix.subproject }}
-          bash download_and_run_models_linux.sh --device CPU --timeout 2400 --llm-model "OpenVINO/TinyLlama-1.1B-Chat-v1.0-fp16-ov"
+          bash download_and_run_models_linux.sh --device CPU 
       - name: Check OVMS
         shell: bash
         run: |
