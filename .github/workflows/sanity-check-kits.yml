@@ -177,10 +177,10 @@ jobs:
           bash download_and_run_models_linux.sh --stop
       - name: Stop OVMS, MCP and agents (Windows)
         if: always() && runner.os == 'Windows'
-        shell: cmd
+        shell: powershell
         run: |
           cd ${{ matrix.subproject }}
-          python start_agents.py --stop
+          Get-WmiObject Win32_Process | Where-Object { $_.CommandLine -like '*agent_runner.py*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
           python start_mcp_servers.py --stop
           download_and_run_models_Windows.bat --stop
 
