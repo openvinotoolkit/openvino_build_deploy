@@ -109,6 +109,11 @@ jobs:
         run: |
           cd ${{ matrix.subproject }}
           bash download_and_run_models_linux.sh --device CPU
+      - name: Install Windows runtime dependencies
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install -y vcredist-all --no-progress
       - name: Start OVMS (Windows)
         if: runner.os == 'Windows'
         shell: cmd
