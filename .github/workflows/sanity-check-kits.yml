@@ -84,10 +84,11 @@ jobs:
   agentic:
     needs: find-subprojects
     if: ${{ needs.find-subprojects.outputs.agentic != '[]' }}
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-24.04, windows-2025]
         python: ["3.11", "3.13"]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.agentic) }}
     steps:
@@ -101,13 +102,22 @@ jobs:
         with:
           python: ${{ matrix.python }}
           project: ${{ matrix.subproject }}
-      - name: Start OVMS
+      - name: Start OVMS (Linux)
+        if: runner.os == 'Linux'
         shell: bash
         timeout-minutes: 45
         run: |
           cd ${{ matrix.subproject }}
-          bash download_and_run_models_linux.sh --device CPU 
-      - name: Check OVMS
+          bash download_and_run_models_linux.sh --device CPU
+      - name: Start OVMS (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        timeout-minutes: 45
+        run: |
+          cd ${{ matrix.subproject }}
+          download_and_run_models_Windows.bat --device CPU
+      - name: Check OVMS (Linux)
+        if: runner.os == 'Linux'
         shell: bash
         run: |
           cd ${{ matrix.subproject }}
@@ -118,6 +128,12 @@ jobs:
           echo "=== ovms-vlm inspect ==="
           docker inspect --format='{{json .State}}' ovms-vlm || true
           python ci/test.py --check-ovms
+      - name: Check OVMS (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          cd ${{ matrix.subproject }}
+          python ci/test.py --check-ovms
       - name: Start MCP
         shell: bash
         env:
@@ -151,81 +167,16 @@ jobs:
         run: |
           cd ${{ matrix.subproject }}
           python ci/test.py --check-overall
-      - name: Stop OVMS, MCP and agents
-        if: ${{ always() }}
+      - name: Stop OVMS, MCP and agents (Linux)
+        if: always() && runner.os == 'Linux'
         shell: bash
         run: |
           cd ${{ matrix.subproject }}
           python start_agents.py --stop
           python start_mcp_servers.py --stop
           bash download_and_run_models_linux.sh --stop
-
-  agentic-windows:
-    needs: find-subprojects
-    if: ${{ needs.find-subprojects.outputs.agentic != '[]' }}
-    runs-on: windows-2025
-    strategy:
-      fail-fast: false
-      matrix:
-        python: ["3.11", "3.13"]
-        subproject: ${{ fromJson(needs.find-subprojects.outputs.agentic) }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/reusable-steps/setup-os
-      - name: Set up Python ${{ matrix.python }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python }}
-      - uses: ./.github/reusable-steps/setup-python
-        with:
-          python: ${{ matrix.python }}
-          project: ${{ matrix.subproject }}
-      - name: Start OVMS
-        shell: cmd
-        timeout-minutes: 45
-        run: |
-          cd ${{ matrix.subproject }}
-          download_and_run_models_Windows.bat --device CPU
-      - name: Check OVMS
-        shell: cmd
-        run: |
-          cd ${{ matrix.subproject }}
-          python ci/test.py --check-ovms
-      - name: Start MCP
-        shell: cmd
-        env:
-          SERP_API_KEY: ${{ secrets.SERP_API_KEY }}
-        run: |
-          cd ${{ matrix.subproject }}
-          python start_mcp_servers.py
-      - name: Check MCP
-        shell: cmd
-        run: |
-          cd ${{ matrix.subproject }}
-          python ci/test.py --check-mcp
-      - name: Start agents
-        shell: cmd
-        run: |
-          cd ${{ matrix.subproject }}
-          python start_agents.py
-      - name: Check agents
-        shell: cmd
-        env:
-          AGENT_WARMUP_SECONDS: 15
-          AGENT_QUERY_TIMEOUT_SECONDS: 1000
-          AGENT_QUERY_RETRIES: 4
-          AGENT_QUERY_RETRY_SLEEP_SECONDS: 8
-        run: |
-          cd ${{ matrix.subproject }}
-          python ci/test.py --check-agents
-      - name: Check overall
-        shell: cmd
-        timeout-minutes: 10
-        run: |
-          cd ${{ matrix.subproject }}
-          python ci/test.py --check-overall
-      - name: Stop OVMS, MCP and agents
-        if: ${{ always() }}
+      - name: Stop OVMS, MCP and agents (Windows)
+        if: always() && runner.os == 'Windows'
         shell: cmd
         run: |
           cd ${{ matrix.subproject }}
