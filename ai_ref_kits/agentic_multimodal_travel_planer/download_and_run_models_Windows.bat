@@ -43,17 +43,9 @@ if not exist "%OVMS_PATH%" (
 )
 echo OVMS binary found: %OVMS_PATH%
 
-echo Checking for GPU...
 REM Detect GPU
 set GPU_DETECTED=0
 powershell -Command "$gpu = Get-WmiObject Win32_VideoController | Where-Object {$_.Name -like '*Intel*' -and $_.AdapterRAM -gt 0} | Select-Object -First 1; if ($gpu) { exit 0 } else { exit 1 }" >nul 2>&1 && set GPU_DETECTED=1
-echo PowerShell check finished. GPU_DETECTED=%GPU_DETECTED%
-
-if %GPU_DETECTED% equ 0 (
-    echo Checking with wmic...
-    wmic path win32_VideoController get name 2>nul | findstr /i /c:"intel" >nul 2>&1 && set GPU_DETECTED=1
-)
-echo GPU check finished. GPU_DETECTED=%GPU_DETECTED%
 
 REM Auto-select device
 if "%TARGET_DEVICE%"=="" (
@@ -62,18 +54,15 @@ if "%TARGET_DEVICE%"=="" (
     echo Target device: %TARGET_DEVICE%
 )
 
-echo Installing Python dependencies...
 REM Install Python dependencies
 if "%PYTHON_SUPPORT%"=="python_on" (
     pip3 install "Jinja2==3.1.6" "MarkupSafe==3.0.2" --quiet 2>nul || echo Warning: Failed to install Python dependencies
 )
-echo Python dependencies installed.
 
 REM Create directories
 if not exist "%MODELS_DIR%" mkdir "%MODELS_DIR%"
 if not exist "%LOGS_DIR%" mkdir "%LOGS_DIR%"
 
-echo Downloading models...
 REM Download models
 set LLM_MODEL_PATH=%MODELS_DIR%\%LLM_MODEL%
 if not exist "%LLM_MODEL_PATH%" (
@@ -82,7 +71,6 @@ if not exist "%LLM_MODEL_PATH%" (
 ) else (
     echo LLM model already exists, skipping download.
 )
-echo LLM model check finished.
 
 set VLM_MODEL_PATH=%MODELS_DIR%\%VLM_MODEL%
 if not exist "%VLM_MODEL_PATH%" (

@@ -212,7 +212,7 @@ jobs:
           cd ${{ matrix.subproject }}
           Get-WmiObject Win32_Process | Where-Object { $_.CommandLine -like '*agent_runner.py*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
           python start_mcp_servers.py --stop
-          download_and_run_models_Windows.bat --stop
+          cmd /c "download_and_run_models_Windows.bat --stop"
 
   webcam:
     needs: find-subprojects
