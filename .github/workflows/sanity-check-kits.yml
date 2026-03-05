@@ -114,6 +114,21 @@ jobs:
         shell: pwsh
         run: |
           choco install -y vcredist-all --no-progress
+      - name: Debug OVMS binary (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cd ${{ matrix.subproject }}
+          $ovmsExe = "ovms\ovms.exe"
+          if (Test-Path $ovmsExe) {
+            Write-Host "Binary exists: $ovmsExe"
+            $p = Start-Process -FilePath $ovmsExe -ArgumentList "--version" -Wait -PassThru -RedirectStandardOutput "ovms_version.txt" -RedirectStandardError "ovms_version_err.txt"
+            Write-Host "Exit code: $($p.ExitCode)"
+            if (Test-Path "ovms_version.txt")    { Get-Content "ovms_version.txt" }
+            if (Test-Path "ovms_version_err.txt") { Get-Content "ovms_version_err.txt" }
+          } else {
+            Write-Host "Binary NOT found at: $ovmsExe"
+          }
       - name: Start OVMS (Windows)
         if: runner.os == 'Windows'
         shell: cmd
