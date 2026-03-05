@@ -104,17 +104,11 @@ jobs:
       - name: Start OVMS
         shell: bash
         timeout-minutes: 45
-        env:
-          AGENT_LLM_MODEL_OVERRIDE: "OpenVINO/TinyLlama-1.1B-Chat-v1.0-fp16-ov"
-          AGENT_LLM_PORT_OVERRIDE: "8001"
         run: |
           cd ${{ matrix.subproject }}
-          bash download_and_run_models_linux.sh --device CPU --timeout 2400 --llm-model "OpenVINO/TinyLlama-1.1B-Chat-v1.0-fp16-ov" --no-update-config
+          bash download_and_run_models_linux.sh --device CPU --timeout 2400 --llm-model "OpenVINO/TinyLlama-1.1B-Chat-v1.0-fp16-ov"
       - name: Check OVMS
         shell: bash
-        env:
-          AGENT_LLM_MODEL_OVERRIDE: "OpenVINO/TinyLlama-1.1B-Chat-v1.0-fp16-ov"
-          AGENT_LLM_PORT_OVERRIDE: "8001"
         run: |
           cd ${{ matrix.subproject }}
           echo "=== docker ps ==="
@@ -139,9 +133,6 @@ jobs:
       - name: Start agents
         id: start-agents
         shell: bash
-        env:
-          AGENT_LLM_MODEL_OVERRIDE: "OpenVINO/TinyLlama-1.1B-Chat-v1.0-fp16-ov"
-          AGENT_LLM_PORT_OVERRIDE: "8001"
         run: |
           cd ${{ matrix.subproject }}
           python start_agents.py
@@ -159,8 +150,6 @@ jobs:
       - name: Check agents
         shell: bash
         env:
-          AGENT_LLM_MODEL_OVERRIDE: "OpenVINO/TinyLlama-1.1B-Chat-v1.0-fp16-ov"
-          AGENT_LLM_PORT_OVERRIDE: "8001"
           AGENT_WARMUP_SECONDS: 15
           AGENT_QUERY_TIMEOUT_SECONDS: 1000
           AGENT_QUERY_RETRIES: 4
@@ -173,9 +162,6 @@ jobs:
       - name: Check overall
         shell: bash
         timeout-minutes: 30
-        env:
-          AGENT_LLM_MODEL_OVERRIDE: "OpenVINO/TinyLlama-1.1B-Chat-v1.0-fp16-ov"
-          AGENT_LLM_PORT_OVERRIDE: "8001"
         run: |
           cd ${{ matrix.subproject }}
           python ci/test.py --check-overall
