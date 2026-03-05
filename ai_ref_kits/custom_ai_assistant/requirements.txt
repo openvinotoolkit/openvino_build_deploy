@@ -11,4 +11,4 @@ torch==2.8.0
 transformers==4.53.3
 librosa==0.10.2
 
-gradio==5.35.0
+gradio==6.7.0

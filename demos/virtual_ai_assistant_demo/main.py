@@ -238,22 +238,23 @@ def generate_initial_greeting() -> str:
     return response
 
 
-def chat(history: List[List[str]]) -> Tuple[List[List[str]], float]:
+def chat(history: List) -> Tuple[List, float]:
     # get token by token and merge to the final response
-    history[-1][1] = ""
+    user_prompt = history[-1]["content"]
+    history.append({"role": "assistant", "content": ""})
     with inference_lock:
-        chat_streamer = ov_chat_engine.stream_chat(history[-1][0]).response_gen
+        chat_streamer = ov_chat_engine.stream_chat(user_prompt).response_gen
 
         # generate first token independently
         first_token = next(chat_streamer)
-        history[-1][1] += emphasize_thinking_mode(first_token)
+        history[-1]["content"] += emphasize_thinking_mode(first_token)
         yield history, 0.0
 
         # generate next tokens
         tokens = ov_chat_engine._llm._streamer.tokens_len
         start_time = time.time()
         for partial_text in chat_streamer:
-            history[-1][1] += emphasize_thinking_mode(partial_text)
+            history[-1]["content"] += emphasize_thinking_mode(partial_text)
             processing_time = time.time() - start_time
             tokens += ov_chat_engine._llm._streamer.tokens_len
             # "return" partial response
@@ -266,15 +267,15 @@ def chat(history: List[List[str]]) -> Tuple[List[List[str]], float]:
         yield history, round(tokens / processing_time, 2)
 
 
-def transcribe(prompt: str, conversation: List[List[str]]) -> List[List[str]]:
-    conversation.append([prompt, None])
+def transcribe(prompt: str, conversation: List) -> List:
+    conversation.append({"role": "user", "content": prompt})
     return conversation
 
 
 def extra_action(conversation: List) -> Tuple[str, float]:
-    conversation.append([chatbot_config["extra_action_prompt"], None])
+    conversation.append({"role": "user", "content": chatbot_config["extra_action_prompt"]})
     for partial_summary, performance in chat(conversation):
-        yield f"## Summary\n\n" + partial_summary[-1][1], performance
+        yield f"## Summary\n\n" + partial_summary[-1]["content"], performance
 
 
 def create_UI(initial_message: str, action_name: str) -> gr.Blocks:
@@ -290,7 +291,7 @@ def create_UI(initial_message: str, action_name: str) -> gr.Blocks:
         with gr.Row():
             file_uploader_ui = gr.Files(label="Additional context", file_types=[".pdf", ".txt"], scale=1)
             with gr.Column(scale=4):
-                chatbot_ui = gr.Chatbot(value=[[None, initial_message]], label="Chatbot", sanitize_html=False,
+                chatbot_ui = gr.Chatbot(value=[{"role": "assistant", "content": initial_message}], label="Chatbot", sanitize_html=False,
                                         avatar_images=(None, "https://docs.openvino.ai/2025/_static/favicon.ico"))
                 with gr.Row():
                     input_text_ui = gr.Textbox(label="Your text input", scale=6)
@@ -307,10 +308,10 @@ def create_UI(initial_message: str, action_name: str) -> gr.Blocks:
         gr.on(triggers=input_text_ui.change, inputs=input_text_ui, outputs=submit_btn,
               fn=lambda x: gr.Button(interactive=True) if bool(x) else gr.Button(interactive=False))
 
-        file_uploader_ui.change(lambda: ([[None, initial_message]], None), outputs=[chatbot_ui, summary_ui]) \
+        file_uploader_ui.change(lambda: ([{"role": "assistant", "content": initial_message}], None), outputs=[chatbot_ui, summary_ui]) \
             .then(load_context, inputs=file_uploader_ui)
 
-        clear_btn.click(lambda: ([[None, initial_message]], None, None), outputs=[chatbot_ui, summary_ui, tps_text_ui]) \
+        clear_btn.click(lambda: ([{"role": "assistant", "content": initial_message}], None, None), outputs=[chatbot_ui, summary_ui, tps_text_ui]) \
             .then(load_context, inputs=file_uploader_ui) \
             .then(lambda: gr.Button(interactive=False), outputs=extra_action_button)
 
