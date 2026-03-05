@@ -83,7 +83,7 @@ if not exist "%VLM_MODEL_PATH%" (
 REM Stop existing processes (LLM/VLM REST + gRPC ports)
 echo Stopping existing processes on ports %LLM_PORT%, %VLM_PORT%, 8011, 8012...
 for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%LLM_PORT% :%VLM_PORT% :8011 :8012"') do taskkill /F /PID %%a >nul 2>&1
-timeout /t 2 /nobreak >nul
+ping -n 3 127.0.0.1 >nul
 
 REM Start LLM service
 REM --port = gRPC, --rest_port = HTTP REST (chat/completions). Agents use HTTP, so REST must be on LLM_PORT.
@@ -92,7 +92,7 @@ set LLM_GRPC_PORT=8011
 set LLM_ARGS=--port %LLM_GRPC_PORT% --rest_port %LLM_PORT% --model_repository_path "%MODELS_DIR%" --source_model "%LLM_MODEL%" --tool_parser hermes3 --cache_size 2 --task text_generation --enable_prefix_caching true
 if not "%TARGET_DEVICE%"=="" set LLM_ARGS=%LLM_ARGS% --target_device %TARGET_DEVICE%
 start /B "" "%OVMS_PATH%" %LLM_ARGS% > "%LOGS_DIR%\ovms_llm.log" 2>&1 || (echo Failed to start LLM service && exit /b 1)
-timeout /t 2 /nobreak >nul
+ping -n 3 127.0.0.1 >nul
 for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%LLM_PORT%" ^| findstr "LISTENING"') do set LLM_PID=%%a
 if defined LLM_PID (echo LLM service started - PID: %LLM_PID%) else (echo LLM service started - check log: %LOGS_DIR%\ovms_llm.log)
 
@@ -102,11 +102,11 @@ echo Starting VLM service (REST on %VLM_PORT%, gRPC on 8012)...
 set VLM_GRPC_PORT=8012
 set VLM_ARGS=--port %VLM_GRPC_PORT% --rest_port %VLM_PORT% --model_name "%VLM_MODEL%" --model_path "%VLM_MODEL_PATH%"
 start /B "" "%OVMS_PATH%" %VLM_ARGS% > "%LOGS_DIR%\ovms_vlm.log" 2>&1 || (echo Failed to start VLM service && exit /b 1)
-timeout /t 2 /nobreak >nul
+ping -n 3 127.0.0.1 >nul
 for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%VLM_PORT%" ^| findstr "LISTENING"') do set VLM_PID=%%a
 if defined VLM_PID (echo VLM service started - PID: %VLM_PID%) else (echo VLM service started - check log: %LOGS_DIR%\ovms_vlm.log)
 
-timeout /t 3 /nobreak >nul
+ping -n 4 127.0.0.1 >nul
 
 echo.
 echo === OpenVINO Model Server is running ===
