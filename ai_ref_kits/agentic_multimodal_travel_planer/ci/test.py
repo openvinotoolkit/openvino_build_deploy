@@ -411,6 +411,10 @@ def check_agent_services_up() -> None:
             ) from last_error
         elapsed = time.monotonic() - t0
         print(f"{agent_name} response ({elapsed:.1f}s): {response_text}")
+        if "chat model error" in response_text.lower():
+            raise RuntimeError(
+                f"{agent_name} returned 'Chat Model error' (LLM/OVMS request failed)"
+            )
     print("Agent endpoint sanity passed.")
 
 
@@ -714,25 +718,22 @@ def check_overall() -> None:
         agent_url, [flight_prompt, "yes"], timeout_s=timeout_s
     )
     flight_lower = flight_response.lower()
-    # TinyLlama/small models can return "Chat Model error" (e.g. tool format); allow in CI
-    if "chat model error" in flight_lower and len(flight_response.strip()) < 100:
-        print(
-            "  [Flight Finder] Small model returned 'Chat Model error'; passing (known CI limitation).",
-            flush=True,
-        )
-    else:
-        _assert(
-            ("missing information" not in flight_lower and "please provide the missing" not in flight_lower)
-            and (
-                "here are" in flight_lower
-                or "option" in flight_lower
-                or "$" in flight_response
-                or "€" in flight_response
-                or ("flight" in flight_lower and len(flight_response) > 80)
-            ),
-            f"Flight Finder did not return flight options (may have asked for more details). Response: {flight_response[:500]!r}",
-        )
-        print("Flight Finder flow OK.", flush=True)
+    _assert(
+        "chat model error" not in flight_lower,
+        f"Flight Finder returned 'Chat Model error' (LLM/OVMS request failed). Response: {flight_response[:500]!r}",
+    )
+    _assert(
+        ("missing information" not in flight_lower and "please provide the missing" not in flight_lower)
+        and (
+            "here are" in flight_lower
+            or "option" in flight_lower
+            or "$" in flight_response
+            or "€" in flight_response
+            or ("flight" in flight_lower and len(flight_response) > 80)
+        ),
+        f"Flight Finder did not return flight options (may have asked for more details). Response: {flight_response[:500]!r}",
+    )
+    print("Flight Finder flow OK.", flush=True)
     _print_response_preview("Flight Finder", flight_response)
 
     # Hotel Finder: prompt -> confirmation requested -> "yes" -> expect hotel info
@@ -742,17 +743,15 @@ def check_overall() -> None:
         agent_url, [hotel_prompt, "yes"], timeout_s=timeout_s
     )
     hotel_lower = hotel_response.lower()
-    if "chat model error" in hotel_lower and len(hotel_response.strip()) < 100:
-        print(
-            "  [Hotel Finder] Small model returned 'Chat Model error'; passing (known CI limitation).",
-            flush=True,
-        )
-    else:
-        _assert(
-            "hotel" in hotel_lower or "milan" in hotel_lower,
-            f"Hotel Finder flow did not return hotel information. Response: {hotel_response[:500]!r}",
-        )
-        print("Hotel Finder flow OK.", flush=True)
+    _assert(
+        "chat model error" not in hotel_lower,
+        f"Hotel Finder returned 'Chat Model error' (LLM/OVMS request failed). Response: {hotel_response[:500]!r}",
+    )
+    _assert(
+        "hotel" in hotel_lower or "milan" in hotel_lower,
+        f"Hotel Finder flow did not return hotel information. Response: {hotel_response[:500]!r}",
+    )
+    print("Hotel Finder flow OK.", flush=True)
     _print_response_preview("Hotel Finder", hotel_response)
     print("Check overall passed.", flush=True)
 

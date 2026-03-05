@@ -443,6 +443,37 @@ wait "${PID_VLM}"
 show_progress "Setup complete!"
 
 # --------------------------------------------------
+# Sync agents_config.yaml to OVMS model id (so agents use exact id OVMS expects)
+# --------------------------------------------------
+if [ "${UPDATE_CONFIG:-1}" = "1" ]; then
+  CONFIG_FILE="$(dirname "$0")/config/agents_config.yaml"
+  if [ -f "${CONFIG_FILE}" ]; then
+    for retry in 1 2 3 4 5; do
+      OVMS_MODEL_JSON="$(curl -s --connect-timeout 5 "http://127.0.0.1:${LLM_PORT}/v3/models" 2>/dev/null)" || true
+      OVMS_MODEL_ID=""
+      if [ -n "$OVMS_MODEL_JSON" ]; then
+        OVMS_MODEL_ID="$(echo "$OVMS_MODEL_JSON" | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    data = d.get('data') or []
+    if isinstance(data, list) and data and isinstance(data[0], dict):
+        print(data[0].get('id') or '')
+except Exception:
+    pass
+" 2>/dev/null)" || true
+      fi
+      if [ -n "$OVMS_MODEL_ID" ]; then
+        sed -i.bak "s|model: \"openai:[^\"]*\"|model: \"openai:${OVMS_MODEL_ID}\"|g" "${CONFIG_FILE}"
+        echo "✓ Synced agents_config.yaml model to OVMS model id: ${OVMS_MODEL_ID}"
+        break
+      fi
+      [ "$retry" -lt 5 ] && sleep 2
+    done
+  fi
+fi
+
+# --------------------------------------------------
 # Final status
 # --------------------------------------------------
 echo ""
