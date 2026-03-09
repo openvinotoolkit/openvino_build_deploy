@@ -691,12 +691,10 @@ def _print_response_preview(label: str, response: str, max_chars: int = 1200) ->
 
 
 def check_overall() -> None:
-    """Verify supervisor routing: each prompt reaches the right agent.
+    """Run end-to-end flows through supervisor with explicit confirmation.
 
-    We only validate the first turn (supervisor acknowledges and asks for
-    confirmation or starts routing) — we do NOT send "yes" to trigger real
-    SERP API calls. This keeps CI fast while still validating the full
-    supervisor → sub-agent handoff path.
+    This test sends each user prompt, then sends "yes" as a second turn to
+    trigger the actual downstream agent + MCP execution path.
     """
     _assert(
         A2AAgent is not None and UnconstrainedMemory is not None,
@@ -718,11 +716,11 @@ def check_overall() -> None:
     except ValueError:
         timeout_s = 0
 
-    # Flight Finder: send prompt, verify supervisor understood and responded
+    # Flight Finder: prompt -> confirmation -> yes -> flight options
     flight_prompt = "Give me flights from Milan to Berlin for March 1st to March 10th"
     print(f"Check overall (Flight Finder): {flight_prompt!r} -> yes", flush=True)
     flight_response = _query_supervisor_multi_turn(
-        agent_url, [flight_prompt], timeout_s=timeout_s
+        agent_url, [flight_prompt, "yes"], timeout_s=timeout_s
     )
     flight_lower = flight_response.lower()
     _assert(
@@ -730,19 +728,24 @@ def check_overall() -> None:
         f"Flight Finder returned 'Chat Model error' (LLM/OVMS request failed). Response: {flight_response[:500]!r}",
     )
     _assert(
-        any(kw in flight_lower for kw in [
-            "flight", "berlin", "milan", "confirm", "search", "yes", "proceed"
-        ]),
-        f"Supervisor did not acknowledge flight query. Response: {flight_response[:500]!r}",
+        ("missing information" not in flight_lower and "please provide the missing" not in flight_lower)
+        and (
+            "here are" in flight_lower
+            or "option" in flight_lower
+            or "$" in flight_response
+            or "€" in flight_response
+            or ("flight" in flight_lower and len(flight_response) > 80)
+        ),
+        f"Flight Finder did not return flight options. Response: {flight_response[:500]!r}",
     )
     print("Flight Finder flow OK.", flush=True)
     _print_response_preview("Flight Finder", flight_response)
 
-    # Hotel Finder: send prompt, verify supervisor understood and responded
+    # Hotel Finder: prompt -> confirmation -> yes -> hotel options
     hotel_prompt = "Give me hotels in Milan for March 1st to March 10th for 2 guests"
     print(f"Check overall (Hotel Finder): {hotel_prompt!r} -> yes", flush=True)
     hotel_response = _query_supervisor_multi_turn(
-        agent_url, [hotel_prompt], timeout_s=timeout_s
+        agent_url, [hotel_prompt, "yes"], timeout_s=timeout_s
     )
     hotel_lower = hotel_response.lower()
     _assert(
@@ -750,10 +753,9 @@ def check_overall() -> None:
         f"Hotel Finder returned 'Chat Model error' (LLM/OVMS request failed). Response: {hotel_response[:500]!r}",
     )
     _assert(
-        any(kw in hotel_lower for kw in [
-            "hotel", "milan", "confirm", "search", "yes", "proceed", "guest"
-        ]),
-        f"Supervisor did not acknowledge hotel query. Response: {hotel_response[:500]!r}",
+        ("missing information" not in hotel_lower and "please provide the missing" not in hotel_lower)
+        and ("hotel" in hotel_lower or "milan" in hotel_lower),
+        f"Hotel Finder did not return hotel information. Response: {hotel_response[:500]!r}",
     )
     print("Hotel Finder flow OK.", flush=True)
     _print_response_preview("Hotel Finder", hotel_response)
