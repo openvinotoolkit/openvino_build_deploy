@@ -222,17 +222,6 @@ jobs:
           cd ${{ matrix.subproject }}
           export AGENT_QUERY_TIMEOUT_SECONDS=0
           python ci/test.py --check-overall
-      - name: Show MCP logs on overall failure (Linux)
-        if: failure() && runner.os == 'Linux'
-        shell: bash
-        run: |
-          cd ${{ matrix.subproject }}
-          echo "=== MCP log files ==="
-          for f in logs/mcp_*.log; do
-            [ -f "$f" ] || continue
-            echo "--- $f ---"
-            cat "$f" || true
-          done
       - name: Check overall (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -240,18 +229,6 @@ jobs:
           cd ${{ matrix.subproject }}
           $env:AGENT_QUERY_TIMEOUT_SECONDS = "0"
           python ci/test.py --check-overall
-      - name: Show MCP logs on overall failure (Windows)
-        if: failure() && runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          cd ${{ matrix.subproject }}
-          Write-Host "=== MCP log files ==="
-          $logs = Get-ChildItem "logs" -Filter "mcp_*.log" -ErrorAction SilentlyContinue
-          if (-not $logs) { Write-Host "No MCP logs found" }
-          foreach ($f in $logs) {
-            Write-Host "--- $($f.FullName) ---"
-            Get-Content $f.FullName
-          }
       - name: Stop OVMS, MCP and agents (Linux)
         if: always() && runner.os == 'Linux'
         shell: bash
