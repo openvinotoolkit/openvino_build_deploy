@@ -1,0 +1,28 @@
+FROM python:3.10-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    wget \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install OpenVINO
+RUN pip install --no-cache-dir openvino
+
+# Install common dependencies used in demos
+RUN pip install --no-cache-dir \
+    numpy \
+    onnx \
+    opencv-python \
+    torch \
+    transformers \
+    gradio
+
+# Set working directory
+WORKDIR /workspace
+
+# Clone the repository
+RUN git clone https://github.com/openvinotoolkit/openvino_build_deploy.git .
+
+CMD ["/bin/bash"]
