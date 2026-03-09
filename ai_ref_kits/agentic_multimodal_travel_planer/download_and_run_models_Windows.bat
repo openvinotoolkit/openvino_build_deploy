@@ -4,7 +4,7 @@ setlocal enabledelayedexpansion
 echo === OpenVINO Model Server: setup + start (Baremetal) ===
 
 REM Config
-set OVMS_VERSION=v2025.4
+set OVMS_VERSION=v2026.0
 set OVMS_DIR=%CD%\ovms
 set MODELS_DIR=%CD%\models
 set LOGS_DIR=%CD%\logs
