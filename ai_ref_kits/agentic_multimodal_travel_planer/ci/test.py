@@ -690,6 +690,24 @@ def _print_response_preview(label: str, response: str, max_chars: int = 1200) ->
         print(f"  [{label}] response ({len(text)} chars): {text[:max_chars]}...", flush=True)
 
 
+def _contains_failure_fallback(text_lower: str) -> bool:
+    """Detect common fallback/error responses that should fail E2E checks."""
+    failure_markers = [
+        "unable to",
+        "cannot",
+        "can't",
+        "not available",
+        "try again later",
+        "contact support",
+        "check your account balance",
+        "service unavailable",
+        "temporarily unavailable",
+        "i'm sorry",
+        "sorry",
+    ]
+    return any(marker in text_lower for marker in failure_markers)
+
+
 def check_overall() -> None:
     """Run end-to-end flows through supervisor with explicit confirmation.
 
@@ -728,6 +746,10 @@ def check_overall() -> None:
         f"Flight Finder returned 'Chat Model error' (LLM/OVMS request failed). Response: {flight_response[:500]!r}",
     )
     _assert(
+        not _contains_failure_fallback(flight_lower),
+        f"Flight Finder returned fallback/error response instead of offers. Response: {flight_response[:500]!r}",
+    )
+    _assert(
         ("missing information" not in flight_lower and "please provide the missing" not in flight_lower)
         and (
             "here are" in flight_lower
@@ -753,8 +775,18 @@ def check_overall() -> None:
         f"Hotel Finder returned 'Chat Model error' (LLM/OVMS request failed). Response: {hotel_response[:500]!r}",
     )
     _assert(
+        not _contains_failure_fallback(hotel_lower),
+        f"Hotel Finder returned fallback/error response instead of offers. Response: {hotel_response[:500]!r}",
+    )
+    _assert(
         ("missing information" not in hotel_lower and "please provide the missing" not in hotel_lower)
-        and ("hotel" in hotel_lower or "milan" in hotel_lower),
+        and (
+            "here are" in hotel_lower
+            or "option" in hotel_lower
+            or "$" in hotel_response
+            or "€" in hotel_response
+            or ("hotel" in hotel_lower and len(hotel_response) > 80)
+        ),
         f"Hotel Finder did not return hotel information. Response: {hotel_response[:500]!r}",
     )
     print("Hotel Finder flow OK.", flush=True)
