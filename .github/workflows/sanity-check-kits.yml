@@ -151,24 +151,48 @@ jobs:
           if (Test-Path "logs\ovms_llm.log") { Get-Content "logs\ovms_llm.log" } else { Write-Host "No LLM log found" }
           Write-Host "=== OVMS VLM Log ==="
           if (Test-Path "logs\ovms_vlm.log") { Get-Content "logs\ovms_vlm.log" } else { Write-Host "No VLM log found" }
-      - name: Start MCP
+      - name: Start MCP (Linux)
+        if: runner.os == 'Linux'
         shell: bash
         env:
           SERP_API_KEY: ${{ secrets.SERP_API_KEY }}
         run: |
           cd ${{ matrix.subproject }}
           python start_mcp_servers.py
-      - name: Check MCP
+      - name: Start MCP (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          SERP_API_KEY: ${{ secrets.SERP_API_KEY }}
+        run: |
+          cd ${{ matrix.subproject }}
+          python start_mcp_servers.py
+      - name: Check MCP (Linux)
+        if: runner.os == 'Linux'
         shell: bash
         run: |
           cd ${{ matrix.subproject }}
           python ci/test.py --check-mcp
-      - name: Start agents
+      - name: Check MCP (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cd ${{ matrix.subproject }}
+          python ci/test.py --check-mcp
+      - name: Start agents (Linux)
+        if: runner.os == 'Linux'
         shell: bash
         run: |
           cd ${{ matrix.subproject }}
           python start_agents.py
-      - name: Check agents
+      - name: Start agents (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cd ${{ matrix.subproject }}
+          python start_agents.py
+      - name: Check agents (Linux)
+        if: runner.os == 'Linux'
         shell: bash
         env:
           AGENT_WARMUP_SECONDS: 15
@@ -178,8 +202,27 @@ jobs:
         run: |
           cd ${{ matrix.subproject }}
           python ci/test.py --check-agents
-      - name: Check overall
+      - name: Check agents (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          AGENT_WARMUP_SECONDS: 15
+          AGENT_QUERY_TIMEOUT_SECONDS: 1000
+          AGENT_QUERY_RETRIES: 4
+          AGENT_QUERY_RETRY_SLEEP_SECONDS: 8
+        run: |
+          cd ${{ matrix.subproject }}
+          python ci/test.py --check-agents
+      - name: Check overall (Linux)
+        if: runner.os == 'Linux'
         shell: bash
+        timeout-minutes: 10
+        run: |
+          cd ${{ matrix.subproject }}
+          python ci/test.py --check-overall
+      - name: Check overall (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
         timeout-minutes: 10
         run: |
           cd ${{ matrix.subproject }}
