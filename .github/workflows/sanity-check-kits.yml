@@ -85,6 +85,9 @@ jobs:
     needs: find-subprojects
     if: ${{ needs.find-subprojects.outputs.agentic != '[]' }}
     runs-on: ${{ matrix.os }}
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: utf-8
     strategy:
       fail-fast: false
       matrix:
