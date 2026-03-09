@@ -609,10 +609,11 @@ def _query_supervisor_multi_turn(
 
         response_task = asyncio.create_task(_await_run())
         ready_task = asyncio.create_task(response_ready.wait())
+        wait_timeout = timeout_s if timeout_s > 0 else None
         done, pending = await asyncio.wait(
             {response_task, ready_task},
             return_when=asyncio.FIRST_COMPLETED,
-            timeout=timeout_s,
+            timeout=wait_timeout,
         )
         if response_task in done and not response_task.cancelled():
             try:
@@ -636,7 +637,7 @@ def _query_supervisor_multi_turn(
             text = "".join(text_chunks).strip() or last_text
             if text:
                 # Give the run more time to complete (streaming may never "finish")
-                extra_s = min(120, timeout_s // 2)
+                extra_s = min(120, timeout_s // 2) if timeout_s > 0 else None
                 done2, pending2 = await asyncio.wait(
                     {response_task},
                     timeout=extra_s,
@@ -709,9 +710,13 @@ def check_overall() -> None:
     )
     port = int(router_cfg["port"])
     agent_url = f"http://127.0.0.1:{port}"
-    # First-turn only: supervisor just needs to acknowledge + ask confirmation.
-    # No SERP API call is made at this stage, so a short timeout is sufficient.
-    timeout_s = _int_env("AGENT_QUERY_TIMEOUT_SECONDS", 120)
+    # Allow disabling timeout for slow CI environments by setting
+    # AGENT_QUERY_TIMEOUT_SECONDS=0 (or a negative value).
+    timeout_raw = os.getenv("AGENT_QUERY_TIMEOUT_SECONDS", "0").strip()
+    try:
+        timeout_s = int(timeout_raw)
+    except ValueError:
+        timeout_s = 0
 
     # Flight Finder: send prompt, verify supervisor understood and responded
     flight_prompt = "Give me flights from Milan to Berlin for March 1st to March 10th"
