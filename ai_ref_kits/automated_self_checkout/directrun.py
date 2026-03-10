@@ -423,7 +423,7 @@ def ascd_init():
     header = "# Detect and Track Objects with OpenVINO™ for Self-Checkout\n"
     header += "### [Go to Jupyter Notebook](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/ai_ref_kits/automated_self_checkout/self-checkout-recipe.ipynb)"
     footer = "**<center>License: [Apache 2.0](https://github.com/openvinotoolkit/openvino_build_deploy/blob/master/LICENSE.txt) | Learn more about [OpenVINO](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html) | Explore [OpenVINO’s documentation](https://docs.openvino.ai/2023.0/home.html)</center>**"
-    with gr.Blocks(theme=gr.themes.Base()) as demo:
+    with gr.Blocks() as demo:
         with gr.Row():
             gr.Markdown(header)
         with gr.Row(equal_height=True):
@@ -443,8 +443,7 @@ def ascd_init():
                     datatype=["str", "str", "str", "str"],
                     label="Detection Message Log",
                     column_widths=["25%", "15%", "15%", "45%"],
-                    show_search="filter",
-                    show_copy_button=True
+                    show_search="filter"
                 )
 
             with gr.Column():
@@ -478,7 +477,7 @@ if __name__ == "__main__":
         exit(1)
 
     print("Starting the server...")    
-    _, localurl, _ = demo.launch(inbrowser=True, prevent_thread_lock=True)
+    _, localurl, _ = demo.launch(inbrowser=True, prevent_thread_lock=True, theme=gr.themes.Base())
     print("Server running at "+localurl)
     print("Opening browser...")
     try:

@@ -21,11 +21,11 @@ MODEL_DIR = Path("model")
 
 MODELS = [
     "OpenVINO/Qwen3-8B-int4-cw-ov",
-    "OpenVINO/gemma-3-4b-it-int4-cw-ov",
 ]
 
 stop_generating: bool = False
 ov_pipelines: dict = {}
+current_model: str = ""
 generated_text_buffer: str = ""
 generated_tokens: int = 0
 
@@ -73,7 +73,7 @@ def streamer(subword: str) -> genai.StreamingStatus:
 
 
 async def generate_text(model_name: str, device: str, topic: str, endless_generation: bool) -> AsyncGenerator[tuple[str, float], None]:
-    global stop_generating, generated_text_buffer, generated_tokens
+    global stop_generating, generated_text_buffer, generated_tokens, current_model
     stop_generating = False
 
     device = device.split(":")[0]  # Extract device type (e.g., "CPU", "GPU")
@@ -86,6 +86,10 @@ async def generate_text(model_name: str, device: str, topic: str, endless_genera
 
     yield "Model downloading and loading...", 0.0
     await asyncio.sleep(0.1)
+
+    if model_name != current_model:
+        current_model = model_name
+        ov_pipelines.clear()
 
     ov_pipeline = await load_pipeline(model_name, device)
 
@@ -137,12 +141,7 @@ def build_ui():
         utils.gradio_intel_header("Infinite Quill by OpenVINO")
         with gr.Group():
             with gr.Row(equal_height=True):
-                topic_text = gr.Text(
-                    label="Write a story about...",
-                    placeholder="Enter your topic here",
-                    value=examples[0],
-                    scale=5
-                )
+                topic_text = gr.Text(label="Write a story about...", placeholder="Enter your topic here", value=random.choice(examples), scale=5)
                 random_topic_button = gr.Button("Random topic", variant="secondary", scale=1)
             output_textbox = gr.Textbox(label="Story", lines=30, autoscroll=True, interactive=False)
             with gr.Row():
