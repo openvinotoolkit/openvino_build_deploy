@@ -708,6 +708,18 @@ def _contains_failure_fallback(text_lower: str) -> bool:
     return any(marker in text_lower for marker in failure_markers)
 
 
+def _requests_missing_information(text_lower: str) -> bool:
+    """Detect when the supervisor asks for additional required fields."""
+    markers = [
+        "missing information",
+        "please provide the missing",
+        "i need",
+        "provide the missing",
+        "need all",
+    ]
+    return any(marker in text_lower for marker in markers)
+
+
 def check_overall() -> None:
     """Run end-to-end flows through supervisor with explicit confirmation.
 
@@ -734,11 +746,28 @@ def check_overall() -> None:
     except ValueError:
         timeout_s = 0
 
-    # Flight Finder: prompt -> confirmation -> yes -> flight options
+    # Flight Finder: first prompt, then either confirm ("yes") or provide
+    # explicit details if the first turn asks for missing information.
     flight_prompt = "Give me flights from Milan to Berlin for March 1st to March 10th"
-    print(f"Check overall (Flight Finder): {flight_prompt!r} -> yes", flush=True)
+    print(f"Check overall (Flight Finder): {flight_prompt!r} -> second turn", flush=True)
+    flight_first_response = _query_supervisor_multi_turn(
+        agent_url, [flight_prompt], timeout_s=timeout_s
+    )
+    _print_response_preview("Flight Finder first response", flight_first_response)
+    flight_first_lower = flight_first_response.lower()
+    if _requests_missing_information(flight_first_lower):
+        flight_second_message = (
+            "from Milan to Berlin, departure date 2026-03-01, "
+            "return date 2026-03-10, class economy"
+        )
+    else:
+        flight_second_message = "yes"
+    print(
+        f"  [Flight Finder second message] {flight_second_message}",
+        flush=True,
+    )
     flight_response = _query_supervisor_multi_turn(
-        agent_url, [flight_prompt, "yes"], timeout_s=timeout_s
+        agent_url, [flight_prompt, flight_second_message], timeout_s=timeout_s
     )
     flight_lower = flight_response.lower()
     _assert(
@@ -763,11 +792,28 @@ def check_overall() -> None:
     print("Flight Finder flow OK.", flush=True)
     _print_response_preview("Flight Finder", flight_response)
 
-    # Hotel Finder: prompt -> confirmation -> yes -> hotel options
+    # Hotel Finder: first prompt, then either confirm ("yes") or provide
+    # explicit details if the first turn asks for missing information.
     hotel_prompt = "Give me hotels in Milan for March 1st to March 10th for 2 guests"
-    print(f"Check overall (Hotel Finder): {hotel_prompt!r} -> yes", flush=True)
+    print(f"Check overall (Hotel Finder): {hotel_prompt!r} -> second turn", flush=True)
+    hotel_first_response = _query_supervisor_multi_turn(
+        agent_url, [hotel_prompt], timeout_s=timeout_s
+    )
+    _print_response_preview("Hotel Finder first response", hotel_first_response)
+    hotel_first_lower = hotel_first_response.lower()
+    if _requests_missing_information(hotel_first_lower):
+        hotel_second_message = (
+            "destination Milan, check-in date 2026-03-01, "
+            "check-out date 2026-03-10, guests 2"
+        )
+    else:
+        hotel_second_message = "yes"
+    print(
+        f"  [Hotel Finder second message] {hotel_second_message}",
+        flush=True,
+    )
     hotel_response = _query_supervisor_multi_turn(
-        agent_url, [hotel_prompt, "yes"], timeout_s=timeout_s
+        agent_url, [hotel_prompt, hotel_second_message], timeout_s=timeout_s
     )
     hotel_lower = hotel_response.lower()
     _assert(
