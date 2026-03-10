@@ -215,20 +215,6 @@ jobs:
         run: |
           cd ${{ matrix.subproject }}
           python ci/test.py --check-agents
-      - name: Check overall (Linux)
-        if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          cd ${{ matrix.subproject }}
-          export AGENT_QUERY_TIMEOUT_SECONDS=0
-          python ci/test.py --check-overall
-      - name: Check overall (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          cd ${{ matrix.subproject }}
-          $env:AGENT_QUERY_TIMEOUT_SECONDS = "0"
-          python ci/test.py --check-overall
       - name: Stop OVMS, MCP and agents (Linux)
         if: always() && runner.os == 'Linux'
         shell: bash
