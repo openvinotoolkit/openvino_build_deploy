@@ -464,7 +464,9 @@ except Exception:
 " 2>/dev/null)" || true
       fi
       if [ -n "$OVMS_MODEL_ID" ]; then
-        sed -i.bak "s|model: \"openai:[^\"]*\"|model: \"openai:${OVMS_MODEL_ID}\"|g" "${CONFIG_FILE}"
+        OVMS_MODEL_ID_ESC=${OVMS_MODEL_ID//&/\\&}
+        OVMS_MODEL_ID_ESC=${OVMS_MODEL_ID_ESC//|/\\|}
+        sed -i.bak "s|model: \"openai:[^\"]*\"|model: \"openai:${OVMS_MODEL_ID_ESC}\"|g" "${CONFIG_FILE}"
         echo "✓ Synced agents_config.yaml model to OVMS model id: ${OVMS_MODEL_ID}"
         break
       fi
