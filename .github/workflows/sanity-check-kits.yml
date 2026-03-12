@@ -139,9 +139,13 @@ jobs:
         if: runner.os == 'Windows'
         shell: cmd
         timeout-minutes: 45
+        env:
+          TARGET_DEVICE: CPU
+          LLM_DEVICE: CPU
+          VLM_DEVICE: CPU
         run: |
           cd ${{ matrix.subproject }}
-          download_and_run_models_Windows.bat --device CPU
+          download_and_run_models_Windows.bat
       - name: Check OVMS (Linux)
         if: runner.os == 'Linux'
         shell: bash
