@@ -5,13 +5,14 @@ functionality to start, stop, and download server scripts from GitHub.
 """
 
 import os
-import subprocess
+import subprocess  # nosec B404 - controlled argv lists, no shell=True usage
 import sys
 import time
 import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Dict, List, Tuple
+from urllib.parse import urlparse
 
 import yaml
 from dotenv import find_dotenv, load_dotenv, set_key
@@ -33,6 +34,34 @@ GITHUB_MCP_URLS = {
         "main/mcp/mcp_servers/mcp_google_hotel/server.py"
     ),
 }
+ALLOWED_DOWNLOAD_SCHEMES = {"https"}
+ALLOWED_DOWNLOAD_HOSTS = {"raw.githubusercontent.com"}
+
+
+def _validate_download_url(url: str) -> None:
+    """Validate URL scheme and host before network download.
+
+    Args:
+        url: URL string to validate.
+
+    Raises:
+        ValueError: If URL scheme/host is not explicitly allowed.
+    """
+    parsed = urlparse(url)
+    scheme = (parsed.scheme or "").lower()
+    host = (parsed.hostname or "").lower()
+
+    if scheme not in ALLOWED_DOWNLOAD_SCHEMES:
+        raise ValueError(
+            f"Unsupported URL scheme '{scheme}'. Allowed: "
+            f"{sorted(ALLOWED_DOWNLOAD_SCHEMES)}"
+        )
+
+    if host not in ALLOWED_DOWNLOAD_HOSTS:
+        raise ValueError(
+            f"Unsupported download host '{host}'. Allowed: "
+            f"{sorted(ALLOWED_DOWNLOAD_HOSTS)}"
+        )
 
 
 def check_and_set_api_key() -> bool:
@@ -114,6 +143,7 @@ def download_script_if_missing(name: str, script_path: Path) -> bool:
         print(f"Downloading '{name}' from GitHub...")
         print(f"  URL: {url}")
         print(f"  Destination: {script_path}")
+        _validate_download_url(url)
 
         # Create parent directory if needed
         script_path.parent.mkdir(parents=True, exist_ok=True)
