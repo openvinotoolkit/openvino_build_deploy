@@ -226,12 +226,17 @@ def load_config(agent_name: str):
 
     # Env overrides for tests/CI: use small model / port without changing agents_config.yaml
     port_override = os.environ.get("AGENT_LLM_PORT_OVERRIDE")
-    if os.environ.get("AGENT_LLM_API_BASE_OVERRIDE"):
-      api_base = os.environ.get("AGENT_LLM_API_BASE_OVERRIDE")
+    api_base_override = os.environ.get("AGENT_LLM_API_BASE_OVERRIDE")
+    if api_base_override:
+        api_base = api_base_override
     elif port_override:
-      api_base = f"http://127.0.0.1:{port_override.strip()}/v3"
+        stripped_port = port_override.strip()
+        if stripped_port.isdigit() and int(stripped_port) > 0:
+            api_base = f"http://127.0.0.1:{stripped_port}/v3"
+        else:
+            api_base = agent_llm_config['api_base']
     else:
-      api_base = agent_llm_config['api_base']
+        api_base = agent_llm_config['api_base']
     llm_model = os.environ.get("AGENT_LLM_MODEL_OVERRIDE") or agent_llm_config['model']
     llm_temperature = agent_llm_config['temperature']
     api_key = agent_llm_config['api_key']
