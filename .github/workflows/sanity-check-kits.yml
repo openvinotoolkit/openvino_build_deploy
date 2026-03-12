@@ -91,9 +91,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Agentic kit uses OVMS Docker image that is not currently runnable on
-        # ubuntu-24.04-arm runners (exec format error).
-        os: [ubuntu-24.04, windows-2025]
+        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025]
         python: ["3.11", "3.13"]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.agentic) }}
     steps:
