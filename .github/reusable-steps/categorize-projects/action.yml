@@ -36,9 +36,8 @@ runs:
             js+=("$dir")
           elif find "$dir" -maxdepth 1 -name "*.ipynb" | grep -q "."; then
             notebook+=("$dir")
-          elif [ -f "$dir/start_mcp_servers.py" ] && [ -f "$dir/start_agents.py" ] && [ -f "$dir/download_and_run_models_linux.sh" ]; then
+          elif [ -f "$dir/start_agents.py" ] && [ -f "$dir/download_and_run_models_linux.sh" ]; then
             agentic+=("$dir")
-          elif [ -f "$dir/requirements.txt" ] && grep -q "mcp" "$dir/requirements.txt"; then
           elif [ -f "$dir/requirements.txt" ] && { grep -q "gradio" "$dir/requirements.txt" || grep -q "fastapi" "$dir/requirements.txt"; }; then  
             gradio+=("$dir")
           elif [ -f "$dir/main.py" ] && grep -q -- "--stream" "$dir/main.py"; then
