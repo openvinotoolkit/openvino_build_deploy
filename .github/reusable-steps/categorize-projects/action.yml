@@ -38,9 +38,7 @@ runs:
             notebook+=("$dir")
           elif [ -f "$dir/start_agents.py" ] && [ -f "$dir/download_and_run_models_linux.sh" ]; then
             agentic+=("$dir")
-          elif [ -f "$dir/requirements.txt" ] && grep -q "gradio" "$dir/requirements.txt"; then
-            gradio+=("$dir")
-          elif [ -f "$dir/requirements.txt" ] && grep -q "fastapi" "$dir/requirements.txt"; then
+          elif [ -f "$dir/requirements.txt" ] && { grep -q "gradio" "$dir/requirements.txt" || grep -q "fastapi" "$dir/requirements.txt"; }; then  
             gradio+=("$dir")
           elif [ -f "$dir/main.py" ] && grep -q -- "--stream" "$dir/main.py"; then
             webcam+=("$dir")
