@@ -55,6 +55,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/reusable-steps/setup-os
+      - name: Enable amd64 emulation on ARM runner
+        if: runner.os == 'Linux' && matrix.os == 'ubuntu-24.04-arm'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: amd64
       - name: Set up Python ${{ matrix.python }}
         uses: actions/setup-python@v5
         with:
@@ -105,13 +110,22 @@ jobs:
         with:
           python: ${{ matrix.python }}
           project: ${{ matrix.subproject }}
-      - name: Start OVMS (Linux)
-        if: runner.os == 'Linux'
+      - name: Start OVMS (Linux amd64 runner)
+        if: runner.os == 'Linux' && matrix.os == 'ubuntu-24.04'
         shell: bash
         timeout-minutes: 45
         run: |
           cd ${{ matrix.subproject }}
           bash download_and_run_models_linux.sh --device CPU
+      - name: Start OVMS (Linux ARM runner via amd64 emulation)
+        if: runner.os == 'Linux' && matrix.os == 'ubuntu-24.04-arm'
+        shell: bash
+        timeout-minutes: 60
+        env:
+          DOCKER_DEFAULT_PLATFORM: linux/amd64
+        run: |
+          cd ${{ matrix.subproject }}
+          bash download_and_run_models_linux.sh --device CPU --timeout 3600
       - name: Install Windows runtime dependencies
         if: runner.os == 'Windows'
         shell: pwsh
