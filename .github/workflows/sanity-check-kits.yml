@@ -112,24 +112,17 @@ jobs:
         run: |
           cd ${{ matrix.subproject }}
           bash download_and_run_models_linux.sh --device CPU
-      - name: Check native OVMS support on ARM runner
-        id: arm-ovms-compat
+      - name: Enable amd64 emulation on ARM runner
         if: runner.os == 'Linux' && matrix.os == 'ubuntu-24.04-arm'
-        shell: bash
-        run: |
-          if docker pull --platform linux/arm64 openvino/model_server:latest >/dev/null 2>&1; then
-            echo "ovms_native=true" >> "$GITHUB_OUTPUT"
-            echo "Native ARM OVMS image is available."
-          else
-            echo "ovms_native=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Skipping agentic ARM checks: openvino/model_server:latest has no native linux/arm64 image."
-          fi
-      - name: Start OVMS (Linux ARM native)
-        if: runner.os == 'Linux' && matrix.os == 'ubuntu-24.04-arm' && steps.arm-ovms-compat.outputs.ovms_native == 'true'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: amd64
+      - name: Start OVMS (Linux ARM via amd64 emulation)
+        if: runner.os == 'Linux' && matrix.os == 'ubuntu-24.04-arm'
         shell: bash
         timeout-minutes: 60
         env:
-          DOCKER_DEFAULT_PLATFORM: linux/arm64
+          DOCKER_DEFAULT_PLATFORM: linux/amd64
         run: |
           cd ${{ matrix.subproject }}
           bash download_and_run_models_linux.sh \
@@ -137,11 +130,6 @@ jobs:
             --timeout 5400 \
             --llm-model "OpenVINO/TinyLlama-1.1B-Chat-v1.0-int4-ov" \
             --vlm-model "OpenVINO/InternVL2-4B-int4-ov"
-      - name: Skip OVMS startup on ARM (no native image)
-        if: runner.os == 'Linux' && matrix.os == 'ubuntu-24.04-arm' && steps.arm-ovms-compat.outputs.ovms_native != 'true'
-        shell: bash
-        run: |
-          echo "Skipping ARM agentic checks because OVMS native image is unavailable."
       - name: Install Windows runtime dependencies
         if: runner.os == 'Windows'
         shell: pwsh
@@ -159,7 +147,7 @@ jobs:
           cd ${{ matrix.subproject }}
           download_and_run_models_Windows.bat
       - name: Check OVMS (Linux)
-        if: runner.os == 'Linux' && (matrix.os != 'ubuntu-24.04-arm' || steps.arm-ovms-compat.outputs.ovms_native == 'true')
+        if: runner.os == 'Linux'
         shell: bash
         run: |
           cd ${{ matrix.subproject }}
@@ -190,7 +178,7 @@ jobs:
           Write-Host "=== OVMS VLM Log (stderr) ==="
           if (Test-Path "logs\ovms_vlm.err") { Get-Content "logs\ovms_vlm.err" } else { Write-Host "No VLM stderr log found" }
       - name: Start MCP (Linux)
-        if: runner.os == 'Linux' && (matrix.os != 'ubuntu-24.04-arm' || steps.arm-ovms-compat.outputs.ovms_native == 'true')
+        if: runner.os == 'Linux'
         shell: bash
         env:
           SERP_API_KEY: ${{ secrets.SERP_API_KEY }}
@@ -208,7 +196,7 @@ jobs:
           python -c "import os; print('SERP_API_KEY present:', bool(os.getenv('SERP_API_KEY')))"
           python start_mcp_servers.py
       - name: Check MCP (Linux)
-        if: runner.os == 'Linux' && (matrix.os != 'ubuntu-24.04-arm' || steps.arm-ovms-compat.outputs.ovms_native == 'true')
+        if: runner.os == 'Linux'
         shell: bash
         run: |
           cd ${{ matrix.subproject }}
@@ -220,7 +208,7 @@ jobs:
           cd ${{ matrix.subproject }}
           python ci/test.py --check-mcp
       - name: Start agents (Linux)
-        if: runner.os == 'Linux' && (matrix.os != 'ubuntu-24.04-arm' || steps.arm-ovms-compat.outputs.ovms_native == 'true')
+        if: runner.os == 'Linux'
         shell: bash
         run: |
           cd ${{ matrix.subproject }}
@@ -232,7 +220,7 @@ jobs:
           cd ${{ matrix.subproject }}
           python start_agents.py
       - name: Check agents (Linux)
-        if: runner.os == 'Linux' && (matrix.os != 'ubuntu-24.04-arm' || steps.arm-ovms-compat.outputs.ovms_native == 'true')
+        if: runner.os == 'Linux'
         shell: bash
         env:
           AGENT_WARMUP_SECONDS: 15
@@ -254,7 +242,7 @@ jobs:
           cd ${{ matrix.subproject }}
           python ci/test.py --check-agents
       - name: Stop OVMS, MCP and agents (Linux)
-        if: always() && runner.os == 'Linux' && (matrix.os != 'ubuntu-24.04-arm' || steps.arm-ovms-compat.outputs.ovms_native == 'true')
+        if: always() && runner.os == 'Linux'
         shell: bash
         run: |
           cd ${{ matrix.subproject }}
