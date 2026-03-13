@@ -112,10 +112,17 @@ jobs:
         run: |
           cd ${{ matrix.subproject }}
           bash download_and_run_models_linux.sh --device CPU
-      - name: Start OVMS (Linux ARM native)
+      - name: Enable amd64 emulation on ARM runner
+        if: runner.os == 'Linux' && matrix.os == 'ubuntu-24.04-arm'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: amd64
+      - name: Start OVMS (Linux ARM via amd64 emulation)
         if: runner.os == 'Linux' && matrix.os == 'ubuntu-24.04-arm'
         shell: bash
         timeout-minutes: 60
+        env:
+          DOCKER_DEFAULT_PLATFORM: linux/amd64
         run: |
           cd ${{ matrix.subproject }}
           bash download_and_run_models_linux.sh \
