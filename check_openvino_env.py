@@ -31,29 +31,27 @@ try:
 except Exception as e:
     print("OpenVINO check failed:", e)
 
-# Check packages from requirements.txt
+# Package check
 print("\nPackage Check")
 print("------------------")
 
 req_file = Path("requirements.txt")
 
 if req_file.exists():
-    packages = []
-
     with open(req_file) as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#"):
-                pkg = line.split("==")[0].split(">=")[0].split("<=")[0]
-                packages.append(pkg)
+        packages = [
+            line.strip().split("==")[0].split(">=")[0].split("<=")[0]
+            for line in f if line.strip() and not line.startswith("#")
+        ]
 
     for pkg in packages:
+        module_name = pkg.replace("-", "_")  # fix import naming
         try:
-            importlib.import_module(pkg)
+            importlib.import_module(module_name)
             print(pkg, "✔ installed")
         except ImportError:
             print(pkg, "❌ missing")
 else:
-    print("No requirements.txt found. Skipping package checks.")
+    print("No requirements.txt found.")
 
 print("\n===========================================\n")
