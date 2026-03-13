@@ -139,13 +139,9 @@ jobs:
         if: runner.os == 'Windows'
         shell: cmd
         timeout-minutes: 45
-        env:
-          TARGET_DEVICE: CPU
-          LLM_DEVICE: CPU
-          VLM_DEVICE: CPU
         run: |
           cd ${{ matrix.subproject }}
-          download_and_run_models_Windows.bat
+          download_and_run_models_Windows.bat --device CPU
       - name: Check OVMS (Linux)
         if: runner.os == 'Linux'
         shell: bash
@@ -169,14 +165,10 @@ jobs:
         shell: pwsh
         run: |
           cd ${{ matrix.subproject }}
-          Write-Host "=== OVMS LLM Log (stdout) ==="
-          if (Test-Path "logs\ovms_llm.log") { Get-Content "logs\ovms_llm.log" } else { Write-Host "No LLM stdout log found" }
-          Write-Host "=== OVMS LLM Log (stderr) ==="
-          if (Test-Path "logs\ovms_llm.err") { Get-Content "logs\ovms_llm.err" } else { Write-Host "No LLM stderr log found" }
-          Write-Host "=== OVMS VLM Log (stdout) ==="
-          if (Test-Path "logs\ovms_vlm.log") { Get-Content "logs\ovms_vlm.log" } else { Write-Host "No VLM stdout log found" }
-          Write-Host "=== OVMS VLM Log (stderr) ==="
-          if (Test-Path "logs\ovms_vlm.err") { Get-Content "logs\ovms_vlm.err" } else { Write-Host "No VLM stderr log found" }
+          Write-Host "=== OVMS LLM Log ==="
+          if (Test-Path "logs\ovms_llm.log") { Get-Content "logs\ovms_llm.log" } else { Write-Host "No LLM log found" }
+          Write-Host "=== OVMS VLM Log ==="
+          if (Test-Path "logs\ovms_vlm.log") { Get-Content "logs\ovms_vlm.log" } else { Write-Host "No VLM log found" }
       - name: Start MCP (Linux)
         if: runner.os == 'Linux'
         shell: bash

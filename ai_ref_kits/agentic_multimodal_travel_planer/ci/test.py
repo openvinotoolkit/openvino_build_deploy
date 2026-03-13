@@ -740,13 +740,11 @@ def check_overall() -> None:
     agent_url = f"http://127.0.0.1:{port}"
     # Allow disabling timeout for slow CI environments by setting
     # AGENT_QUERY_TIMEOUT_SECONDS=0 (or a negative value).
-    # Use a sensible positive default when unset or invalid to avoid waiting forever.
-    DEFAULT_TIMEOUT_SECONDS = 300
-    timeout_raw = os.getenv("AGENT_QUERY_TIMEOUT_SECONDS", str(DEFAULT_TIMEOUT_SECONDS)).strip()
+    timeout_raw = os.getenv("AGENT_QUERY_TIMEOUT_SECONDS", "0").strip()
     try:
         timeout_s = int(timeout_raw)
     except ValueError:
-        timeout_s = DEFAULT_TIMEOUT_SECONDS
+        timeout_s = 0
 
     # Flight Finder: first prompt, then either confirm ("yes") or provide
     # explicit details if the first turn asks for missing information.
