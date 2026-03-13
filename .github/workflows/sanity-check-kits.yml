@@ -55,11 +55,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/reusable-steps/setup-os
-      - name: Enable amd64 emulation on ARM runner
-        if: runner.os == 'Linux' && matrix.os == 'ubuntu-24.04-arm'
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: amd64
       - name: Set up Python ${{ matrix.python }}
         uses: actions/setup-python@v5
         with:
