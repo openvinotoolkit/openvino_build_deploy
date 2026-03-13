@@ -22,6 +22,22 @@ LLM_DEVICE=""  # Separate device for LLM (overrides DEVICE if set)
 VLM_DEVICE=""  # Separate device for VLM (overrides DEVICE if set)
 
 # --------------------------------------------------
+# Preflight checks
+# --------------------------------------------------
+require_docker() {
+  if ! command -v docker >/dev/null 2>&1; then
+    echo "ERROR: docker CLI not found. Install Docker and retry."
+    exit 1
+  fi
+
+  if ! docker info >/dev/null 2>&1; then
+    echo "ERROR: Docker daemon is not reachable."
+    echo "Start Docker Desktop (or daemon) and ensure your user can access docker.sock."
+    exit 1
+  fi
+}
+
+# --------------------------------------------------
 # Parse command line arguments
 # --------------------------------------------------
 show_help() {
@@ -331,6 +347,8 @@ wait_for_ready() {
 # --------------------------------------------------
 # Show Configuration
 # --------------------------------------------------
+require_docker
+
 echo ""
 echo "=============================================="
 echo "  OpenVINO Model Server Setup"
@@ -368,7 +386,11 @@ fi
 # --------------------------------------------------
 
 show_progress "Pulling Docker image..."
-docker pull "${OVMS_IMAGE}" >/dev/null 2>&1
+if ! docker pull "${OVMS_IMAGE}" >/dev/null; then
+  echo ""
+  echo "ERROR: failed to pull image '${OVMS_IMAGE}'"
+  exit 1
+fi
 
 mkdir -p "${MODELS_DIR}"
 chown -R "${UID_GID}" "${MODELS_DIR}" 2>/dev/null || true
@@ -391,7 +413,7 @@ fi
 # Run containers
 # --------------------------------------------------
 show_progress "Starting LLM container..."
-docker run -d \
+if ! docker run -d \
   ${LLM_GPU_ARGS} \
   --name "${LLM_CONTAINER}" \
   --user "${UID_GID}" \
@@ -408,10 +430,15 @@ docker run -d \
   ${LLM_REASONING_PARSER:+--reasoning_parser ${LLM_REASONING_PARSER}} \
   --log_level DEBUG \
   ${LLM_TARGET_DEVICE_ARG} \
-  >/dev/null 2>&1
+  >/dev/null; then
+  echo ""
+  echo "ERROR: failed to start LLM container '${LLM_CONTAINER}'"
+  docker image inspect "${OVMS_IMAGE}" --format 'Image OS/Arch: {{.Os}}/{{.Architecture}}' || true
+  exit 1
+fi
 
 show_progress "Starting VLM container..."
-docker run -d \
+if ! docker run -d \
   ${VLM_GPU_ARGS} \
   --name "${VLM_CONTAINER}" \
   --user "${UID_GID}" \
@@ -428,7 +455,12 @@ docker run -d \
   --pipeline_type VLM \
   --log_level DEBUG \
   ${VLM_TARGET_DEVICE_ARG} \
-  >/dev/null 2>&1
+  >/dev/null; then
+  echo ""
+  echo "ERROR: failed to start VLM container '${VLM_CONTAINER}'"
+  docker image inspect "${OVMS_IMAGE}" --format 'Image OS/Arch: {{.Os}}/{{.Architecture}}' || true
+  exit 1
+fi
 
 # --------------------------------------------------
 # Wait for readiness (PARALLEL)
