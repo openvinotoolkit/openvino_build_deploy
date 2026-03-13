@@ -120,11 +120,7 @@ jobs:
           DOCKER_DEFAULT_PLATFORM: linux/arm64
         run: |
           cd ${{ matrix.subproject }}
-          bash download_and_run_models_linux.sh \
-            --device CPU \
-            --timeout 5400 \
-            --llm-model "OpenVINO/TinyLlama-1.1B-Chat-v1.0-int4-ov" \
-            --vlm-model "OpenVINO/InternVL2-4B-int4-ov"
+          bash download_and_run_models_linux.sh --device CPU
       - name: Install Windows runtime dependencies
         if: runner.os == 'Windows'
         shell: pwsh
