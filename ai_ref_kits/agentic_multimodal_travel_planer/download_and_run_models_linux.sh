@@ -264,6 +264,7 @@ show_progress() {
 # --------------------------------------------------
 wait_for_ready() {
   local container="$1"
+  local port="$2"
   local start_ts
   start_ts=$(date +%s)
   local last_hash=""
@@ -271,9 +272,18 @@ wait_for_ready() {
   local spin_idx=0
 
   while true; do
-    if ! docker ps -q -f name="^${container}$" >/dev/null; then
+    if ! docker inspect "${container}" >/dev/null 2>&1; then
+      echo ""
+      echo "ERROR: ${container} is missing"
+      exit 1
+    fi
+
+    local running
+    running="$(docker inspect --format='{{.State.Running}}' "${container}" 2>/dev/null || echo "false")"
+    if [[ "${running}" != "true" ]]; then
       echo ""
       echo "ERROR: ${container} exited before becoming ready"
+      docker inspect --format='status={{.State.Status}} exitCode={{.State.ExitCode}} error={{.State.Error}}' "${container}" || true
       docker logs "${container}" || true
       exit 1
     fi
@@ -297,7 +307,12 @@ wait_for_ready() {
       last_hash="${hash}"
     fi
 
-    if grep -q "REST server listening on port" <<< "${logs}"; then
+    if curl -fsS --connect-timeout 2 --max-time 3 "http://127.0.0.1:${port}/v3/models" >/dev/null 2>&1; then
+      printf "\r\033[K  ✓ ${container} endpoint is ready (port ${port})\n"
+      return 0
+    fi
+
+    if grep -Eq "REST server listening on port|REST server started|HTTP server listening|Started REST server" <<< "${logs}"; then
       printf "\r\033[K  ✓ ${container} is ready\n"
       return 0
     fi
@@ -421,10 +436,10 @@ docker run -d \
 show_progress "Waiting for containers to be ready..."
 echo ""
 
-wait_for_ready "${LLM_CONTAINER}" &
+wait_for_ready "${LLM_CONTAINER}" "${LLM_PORT}" &
 PID_LLM=$!
 
-wait_for_ready "${VLM_CONTAINER}" &
+wait_for_ready "${VLM_CONTAINER}" "${VLM_PORT}" &
 PID_VLM=$!
 
 wait "${PID_LLM}"
