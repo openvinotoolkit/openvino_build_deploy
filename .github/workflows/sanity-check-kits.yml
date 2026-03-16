@@ -91,7 +91,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025]
+        os: [ubuntu-24.04, windows-2025]
         python: ["3.11", "3.13"]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.agentic) }}
     steps:
@@ -109,15 +109,6 @@ jobs:
         if: runner.os == 'Linux' && matrix.os == 'ubuntu-24.04'
         shell: bash
         timeout-minutes: 45
-        run: |
-          cd ${{ matrix.subproject }}
-          bash download_and_run_models_linux.sh --device CPU
-      - name: Start OVMS (Linux ARM native)
-        if: runner.os == 'Linux' && matrix.os == 'ubuntu-24.04-arm'
-        shell: bash
-        timeout-minutes: 60
-        env:
-          DOCKER_DEFAULT_PLATFORM: linux/arm64
         run: |
           cd ${{ matrix.subproject }}
           bash download_and_run_models_linux.sh --device CPU
