@@ -37,20 +37,47 @@ print("------------------")
 
 req_file = Path("requirements.txt")
 
+# special cases where pip name != import name
+IMPORT_NAME_MAP = {
+    "pillow": "PIL",
+    "opencv-python": "cv2",
+    "optimum-intel": "optimum",
+}
+
 if req_file.exists():
+    packages = []
+
     with open(req_file) as f:
-        packages = [
-            line.strip().split("==")[0].split(">=")[0].split("<=")[0]
-            for line in f if line.strip() and not line.startswith("#")
-        ]
+        for line in f:
+            line = line.strip()
+
+            # skip empty lines and comments
+            if not line or line.startswith("#"):
+                continue
+
+            # skip pip options
+            if line.startswith("--"):
+                continue
+
+            # remove version constraints
+            pkg = line.split("==")[0].split(">=")[0].split("<=")[0]
+
+            # remove extras like qrcode[pil]
+            pkg = pkg.split("[")[0]
+
+            packages.append(pkg)
 
     for pkg in packages:
-        module_name = pkg.replace("-", "_")  # fix import naming
+
+        # determine correct import name
+        module_name = IMPORT_NAME_MAP.get(pkg, pkg.replace("-", "_"))
+
         try:
             importlib.import_module(module_name)
             print(pkg, "✔ installed")
         except ImportError:
             print(pkg, "❌ missing")
+
 else:
     print("No requirements.txt found.")
 
