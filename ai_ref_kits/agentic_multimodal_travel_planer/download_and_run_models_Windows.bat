@@ -14,6 +14,10 @@ set LLM_PORT=8001
 set VLM_PORT=8002
 set PYTHON_SUPPORT=python_on
 set TARGET_DEVICE=
+set NO_PROXY=localhost,127.0.0.1
+set no_proxy=localhost,127.0.0.1
+set http_proxy=
+set https_proxy=
 
 REM Download and extract OVMS package
 if not exist "%OVMS_DIR%" (
