@@ -68,7 +68,7 @@ VisionGuard is a privacy-focused desktop app that uses your webcam and computer 
 
 ### 🏙️ Real-Time Crowd Density Estimation
 
-Estimates crowd density from images or video streams using a CSRNet model converted to OpenVINO IR format via `ov.convert_model()` — no ONNX intermediate step required.
+Estimates crowd density from images or video streams using a CSRNet model converted to OpenVINO IR format — no ONNX intermediate step required.
 
 [![Crowd Density Estimation](https://raw.githubusercontent.com/arunimakanavu/crowd-density/main/assets/crowd_density_demo.png)](https://github.com/arunimakanavu/crowd-density)
 
