@@ -66,5 +66,17 @@ VisionGuard is a privacy-focused desktop app that uses your webcam and computer 
 | Platforms                            | Client (CPU, GPU, NPU), Edge (CPU)         |
 | Owner                                | [@inbasperu](https://github.com/inbasperu) |
 
+### 🏙️ Real-Time Crowd Density Estimation
+
+Estimates crowd density from images or video streams using a CSRNet model converted to OpenVINO IR format via `ov.convert_model()` — no ONNX intermediate step required.
+
+[![Crowd Density Estimation](https://raw.githubusercontent.com/arunimakanavu/crowd-density/main/assets/crowd_density_demo.png)](https://github.com/arunimakanavu/crowd-density)
+
+| [Crowd Density Estimation](https://github.com/arunimakanavu/crowd-density) | |
+|---|---|
+| Related AI concepts | crowd counting, density estimation, computer vision |
+| Platforms | Client (CPU, GPU), Edge (CPU) |
+| Owner | [@arunimakanavu](https://github.com/arunimakanavu) |
+
 [//]: # (telemetry pixel)
 <img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=7003a37c-568d-40a5-9718-0d021d8589ca&project=apps&file=README.md" />
