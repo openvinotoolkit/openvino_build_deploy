@@ -93,7 +93,7 @@ REM Start LLM service
 REM --port = gRPC, --rest_port = HTTP REST (chat/completions). Agents use HTTP, so REST must be on LLM_PORT.
 echo Starting LLM service (REST on %LLM_PORT%, gRPC on 8011)...
 set LLM_GRPC_PORT=8011
-set LLM_ARGS=--port %LLM_GRPC_PORT% --rest_port %LLM_PORT% --model_repository_path "%MODELS_DIR%" --source_model "%LLM_MODEL%" --tool_parser hermes3 --cache_size 2 --task text_generation --enable_prefix_caching true
+set LLM_ARGS=--port %LLM_GRPC_PORT% --rest_port %LLM_PORT% --model_repository_path "%MODELS_DIR%" --source_model "%LLM_MODEL%" --tool_parser hermes3 --cache_size 0 --task text_generation 
 if not "%TARGET_DEVICE%"=="" set LLM_ARGS=%LLM_ARGS% --target_device %TARGET_DEVICE%
 REM Use PowerShell Start-Process to launch detached
 powershell -Command "Start-Process -FilePath '%OVMS_PATH%' -ArgumentList '%LLM_ARGS%' -RedirectStandardOutput '%LOGS_DIR%\ovms_llm.log' -RedirectStandardError '%LOGS_DIR%\ovms_llm.err' -WindowStyle Hidden" || (echo Failed to start LLM service && exit /b 1)
