@@ -38,6 +38,7 @@ def download_file(
     """
     import tqdm
     import requests
+    import socket
 
     filename = filename or Path(urllib.parse.urlparse(url).path).name
     if directory:
@@ -46,7 +47,20 @@ def download_file(
     else:
         filename = Path(filename)
 
-    response = requests.get(url, stream=True, timeout=timeout)
+    # Work around intermittent WinError 10054 on some Windows networks by
+    # forcing IPv4 resolution for OMZ storage host.
+    parsed_url = urllib.parse.urlparse(str(url))
+    orig_getaddrinfo = socket.getaddrinfo
+    if parsed_url.hostname == "storage.openvinotoolkit.org":
+        def _ipv4_only(host, port, family=0, type=0, proto=0, flags=0):
+            if host == "storage.openvinotoolkit.org":
+                family = socket.AF_INET
+            return orig_getaddrinfo(host, port, family, type, proto, flags)
+        socket.getaddrinfo = _ipv4_only
+    try:
+        response = requests.get(url, stream=True, timeout=timeout)
+    finally:
+        socket.getaddrinfo = orig_getaddrinfo
     response.raise_for_status()
 
     # Download to temporary file
