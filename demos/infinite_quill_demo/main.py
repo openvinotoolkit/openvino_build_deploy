@@ -21,7 +21,6 @@ MODEL_DIR = Path("model")
 
 MODELS = [
     "OpenVINO/Qwen3-8B-int4-cw-ov",
-    "OpenVINO/gemma-3-4b-it-int4-cw-ov",
 ]
 
 stop_generating: bool = False
@@ -142,12 +141,7 @@ def build_ui():
         utils.gradio_intel_header("Infinite Quill by OpenVINO")
         with gr.Group():
             with gr.Row(equal_height=True):
-                topic_text = gr.Text(
-                    label="Write a story about...",
-                    placeholder="Enter your topic here",
-                    value=examples[0],
-                    scale=5
-                )
+                topic_text = gr.Text(label="Write a story about...", placeholder="Enter your topic here", value=random.choice(examples), scale=5)
                 random_topic_button = gr.Button("Random topic", variant="secondary", scale=1)
             output_textbox = gr.Textbox(label="Story", lines=30, autoscroll=True, interactive=False)
             with gr.Row():

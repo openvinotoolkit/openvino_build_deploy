@@ -309,8 +309,8 @@ class TravelRouterClient:
 # Example prompts for the UI
 EXAMPLES = [
     "Which city is shown in this image?",
-    "Give me flights from Milan to Berlin for March 1st to March 10th",
-    "Give me hotels in Milan for March 1st to March 10th for 2 guests",
+    "Give me flights from Milan to Berlin for October 1st to October 10th",
+    "Give me hotels in Milan for October 1st to October 10th for 2 guests",
     (
         "Help me finding flights to the city "
         "in the image"
@@ -872,10 +872,7 @@ def create_gradio_interface():
     gradio_temp_dir.mkdir(exist_ok=True)
     os.environ["GRADIO_TEMP_DIR"] = str(gradio_temp_dir)
 
-    demo = gr.Blocks(
-        theme=gr.themes.Soft(),
-        css=".disclaimer{font-variant-caps:all-small-caps;}",
-    )
+    demo = gr.Blocks()
     with demo:
         # Title
         gr.Markdown(
@@ -900,7 +897,7 @@ def create_gradio_interface():
             # Right Column: Chat UI
             with gr.Column(scale=2):
                 chatbot = gr.Chatbot(
-                    label="Conversation", height=500, type="messages"
+                    label="Conversation", height=500
                 )
                 with gr.Row():
                     msg = gr.Textbox(
@@ -962,7 +959,9 @@ def main():
             share=False,
             debug=False,
             show_error=True,
-            quiet=False
+            quiet=False,
+            theme=gr.themes.Soft(),
+            css=".disclaimer{font-variant-caps:all-small-caps;}"
         )
     except Exception as e:
         print(f"❌ Error launching Gradio interface: {e}")

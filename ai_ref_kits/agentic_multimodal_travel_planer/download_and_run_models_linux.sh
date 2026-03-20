@@ -22,6 +22,22 @@ LLM_DEVICE=""  # Separate device for LLM (overrides DEVICE if set)
 VLM_DEVICE=""  # Separate device for VLM (overrides DEVICE if set)
 
 # --------------------------------------------------
+# Preflight checks
+# --------------------------------------------------
+require_docker() {
+  if ! command -v docker >/dev/null 2>&1; then
+    echo "ERROR: docker CLI not found. Install Docker and retry."
+    exit 1
+  fi
+
+  if ! docker info >/dev/null 2>&1; then
+    echo "ERROR: Docker daemon is not reachable."
+    echo "Start Docker Desktop (or daemon) and ensure your user can access docker.sock."
+    exit 1
+  fi
+}
+
+# --------------------------------------------------
 # Parse command line arguments
 # --------------------------------------------------
 show_help() {
@@ -264,6 +280,7 @@ show_progress() {
 # --------------------------------------------------
 wait_for_ready() {
   local container="$1"
+  local port="$2"
   local start_ts
   start_ts=$(date +%s)
   local last_hash=""
@@ -271,9 +288,18 @@ wait_for_ready() {
   local spin_idx=0
 
   while true; do
-    if ! docker ps -q -f name="^${container}$" >/dev/null; then
+    if ! docker inspect "${container}" >/dev/null 2>&1; then
+      echo ""
+      echo "ERROR: ${container} is missing"
+      exit 1
+    fi
+
+    local running
+    running="$(docker inspect --format='{{.State.Running}}' "${container}" 2>/dev/null || echo "false")"
+    if [[ "${running}" != "true" ]]; then
       echo ""
       echo "ERROR: ${container} exited before becoming ready"
+      docker inspect --format='status={{.State.Status}} exitCode={{.State.ExitCode}} error={{.State.Error}}' "${container}" || true
       docker logs "${container}" || true
       exit 1
     fi
@@ -297,7 +323,12 @@ wait_for_ready() {
       last_hash="${hash}"
     fi
 
-    if grep -q "REST server listening on port" <<< "${logs}"; then
+    if curl -fsS --connect-timeout 2 --max-time 3 "http://127.0.0.1:${port}/v3/models" >/dev/null 2>&1; then
+      printf "\r\033[K  ✓ ${container} endpoint is ready (port ${port})\n"
+      return 0
+    fi
+
+    if grep -Eq "REST server listening on port|REST server started|HTTP server listening|Started REST server" <<< "${logs}"; then
       printf "\r\033[K  ✓ ${container} is ready\n"
       return 0
     fi
@@ -316,6 +347,8 @@ wait_for_ready() {
 # --------------------------------------------------
 # Show Configuration
 # --------------------------------------------------
+require_docker
+
 echo ""
 echo "=============================================="
 echo "  OpenVINO Model Server Setup"
@@ -353,7 +386,11 @@ fi
 # --------------------------------------------------
 
 show_progress "Pulling Docker image..."
-docker pull "${OVMS_IMAGE}" >/dev/null 2>&1
+if ! docker pull "${OVMS_IMAGE}" >/dev/null; then
+  echo ""
+  echo "ERROR: failed to pull image '${OVMS_IMAGE}'"
+  exit 1
+fi
 
 mkdir -p "${MODELS_DIR}"
 chown -R "${UID_GID}" "${MODELS_DIR}" 2>/dev/null || true
@@ -362,10 +399,21 @@ chmod -R 755 "${MODELS_DIR}"
 docker rm -f "${LLM_CONTAINER}" "${VLM_CONTAINER}" >/dev/null 2>&1 || true
 
 # --------------------------------------------------
+# LLM tool/reasoning parser (TinyLlama is Llama-based; use llama3)
+# --------------------------------------------------
+if echo "${LLM_MODEL}" | grep -qi "TinyLlama"; then
+  LLM_TOOL_PARSER="llama3"
+  LLM_REASONING_PARSER=""   # TinyLlama does not use qwen3 reasoning format
+else
+  LLM_TOOL_PARSER="hermes3"
+  LLM_REASONING_PARSER="qwen3"
+fi
+
+# --------------------------------------------------
 # Run containers
 # --------------------------------------------------
 show_progress "Starting LLM container..."
-docker run -d \
+if ! docker run -d \
   ${LLM_GPU_ARGS} \
   --name "${LLM_CONTAINER}" \
   --user "${UID_GID}" \
@@ -378,14 +426,18 @@ docker run -d \
   --model_repository_path /models \
   --source_model "${LLM_MODEL}" \
   --task text_generation \
-  --tool_parser hermes3 \
-  --reasoning_parser qwen3 \
+  --tool_parser ${LLM_TOOL_PARSER} \
   --log_level DEBUG \
   ${LLM_TARGET_DEVICE_ARG} \
-  >/dev/null 2>&1
+  >/dev/null; then
+  echo ""
+  echo "ERROR: failed to start LLM container '${LLM_CONTAINER}'"
+  docker image inspect "${OVMS_IMAGE}" --format 'Image OS/Arch: {{.Os}}/{{.Architecture}}' || true
+  exit 1
+fi
 
 show_progress "Starting VLM container..."
-docker run -d \
+if ! docker run -d \
   ${VLM_GPU_ARGS} \
   --name "${VLM_CONTAINER}" \
   --user "${UID_GID}" \
@@ -402,7 +454,12 @@ docker run -d \
   --pipeline_type VLM \
   --log_level DEBUG \
   ${VLM_TARGET_DEVICE_ARG} \
-  >/dev/null 2>&1
+  >/dev/null; then
+  echo ""
+  echo "ERROR: failed to start VLM container '${VLM_CONTAINER}'"
+  docker image inspect "${OVMS_IMAGE}" --format 'Image OS/Arch: {{.Os}}/{{.Architecture}}' || true
+  exit 1
+fi
 
 # --------------------------------------------------
 # Wait for readiness (PARALLEL)
@@ -410,16 +467,49 @@ docker run -d \
 show_progress "Waiting for containers to be ready..."
 echo ""
 
-wait_for_ready "${LLM_CONTAINER}" &
+wait_for_ready "${LLM_CONTAINER}" "${LLM_PORT}" &
 PID_LLM=$!
 
-wait_for_ready "${VLM_CONTAINER}" &
+wait_for_ready "${VLM_CONTAINER}" "${VLM_PORT}" &
 PID_VLM=$!
 
 wait "${PID_LLM}"
 wait "${PID_VLM}"
 
 show_progress "Setup complete!"
+
+# --------------------------------------------------
+# Sync agents_config.yaml to OVMS model id (so agents use exact id OVMS expects)
+# --------------------------------------------------
+if [ "${UPDATE_CONFIG:-1}" = "1" ]; then
+  CONFIG_FILE="$(dirname "$0")/config/agents_config.yaml"
+  if [ -f "${CONFIG_FILE}" ]; then
+    for retry in 1 2 3 4 5; do
+      OVMS_MODEL_JSON="$(curl -s --connect-timeout 5 "http://127.0.0.1:${LLM_PORT}/v3/models" 2>/dev/null)" || true
+      OVMS_MODEL_ID=""
+      if [ -n "$OVMS_MODEL_JSON" ]; then
+        OVMS_MODEL_ID="$(echo "$OVMS_MODEL_JSON" | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    data = d.get('data') or []
+    if isinstance(data, list) and data and isinstance(data[0], dict):
+        print(data[0].get('id') or '')
+except Exception:
+    pass
+" 2>/dev/null)" || true
+      fi
+      if [ -n "$OVMS_MODEL_ID" ]; then
+        OVMS_MODEL_ID_ESC=${OVMS_MODEL_ID//&/\\&}
+        OVMS_MODEL_ID_ESC=${OVMS_MODEL_ID_ESC//|/\\|}
+        sed -i.bak "s|model: \"openai:[^\"]*\"|model: \"openai:${OVMS_MODEL_ID_ESC}\"|g" "${CONFIG_FILE}"
+        echo "✓ Synced agents_config.yaml model to OVMS model id: ${OVMS_MODEL_ID}"
+        break
+      fi
+      [ "$retry" -lt 5 ] && sleep 2
+    done
+  fi
+fi
 
 # --------------------------------------------------
 # Final status

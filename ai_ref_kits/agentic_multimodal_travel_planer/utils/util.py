@@ -223,14 +223,25 @@ def load_config(agent_name: str):
     # Get agent specific config
     agent_config = agents_config[agent_name]
     agent_llm_config = agent_config['llm']
-    
-    # Use config values directly (no environment variable overrides)
-    port = agent_config['port']
-    llm_model = agent_llm_config['model']
+
+    # Env overrides for tests/CI: use small model / port without changing agents_config.yaml
+    port_override = os.environ.get("AGENT_LLM_PORT_OVERRIDE")
+    api_base_override = os.environ.get("AGENT_LLM_API_BASE_OVERRIDE")
+    if api_base_override:
+        api_base = api_base_override
+    elif port_override:
+        stripped_port = port_override.strip()
+        if stripped_port.isdigit() and int(stripped_port) > 0:
+            api_base = f"http://127.0.0.1:{stripped_port}/v3"
+        else:
+            api_base = agent_llm_config['api_base']
+    else:
+        api_base = agent_llm_config['api_base']
+    llm_model = os.environ.get("AGENT_LLM_MODEL_OVERRIDE") or agent_llm_config['model']
     llm_temperature = agent_llm_config['temperature']
-    api_base = agent_llm_config['api_base']
     api_key = agent_llm_config['api_key']
-    
+    port = agent_config['port']
+
     # Validate LLM endpoint before proceeding
     print(f"Validating LLM endpoint: {api_base}")
     is_valid, message = validate_llm_endpoint(api_base)
