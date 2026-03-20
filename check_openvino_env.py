@@ -5,19 +5,19 @@ from pathlib import Path
 
 print("\n===== OpenVINO Environment Diagnostic =====\n")
 
-# System info
+# ------------------ SYSTEM INFO ------------------
 print("System Information")
 print("------------------")
 print("OS:", platform.system(), platform.release())
 print("Machine:", platform.machine())
 print("Processor:", platform.processor())
 
-# Python info
+# ------------------ PYTHON INFO ------------------
 print("\nPython Information")
 print("------------------")
 print("Python version:", sys.version)
 
-# OpenVINO info
+# ------------------ OPENVINO INFO ------------------
 print("\nOpenVINO Information")
 print("------------------")
 
@@ -31,18 +31,35 @@ try:
 except Exception as e:
     print("OpenVINO check failed:", e)
 
-# Package check
+# ------------------ PACKAGE CHECK ------------------
 print("\nPackage Check")
 print("------------------")
 
 req_file = Path("requirements.txt")
 
-# special cases where pip name != import name
-IMPORT_NAME_MAP = {
+# mapping pip names → import names
+IMPORT_MAP = {
     "pillow": "PIL",
     "opencv-python": "cv2",
     "optimum-intel": "optimum",
 }
+
+def parse_line(line):
+    """Extract package name + required version"""
+    if "==" in line:
+        name, version = line.split("==")
+    elif ">=" in line:
+        name, version = line.split(">=")
+    else:
+        name, version = line, None
+
+    name = name.strip()
+    version = version.strip() if version else None
+
+    # remove extras like qrcode[pil]
+    name = name.split("[")[0]
+
+    return name, version
 
 if req_file.exists():
     packages = []
@@ -51,32 +68,34 @@ if req_file.exists():
         for line in f:
             line = line.strip()
 
-            # skip empty lines and comments
             if not line or line.startswith("#"):
                 continue
 
-            # skip pip options
             if line.startswith("--"):
                 continue
 
-            # remove version constraints
-            pkg = line.split("==")[0].split(">=")[0].split("<=")[0]
+            pkg_name, req_version = parse_line(line)
+            packages.append((pkg_name, req_version))
 
-            # remove extras like qrcode[pil]
-            pkg = pkg.split("[")[0]
-
-            packages.append(pkg)
-
-    for pkg in packages:
-
-        # determine correct import name
-        module_name = IMPORT_NAME_MAP.get(pkg, pkg.replace("-", "_"))
+    for pkg, req_version in packages:
+        module_name = IMPORT_MAP.get(pkg, pkg.replace("-", "_"))
 
         try:
-            importlib.import_module(module_name)
-            print(pkg, "✔ installed")
+            module = importlib.import_module(module_name)
+
+            # try to get installed version
+            installed_version = getattr(module, "__version__", None)
+
+            if req_version and installed_version:
+                if installed_version.startswith(req_version):
+                    print(f"{pkg} ✔ installed ({installed_version})")
+                else:
+                    print(f"{pkg} ⚠ version mismatch (installed: {installed_version}, required: {req_version})")
+            else:
+                print(f"{pkg} ✔ installed")
+
         except ImportError:
-            print(pkg, "❌ missing")
+            print(f"{pkg} ❌ missing")
 
 else:
     print("No requirements.txt found.")
