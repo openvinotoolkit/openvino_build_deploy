@@ -270,7 +270,7 @@ def generate_initial_greeting() -> str:
     return ov_chat_engine.chat(chatbot_config["greet_the_user_prompt"]).response
 
 
-def chat(history: List[List[str]]) -> List[List[str]]:
+def chat(history: List) -> List:
     """
     Chat function. It generates response based on a prompt
 
@@ -281,30 +281,31 @@ def chat(history: List[List[str]]) -> List[List[str]]:
     """
     # no document is loaded
     if isinstance(ov_chat_engine, SimpleChatEngine):
-        history[-1][1] = "No guide is provided, so I cannot answer this question. Please upload the hotel guide."
+        history.append({"role": "assistant", "content": "No guide is provided, so I cannot answer this question. Please upload the hotel guide."})
         yield history
         return
 
     # get token by token and merge to the final response
-    history[-1][1] = ""
+    user_prompt = history[-1]["content"]
+    history.append({"role": "assistant", "content": ""})
     with inference_lock:
         start_time = time.time()
 
-        chat_streamer = ov_chat_engine.stream_chat(history[-1][0]).response_gen
+        chat_streamer = ov_chat_engine.stream_chat(user_prompt).response_gen
         for partial_text in chat_streamer:
-            history[-1][1] += partial_text
+            history[-1]["content"] += partial_text
             # "return" partial response
             yield history
 
         end_time = time.time()
 
         # 75 words ~= 100 tokens
-        tokens = len(history[-1][1].split(" ")) * 4 / 3
+        tokens = len(history[-1]["content"].split(" ")) * 4 / 3
         processing_time = end_time - start_time
         log.info(f"Chat model response time: {processing_time:.2f} seconds ({tokens / processing_time:.2f} tokens/s)")
 
 
-def transcribe(audio: Tuple[int, np.ndarray], prompt: str, conversation: List[List[str]]) -> List[List[str]]:
+def transcribe(audio: Tuple[int, np.ndarray], prompt: str, conversation: List) -> List:
     """
     Transcribe audio to text
 
@@ -333,10 +334,10 @@ def transcribe(audio: Tuple[int, np.ndarray], prompt: str, conversation: List[Li
         thread = Thread(target=asr_model.generate, kwargs={"input_features": input_features, "streamer": text_streamer})
         thread.start()
 
-        conversation.append(["", None])
+        conversation.append({"role": "user", "content": ""})
         # get token by token and merge to the final response
         for partial_text in text_streamer:
-            conversation[-1][0] += partial_text
+            conversation[-1]["content"] += partial_text
             # "return" partial response
             yield conversation
 
@@ -346,13 +347,13 @@ def transcribe(audio: Tuple[int, np.ndarray], prompt: str, conversation: List[Li
         # wait for the thread
         thread.join()
     else:
-        conversation.append([prompt, None])
+        conversation.append({"role": "user", "content": prompt})
         yield conversation
 
     return conversation
 
 
-def synthesize(conversation: List[List[str]], audio: Tuple[int, np.ndarray]) -> Optional[Tuple[int, np.ndarray]]:
+def synthesize(conversation: List, audio: Tuple[int, np.ndarray]) -> Optional[Tuple[int, np.ndarray]]:
     """
     Synthesizes speech from chatbot's response
 
@@ -366,7 +367,7 @@ def synthesize(conversation: List[List[str]], audio: Tuple[int, np.ndarray]) -> 
     if not audio:
         return None
 
-    prompt = conversation[-1][1]
+    prompt = conversation[-1]["content"]
 
     start_time = time.time()
     # English
@@ -393,7 +394,7 @@ def create_UI(initial_message: str, example_pdf_path: Path) -> gr.Blocks:
         with gr.Row():
             file_uploader_ui = gr.File(label="Hotel guide", file_types=[".pdf", ".txt"], value=str(example_pdf_path), scale=1)
             with gr.Column(scale=4):
-                chatbot_ui = gr.Chatbot(value=[[None, initial_message]], label="Chatbot")
+                chatbot_ui = gr.Chatbot(value=[{"role": "assistant", "content": initial_message}], label="Chatbot")
                 with gr.Tab(label="Voice"):
                     with gr.Row():
                         input_audio_ui = gr.Audio(sources=["microphone"], label="Your voice input")
@@ -409,10 +410,10 @@ def create_UI(initial_message: str, example_pdf_path: Path) -> gr.Blocks:
         gr.on(triggers=[input_audio_ui.change, input_text_ui.change], inputs=[input_audio_ui, input_text_ui], outputs=submit_btn,
               fn=lambda x, y: gr.Button(interactive=True) if bool(x) ^ bool(y) else gr.Button(interactive=False))
 
-        file_uploader_ui.change(lambda: [[None, initial_message]], outputs=chatbot_ui) \
+        file_uploader_ui.change(lambda: [{"role": "assistant", "content": initial_message}], outputs=chatbot_ui) \
             .then(load_context, inputs=file_uploader_ui)
 
-        clear_btn.click(lambda: [[None, initial_message]], outputs=chatbot_ui) \
+        clear_btn.click(lambda: [{"role": "assistant", "content": initial_message}], outputs=chatbot_ui) \
             .then(lambda: gr.Button(interactive=False), outputs=clear_btn)
 
         # block buttons, clear output audio, do the transcription and conversation, clear input audio, unblock buttons
