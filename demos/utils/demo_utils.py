@@ -2,6 +2,7 @@ import hashlib
 import os
 import os.path
 import shutil
+import socket
 import tempfile
 import threading
 import time
@@ -12,6 +13,24 @@ from typing import Tuple, Dict
 
 import numpy as np
 
+# Prefer IPv4 for these hosts to avoid intermittent WinError 10054 TLS resets
+# on some Windows networks/routes.
+_FORCE_IPV4_HOSTS = {
+    "storage.openvinotoolkit.org",
+    "huggingface.co",
+    "hf.co",
+    "cdn-lfs.huggingface.co",
+}
+_orig_getaddrinfo = socket.getaddrinfo
+
+
+def _ipv4_preferred_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+    if host in _FORCE_IPV4_HOSTS or str(host).endswith(".huggingface.co"):
+        family = socket.AF_INET
+    return _orig_getaddrinfo(host, port, family, type, proto, flags)
+
+
+socket.getaddrinfo = _ipv4_preferred_getaddrinfo
 
 def download_file(
     url: PathLike,
