@@ -427,7 +427,6 @@ if ! docker run -d \
   --source_model "${LLM_MODEL}" \
   --task text_generation \
   --tool_parser ${LLM_TOOL_PARSER} \
-  ${LLM_REASONING_PARSER:+--reasoning_parser ${LLM_REASONING_PARSER}} \
   --log_level DEBUG \
   ${LLM_TARGET_DEVICE_ARG} \
   >/dev/null; then
