@@ -17,10 +17,6 @@ set PYTHON_SUPPORT=python_on
 set TARGET_DEVICE=
 set LLM_DEVICE=
 set VLM_DEVICE=
-set NO_PROXY=localhost,127.0.0.1
-set no_proxy=localhost,127.0.0.1
-set http_proxy=
-set https_proxy=
 set STOP_MODE=0
 
 :parse_args
@@ -101,8 +97,8 @@ call :to_upper VLM_DEVICE
 REM Download and extract OVMS package
 if not exist "%OVMS_DIR%" (
     echo Downloading OpenVINO Model Server package...
-    set PACKAGE_NAME=ovms_windows_%PYTHON_SUPPORT%.zip
-    call set "DOWNLOAD_URL=https://github.com/openvinotoolkit/model_server/releases/download/%%OVMS_VERSION%%/%%PACKAGE_NAME%%"
+    set PACKAGE_NAME=ovms_windows_!PYTHON_SUPPORT!.zip
+    call set "DOWNLOAD_URL=https://github.com/openvinotoolkit/model_server/releases/download/!OVMS_VERSION!/!PACKAGE_NAME!"
     curl -L -o "%CD%\ovms.zip" "!DOWNLOAD_URL!" || (echo Failed to download package && exit /b 1)
     powershell -Command "Expand-Archive -Path '%CD%\ovms.zip' -DestinationPath '%CD%' -Force" 2>nul || (echo Failed to extract package && exit /b 1)
     del "%CD%\ovms.zip" >nul 2>&1
