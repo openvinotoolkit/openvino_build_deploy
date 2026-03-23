@@ -373,9 +373,9 @@ echo ""
 CONFIG_FILE="$(dirname "$0")/config/agents_config.yaml"
 if [ -f "${CONFIG_FILE}" ]; then
   # Update all api_base URLs with the current LLM port
-  sed -i.bak "s|api_base: \"http://127.0.0.1:[0-9]*/v3\"|api_base: \"http://127.0.0.1:${LLM_PORT}/v3\"|g" "${CONFIG_FILE}"
+  sed -i "s|api_base: \"http://127.0.0.1:[0-9]*/v3\"|api_base: \"http://127.0.0.1:${LLM_PORT}/v3\"|g" "${CONFIG_FILE}"
   # Update model names
-  sed -i.bak "s|model: \"openai:OpenVINO/[^\"]*\"|model: \"openai:${LLM_MODEL}\"|g" "${CONFIG_FILE}"
+  sed -i "s|model: \"openai:OpenVINO/[^\"]*\"|model: \"openai:${LLM_MODEL}\"|g" "${CONFIG_FILE}"
   echo "✓ Updated agents_config.yaml with current configuration"
 else
   echo "⚠ config/agents_config.yaml not found"
@@ -502,7 +502,7 @@ except Exception:
       if [ -n "$OVMS_MODEL_ID" ]; then
         OVMS_MODEL_ID_ESC=${OVMS_MODEL_ID//&/\\&}
         OVMS_MODEL_ID_ESC=${OVMS_MODEL_ID_ESC//|/\\|}
-        sed -i.bak "s|model: \"openai:[^\"]*\"|model: \"openai:${OVMS_MODEL_ID_ESC}\"|g" "${CONFIG_FILE}"
+        sed -i "s|model: \"openai:[^\"]*\"|model: \"openai:${OVMS_MODEL_ID_ESC}\"|g" "${CONFIG_FILE}"
         echo "✓ Synced agents_config.yaml model to OVMS model id: ${OVMS_MODEL_ID}"
         break
       fi
