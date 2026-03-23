@@ -132,7 +132,7 @@ Stop everything:
 ./run_all_linux.sh --stop
 ```
 
-Pass model/device options:
+The kit ships with tested default models and runs without extra flags. The options below are optional if you want to customize models, ports, or device selection:
 
 ```bash
 ./run_all_linux.sh --device CPU --llm-port 9001 --vlm-port 9002
@@ -154,7 +154,7 @@ Stop everything:
 run_all_windows.bat --stop
 ```
 
-Pass model/device options:
+The kit ships with tested default models and runs without extra flags. The options below are optional if you want to customize models, ports, or device selection:
 
 ```bat
 run_all_windows.bat --device CPU --llm-port 9001 --vlm-port 9002
