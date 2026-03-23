@@ -51,11 +51,23 @@ To read about the latest details and updates on OpenVINO toolkit, visit our [blo
 ## Contribute
 If you want to contribute to OpenVINO toolkit, please read this [article](https://medium.com/openvino-toolkit/how-to-contribute-to-an-ai-open-source-project-c741f48e009e).
 
-## Troubleshooting and Resources
-- Open a [discussion topic](https://github.com/openvinotoolkit/openvino_build_deploy/discussions)
-- Create an [issue](https://github.com/openvinotoolkit/openvino_build_deploy/issues)
-- Learn more about [OpenVINO](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html)
-- Explore [OpenVINO’s documentation](https://docs.openvino.ai/home.html)
+## Troubleshooting
+
+First, please verify that you have followed the instructions in the project's README. Then, being in the `ai_ref_kit/demo` directory, run the following to check the environment and all the packages:
+
+```bash
+python ../../check_project_env.py
+```
+
+See if no packages are missing and all the versions are correct. If you still have issues, please try:
+
+- Opening a [discussion topic](https://github.com/openvinotoolkit/openvino_build_deploy/discussions)
+- Creating an [issue](https://github.com/openvinotoolkit/openvino_build_deploy/issues)
+
+And learn more by:
+
+- Reading about [OpenVINO](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html)
+- Exploring [OpenVINO’s documentation](https://docs.openvino.ai/home.html)
 
 ## Team
 
