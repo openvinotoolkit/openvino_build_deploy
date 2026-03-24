@@ -81,9 +81,12 @@ cd /d "%SCRIPT_DIR%"
 
 if "%STOP_MODE%"=="1" (
     echo Stopping unified stack...
+    echo Stopping OVMS models...
+    call "%MODELS_SCRIPT%" --stop %MODEL_ARGS%
+    echo Stopping agents...
     call :run_python "start_agents.py" --stop
+    echo Stopping MCP servers...
     call :run_python "start_mcp_servers.py" --stop --kill
-    call :stop_ovms_ports
     echo All stop commands sent.
     exit /b 0
 )
