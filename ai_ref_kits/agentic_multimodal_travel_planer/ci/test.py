@@ -88,6 +88,24 @@ def _http_get_json(url: str, timeout: int = 20) -> dict:
         raise RuntimeError(f"GET failed for {url}: {exc}") from exc
 
 
+def _try_http_get_json(url: str, timeout: int = 20) -> dict | None:
+    """GET JSON or return None on transient errors (connection refused, timeout)."""
+    req = urllib.request.Request(url, method="GET")
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            payload = response.read().decode("utf-8")
+            if not payload:
+                return {}
+            return json.loads(payload)
+    except (
+        urllib.error.URLError,
+        TimeoutError,
+        OSError,
+        json.JSONDecodeError,
+    ):
+        return None
+
+
 def _load_yaml(path: Path) -> dict:
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     return data if isinstance(data, dict) else {}
@@ -180,16 +198,20 @@ def _wait_for_models_payload(
 ) -> dict:
     deadline = time.time() + timeout_s
     last_payload: dict = {}
+    models_url = f"{base_url}/models"
+    get_timeout = min(30, max(5, int(timeout_s // 6)))
     while time.time() < deadline:
-        payload = _http_get_json(f"{base_url}/models")
-        last_payload = payload if isinstance(payload, dict) else {}
-        data = last_payload.get("data")
-        if isinstance(data, list) and data:
-            return last_payload
+        payload = _try_http_get_json(models_url, timeout=get_timeout)
+        if isinstance(payload, dict):
+            last_payload = payload
+            data = last_payload.get("data")
+            if isinstance(data, list) and data:
+                return last_payload
         time.sleep(interval_s)
 
     raise RuntimeError(
-        f"{label} models did not become ready within {timeout_s}s. "
+        f"{label} models did not become ready within {timeout_s}s "
+        f"(retried while connection refused or empty /v3/models). "
         f"Last payload={json.dumps(last_payload, ensure_ascii=True)}"
     )
 
