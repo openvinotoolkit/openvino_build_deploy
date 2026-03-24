@@ -275,7 +275,8 @@ if not "%VLM_DEVICE%"=="" set VLM_ARGS=%VLM_ARGS% --target_device %VLM_DEVICE%
 REM Use PowerShell Start-Process to launch detached
 powershell -Command "Start-Process -FilePath '%OVMS_PATH%' -ArgumentList '%VLM_ARGS%' -RedirectStandardOutput '%LOGS_DIR%\ovms_vlm.log' -RedirectStandardError '%LOGS_DIR%\ovms_vlm.err' -WindowStyle Hidden" || (echo Failed to start VLM service && exit /b 1)
 set "VLM_PID="
-for /L %%n in (1,1,25) do (
+REM VLM (vision) often binds slower than LLM on CPU CI; allow ~3 min of polling
+for /L %%n in (1,1,90) do (
   if "!VLM_PID!"=="" (
     ping -n 3 127.0.0.1 >nul
     for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%VLM_PORT%" ^| findstr "LISTENING"') do set "VLM_PID=%%a"
