@@ -271,7 +271,7 @@ REM --port = gRPC, --rest_port = HTTP REST. REST on VLM_PORT for clients.
 echo Starting VLM service (REST on %VLM_PORT%, gRPC on 8012)...
 set VLM_GRPC_PORT=8012
 set VLM_ARGS=--port %VLM_GRPC_PORT% --rest_port %VLM_PORT% --model_name "%VLM_MODEL%" --model_path "%VLM_MODEL_PATH%"
-if not "%VLM_DEVICE%"=="" set VLM_ARGS=%VLM_ARGS% --target_device %VLM_DEVICE%
+REM Do not pass --target_device for VLM ^(MediaPipe^); OVMS expects device in model subconfig.json.
 REM Use PowerShell Start-Process to launch detached
 powershell -Command "Start-Process -FilePath '%OVMS_PATH%' -ArgumentList '%VLM_ARGS%' -RedirectStandardOutput '%LOGS_DIR%\ovms_vlm.log' -RedirectStandardError '%LOGS_DIR%\ovms_vlm.err' -WindowStyle Hidden" || (echo Failed to start VLM service && exit /b 1)
 set "VLM_PID="
@@ -376,7 +376,7 @@ echo   --vlm-port PORT        VLM REST port ^(default: %VLM_PORT%^)
 echo   --models-dir DIR       Models directory ^(default: %MODELS_DIR%^)
 echo   --device DEVICE        Base device for both models ^(CPU, GPU, GPU.0, ...^)
 echo   --llm-device DEVICE    Device override for LLM
-echo   --vlm-device DEVICE    Device override for VLM
+echo   --vlm-device DEVICE    Not passed to VLM OVMS ^(use model subconfig.json^)
 echo.
 echo Examples:
 echo   %~nx0
