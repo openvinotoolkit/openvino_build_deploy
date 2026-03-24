@@ -239,7 +239,14 @@ echo Syncing config\agents_config.yaml with current LLM settings...
 powershell -NoProfile -Command "$cfg=$env:CONFIG_FILE; $port=$env:LLM_PORT; $llm=$env:LLM_MODEL; if (-not $cfg) { exit 0 }; $text=Get-Content -Raw -Path $cfg; $text=[regex]::Replace($text, 'api_base:\s*\"http://127\.0\.0\.1:[0-9]+/v3\"', ('api_base: \"http://127.0.0.1:' + $port + '/v3\"')); $text=[regex]::Replace($text, 'model:\s*\"openai:OpenVINO/[^\"]*\"', ('model: \"openai:' + $llm + '\"')); Set-Content -Path $cfg -Value $text"
 
 set "OVMS_MODEL_ID="
-for /f "usebackq delims=" %%I in (`powershell -NoProfile -Command "try { $r=Invoke-RestMethod -Uri ('http://127.0.0.1:' + $env:LLM_PORT + '/v3/models') -Method Get -TimeoutSec 5; if ($r.data -and $r.data.Count -gt 0) { $r.data[0].id } } catch {}"`) do set "OVMS_MODEL_ID=%%I"
+set "OVMS_ID_FILE=%TEMP%\ovms_model_id_%RANDOM%.txt"
+if exist "%OVMS_ID_FILE%" del "%OVMS_ID_FILE%" >nul 2>&1
+
+powershell -NoProfile -Command "$id=''; try { $r=Invoke-RestMethod -Uri ('http://127.0.0.1:' + $env:LLM_PORT + '/v3/models') -Method Get -TimeoutSec 5; if ($r.data -and $r.data.Count -gt 0) { $id = $r.data[0].id } } catch {}; if ($id) { Set-Content -Path $env:OVMS_ID_FILE -Value $id -NoNewline }"
+if exist "%OVMS_ID_FILE%" (
+    set /p OVMS_MODEL_ID=<"%OVMS_ID_FILE%"
+    del "%OVMS_ID_FILE%" >nul 2>&1
+)
 
 if defined OVMS_MODEL_ID (
     powershell -NoProfile -Command "$cfg=$env:CONFIG_FILE; $id=$env:OVMS_MODEL_ID; $text=Get-Content -Raw -Path $cfg; $text=[regex]::Replace($text, 'model:\s*\"openai:[^\"]*\"', ('model: \"openai:' + $id + '\"')); Set-Content -Path $cfg -Value $text"
