@@ -260,7 +260,7 @@ powershell -Command "Start-Process -FilePath '%OVMS_PATH%' -ArgumentList '%LLM_A
 set "LLM_PID="
 for /L %%n in (1,1,25) do (
   if "!LLM_PID!"=="" (
-    timeout /t 2 /nobreak >nul
+    ping -n 3 127.0.0.1 >nul
     for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%LLM_PORT%" ^| findstr "LISTENING"') do set "LLM_PID=%%a"
   )
 )
@@ -277,7 +277,7 @@ powershell -Command "Start-Process -FilePath '%OVMS_PATH%' -ArgumentList '%VLM_A
 set "VLM_PID="
 for /L %%n in (1,1,25) do (
   if "!VLM_PID!"=="" (
-    timeout /t 2 /nobreak >nul
+    ping -n 3 127.0.0.1 >nul
     for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%VLM_PORT%" ^| findstr "LISTENING"') do set "VLM_PID=%%a"
   )
 )
