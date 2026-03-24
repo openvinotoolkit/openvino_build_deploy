@@ -156,8 +156,8 @@ echo ERROR: python, py, or python3 not found in PATH.
 exit /b 1
 
 :stop_ovms_ports
-echo Stopping OVMS processes on ports 8001, 8002, 8011, 8012...
-for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":8001 :8002 :8011 :8012"') do taskkill /F /PID %%a >nul 2>&1
+echo Stopping OVMS processes listening on ports 8001, 8002, 8011, 8012...
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr "LISTENING" ^| findstr ":8001 :8002 :8011 :8012"') do taskkill /F /PID %%a >nul 2>&1
 exit /b 0
 
 :show_help
