@@ -261,11 +261,11 @@ echo Warning: could not resolve OVMS model id from /v3/models
 exit /b 0
 
 :sync_cfg_base
-powershell -NoProfile -Command "$cfg=$env:CONFIG_FILE; $port=$env:LLM_PORT; $llm=$env:LLM_MODEL; if (-not (Test-Path $cfg)) { exit 0 }; $text=Get-Content -Raw -Path $cfg; $text=[regex]::Replace($text, 'api_base:\s*\x22http://127\.0\.0\.1:[0-9]+/v3\x22', ('api_base: `"http://127.0.0.1:' + $port + '/v3`"')); $text=[regex]::Replace($text, 'model:\s*\x22openai:OpenVINO/[^\x22]*\x22', ('model: `"openai:' + $llm + '`"')); Set-Content -Path $cfg -Value $text -Encoding UTF8"
+powershell -NoProfile -Command "$cfg=$env:CONFIG_FILE; $port=$env:LLM_PORT; $llm=$env:LLM_MODEL; if (-not (Test-Path $cfg)) { exit 0 }; $q=[char]34; $text=Get-Content -Raw -Path $cfg; $text=[regex]::Replace($text, 'api_base:\s*\x22http://127\.0\.0\.1:[0-9]+/v3\x22', ('api_base: ' + $q + 'http://127.0.0.1:' + $port + '/v3' + $q)); $text=[regex]::Replace($text, 'model:\s*\x22openai:OpenVINO/[^\x22]*\x22', ('model: ' + $q + 'openai:' + $llm + $q)); Set-Content -Path $cfg -Value $text -Encoding UTF8"
 exit /b 0
 
 :sync_cfg_model_id
-powershell -NoProfile -Command "$cfg=$env:CONFIG_FILE; $id=$env:OVMS_MODEL_ID; if (-not (Test-Path $cfg)) { exit 0 }; $text=Get-Content -Raw -Path $cfg; $text=[regex]::Replace($text, 'model:\s*\x22openai:[^\x22]*\x22', ('model: `"openai:' + $id + '`"')); Set-Content -Path $cfg -Value $text -Encoding UTF8"
+powershell -NoProfile -Command "$cfg=$env:CONFIG_FILE; $id=$env:OVMS_MODEL_ID; if (-not (Test-Path $cfg)) { exit 0 }; $q=[char]34; $text=Get-Content -Raw -Path $cfg; $text=[regex]::Replace($text, 'model:\s*\x22openai:[^\x22]*\x22', ('model: ' + $q + 'openai:' + $id + $q)); Set-Content -Path $cfg -Value $text -Encoding UTF8"
 exit /b 0
 
 :stop_only
