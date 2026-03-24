@@ -117,7 +117,7 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### Linux (Docker)
+### Start Application (Linux / Docker)
 
 Use the launcher:
 
@@ -140,7 +140,7 @@ The kit ships with tested default models and runs without extra flags. The optio
 ./run_all_linux.sh --llm-device GPU.0 --vlm-device CPU
 ```
 
-### Windows (Binary)
+### Start Application (Windows / Binary)
 
 Use the launcher:
 
