@@ -1,6 +1,5 @@
 gradio==6.7.0
 # beeai-framework needs litellm>=1.80.11,<2; pin one release (avoid 1.82.7–1.82.8 on PyPI).
-# Windows: litellm has deep paths—if pip fails with path length errors, see README (long paths / shorter clone path).
 litellm==1.82.2
 beeai-framework==0.1.75
 beeai-framework[a2a]==0.1.75
