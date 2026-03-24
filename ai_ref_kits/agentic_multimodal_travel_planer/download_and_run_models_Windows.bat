@@ -352,7 +352,12 @@ exit /b 0
 
 :stop_only
 echo Stopping existing processes on ports %LLM_PORT%, %VLM_PORT%, 8011, 8012...
-for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%LLM_PORT% :%VLM_PORT% :8011 :8012"') do taskkill /F /PID %%a >nul 2>&1
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr "LISTENING" ^| findstr ":%LLM_PORT% :%VLM_PORT% :8011 :8012"') do (
+    if not defined seen_%%a (
+        set "seen_%%a=1"
+        taskkill /F /PID %%a >nul 2>&1
+    )
+)
 echo Done.
 endlocal
 exit /b 0
