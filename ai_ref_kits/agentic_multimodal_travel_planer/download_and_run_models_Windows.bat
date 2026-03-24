@@ -94,6 +94,77 @@ call :to_upper TARGET_DEVICE
 call :to_upper LLM_DEVICE
 call :to_upper VLM_DEVICE
 
+REM Validate device values (must be CPU, GPU, or GPU.N) and ports (must be numeric)
+call :validate_device TARGET_DEVICE "!TARGET_DEVICE!"
+call :validate_device LLM_DEVICE "!LLM_DEVICE!"
+call :validate_device VLM_DEVICE "!VLM_DEVICE!"
+call :validate_port LLM_PORT "!LLM_PORT!"
+call :validate_port VLM_PORT "!VLM_PORT!"
+
+goto :after_validation_subroutines
+
+:validate_device
+REM %1 = variable name, %2 = current value (already normalized to upper-case)
+set "DEV_NAME=%~1"
+set "DEV_VALUE=%~2"
+
+REM Allow empty value (use default behavior if any)
+if "!DEV_VALUE!"=="" goto :validate_device_end
+
+REM Allow CPU or GPU directly
+if /I "!DEV_VALUE!"=="CPU" goto :validate_device_end
+if /I "!DEV_VALUE!"=="GPU" goto :validate_device_end
+
+REM Check for GPU.N pattern
+for /f "tokens=1,2 delims=." %%A in ("!DEV_VALUE!") do (
+    set "DEV_PREFIX=%%A"
+    set "DEV_SUFFIX=%%B"
+)
+
+if /I not "!DEV_PREFIX!"=="GPU" goto :invalid_device_value
+if "!DEV_SUFFIX!"=="" goto :invalid_device_value
+
+REM Ensure suffix is numeric
+echo(!DEV_SUFFIX!| findstr /R "^[0-9][0-9]*$" >nul || goto :invalid_device_value
+goto :validate_device_end
+
+:invalid_device_value
+echo.
+echo ERROR: Invalid value for !DEV_NAME!: "!DEV_VALUE!"
+echo        Supported formats: CPU, GPU, or GPU.N  (for example: GPU.0)
+exit /b 1
+
+:validate_device_end
+set "DEV_NAME="
+set "DEV_VALUE="
+set "DEV_PREFIX="
+set "DEV_SUFFIX="
+goto :eof
+
+:validate_port
+REM %1 = variable name, %2 = current value
+set "PORT_NAME=%~1"
+set "PORT_VALUE=%~2"
+
+REM Port must be non-empty and numeric
+if "!PORT_VALUE!"=="" (
+    echo.
+    echo ERROR: Port variable !PORT_NAME! is empty.
+    exit /b 1
+)
+
+echo(!PORT_VALUE!| findstr /R "^[0-9][0-9]*$" >nul || (
+    echo.
+    echo ERROR: Invalid value for !PORT_NAME!: "!PORT_VALUE!"
+    echo        Port values must be numeric.
+    exit /b 1
+)
+
+set "PORT_NAME="
+set "PORT_VALUE="
+goto :eof
+
+:after_validation_subroutines
 REM Download and extract OVMS package
 if not exist "%OVMS_DIR%" (
     echo Downloading OpenVINO Model Server package...
