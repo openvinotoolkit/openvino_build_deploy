@@ -236,7 +236,7 @@ if not exist "%CONFIG_FILE%" (
 )
 
 echo Syncing config\agents_config.yaml with current LLM settings...
-powershell -NoProfile -Command "$cfg=$env:CONFIG_FILE; $port=$env:LLM_PORT; $llm=$env:LLM_MODEL; if (-not $cfg) { exit 0 }; $text=Get-Content -Raw -Path $cfg; $text=[regex]::Replace($text, 'api_base:\s*\"http://127\.0\.0\.1:[0-9]+/v3\"', ('api_base: \"http://127.0.0.1:' + $port + '/v3\"')); $text=[regex]::Replace($text, 'model:\s*\"openai:OpenVINO/[^\"]*\"', ('model: \"openai:' + $llm + '\"')); Set-Content -Path $cfg -Value $text"
+powershell -NoProfile -Command "$cfg=$env:CONFIG_FILE; $port=$env:LLM_PORT; $llm=$env:LLM_MODEL; if (-not (Test-Path $cfg)) { exit 0 }; $text=Get-Content -Raw -Path $cfg; $text=[regex]::Replace($text, 'api_base:\s*\x22http://127\.0\.0\.1:[0-9]+/v3\x22', ('api_base: `"http://127.0.0.1:' + $port + '/v3`"')); $text=[regex]::Replace($text, 'model:\s*\x22openai:OpenVINO/[^\x22]*\x22', ('model: `"openai:' + $llm + '`"')); Set-Content -Path $cfg -Value $text -Encoding UTF8"
 
 set "OVMS_MODEL_ID="
 set "OVMS_ID_FILE=%TEMP%\ovms_model_id_%RANDOM%.txt"
@@ -249,7 +249,7 @@ if exist "%OVMS_ID_FILE%" (
 )
 
 if defined OVMS_MODEL_ID (
-    powershell -NoProfile -Command "$cfg=$env:CONFIG_FILE; $id=$env:OVMS_MODEL_ID; $text=Get-Content -Raw -Path $cfg; $text=[regex]::Replace($text, 'model:\s*\"openai:[^\"]*\"', ('model: \"openai:' + $id + '\"')); Set-Content -Path $cfg -Value $text"
+    powershell -NoProfile -Command "$cfg=$env:CONFIG_FILE; $id=$env:OVMS_MODEL_ID; if (-not (Test-Path $cfg)) { exit 0 }; $text=Get-Content -Raw -Path $cfg; $text=[regex]::Replace($text, 'model:\s*\x22openai:[^\x22]*\x22', ('model: `"openai:' + $id + '`"')); Set-Content -Path $cfg -Value $text -Encoding UTF8"
     echo Synced agents model to OVMS model id: !OVMS_MODEL_ID!
 ) else (
     echo Warning: could not resolve OVMS model id from /v3/models
