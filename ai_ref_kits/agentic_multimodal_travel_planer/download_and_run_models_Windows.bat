@@ -236,7 +236,7 @@ if not exist "%CONFIG_FILE%" (
 )
 
 echo Syncing config\agents_config.yaml with current LLM settings...
-powershell -NoProfile -Command "$cfg=$env:CONFIG_FILE; $port=$env:LLM_PORT; $llm=$env:LLM_MODEL; if (-not (Test-Path $cfg)) { exit 0 }; $text=Get-Content -Raw -Path $cfg; $text=[regex]::Replace($text, 'api_base:\s*\x22http://127\.0\.0\.1:[0-9]+/v3\x22', ('api_base: `"http://127.0.0.1:' + $port + '/v3`"')); $text=[regex]::Replace($text, 'model:\s*\x22openai:OpenVINO/[^\x22]*\x22', ('model: `"openai:' + $llm + '`"')); Set-Content -Path $cfg -Value $text -Encoding UTF8"
+call :sync_cfg_base
 
 set "OVMS_MODEL_ID="
 set "OVMS_ID_FILE=%TEMP%\ovms_model_id_%RANDOM%.txt"
@@ -248,13 +248,24 @@ if exist "%OVMS_ID_FILE%" (
     del "%OVMS_ID_FILE%" >nul 2>&1
 )
 
-if defined OVMS_MODEL_ID (
-    powershell -NoProfile -Command "$cfg=$env:CONFIG_FILE; $id=$env:OVMS_MODEL_ID; if (-not (Test-Path $cfg)) { exit 0 }; $text=Get-Content -Raw -Path $cfg; $text=[regex]::Replace($text, 'model:\s*\x22openai:[^\x22]*\x22', ('model: `"openai:' + $id + '`"')); Set-Content -Path $cfg -Value $text -Encoding UTF8"
-    echo Synced agents model to OVMS model id: !OVMS_MODEL_ID!
-) else (
-    echo Warning: could not resolve OVMS model id from /v3/models
-)
+if not defined OVMS_MODEL_ID goto sync_cfg_no_model_id
+call :sync_cfg_model_id
+echo Synced agents model to OVMS model id: !OVMS_MODEL_ID!
+goto sync_cfg_done
 
+:sync_cfg_no_model_id
+echo Warning: could not resolve OVMS model id from /v3/models
+
+:sync_cfg_done
+
+exit /b 0
+
+:sync_cfg_base
+powershell -NoProfile -Command "$cfg=$env:CONFIG_FILE; $port=$env:LLM_PORT; $llm=$env:LLM_MODEL; if (-not (Test-Path $cfg)) { exit 0 }; $text=Get-Content -Raw -Path $cfg; $text=[regex]::Replace($text, 'api_base:\s*\x22http://127\.0\.0\.1:[0-9]+/v3\x22', ('api_base: `"http://127.0.0.1:' + $port + '/v3`"')); $text=[regex]::Replace($text, 'model:\s*\x22openai:OpenVINO/[^\x22]*\x22', ('model: `"openai:' + $llm + '`"')); Set-Content -Path $cfg -Value $text -Encoding UTF8"
+exit /b 0
+
+:sync_cfg_model_id
+powershell -NoProfile -Command "$cfg=$env:CONFIG_FILE; $id=$env:OVMS_MODEL_ID; if (-not (Test-Path $cfg)) { exit 0 }; $text=Get-Content -Raw -Path $cfg; $text=[regex]::Replace($text, 'model:\s*\x22openai:[^\x22]*\x22', ('model: `"openai:' + $id + '`"')); Set-Content -Path $cfg -Value $text -Encoding UTF8"
 exit /b 0
 
 :stop_only
