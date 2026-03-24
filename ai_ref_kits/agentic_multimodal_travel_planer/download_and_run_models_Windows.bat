@@ -186,9 +186,14 @@ set LLM_ARGS=--port %LLM_GRPC_PORT% --rest_port %LLM_PORT% --model_repository_pa
 if not "%LLM_DEVICE%"=="" set LLM_ARGS=%LLM_ARGS% --target_device %LLM_DEVICE%
 REM Use PowerShell Start-Process to launch detached
 powershell -Command "Start-Process -FilePath '%OVMS_PATH%' -ArgumentList '%LLM_ARGS%' -RedirectStandardOutput '%LOGS_DIR%\ovms_llm.log' -RedirectStandardError '%LOGS_DIR%\ovms_llm.err' -WindowStyle Hidden" || (echo Failed to start LLM service && exit /b 1)
-ping -n 3 127.0.0.1 >nul
-for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%LLM_PORT%" ^| findstr "LISTENING"') do set LLM_PID=%%a
-if defined LLM_PID (echo LLM service started - PID: %LLM_PID%) else (echo LLM service started - check log: %LOGS_DIR%\ovms_llm.log)
+set "LLM_PID="
+for /L %%n in (1,1,25) do (
+  if "!LLM_PID!"=="" (
+    timeout /t 2 /nobreak >nul
+    for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%LLM_PORT%" ^| findstr "LISTENING"') do set "LLM_PID=%%a"
+  )
+)
+if defined LLM_PID (echo LLM service started - PID: !LLM_PID!) else (echo LLM service started - still binding; check log: %LOGS_DIR%\ovms_llm.log)
 
 REM Start VLM service
 REM --port = gRPC, --rest_port = HTTP REST. REST on VLM_PORT for clients.
@@ -198,9 +203,14 @@ set VLM_ARGS=--port %VLM_GRPC_PORT% --rest_port %VLM_PORT% --model_name "%VLM_MO
 if not "%VLM_DEVICE%"=="" set VLM_ARGS=%VLM_ARGS% --target_device %VLM_DEVICE%
 REM Use PowerShell Start-Process to launch detached
 powershell -Command "Start-Process -FilePath '%OVMS_PATH%' -ArgumentList '%VLM_ARGS%' -RedirectStandardOutput '%LOGS_DIR%\ovms_vlm.log' -RedirectStandardError '%LOGS_DIR%\ovms_vlm.err' -WindowStyle Hidden" || (echo Failed to start VLM service && exit /b 1)
-ping -n 3 127.0.0.1 >nul
-for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%VLM_PORT%" ^| findstr "LISTENING"') do set VLM_PID=%%a
-if defined VLM_PID (echo VLM service started - PID: %VLM_PID%) else (echo VLM service started - check log: %LOGS_DIR%\ovms_vlm.log)
+set "VLM_PID="
+for /L %%n in (1,1,25) do (
+  if "!VLM_PID!"=="" (
+    timeout /t 2 /nobreak >nul
+    for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%VLM_PORT%" ^| findstr "LISTENING"') do set "VLM_PID=%%a"
+  )
+)
+if defined VLM_PID (echo VLM service started - PID: !VLM_PID!) else (echo VLM service started - still binding; check log: %LOGS_DIR%\ovms_vlm.log)
 
 call :sync_agents_config
 
@@ -242,7 +252,7 @@ set "OVMS_MODEL_ID="
 set "OVMS_ID_FILE=%TEMP%\ovms_model_id_%RANDOM%.txt"
 if exist "%OVMS_ID_FILE%" del "%OVMS_ID_FILE%" >nul 2>&1
 
-powershell -NoProfile -Command "$id=''; try { $r=Invoke-RestMethod -Uri ('http://127.0.0.1:' + $env:LLM_PORT + '/v3/models') -Method Get -TimeoutSec 5; if ($r.data -and $r.data.Count -gt 0) { $id = $r.data[0].id } } catch {}; if ($id) { Set-Content -Path $env:OVMS_ID_FILE -Value $id -NoNewline }"
+powershell -NoProfile -Command "$out=$env:OVMS_ID_FILE; $port=$env:LLM_PORT; $id=''; for ($i=0; $i -lt 30 -and -not $id; $i++) { try { $r=Invoke-RestMethod -Uri ('http://127.0.0.1:' + $port + '/v3/models') -Method Get -TimeoutSec 15; if ($r.data -and @($r.data).Count -gt 0 -and $r.data[0].id) { $id=[string]$r.data[0].id } } catch { } if (-not $id) { Start-Sleep -Seconds 3 } }; if ($id) { Set-Content -Path $out -Value $id -NoNewline }"
 if exist "%OVMS_ID_FILE%" (
     set /p OVMS_MODEL_ID=<"%OVMS_ID_FILE%"
     del "%OVMS_ID_FILE%" >nul 2>&1
@@ -254,7 +264,8 @@ echo Synced agents model to OVMS model id: !OVMS_MODEL_ID!
 goto sync_cfg_done
 
 :sync_cfg_no_model_id
-echo Warning: could not resolve OVMS model id from /v3/models
+echo Note: LLM /v3/models not ready yet after wait - agents_config already has model and api_base from sync above.
+echo       If agents fail to load the model, wait for OVMS then re-run this script or edit config\agents_config.yaml.
 
 :sync_cfg_done
 
