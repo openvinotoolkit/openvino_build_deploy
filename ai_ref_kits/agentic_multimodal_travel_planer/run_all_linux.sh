@@ -16,7 +16,7 @@ MODEL_ARGS=()
 
 show_help() {
   cat <<EOF
-Usage: $0 [OPTIONS] [-- <model-script-args>]
+Usage: $0 [OPTIONS] [[--] <model-script-args>...]
 
 Unified launcher for:
   1) download_and_run_models_linux.sh
@@ -32,11 +32,14 @@ Options:
   --skip-agents      Skip agent startup
   --skip-ui          Skip Gradio UI startup
 
-Pass-through model args:
-  Use '--' to pass arguments directly to download_and_run_models_linux.sh.
+Model script arguments:
+  Any token that is not a launcher option above is forwarded to
+  download_and_run_models_linux.sh (same as run_all_windows.bat).
+  Optional '--' ends launcher parsing; everything after it is forwarded as-is.
 
 Examples:
   $0
+  $0 --device CPU --llm-port 9001 --vlm-port 9002
   $0 -- --device CPU --llm-port 9001 --vlm-port 9002
   $0 --skip-ui
   $0 --stop
