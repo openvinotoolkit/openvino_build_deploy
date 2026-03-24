@@ -183,7 +183,7 @@ REM --port = gRPC, --rest_port = HTTP REST (chat/completions). Agents use HTTP, 
 echo Starting LLM service (REST on %LLM_PORT%, gRPC on 8011)...
 set LLM_GRPC_PORT=8011
 set LLM_ARGS=--port %LLM_GRPC_PORT% --rest_port %LLM_PORT% --model_repository_path "%MODELS_DIR%" --source_model "%LLM_MODEL%" --tool_parser hermes3 --cache_size 0 --task text_generation 
-if not "%TARGET_DEVICE%"=="" set LLM_ARGS=%LLM_ARGS% --target_device %TARGET_DEVICE%
+if not "%LLM_DEVICE%"=="" set LLM_ARGS=%LLM_ARGS% --target_device %LLM_DEVICE%
 REM Use PowerShell Start-Process to launch detached
 powershell -Command "Start-Process -FilePath '%OVMS_PATH%' -ArgumentList '%LLM_ARGS%' -RedirectStandardOutput '%LOGS_DIR%\ovms_llm.log' -RedirectStandardError '%LOGS_DIR%\ovms_llm.err' -WindowStyle Hidden" || (echo Failed to start LLM service && exit /b 1)
 ping -n 3 127.0.0.1 >nul
@@ -236,14 +236,14 @@ if not exist "%CONFIG_FILE%" (
 )
 
 echo Syncing config\agents_config.yaml with current LLM settings...
-powershell -NoProfile -Command "$cfg=$args[0]; $port=$args[1]; $llm=$args[2]; $text=Get-Content -Raw -Path $cfg; $text=[regex]::Replace($text, 'api_base:\s*\"http://127\.0\.0\.1:[0-9]+/v3\"', ('api_base: \"http://127.0.0.1:'+ $port + '/v3\"')); $text=[regex]::Replace($text, 'model:\s*\"openai:OpenVINO/[^\"]*\"', ('model: \"openai:' + $llm + '\"')); Set-Content -Path $cfg -Value $text" "%CONFIG_FILE%" "%LLM_PORT%" "%LLM_MODEL%" >nul 2>&1
+powershell -NoProfile -Command "$cfg=$env:CONFIG_FILE; $port=$env:LLM_PORT; $llm=$env:LLM_MODEL; if (-not $cfg) { exit 0 }; $text=Get-Content -Raw -Path $cfg; $text=[regex]::Replace($text, 'api_base:\s*\"http://127\.0\.0\.1:[0-9]+/v3\"', ('api_base: \"http://127.0.0.1:' + $port + '/v3\"')); $text=[regex]::Replace($text, 'model:\s*\"openai:OpenVINO/[^\"]*\"', ('model: \"openai:' + $llm + '\"')); Set-Content -Path $cfg -Value $text"
 
 set "OVMS_MODEL_ID="
-for /f "usebackq delims=" %%I in (`powershell -NoProfile -Command "try { $r=Invoke-RestMethod -Uri ('http://127.0.0.1:' + $args[0] + '/v3/models') -Method Get -TimeoutSec 5; if ($r.data -and $r.data.Count -gt 0) { $r.data[0].id } } catch {}" "%LLM_PORT%"`) do set "OVMS_MODEL_ID=%%I"
+for /f "usebackq delims=" %%I in (`powershell -NoProfile -Command "try { $r=Invoke-RestMethod -Uri ('http://127.0.0.1:' + $env:LLM_PORT + '/v3/models') -Method Get -TimeoutSec 5; if ($r.data -and $r.data.Count -gt 0) { $r.data[0].id } } catch {}"`) do set "OVMS_MODEL_ID=%%I"
 
 if defined OVMS_MODEL_ID (
-    powershell -NoProfile -Command "$cfg=$args[0]; $id=$args[1]; $text=Get-Content -Raw -Path $cfg; $text=[regex]::Replace($text, 'model:\s*\"openai:[^\"]*\"', ('model: \"openai:' + $id + '\"')); Set-Content -Path $cfg -Value $text" "%CONFIG_FILE%" "%OVMS_MODEL_ID%" >nul 2>&1
-    echo Synced agents model to OVMS model id: %OVMS_MODEL_ID%
+    powershell -NoProfile -Command "$cfg=$env:CONFIG_FILE; $id=$env:OVMS_MODEL_ID; $text=Get-Content -Raw -Path $cfg; $text=[regex]::Replace($text, 'model:\s*\"openai:[^\"]*\"', ('model: \"openai:' + $id + '\"')); Set-Content -Path $cfg -Value $text"
+    echo Synced agents model to OVMS model id: !OVMS_MODEL_ID!
 ) else (
     echo Warning: could not resolve OVMS model id from /v3/models
 )
