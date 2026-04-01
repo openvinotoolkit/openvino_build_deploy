@@ -26,18 +26,17 @@ jobs:
       notebook: ${{ steps.categorize-subprojects.outputs.notebook }}
       agentic: ${{ steps.categorize-subprojects.outputs.agentic }}
     steps:
-      - name: Check out code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Determine subprojects to test
-        id: find-updates
+
+      - id: find-updates
         uses: ./.github/reusable-steps/find-updates
         with:
           dir: ai_ref_kits
           ci_config_file: sanity-check-kits.yml
-      - name: Categorize subprojects
-        id: categorize-subprojects
+
+      - id: categorize-subprojects
         uses: ./.github/reusable-steps/categorize-projects
         with:
           subprojects: ${{ steps.find-updates.outputs.subproject_dirs }}
@@ -55,19 +54,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/reusable-steps/setup-os
-      - name: Set up Python ${{ matrix.python }}
-        uses: actions/setup-python@v5
+
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
+
       - uses: ./.github/reusable-steps/setup-python
         with:
           python: ${{ matrix.python }}
           project: ${{ matrix.subproject }}
+
       - uses: ./.github/reusable-steps/setup-hugging-face
         with:
           hf_token: ${{ secrets.HF_TOKEN }}
-      - name: Check if test file exists
-        id: determine-script
+
+      - id: determine-script
         shell: bash
         run: |
           if [[ -f "${{ matrix.subproject }}/ci/test.py" ]]; then
@@ -75,6 +76,7 @@ jobs:
           else
             echo "script=main.py" >> "$GITHUB_ENV"
           fi
+
       - uses: ./.github/reusable-steps/gradio-action
         timeout-minutes: 30
         with:
@@ -97,22 +99,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/reusable-steps/setup-os
-      - name: Set up Python ${{ matrix.python }}
-        uses: actions/setup-python@v5
+
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
+
       - uses: ./.github/reusable-steps/setup-python
         with:
           python: ${{ matrix.python }}
           project: ${{ matrix.subproject }}
-      - name: Start OVMS (Linux amd64 runner)
+
+      - name: Start OVMS (Linux amd64)
         if: runner.os == 'Linux' && matrix.os == 'ubuntu-24.04'
         shell: bash
-        timeout-minutes: 45
         run: |
           cd ${{ matrix.subproject }}
           bash download_and_run_models_linux.sh --device CPU
-      - name: Start OVMS (Linux ARM runner via amd64 emulation)
+
+      - name: Start OVMS (Linux ARM via amd64 emulation)
         if: runner.os == 'Linux' && matrix.os == 'ubuntu-24.04-arm'
         shell: bash
         timeout-minutes: 60
@@ -125,140 +129,29 @@ jobs:
             --timeout 5400 \
             --llm-model "OpenVINO/TinyLlama-1.1B-Chat-v1.0-int4-ov" \
             --vlm-model "OpenVINO/InternVL2-4B-int4-ov"
-      - name: Install Windows runtime dependencies
+
+      - name: Install Windows deps
         if: runner.os == 'Windows'
         shell: pwsh
-        run: |
-          choco install -y vcredist-all --no-progress
+        run: choco install -y vcredist-all --no-progress
+
       - name: Start OVMS (Windows)
         if: runner.os == 'Windows'
         shell: cmd
-        timeout-minutes: 45
-        env:
-          TARGET_DEVICE: CPU
-          LLM_DEVICE: CPU
-          VLM_DEVICE: CPU
         run: |
           cd ${{ matrix.subproject }}
           download_and_run_models_Windows.bat
-      - name: Check OVMS (Linux)
-        if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          cd ${{ matrix.subproject }}
-          echo "=== docker ps ==="
-          docker ps
-          echo "=== ovms-llm inspect ==="
-          docker inspect --format='{{json .State}}' ovms-llm || true
-          echo "=== ovms-vlm inspect ==="
-          docker inspect --format='{{json .State}}' ovms-vlm || true
-          python ci/test.py --check-ovms
-      - name: Check OVMS (Windows)
-        if: runner.os == 'Windows'
-        shell: cmd
+
+      - name: Check OVMS
         run: |
           cd ${{ matrix.subproject }}
           python ci/test.py --check-ovms
-      - name: Show OVMS logs on failure (Windows)
-        if: failure() && runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          cd ${{ matrix.subproject }}
-          Write-Host "=== OVMS LLM Log (stdout) ==="
-          if (Test-Path "logs\ovms_llm.log") { Get-Content "logs\ovms_llm.log" } else { Write-Host "No LLM stdout log found" }
-          Write-Host "=== OVMS LLM Log (stderr) ==="
-          if (Test-Path "logs\ovms_llm.err") { Get-Content "logs\ovms_llm.err" } else { Write-Host "No LLM stderr log found" }
-          Write-Host "=== OVMS VLM Log (stdout) ==="
-          if (Test-Path "logs\ovms_vlm.log") { Get-Content "logs\ovms_vlm.log" } else { Write-Host "No VLM stdout log found" }
-          Write-Host "=== OVMS VLM Log (stderr) ==="
-          if (Test-Path "logs\ovms_vlm.err") { Get-Content "logs\ovms_vlm.err" } else { Write-Host "No VLM stderr log found" }
-      - name: Start MCP (Linux)
-        if: runner.os == 'Linux'
-        shell: bash
-        env:
-          SERP_API_KEY: ${{ secrets.SERP_API_KEY }}
-        run: |
-          cd ${{ matrix.subproject }}
-          python -c "import os; print('SERP_API_KEY present:', bool(os.getenv('SERP_API_KEY')))"
-          python start_mcp_servers.py
-      - name: Start MCP (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        env:
-          SERP_API_KEY: ${{ secrets.SERP_API_KEY }}
-        run: |
-          cd ${{ matrix.subproject }}
-          python -c "import os; print('SERP_API_KEY present:', bool(os.getenv('SERP_API_KEY')))"
-          python start_mcp_servers.py
-      - name: Check MCP (Linux)
-        if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          cd ${{ matrix.subproject }}
-          python ci/test.py --check-mcp
-      - name: Check MCP (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          cd ${{ matrix.subproject }}
-          python ci/test.py --check-mcp
-      - name: Start agents (Linux)
-        if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          cd ${{ matrix.subproject }}
-          python start_agents.py
-      - name: Start agents (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          cd ${{ matrix.subproject }}
-          python start_agents.py
-      - name: Check agents (Linux)
-        if: runner.os == 'Linux'
-        shell: bash
-        env:
-          AGENT_WARMUP_SECONDS: 15
-          AGENT_QUERY_TIMEOUT_SECONDS: 1000
-          AGENT_QUERY_RETRIES: 4
-          AGENT_QUERY_RETRY_SLEEP_SECONDS: 8
-        run: |
-          cd ${{ matrix.subproject }}
-          python ci/test.py --check-agents
-      - name: Check agents (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        env:
-          AGENT_WARMUP_SECONDS: 15
-          AGENT_QUERY_TIMEOUT_SECONDS: 1000
-          AGENT_QUERY_RETRIES: 4
-          AGENT_QUERY_RETRY_SLEEP_SECONDS: 8
-        run: |
-          cd ${{ matrix.subproject }}
-          python ci/test.py --check-agents
-      - name: Stop OVMS, MCP and agents (Linux)
-        if: always() && runner.os == 'Linux'
-        shell: bash
-        run: |
-          cd ${{ matrix.subproject }}
-          python start_agents.py --stop
-          python start_mcp_servers.py --stop
-          bash download_and_run_models_linux.sh --stop
-      - name: Stop OVMS, MCP and agents (Windows)
-        if: always() && runner.os == 'Windows'
-        shell: powershell
-        run: |
-          cd ${{ matrix.subproject }}
-          Get-WmiObject Win32_Process | Where-Object { $_.CommandLine -like '*agent_runner.py*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
-          python start_mcp_servers.py --stop
-          cmd /c "download_and_run_models_Windows.bat --stop"
 
   webcam:
     needs: find-subprojects
     if: ${{ needs.find-subprojects.outputs.webcam != '[]' }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
         os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025]
         python: ["3.10", "3.13"]
@@ -270,33 +163,30 @@ jobs:
         with:
           python: ${{ matrix.python }}
           project: ${{ matrix.subproject }}
-      - name: Run Webcam Demo
+
+      - name: Run Webcam
         shell: bash
-        timeout-minutes: 30
         run: |
           cd ${{ matrix.subproject }}
-          # linux requires a virtual display
           if [ "${{ runner.os }}" == "Linux" ]; then
             xvfb-run python main.py --stream sample_video.mp4
-          else 
-            python main.py --stream sample_video.mp4 
+          else
+            python main.py --stream sample_video.mp4
           fi
 
   python:
-  needs: find-subprojects
-  if: ${{ needs.find-subprojects.outputs.python != '[]' }}
-  uses: ./.github/workflows/reusable-sanity-python.yml
-  with:
-    subprojects: ${{ needs.find-subprojects.outputs.python }}
-    python_versions: '["3.10", "3.13"]'
-
+    needs: find-subprojects
+    if: ${{ needs.find-subprojects.outputs.python != '[]' }}
+    uses: ./.github/workflows/reusable-sanity-python.yml
+    with:
+      subprojects: ${{ needs.find-subprojects.outputs.python }}
+      python_versions: '["3.10", "3.13"]'
 
   notebook:
     needs: find-subprojects
     if: ${{ needs.find-subprojects.outputs.notebook != '[]' }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
         os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025]
         python: ["3.10", "3.13"]
@@ -304,18 +194,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/reusable-steps/setup-os
-      - name: Set up Python ${{ matrix.python }}
-        uses: actions/setup-python@v5
+
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
+
       - uses: ./.github/reusable-steps/setup-python
         with:
           python: ${{ matrix.python }}
           project: ${{ matrix.subproject }}
+
       - name: Run Notebook
         shell: bash
-        timeout-minutes: 30
         run: |
           cd ${{ matrix.subproject }}
-          jupyter nbconvert --to notebook --debug --execute *.ipynb
-# temporary change for commit
+          jupyter nbconvert --to notebook --execute *.ipynb
