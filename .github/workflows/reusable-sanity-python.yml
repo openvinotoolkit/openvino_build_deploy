@@ -1,24 +1,19 @@
-name: Reusable Sanity Python Job
+name: Reusable Sanity Job
 
 on:
   workflow_call:
     inputs:
       subprojects:
-        description: "List of subprojects"
         required: true
         type: string
-
       python_versions:
-        description: "Python versions"
         required: false
         type: string
         default: '["3.10"]'
 
 jobs:
-  run-python:
-    name: Run Python Subprojects
+  run-python-job:
     runs-on: ${{ matrix.os }}
-
     strategy:
       fail-fast: false
       matrix:
@@ -27,30 +22,21 @@ jobs:
         subproject: ${{ fromJson(inputs.subprojects) }}
 
     steps:
-      # 1. Checkout repo
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # 2. Setup OS dependencies
-      - name: Setup OS
-        uses: ./.github/reusable-steps/setup-os
+      - uses: ./.github/reusable-steps/setup-os
 
-      # 3. Setup Python
-      - name: Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
 
-      # 4. Setup project dependencies
-      - name: Install dependencies
-        uses: ./.github/reusable-steps/setup-python
+      - uses: ./.github/reusable-steps/setup-python
         with:
           python: ${{ matrix.python }}
           project: ${{ matrix.subproject }}
 
-      # 5. Run project
-      - name: Run project
-        shell: bash
+      - name: Run Python project
         run: |
           cd ${{ matrix.subproject }}
           python main.py
