@@ -283,28 +283,13 @@ jobs:
           fi
 
   python:
-    needs: find-subprojects
-    if: ${{ needs.find-subprojects.outputs.python != '[]' }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025]
-        python: ["3.10", "3.13"]
-        subproject: ${{ fromJson(needs.find-subprojects.outputs.python) }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/reusable-steps/setup-os
-      - uses: ./.github/reusable-steps/setup-python
-        with:
-          python: ${{ matrix.python }}
-          project: ${{ matrix.subproject }}
-      - name: Run Python
-        shell: bash
-        timeout-minutes: 10
-        run: |
-          cd ${{ matrix.subproject }}
-          python main.py
+  needs: find-subprojects
+  if: ${{ needs.find-subprojects.outputs.python != '[]' }}
+  uses: ./.github/workflows/reusable-sanity-python.yml
+  with:
+    subprojects: ${{ needs.find-subprojects.outputs.python }}
+    python_versions: '["3.10", "3.13"]'
+
 
   notebook:
     needs: find-subprojects
