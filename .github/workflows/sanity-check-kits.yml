@@ -41,6 +41,7 @@ jobs:
         with:
           subprojects: ${{ steps.find-updates.outputs.subproject_dirs }}
 
+  # ---------------- GRADIO ----------------
   gradio:
     needs: find-subprojects
     if: ${{ needs.find-subprojects.outputs.gradio != '[]' }}
@@ -51,6 +52,7 @@ jobs:
         os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025]
         python: ["3.10", "3.13"]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.gradio) }}
+
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/reusable-steps/setup-os
@@ -68,13 +70,12 @@ jobs:
         with:
           hf_token: ${{ secrets.HF_TOKEN }}
 
-      - id: determine-script
-        shell: bash
+      - name: Detect script
         run: |
           if [[ -f "${{ matrix.subproject }}/ci/test.py" ]]; then
-            echo "script=ci/test.py" >> "$GITHUB_ENV"
+            echo "script=ci/test.py" >> $GITHUB_ENV
           else
-            echo "script=main.py" >> "$GITHUB_ENV"
+            echo "script=main.py" >> $GITHUB_ENV
           fi
 
       - uses: ./.github/reusable-steps/gradio-action
@@ -83,19 +84,19 @@ jobs:
           script: ${{ env.script }}
           project: ${{ matrix.subproject }}
 
+  # ---------------- AGENTIC ----------------
   agentic:
     needs: find-subprojects
     if: ${{ needs.find-subprojects.outputs.agentic != '[]' }}
     runs-on: ${{ matrix.os }}
-    env:
-      PYTHONUTF8: "1"
-      PYTHONIOENCODING: utf-8
+
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025]
         python: ["3.11", "3.13"]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.agentic) }}
+
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/reusable-steps/setup-os
@@ -109,32 +110,25 @@ jobs:
           python: ${{ matrix.python }}
           project: ${{ matrix.subproject }}
 
+      # Linux AMD
       - name: Start OVMS (Linux amd64)
         if: runner.os == 'Linux' && matrix.os == 'ubuntu-24.04'
-        shell: bash
         run: |
           cd ${{ matrix.subproject }}
           bash download_and_run_models_linux.sh --device CPU
 
-      - name: Start OVMS (Linux ARM via amd64 emulation)
+      # Linux ARM (KEEP THIS)
+      - name: Start OVMS (Linux ARM)
         if: runner.os == 'Linux' && matrix.os == 'ubuntu-24.04-arm'
-        shell: bash
-        timeout-minutes: 60
         env:
           DOCKER_DEFAULT_PLATFORM: linux/amd64
         run: |
           cd ${{ matrix.subproject }}
           bash download_and_run_models_linux.sh \
             --device CPU \
-            --timeout 5400 \
-            --llm-model "OpenVINO/TinyLlama-1.1B-Chat-v1.0-int4-ov" \
-            --vlm-model "OpenVINO/InternVL2-4B-int4-ov"
+            --timeout 5400
 
-      - name: Install Windows deps
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: choco install -y vcredist-all --no-progress
-
+      # Windows
       - name: Start OVMS (Windows)
         if: runner.os == 'Windows'
         shell: cmd
@@ -142,38 +136,12 @@ jobs:
           cd ${{ matrix.subproject }}
           download_and_run_models_Windows.bat
 
-      - name: Check OVMS
+      - name: Run tests
         run: |
           cd ${{ matrix.subproject }}
-          python ci/test.py --check-ovms
+          python ci/test.py
 
-  webcam:
-    needs: find-subprojects
-    if: ${{ needs.find-subprojects.outputs.webcam != '[]' }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025]
-        python: ["3.10", "3.13"]
-        subproject: ${{ fromJson(needs.find-subprojects.outputs.webcam) }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/reusable-steps/setup-os
-      - uses: ./.github/reusable-steps/setup-python
-        with:
-          python: ${{ matrix.python }}
-          project: ${{ matrix.subproject }}
-
-      - name: Run Webcam
-        shell: bash
-        run: |
-          cd ${{ matrix.subproject }}
-          if [ "${{ runner.os }}" == "Linux" ]; then
-            xvfb-run python main.py --stream sample_video.mp4
-          else
-            python main.py --stream sample_video.mp4
-          fi
-
+  # ---------------- PYTHON (REUSABLE) ----------------
   python:
     needs: find-subprojects
     if: ${{ needs.find-subprojects.outputs.python != '[]' }}
@@ -182,15 +150,44 @@ jobs:
       subprojects: ${{ needs.find-subprojects.outputs.python }}
       python_versions: '["3.10", "3.13"]'
 
+  # ---------------- WEBCAM ----------------
+  webcam:
+    needs: find-subprojects
+    if: ${{ needs.find-subprojects.outputs.webcam != '[]' }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025]
+        python: ["3.10", "3.13"]
+        subproject: ${{ fromJson(needs.find-subprojects.outputs.webcam) }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/reusable-steps/setup-os
+      - uses: ./.github/reusable-steps/setup-python
+        with:
+          python: ${{ matrix.python }}
+          project: ${{ matrix.subproject }}
+
+      - run: |
+          cd ${{ matrix.subproject }}
+          python main.py --stream sample_video.mp4
+
+  # ---------------- NOTEBOOK ----------------
   notebook:
     needs: find-subprojects
     if: ${{ needs.find-subprojects.outputs.notebook != '[]' }}
     runs-on: ${{ matrix.os }}
+
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025]
         python: ["3.10", "3.13"]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.notebook) }}
+
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/reusable-steps/setup-os
@@ -204,8 +201,6 @@ jobs:
           python: ${{ matrix.python }}
           project: ${{ matrix.subproject }}
 
-      - name: Run Notebook
-        shell: bash
-        run: |
+      - run: |
           cd ${{ matrix.subproject }}
           jupyter nbconvert --to notebook --execute *.ipynb
