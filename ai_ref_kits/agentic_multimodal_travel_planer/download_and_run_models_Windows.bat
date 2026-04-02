@@ -87,14 +87,6 @@ echo Run %~nx0 --help for usage.
 exit /b 1
 
 :args_done
-REM Device flags set by run_all_windows.bat in process env (argv through "call" from PowerShell is unreliable)
-if defined AGENTIC_KIT_OVMS_TARGET_DEVICE if "!TARGET_DEVICE!"=="" set "TARGET_DEVICE=!AGENTIC_KIT_OVMS_TARGET_DEVICE!"
-if defined AGENTIC_KIT_OVMS_LLM_DEVICE if "!LLM_DEVICE!"=="" set "LLM_DEVICE=!AGENTIC_KIT_OVMS_LLM_DEVICE!"
-if defined AGENTIC_KIT_OVMS_VLM_DEVICE if "!VLM_DEVICE!"=="" set "VLM_DEVICE=!AGENTIC_KIT_OVMS_VLM_DEVICE!"
-set "AGENTIC_KIT_OVMS_TARGET_DEVICE="
-set "AGENTIC_KIT_OVMS_LLM_DEVICE="
-set "AGENTIC_KIT_OVMS_VLM_DEVICE="
-
 if "%STOP_MODE%"=="1" goto stop_only
 
 call :sanitize_device_var TARGET_DEVICE

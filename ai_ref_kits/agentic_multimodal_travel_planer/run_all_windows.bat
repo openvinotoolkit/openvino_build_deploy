@@ -13,10 +13,6 @@ set "SKIP_MCP=0"
 set "SKIP_AGENTS=0"
 set "SKIP_UI=0"
 set "MODEL_ARGS="
-REM Cleared so stale values never override; device flags copied via env (see below) so they survive call/PowerShell
-set "AGENTIC_KIT_OVMS_TARGET_DEVICE="
-set "AGENTIC_KIT_OVMS_LLM_DEVICE="
-set "AGENTIC_KIT_OVMS_VLM_DEVICE="
 
 :parse_args
 if "%~1"=="" goto args_done
@@ -44,38 +40,6 @@ if /I "%~1"=="--skip-agents" (
 )
 if /I "%~1"=="--skip-ui" (
     set "SKIP_UI=1"
-    shift
-    goto parse_args
-)
-
-REM Device options: set process env only (do not rely on argv through nested call — PowerShell often drops them)
-if /I "%~1"=="--device" (
-    if "%~2"=="" (
-        echo ERROR: --device requires a value ^(e.g. CPU or GPU.0^)
-        exit /b 1
-    )
-    set "AGENTIC_KIT_OVMS_TARGET_DEVICE=%~2"
-    shift
-    shift
-    goto parse_args
-)
-if /I "%~1"=="--llm-device" (
-    if "%~2"=="" (
-        echo ERROR: --llm-device requires a value ^(e.g. CPU or GPU.0^)
-        exit /b 1
-    )
-    set "AGENTIC_KIT_OVMS_LLM_DEVICE=%~2"
-    shift
-    shift
-    goto parse_args
-)
-if /I "%~1"=="--vlm-device" (
-    if "%~2"=="" (
-        echo ERROR: --vlm-device requires a value
-        exit /b 1
-    )
-    set "AGENTIC_KIT_OVMS_VLM_DEVICE=%~2"
-    shift
     shift
     goto parse_args
 )
