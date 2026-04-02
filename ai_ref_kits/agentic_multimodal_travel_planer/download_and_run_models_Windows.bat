@@ -89,6 +89,10 @@ exit /b 1
 :args_done
 if "%STOP_MODE%"=="1" goto stop_only
 
+call :sanitize_device_var TARGET_DEVICE
+call :sanitize_device_var LLM_DEVICE
+call :sanitize_device_var VLM_DEVICE
+
 REM Normalize device values once (cpu/gpu.0 -> CPU/GPU.0)
 call :to_upper TARGET_DEVICE
 call :to_upper LLM_DEVICE
@@ -204,9 +208,9 @@ if "%TARGET_DEVICE%"=="" (
     echo Base target device: %TARGET_DEVICE%
 )
 
-REM Resolve per-model devices
-if "%LLM_DEVICE%"=="" set "LLM_DEVICE=%TARGET_DEVICE%"
-if "%VLM_DEVICE%"=="" set "VLM_DEVICE=%TARGET_DEVICE%"
+REM Resolve per-model devices (delayed expansion: consistent after sanitize)
+if "!LLM_DEVICE!"=="" set "LLM_DEVICE=!TARGET_DEVICE!"
+if "!VLM_DEVICE!"=="" set "VLM_DEVICE=!TARGET_DEVICE!"
 
 echo Configuration:
 echo   LLM Model: %LLM_MODEL%
@@ -294,6 +298,23 @@ if defined VLM_PID (echo To stop VLM: taskkill /F /PID %VLM_PID%)
 echo.
 
 endlocal
+exit /b 0
+
+:sanitize_device_var
+setlocal EnableDelayedExpansion
+set "v=!%~1!"
+if "!v!"=="" endlocal & exit /b 0
+set "PSV=!v!"
+for /f "delims=" %%A in ('powershell -NoProfile -Command "$s=$env:PSV; if ([string]::IsNullOrWhiteSpace($s)) { '__CLR__' } else { $s.Trim() }"') do set "RES=%%A"
+if "!RES!"=="__CLR__" (
+  endlocal
+  set "%~1="
+  exit /b 0
+)
+for %%B in ("!RES!") do (
+  endlocal
+  set "%~1=%%~B"
+)
 exit /b 0
 
 :to_upper
