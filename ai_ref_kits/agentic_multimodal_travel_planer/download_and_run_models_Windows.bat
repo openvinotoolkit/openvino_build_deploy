@@ -8,22 +8,172 @@ set OVMS_VERSION=v2026.0
 set OVMS_DIR=%CD%\ovms
 set MODELS_DIR=%CD%\models
 set LOGS_DIR=%CD%\logs
+set CONFIG_FILE=%~dp0config\agents_config.yaml
 set LLM_MODEL=OpenVINO/Qwen3-8B-int4-ov
 set VLM_MODEL=OpenVINO/Phi-3.5-vision-instruct-int4-ov
 set LLM_PORT=8001
 set VLM_PORT=8002
 set PYTHON_SUPPORT=python_on
 set TARGET_DEVICE=
+set LLM_DEVICE=
+set VLM_DEVICE=
+set STOP_MODE=0
 set NO_PROXY=localhost,127.0.0.1
 set no_proxy=localhost,127.0.0.1
 set http_proxy=
 set https_proxy=
 
+:parse_args
+if "%~1"=="" goto args_done
+if /I "%~1"=="-h" goto show_help
+if /I "%~1"=="--help" goto show_help
+if /I "%~1"=="-s" (
+    set STOP_MODE=1
+    shift
+    goto parse_args
+)
+if /I "%~1"=="--stop" (
+    set STOP_MODE=1
+    shift
+    goto parse_args
+)
+if /I "%~1"=="--llm-model" (
+    set "LLM_MODEL=%~2"
+    shift
+    shift
+    goto parse_args
+)
+if /I "%~1"=="--vlm-model" (
+    set "VLM_MODEL=%~2"
+    shift
+    shift
+    goto parse_args
+)
+if /I "%~1"=="--llm-port" (
+    set "LLM_PORT=%~2"
+    shift
+    shift
+    goto parse_args
+)
+if /I "%~1"=="--vlm-port" (
+    set "VLM_PORT=%~2"
+    shift
+    shift
+    goto parse_args
+)
+if /I "%~1"=="--models-dir" (
+    set "MODELS_DIR=%~2"
+    shift
+    shift
+    goto parse_args
+)
+if /I "%~1"=="--device" (
+    set "TARGET_DEVICE=%~2"
+    shift
+    shift
+    goto parse_args
+)
+if /I "%~1"=="--llm-device" (
+    set "LLM_DEVICE=%~2"
+    shift
+    shift
+    goto parse_args
+)
+if /I "%~1"=="--vlm-device" (
+    set "VLM_DEVICE=%~2"
+    shift
+    shift
+    goto parse_args
+)
+
+echo Unknown option: %~1
+echo Run %~nx0 --help for usage.
+exit /b 1
+
+:args_done
+if "%STOP_MODE%"=="1" goto stop_only
+
+REM Normalize device values once (cpu/gpu.0 -> CPU/GPU.0)
+call :to_upper TARGET_DEVICE
+call :to_upper LLM_DEVICE
+call :to_upper VLM_DEVICE
+
+REM Validate device values (must be CPU, GPU, or GPU.N) and ports (must be numeric)
+call :validate_device TARGET_DEVICE "!TARGET_DEVICE!"
+call :validate_device LLM_DEVICE "!LLM_DEVICE!"
+call :validate_device VLM_DEVICE "!VLM_DEVICE!"
+call :validate_port LLM_PORT "!LLM_PORT!"
+call :validate_port VLM_PORT "!VLM_PORT!"
+
+goto :after_validation_subroutines
+
+:validate_device
+REM %1 = variable name, %2 = current value (already normalized to upper-case)
+set "DEV_NAME=%~1"
+set "DEV_VALUE=%~2"
+
+REM Allow empty value (use default behavior if any)
+if "!DEV_VALUE!"=="" goto :validate_device_end
+
+REM Allow CPU or GPU directly
+if /I "!DEV_VALUE!"=="CPU" goto :validate_device_end
+if /I "!DEV_VALUE!"=="GPU" goto :validate_device_end
+
+REM Check for GPU.N pattern
+for /f "tokens=1,2 delims=." %%A in ("!DEV_VALUE!") do (
+    set "DEV_PREFIX=%%A"
+    set "DEV_SUFFIX=%%B"
+)
+
+if /I not "!DEV_PREFIX!"=="GPU" goto :invalid_device_value
+if "!DEV_SUFFIX!"=="" goto :invalid_device_value
+
+REM Ensure suffix is numeric
+echo(!DEV_SUFFIX!| findstr /R "^[0-9][0-9]*$" >nul || goto :invalid_device_value
+goto :validate_device_end
+
+:invalid_device_value
+echo.
+echo ERROR: Invalid value for !DEV_NAME!: "!DEV_VALUE!"
+echo        Supported formats: CPU, GPU, or GPU.N  (for example: GPU.0)
+exit /b 1
+
+:validate_device_end
+set "DEV_NAME="
+set "DEV_VALUE="
+set "DEV_PREFIX="
+set "DEV_SUFFIX="
+goto :eof
+
+:validate_port
+REM %1 = variable name, %2 = current value
+set "PORT_NAME=%~1"
+set "PORT_VALUE=%~2"
+
+REM Port must be non-empty and numeric
+if "!PORT_VALUE!"=="" (
+    echo.
+    echo ERROR: Port variable !PORT_NAME! is empty.
+    exit /b 1
+)
+
+echo(!PORT_VALUE!| findstr /R "^[0-9][0-9]*$" >nul || (
+    echo.
+    echo ERROR: Invalid value for !PORT_NAME!: "!PORT_VALUE!"
+    echo        Port values must be numeric.
+    exit /b 1
+)
+
+set "PORT_NAME="
+set "PORT_VALUE="
+goto :eof
+
+:after_validation_subroutines
 REM Download and extract OVMS package
 if not exist "%OVMS_DIR%" (
     echo Downloading OpenVINO Model Server package...
-    set PACKAGE_NAME=ovms_windows_%PYTHON_SUPPORT%.zip
-    call set "DOWNLOAD_URL=https://github.com/openvinotoolkit/model_server/releases/download/%%OVMS_VERSION%%/%%PACKAGE_NAME%%"
+    set PACKAGE_NAME=ovms_windows_!PYTHON_SUPPORT!.zip
+    call set "DOWNLOAD_URL=https://github.com/openvinotoolkit/model_server/releases/download/!OVMS_VERSION!/!PACKAGE_NAME!"
     curl -L -o "%CD%\ovms.zip" "!DOWNLOAD_URL!" || (echo Failed to download package && exit /b 1)
     powershell -Command "Expand-Archive -Path '%CD%\ovms.zip' -DestinationPath '%CD%' -Force" 2>nul || (echo Failed to extract package && exit /b 1)
     del "%CD%\ovms.zip" >nul 2>&1
@@ -51,12 +201,26 @@ REM Detect GPU
 set GPU_DETECTED=0
 powershell -Command "$gpu = Get-WmiObject Win32_VideoController | Where-Object {$_.Name -like '*Intel*' -and $_.AdapterRAM -gt 0} | Select-Object -First 1; if ($gpu) { exit 0 } else { exit 1 }" >nul 2>&1 && set GPU_DETECTED=1
 
-REM Auto-select device
+REM Auto-select base device
 if "%TARGET_DEVICE%"=="" (
     if %GPU_DETECTED% equ 1 (set TARGET_DEVICE=GPU && echo Auto-selecting device: GPU) else (set TARGET_DEVICE=CPU && echo Auto-selecting device: CPU)
 ) else (
-    echo Target device: %TARGET_DEVICE%
+    echo Base target device: %TARGET_DEVICE%
 )
+
+REM Resolve per-model devices
+if "%LLM_DEVICE%"=="" set "LLM_DEVICE=%TARGET_DEVICE%"
+if "%VLM_DEVICE%"=="" set "VLM_DEVICE=%TARGET_DEVICE%"
+
+echo Configuration:
+echo   LLM Model: %LLM_MODEL%
+echo   VLM Model: %VLM_MODEL%
+echo   LLM Port:  %LLM_PORT%
+echo   VLM Port:  %VLM_PORT%
+echo   LLM Device:%LLM_DEVICE%
+echo   VLM Device:%VLM_DEVICE%
+echo   Models Dir:%MODELS_DIR%
+echo.
 
 REM Install Python dependencies
 if "%PYTHON_SUPPORT%"=="python_on" (
@@ -94,23 +258,37 @@ REM --port = gRPC, --rest_port = HTTP REST (chat/completions). Agents use HTTP, 
 echo Starting LLM service (REST on %LLM_PORT%, gRPC on 8011)...
 set LLM_GRPC_PORT=8011
 set LLM_ARGS=--port %LLM_GRPC_PORT% --rest_port %LLM_PORT% --model_repository_path "%MODELS_DIR%" --source_model "%LLM_MODEL%" --tool_parser hermes3 --cache_size 0 --task text_generation
-if not "%TARGET_DEVICE%"=="" set LLM_ARGS=%LLM_ARGS% --target_device %TARGET_DEVICE%
+if not "%LLM_DEVICE%"=="" set LLM_ARGS=%LLM_ARGS% --target_device %LLM_DEVICE%
 REM Use PowerShell Start-Process to launch detached
 powershell -Command "Start-Process -FilePath '%OVMS_PATH%' -ArgumentList '%LLM_ARGS%' -RedirectStandardOutput '%LOGS_DIR%\ovms_llm.log' -RedirectStandardError '%LOGS_DIR%\ovms_llm.err' -WindowStyle Hidden" || (echo Failed to start LLM service && exit /b 1)
-ping -n 3 127.0.0.1 >nul
-for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%LLM_PORT%" ^| findstr "LISTENING"') do set LLM_PID=%%a
-if defined LLM_PID (echo LLM service started - PID: %LLM_PID%) else (echo LLM service started - check log: %LOGS_DIR%\ovms_llm.log)
+set "LLM_PID="
+for /L %%n in (1,1,25) do (
+  if "!LLM_PID!"=="" (
+    ping -n 3 127.0.0.1 >nul
+    for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%LLM_PORT%" ^| findstr "LISTENING"') do set "LLM_PID=%%a"
+  )
+)
+if defined LLM_PID (echo LLM service started - PID: !LLM_PID!) else (echo LLM service started - still binding; check log: %LOGS_DIR%\ovms_llm.log)
 
 REM Start VLM service
 REM --port = gRPC, --rest_port = HTTP REST. REST on VLM_PORT for clients.
 echo Starting VLM service (REST on %VLM_PORT%, gRPC on 8012)...
 set VLM_GRPC_PORT=8012
 set VLM_ARGS=--port %VLM_GRPC_PORT% --rest_port %VLM_PORT% --model_name "%VLM_MODEL%" --model_path "%VLM_MODEL_PATH%"
+REM Do not pass --target_device for VLM ^(MediaPipe^); OVMS expects device in model subconfig.json.
 REM Use PowerShell Start-Process to launch detached
 powershell -Command "Start-Process -FilePath '%OVMS_PATH%' -ArgumentList '%VLM_ARGS%' -RedirectStandardOutput '%LOGS_DIR%\ovms_vlm.log' -RedirectStandardError '%LOGS_DIR%\ovms_vlm.err' -WindowStyle Hidden" || (echo Failed to start VLM service && exit /b 1)
-ping -n 3 127.0.0.1 >nul
-for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%VLM_PORT%" ^| findstr "LISTENING"') do set VLM_PID=%%a
-if defined VLM_PID (echo VLM service started - PID: %VLM_PID%) else (echo VLM service started - check log: %LOGS_DIR%\ovms_vlm.log)
+set "VLM_PID="
+REM VLM (vision) often binds slower than LLM on CPU CI; allow ~3 min of polling
+for /L %%n in (1,1,90) do (
+  if "!VLM_PID!"=="" (
+    ping -n 3 127.0.0.1 >nul
+    for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%VLM_PORT%" ^| findstr "LISTENING"') do set "VLM_PID=%%a"
+  )
+)
+if defined VLM_PID (echo VLM service started - PID: !VLM_PID!) else (echo VLM service started - still binding; check log: %LOGS_DIR%\ovms_vlm.log)
+
+call :sync_agents_config
 
 ping -n 4 127.0.0.1 >nul
 
@@ -124,3 +302,91 @@ if defined VLM_PID (echo To stop VLM: taskkill /F /PID %VLM_PID%)
 echo.
 
 endlocal
+exit /b 0
+
+:to_upper
+setlocal enabledelayedexpansion
+set "_var_name=%~1"
+set "_value=!%_var_name%!"
+if "!_value!"=="" (
+    endlocal & exit /b 0
+)
+for /f "usebackq delims=" %%I in (`powershell -NoProfile -Command "$args[0].ToUpperInvariant()" "!_value!"`) do set "_upper=%%I"
+endlocal & set "%~1=%_upper%"
+exit /b 0
+
+:sync_agents_config
+if not exist "%CONFIG_FILE%" (
+    echo Warning: config file not found: %CONFIG_FILE%
+    exit /b 0
+)
+
+echo Syncing config\agents_config.yaml with current LLM settings...
+call :sync_cfg_base
+
+set "OVMS_MODEL_ID="
+set "OVMS_ID_FILE=%TEMP%\ovms_model_id_%RANDOM%.txt"
+if exist "%OVMS_ID_FILE%" del "%OVMS_ID_FILE%" >nul 2>&1
+
+powershell -NoProfile -Command "$out=$env:OVMS_ID_FILE; $port=$env:LLM_PORT; $id=''; for ($i=0; $i -lt 30 -and -not $id; $i++) { try { $r=Invoke-RestMethod -Uri ('http://127.0.0.1:' + $port + '/v3/models') -Method Get -TimeoutSec 15; if ($r.data -and @($r.data).Count -gt 0 -and $r.data[0].id) { $id=[string]$r.data[0].id } } catch { } if (-not $id) { Start-Sleep -Seconds 3 } }; if ($id) { Set-Content -Path $out -Value $id -NoNewline }"
+if exist "%OVMS_ID_FILE%" (
+    set /p OVMS_MODEL_ID=<"%OVMS_ID_FILE%"
+    del "%OVMS_ID_FILE%" >nul 2>&1
+)
+
+if not defined OVMS_MODEL_ID goto sync_cfg_no_model_id
+call :sync_cfg_model_id
+echo Synced agents model to OVMS model id: !OVMS_MODEL_ID!
+goto sync_cfg_done
+
+:sync_cfg_no_model_id
+echo Note: LLM /v3/models not ready yet after wait - agents_config already has model and api_base from sync above.
+echo       If agents fail to load the model, wait for OVMS then re-run this script or edit config\agents_config.yaml.
+
+:sync_cfg_done
+
+exit /b 0
+
+:sync_cfg_base
+powershell -NoProfile -Command "$cfg=$env:CONFIG_FILE; $port=$env:LLM_PORT; $llm=$env:LLM_MODEL; if (-not (Test-Path $cfg)) { exit 0 }; $q=[char]34; $text=Get-Content -Raw -Path $cfg; $text=[regex]::Replace($text, 'api_base:\s*\x22http://127\.0\.0\.1:[0-9]+/v3\x22', ('api_base: ' + $q + 'http://127.0.0.1:' + $port + '/v3' + $q)); $text=[regex]::Replace($text, 'model:\s*\x22openai:OpenVINO/[^\x22]*\x22', ('model: ' + $q + 'openai:' + $llm + $q)); Set-Content -Path $cfg -Value $text -Encoding UTF8"
+exit /b 0
+
+:sync_cfg_model_id
+powershell -NoProfile -Command "$cfg=$env:CONFIG_FILE; $id=$env:OVMS_MODEL_ID; if (-not (Test-Path $cfg)) { exit 0 }; $q=[char]34; $text=Get-Content -Raw -Path $cfg; $text=[regex]::Replace($text, 'model:\s*\x22openai:[^\x22]*\x22', ('model: ' + $q + 'openai:' + $id + $q)); Set-Content -Path $cfg -Value $text -Encoding UTF8"
+exit /b 0
+
+:stop_only
+echo Stopping existing processes on ports %LLM_PORT%, %VLM_PORT%, 8011, 8012...
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr "LISTENING" ^| findstr ":%LLM_PORT% :%VLM_PORT% :8011 :8012"') do (
+    if not defined seen_%%a (
+        set "seen_%%a=1"
+        taskkill /F /PID %%a >nul 2>&1
+    )
+)
+echo Done.
+endlocal
+exit /b 0
+
+:show_help
+echo Usage: %~nx0 [OPTIONS]
+echo.
+echo Options:
+echo   -h, --help             Show this help message
+echo   -s, --stop             Stop running OVMS processes
+echo   --llm-model MODEL      LLM model ^(default: %LLM_MODEL%^)
+echo   --vlm-model MODEL      VLM model ^(default: %VLM_MODEL%^)
+echo   --llm-port PORT        LLM REST port ^(default: %LLM_PORT%^)
+echo   --vlm-port PORT        VLM REST port ^(default: %VLM_PORT%^)
+echo   --models-dir DIR       Models directory ^(default: %MODELS_DIR%^)
+echo   --device DEVICE        Base device for both models ^(CPU, GPU, GPU.0, ...^)
+echo   --llm-device DEVICE    Device override for LLM
+echo   --vlm-device DEVICE    Not passed to VLM OVMS ^(use model subconfig.json^)
+echo.
+echo Examples:
+echo   %~nx0
+echo   %~nx0 --device CPU
+echo   %~nx0 --llm-port 9001 --vlm-port 9002
+echo   %~nx0 --llm-device GPU.0 --vlm-device CPU
+echo   %~nx0 --stop
+endlocal
+exit /b 0

@@ -63,11 +63,7 @@ Check out our [AI Reference Kits repository](https://github.com/openvinotoolkit/
 
 ---
 
-## Steps
-1. Start OVMS LLMs
-2. Start MCP servers (`start_mcp_servers.py`)
-3. Start Agents      (`start_agents.py`)
-4. Start UI          (`start_ui.py`)
+## Quick Start
 
 ## Setting Up Your Environment
 
@@ -121,199 +117,52 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-## Step 1: Getting the LLMs/VLM for agents ready with OpenVINO model Server (OVMS)
+### Start Application (Linux / Docker)
 
-### OPTION 1: Linux (Docker)
-
-#### Docker Installation
-For installation instructions, refer to the [official Docker documentation for Ubuntu](https://docs.docker.com/engine/install/ubuntu/).
-
-#### Download images and Run models
-Once you have Docker installed on your machine, run the following script which will download the images and start the containers:
-```
-chmod +x download_and_run_models_linux.sh
-./download_and_run_models_linux.sh
-```
-
-The script PULL the models from Hugging Face and will start the docker containers for you. It might take few minutes, please wait until you see the following confirmation.
-```
-==============================================
-OpenVINO Model Server is running on:
-----------------------------------------------
-LLM : http://localhost:8001
-VLM : http://localhost:8002
-==============================================
-```
-
-### Verify the services are running
-
-Run:
-```
-docker ps
-```
-
-You should see the two models serving 
-```
-CONTAINER ID   IMAGE                          COMMAND                  CREATED       STATUS       PORTS                                         NAMES
-424634ea10fe   openvino/model_server:latest   "/ovms/bin/ovms --re…"   3 days ago    Up 3 days    0.0.0.0:8001->8000/tcp, [::]:8001->8000/tcp   competent_ganguly9
-a962a7695b1f   openvino/model_server:latest   "/ovms/bin/ovms --re…"   3 days ago    Up 3 days    0.0.0.0:8002->8000/tcp, [::]:8002->8000/tcp   agitated_galois
-```
-#### Customization Options 
-
-##### Stop the Model Servers
-
-To stop and remove the running containers:
-```bash
-./download_and_run_models_linux.sh --stop
-```
-
-##### Use Different Models
-
-You can specify custom models for both LLM and VLM:
+Use the launcher:
 
 ```bash
-# Use different models
-./download_and_run_models_linux.sh \
-  --llm-model "OpenVINO/Llama-3.1-8B-int4-ov" \
-  --vlm-model "OpenVINO/LLaVA-NeXT-7B-int4-ov"
+chmod +x run_all_linux.sh
+./run_all_linux.sh
 ```
 
-> **Note:** Performance may vary depending on model size. We **highly recommend** using OpenVINO-optimized models from the [OpenVINO Hugging Face repository](https://huggingface.co/OpenVINO/models).
-
-##### Use Custom Ports
-
-Change the default ports (8001 for LLM, 8002 for VLM):
+Stop everything:
 
 ```bash
-./download_and_run_models_linux.sh --llm-port 9001 --vlm-port 9002
+./run_all_linux.sh --stop
 ```
 
-##### Device Selection
-
-By default, the script **auto-detects Intel GPUs** and uses them if available, otherwise falls back to CPU. You can force specific hardware:
+The kit ships with tested default models and runs without extra flags. The options below are optional if you want to customize models, ports, or device selection:
 
 ```bash
-# Force CPU
-./download_and_run_models_linux.sh --device CPU
-
-# Force first GPU
-./download_and_run_models_linux.sh --device GPU.0
-
-# Force second GPU
-./download_and_run_models_linux.sh --device GPU.1
+./run_all_linux.sh --device CPU --llm-port 9001 --vlm-port 9002
+./run_all_linux.sh --llm-model "OpenVINO/Llama-3.1-8B-int4-ov" --vlm-model "OpenVINO/LLaVA-NeXT-7B-int4-ov"
+./run_all_linux.sh --llm-device GPU.0 --vlm-device CPU
 ```
 
-##### Combine Multiple Options
+### Start Application (Windows / Binary)
 
-You can combine any of the above options:
+Use the launcher:
 
-```bash
-# Example: Use specific GPU, custom port, and different model
-./download_and_run_models_linux.sh \
-  --device GPU.0 \
-  --llm-port 9001 \
-  --llm-model "OpenVINO/Llama-3.1-8B-int4-ov"
+```bat
+run_all_windows.bat
 ```
 
-##### View All Options
+Stop everything:
 
-For a complete list of available options:
-
-```bash
-./download_and_run_models_linux.sh --help
+```bat
+run_all_windows.bat --stop
 ```
 
-### OPTION 2: Windows (Binary)
+The kit ships with tested default models and runs without extra flags. The options below are optional if you want to customize models, ports, or device selection:
 
-#### Download images and Run models using Binaries
-Run the following command:
-
-```
-./download_and_run_models_Windows.bat
-```
-
-NOTE: If you are using Windows, you may need to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe) 
-
-## Step 2: Start the MCP servers
-
-This example uses three MCP servers that the agents will consume:
-- Flight search (Intel AI Builder): provides available flight options
-- Hotel search (Intel AI Builder): provides available hotels
-- Image captioning: generates captions for images
-
-### Get your SerpAPI key
-The flight and travel agents rely on an external API to search for flights and hotels. To enable this, you’ll need an API key from SerpAPI.
-
-You can sign up for a free API key, which includes 250 requests per month and does not require a credit card. You’ll only need to upgrade if you plan to exceed the free monthly limit.
-
-1. Go to https://serpapi.com/
-2. Navigate to "Your Private API Key"
-3. Copy the key
-
-Once you have your key, you can launch the MCP servers.
-
-### Launch MCP servers
-
-Run and note you will be required to add the KEY
-```
-python start_mcp_servers.py
+```bat
+run_all_windows.bat --device CPU --llm-port 9001 --vlm-port 9002
+run_all_windows.bat --llm-model "OpenVINO/Llama-3.1-8B-int4-ov" --vlm-model "OpenVINO/LLaVA-NeXT-7B-int4-ov"
+run_all_windows.bat --llm-device GPU.0 --vlm-device CPU
 ```
 
-**NOTE**: This script starts the MCP servers in the background and reads configuration from `config/mcp_config.yaml`. You can configure each MCP server there.
-
-You should see confirmation that the MCP servers are running:
-```
-MCP 'image_mcp' started on port 3003
-MCP 'hotel_finder' started on port 3001
-MCP 'flight_finder' started on port 3002
-
-Successfully started MCP servers: image_mcp, hotel_finder, flight_finder
-
-Logs are in `logs/`. You can open each MCP server's log file there.
-```
-The script also provides a stop command:
-
-```
-python start_mcp_servers.py --stop
-```
-
-## Step 3: Start Agents
-
-Start all the agents.
-
-```
-python start_agents.py
-```
-
-You should see:
-```
-Agent 'travel_router' started on port 9996
-Agent 'flight_finder' started on port 9998
-Agent 'hotel_finder' started on port 9999
-Agent 'image_captioning' started on port 9997
-
-Successfully started agents: travel_router, flight_finder, hotel_finder, image_captioning
-
-Logs are in `logs/`
-```
-
-Logs are in `logs/`. You can open each agent's log file there.
-
-The script also provides a stop command:
-
-```
-python start_agents.py --stop
-```
-
-Logs are in `logs/`. You can navigate to the folder to the log of each Agent server.
-
-## Step 4: Start UI
-
-```
-python start_ui.py
-```
-
-Open `http://127.0.0.1:7860` in your browser.
+> NOTE: If you are using Windows, you may need to install [Microsoft Visual C++ Redistributable](https://aka.ms/vs/16/release/vc_redist.x64.exe)
 
 ## Customization (optional)
 

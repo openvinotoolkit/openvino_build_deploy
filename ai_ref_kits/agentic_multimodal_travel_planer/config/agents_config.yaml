@@ -43,7 +43,7 @@ travel_router:
     trajectory:
       included_types: ["Tool"]
       pretty: true
-      tool_prefix: "🔍 "
+      tool_prefix: "Tool"
 
   # Requirements - Force workflow: scratchpad first, STRICT confirmation required
   requirements:
@@ -109,7 +109,7 @@ flight_finder:
     trajectory:
       included_types: ["Tool", "ChatModel"]
       pretty: true
-      tool_prefix: "🔍 "
+      tool_prefix: "Tool"
 
   # BeeAI rules requirements, useful to force agent behaviour
   requirements:
@@ -160,7 +160,7 @@ hotel_finder:
     trajectory:
       included_types: ["Tool", "ChatModel"]
       pretty: true
-      tool_prefix: "🔍 "
+      tool_prefix: "Tool"
 
   # BeeAI rules requirements, useful to force agent behaviour
   requirements:
