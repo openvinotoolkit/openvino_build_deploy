@@ -49,13 +49,13 @@ if /I "%~1"=="--" (
     goto collect_model_args
 )
 
-set "MODEL_ARGS=%MODEL_ARGS% %1"
+set "MODEL_ARGS=!MODEL_ARGS! %~1"
 shift
 goto parse_args
 
 :collect_model_args
 if "%~1"=="" goto args_done
-set "MODEL_ARGS=%MODEL_ARGS% %1"
+set "MODEL_ARGS=!MODEL_ARGS! %~1"
 shift
 goto collect_model_args
 
@@ -79,29 +79,34 @@ if not exist "%UI_SCRIPT%" (
 
 cd /d "%SCRIPT_DIR%"
 
-if "%STOP_MODE%"=="1" (
-    echo Stopping unified stack...
-    echo Stopping OVMS models...
-    call "%MODELS_SCRIPT%" --stop %MODEL_ARGS%
-    echo Stopping agents...
-    call :run_python "start_agents.py" --stop
-    echo Stopping MCP servers...
-    call :run_python "start_mcp_servers.py" --stop --kill
-    echo All stop commands sent.
-    exit /b 0
-)
+REM Do not put "call ... %MODEL_ARGS%" inside parenthesized IF blocks: %% vars expand at block parse time
+REM and MODEL_ARGS is often still empty then, so --llm-device etc. never reach the model script.
+if "%STOP_MODE%"=="1" goto do_stop_stack
+goto after_stop_stack
+:do_stop_stack
+echo Stopping unified stack...
+echo Stopping OVMS models...
+call "%MODELS_SCRIPT%" --stop !MODEL_ARGS!
+echo Stopping agents...
+call :run_python "start_agents.py" --stop
+echo Stopping MCP servers...
+call :run_python "start_mcp_servers.py" --stop --kill
+echo All stop commands sent.
+exit /b 0
+:after_stop_stack
 
-if "%SKIP_MODELS%"=="0" (
-    echo.
-    echo === Step 1/4: Starting OVMS models ===
-    call "%MODELS_SCRIPT%" %MODEL_ARGS%
-    if errorlevel 1 (
-        echo ERROR: Model startup failed.
-        exit /b 1
-    )
-) else (
-    echo Skipping OVMS model startup.
+if "%SKIP_MODELS%"=="1" goto skip_models_step
+echo.
+echo === Step 1/4: Starting OVMS models ===
+call "%MODELS_SCRIPT%" !MODEL_ARGS!
+if errorlevel 1 (
+    echo ERROR: Model startup failed.
+    exit /b 1
 )
+goto after_models_step
+:skip_models_step
+echo Skipping OVMS model startup.
+:after_models_step
 
 if "%SKIP_MCP%"=="0" (
     echo.
