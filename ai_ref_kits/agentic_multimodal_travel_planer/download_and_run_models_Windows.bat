@@ -17,6 +17,7 @@ set PYTHON_SUPPORT=python_on
 set TARGET_DEVICE=
 set LLM_DEVICE=
 set VLM_DEVICE=
+set LLM_DEVICE_FROM_FLAG=
 set STOP_MODE=0
 
 :parse_args
@@ -71,6 +72,7 @@ if /I "%~1"=="--device" (
 )
 if /I "%~1"=="--llm-device" (
     set "LLM_DEVICE=%~2"
+    set "LLM_DEVICE_FROM_FLAG=1"
     shift
     shift
     goto parse_args
@@ -217,8 +219,16 @@ if "%TARGET_DEVICE%"=="" (
     echo Base target device: %TARGET_DEVICE%
 )
 
-REM Resolve per-model devices (delayed expansion: consistent after sanitize)
-if "!LLM_DEVICE!"=="" set "LLM_DEVICE=!TARGET_DEVICE!"
+REM LLM device: --llm-device overrides auto TARGET_DEVICE for OVMS LLM only; otherwise inherit TARGET_DEVICE
+if not defined LLM_DEVICE_FROM_FLAG (
+    if "!LLM_DEVICE!"=="" set "LLM_DEVICE=!TARGET_DEVICE!"
+)
+if defined LLM_DEVICE_FROM_FLAG (
+    if "!LLM_DEVICE!"=="" (
+        echo ERROR: --llm-device needs a value ^(CPU, GPU, or GPU.N^).
+        exit /b 1
+    )
+)
 if "!VLM_DEVICE!"=="" set "VLM_DEVICE=!TARGET_DEVICE!"
 
 echo Configuration:
