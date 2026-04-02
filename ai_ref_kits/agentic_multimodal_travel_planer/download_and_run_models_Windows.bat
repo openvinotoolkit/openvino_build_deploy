@@ -115,6 +115,15 @@ set "DEV_VALUE=%~2"
 REM Allow empty value (use default behavior if any)
 if "!DEV_VALUE!"=="" goto :validate_device_end
 
+REM Whitespace-only (space/tab/NBSP etc.): clear the caller var and skip — avoids bad User env LLM_DEVICE
+set "VDW="
+set "VD_CH=!DEV_VALUE!"
+for /f "delims=" %%Z in ('powershell -NoProfile -Command "if ([string]::IsNullOrWhiteSpace($env:VD_CH)) { Write-Output 1 } else { Write-Output 0 }"') do set "VDW=%%Z"
+if "!VDW!"=="1" (
+  set "%~1="
+  goto :validate_device_end
+)
+
 REM Allow CPU or GPU directly
 if /I "!DEV_VALUE!"=="CPU" goto :validate_device_end
 if /I "!DEV_VALUE!"=="GPU" goto :validate_device_end
@@ -302,18 +311,19 @@ exit /b 0
 
 :sanitize_device_var
 setlocal EnableDelayedExpansion
-set "v=!%~1!"
+set "_vn=%~1"
+set "v=!%_vn%!"
 if "!v!"=="" endlocal & exit /b 0
 set "PSV=!v!"
-for /f "delims=" %%A in ('powershell -NoProfile -Command "$s=$env:PSV; if ([string]::IsNullOrWhiteSpace($s)) { '__CLR__' } else { $s.Trim() }"') do set "RES=%%A"
-if "!RES!"=="__CLR__" (
+for /f "delims=" %%A in ('powershell -NoProfile -Command "$s=$env:PSV; if ([string]::IsNullOrWhiteSpace($s)) { 'CLR' } else { $s.Trim() }"') do set "RES=%%A"
+if "!RES!"=="CLR" (
   endlocal
   set "%~1="
   exit /b 0
 )
-for %%B in ("!RES!") do (
+for %%E in ("!RES!") do (
   endlocal
-  set "%~1=%%~B"
+  set "%~1=%%~E"
 )
 exit /b 0
 
