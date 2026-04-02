@@ -74,6 +74,10 @@ REM --llm-device: two argv, one argv with space, or --llm-device=VALUE (PowerShe
 set "ARG1=%~1"
 if /I "!ARG1:~0,13!"=="--llm-device=" (
     set "LLM_DEVICE=!ARG1:~13!"
+    if "!LLM_DEVICE!"=="" (
+        echo ERROR: --llm-device= needs a value ^(e.g. --llm-device=CPU^).
+        exit /b 1
+    )
     set "LLM_DEVICE_FROM_FLAG=1"
     shift
     goto parse_args
@@ -119,9 +123,24 @@ exit /b 1
 :args_done
 if "%STOP_MODE%"=="1" goto stop_only
 
+REM Orphan flag when value never arrived ^(bare --llm-device= or dropped argv^)
+if defined LLM_DEVICE_FROM_FLAG if "!LLM_DEVICE!"=="" set "LLM_DEVICE_FROM_FLAG="
+REM run_all_windows.bat sets TRAVEL_PLANNER_LLM_DEVICE when argv to this script is broken ^(PowerShell^)
+if "!LLM_DEVICE!"=="" if defined TRAVEL_PLANNER_LLM_DEVICE (
+    set "LLM_DEVICE=!TRAVEL_PLANNER_LLM_DEVICE!"
+    set "LLM_DEVICE_FROM_FLAG=1"
+)
+
 call :sanitize_device_var TARGET_DEVICE
 call :sanitize_device_var LLM_DEVICE
 call :sanitize_device_var VLM_DEVICE
+
+REM Re-apply env if sanitize cleared LLM; drop orphan flag if still empty
+if "!LLM_DEVICE!"=="" if defined TRAVEL_PLANNER_LLM_DEVICE (
+    set "LLM_DEVICE=!TRAVEL_PLANNER_LLM_DEVICE!"
+    set "LLM_DEVICE_FROM_FLAG=1"
+)
+if defined LLM_DEVICE_FROM_FLAG if "!LLM_DEVICE!"=="" set "LLM_DEVICE_FROM_FLAG="
 
 REM Normalize device values once (cpu/gpu.0 -> CPU/GPU.0)
 call :to_upper TARGET_DEVICE
@@ -440,7 +459,8 @@ echo   --llm-port PORT        LLM REST port ^(default: %LLM_PORT%^)
 echo   --vlm-port PORT        VLM REST port ^(default: %VLM_PORT%^)
 echo   --models-dir DIR       Models directory ^(default: %MODELS_DIR%^)
 echo   --device DEVICE        Base device for both models ^(CPU, GPU, GPU.0, ...^)
-echo   --llm-device DEVICE    Device override for LLM ^(also --llm-device=CPU from PowerShell^)
+echo   --llm-device DEVICE    Device override for LLM ^(also --llm-device=CPU^)
+echo   Env TRAVEL_PLANNER_LLM_DEVICE   If set, used when argv has no LLM device ^(run_all sets this^)
 echo   --vlm-device DEVICE    Not passed to VLM OVMS ^(use model subconfig.json^)
 echo.
 echo Examples:

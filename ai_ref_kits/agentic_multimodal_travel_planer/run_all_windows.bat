@@ -44,6 +44,31 @@ if /I "%~1"=="--skip-ui" (
     goto parse_args
 )
 
+REM Stash LLM device in env so download_and_run_models_Windows.bat still gets it if cmd drops argv to the child
+set "RA1=%~1"
+if /I "!RA1:~0,13!"=="--llm-device=" (
+    set "VE=!RA1:~13!"
+    if "!VE!"=="" (
+        echo ERROR: --llm-device= needs a value ^(e.g. --llm-device=CPU^).
+        exit /b 1
+    )
+    set "TRAVEL_PLANNER_LLM_DEVICE=!VE!"
+    set "MODEL_ARGS=!MODEL_ARGS! %~1"
+    shift
+    goto parse_args
+)
+if /I "%~1"=="--llm-device" (
+    if "%~2"=="" (
+        echo ERROR: --llm-device needs a value ^(e.g. --llm-device=CPU on one token^).
+        exit /b 1
+    )
+    set "TRAVEL_PLANNER_LLM_DEVICE=%~2"
+    set "MODEL_ARGS=!MODEL_ARGS! %~1 %~2"
+    shift
+    shift
+    goto parse_args
+)
+
 if /I "%~1"=="--" (
     shift
     goto collect_model_args
@@ -195,7 +220,8 @@ echo   --vlm-port PORT       VLM REST port
 echo   --models-dir DIR      Models directory
 echo   --device DEVICE       Base device for LLM/VLM defaults ^(CPU, GPU, GPU.0, ...^)
 echo   --llm-device DEVICE   LLM-only device ^(overrides --device for LLM^)
-echo                           From PowerShell use --llm-device=CPU if the value token is dropped.
+echo                           This launcher also sets TRAVEL_PLANNER_LLM_DEVICE for the model script.
+echo                           Or set it yourself: set TRAVEL_PLANNER_LLM_DEVICE=CPU
 echo   --vlm-device DEVICE   Recorded for docs; VLM OVMS uses model subconfig.json
 echo   Optional --            End launcher parsing; remaining tokens go to the model script
 echo.
