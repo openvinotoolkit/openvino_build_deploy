@@ -81,12 +81,13 @@ cd /d "%SCRIPT_DIR%"
 
 REM Do not put "call ... %MODEL_ARGS%" inside parenthesized IF blocks: %% vars expand at block parse time
 REM and MODEL_ARGS is often still empty then, so --llm-device etc. never reach the model script.
+REM Fresh cmd.exe parses argv for the model script (fixes missing args when the parent was started from PowerShell).
 if "%STOP_MODE%"=="1" goto do_stop_stack
 goto after_stop_stack
 :do_stop_stack
 echo Stopping unified stack...
 echo Stopping OVMS models...
-call "%MODELS_SCRIPT%" --stop !MODEL_ARGS!
+cmd.exe /c call "%MODELS_SCRIPT%" --stop!MODEL_ARGS!
 echo Stopping agents...
 call :run_python "start_agents.py" --stop
 echo Stopping MCP servers...
@@ -98,7 +99,7 @@ exit /b 0
 if "%SKIP_MODELS%"=="1" goto skip_models_step
 echo.
 echo === Step 1/4: Starting OVMS models ===
-call "%MODELS_SCRIPT%" !MODEL_ARGS!
+cmd.exe /c call "%MODELS_SCRIPT%"!MODEL_ARGS!
 if errorlevel 1 (
     echo ERROR: Model startup failed.
     exit /b 1
