@@ -253,10 +253,8 @@ REM Start LLM service
 REM --port = gRPC, --rest_port = HTTP REST (chat/completions). Agents use HTTP, so REST must be on LLM_PORT.
 echo Starting LLM service (REST on %LLM_PORT%, gRPC on 8011)...
 set LLM_GRPC_PORT=8011
-set LLM_ARGS=--port %LLM_GRPC_PORT% --rest_port %LLM_PORT% --model_repository_path "%MODELS_DIR%" --source_model "%LLM_MODEL%" --tool_parser hermes3 --cache_size 0 --task text_generation 
-if not "%LLM_DEVICE%"=="" set LLM_ARGS=%LLM_ARGS% --target_device %LLM_DEVICE%
-REM Use PowerShell Start-Process to launch detached
-powershell -Command "Start-Process -FilePath '%OVMS_PATH%' -ArgumentList '%LLM_ARGS%' -RedirectStandardOutput '%LOGS_DIR%\ovms_llm.log' -RedirectStandardError '%LOGS_DIR%\ovms_llm.err' -WindowStyle Hidden" || (echo Failed to start LLM service && exit /b 1)
+REM Start-Process must use an argument array; a single -ArgumentList string is passed as ONE argv (OVMS would not see --target_device).
+powershell -NoProfile -Command "$al=@('--port',$env:LLM_GRPC_PORT,'--rest_port',$env:LLM_PORT,'--model_repository_path',$env:MODELS_DIR,'--source_model',$env:LLM_MODEL,'--tool_parser','hermes3','--cache_size','0','--task','text_generation'); if (-not [string]::IsNullOrWhiteSpace($env:LLM_DEVICE)) { $al+='--target_device'; $al+=$env:LLM_DEVICE }; Start-Process -FilePath $env:OVMS_PATH -ArgumentList $al -RedirectStandardOutput ([IO.Path]::Combine($env:LOGS_DIR,'ovms_llm.log')) -RedirectStandardError ([IO.Path]::Combine($env:LOGS_DIR,'ovms_llm.err')) -WindowStyle Hidden" || (echo Failed to start LLM service && exit /b 1)
 set "LLM_PID="
 for /L %%n in (1,1,25) do (
   if "!LLM_PID!"=="" (
@@ -270,10 +268,8 @@ REM Start VLM service
 REM --port = gRPC, --rest_port = HTTP REST. REST on VLM_PORT for clients.
 echo Starting VLM service (REST on %VLM_PORT%, gRPC on 8012)...
 set VLM_GRPC_PORT=8012
-set VLM_ARGS=--port %VLM_GRPC_PORT% --rest_port %VLM_PORT% --model_name "%VLM_MODEL%" --model_path "%VLM_MODEL_PATH%"
 REM Do not pass --target_device for VLM ^(MediaPipe^); OVMS expects device in model subconfig.json.
-REM Use PowerShell Start-Process to launch detached
-powershell -Command "Start-Process -FilePath '%OVMS_PATH%' -ArgumentList '%VLM_ARGS%' -RedirectStandardOutput '%LOGS_DIR%\ovms_vlm.log' -RedirectStandardError '%LOGS_DIR%\ovms_vlm.err' -WindowStyle Hidden" || (echo Failed to start VLM service && exit /b 1)
+powershell -NoProfile -Command "$al=@('--port',$env:VLM_GRPC_PORT,'--rest_port',$env:VLM_PORT,'--model_name',$env:VLM_MODEL,'--model_path',$env:VLM_MODEL_PATH); Start-Process -FilePath $env:OVMS_PATH -ArgumentList $al -RedirectStandardOutput ([IO.Path]::Combine($env:LOGS_DIR,'ovms_vlm.log')) -RedirectStandardError ([IO.Path]::Combine($env:LOGS_DIR,'ovms_vlm.err')) -WindowStyle Hidden" || (echo Failed to start VLM service && exit /b 1)
 set "VLM_PID="
 REM VLM (vision) often binds slower than LLM on CPU CI; allow ~3 min of polling
 for /L %%n in (1,1,90) do (

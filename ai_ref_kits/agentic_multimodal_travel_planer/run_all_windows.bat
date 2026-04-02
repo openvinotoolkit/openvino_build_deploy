@@ -180,13 +180,22 @@ echo   --skip-mcp      Skip MCP startup
 echo   --skip-agents   Skip agent startup
 echo   --skip-ui       Skip UI startup
 echo.
-echo Model options:
-echo   Any additional options are passed to download_and_run_models_Windows.bat
-echo   (for example --llm-model, --vlm-model, --llm-port, --vlm-port, --device).
+echo Model options ^(forwarded to download_and_run_models_Windows.bat^):
+echo   --llm-model MODEL     LLM model id ^(e.g. OpenVINO/Qwen3-8B-int4-ov^)
+echo   --vlm-model MODEL     VLM model id
+echo   --llm-port PORT       LLM REST port
+echo   --vlm-port PORT       VLM REST port
+echo   --models-dir DIR      Models directory
+echo   --device DEVICE       Base device for LLM/VLM defaults ^(CPU, GPU, GPU.0, ...^)
+echo   --llm-device DEVICE   LLM-only device ^(overrides --device for LLM^)
+echo   --vlm-device DEVICE   Recorded for docs; VLM OVMS uses model subconfig.json
+echo   Optional --            End launcher parsing; remaining tokens go to the model script
 echo.
 echo Examples:
 echo   %~nx0
 echo   %~nx0 --device CPU --llm-port 9001 --vlm-port 9002
+echo   %~nx0 --llm-model OpenVINO/Qwen3-8B-int4-ov --llm-device GPU.0
+echo   %~nx0 --vlm-model OpenVINO/Phi-3.5-vision-instruct-int4-ov --vlm-device CPU
 echo   %~nx0 --stop
 echo   %~nx0 --skip-ui
 exit /b 0
