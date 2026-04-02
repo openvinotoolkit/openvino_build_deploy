@@ -102,6 +102,7 @@ echo === Step 1/4: Starting OVMS models ===
 cmd.exe /c call "%MODELS_SCRIPT%"!MODEL_ARGS!
 if errorlevel 1 (
     echo ERROR: Model startup failed.
+    echo OVMS logs: %SCRIPT_DIR%logs\ovms_llm.err  %SCRIPT_DIR%logs\ovms_vlm.err
     exit /b 1
 )
 goto after_models_step

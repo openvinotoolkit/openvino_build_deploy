@@ -78,15 +78,21 @@ if /I "!ARG1:~0,13!"=="--llm-device=" (
     shift
     goto parse_args
 )
+REM Cannot GOTO from inside (...) blocks — use a flag and branch here
+set "LLM_ARG_SHIFT1="
 echo(!ARG1!| findstr /R /C:" " >nul && (
     for /f "tokens=1* delims= " %%a in ("!ARG1!") do (
         if /I "%%a"=="--llm-device" if not "%%b"=="" (
             set "LLM_DEVICE=%%b"
             set "LLM_DEVICE_FROM_FLAG=1"
-            shift
-            goto parse_args
+            set "LLM_ARG_SHIFT1=1"
         )
     )
+)
+if defined LLM_ARG_SHIFT1 (
+    set "LLM_ARG_SHIFT1="
+    shift
+    goto parse_args
 )
 if /I "%~1"=="--llm-device" (
     if "%~2"=="" (
