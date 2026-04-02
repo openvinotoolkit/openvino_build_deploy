@@ -70,7 +70,29 @@ if /I "%~1"=="--device" (
     shift
     goto parse_args
 )
+REM --llm-device: two argv, one argv with space, or --llm-device=VALUE (PowerShell often drops the value token)
+set "ARG1=%~1"
+if /I "!ARG1:~0,13!"=="--llm-device=" (
+    set "LLM_DEVICE=!ARG1:~13!"
+    set "LLM_DEVICE_FROM_FLAG=1"
+    shift
+    goto parse_args
+)
+echo(!ARG1!| findstr /R /C:" " >nul && (
+    for /f "tokens=1* delims= " %%a in ("!ARG1!") do (
+        if /I "%%a"=="--llm-device" if not "%%b"=="" (
+            set "LLM_DEVICE=%%b"
+            set "LLM_DEVICE_FROM_FLAG=1"
+            shift
+            goto parse_args
+        )
+    )
+)
 if /I "%~1"=="--llm-device" (
+    if "%~2"=="" (
+        echo ERROR: --llm-device needs a value. Examples: --llm-device CPU   or   --llm-device=CPU
+        exit /b 1
+    )
     set "LLM_DEVICE=%~2"
     set "LLM_DEVICE_FROM_FLAG=1"
     shift
@@ -412,7 +434,7 @@ echo   --llm-port PORT        LLM REST port ^(default: %LLM_PORT%^)
 echo   --vlm-port PORT        VLM REST port ^(default: %VLM_PORT%^)
 echo   --models-dir DIR       Models directory ^(default: %MODELS_DIR%^)
 echo   --device DEVICE        Base device for both models ^(CPU, GPU, GPU.0, ...^)
-echo   --llm-device DEVICE    Device override for LLM
+echo   --llm-device DEVICE    Device override for LLM ^(also --llm-device=CPU from PowerShell^)
 echo   --vlm-device DEVICE    Not passed to VLM OVMS ^(use model subconfig.json^)
 echo.
 echo Examples:

@@ -194,6 +194,7 @@ echo   --vlm-port PORT       VLM REST port
 echo   --models-dir DIR      Models directory
 echo   --device DEVICE       Base device for LLM/VLM defaults ^(CPU, GPU, GPU.0, ...^)
 echo   --llm-device DEVICE   LLM-only device ^(overrides --device for LLM^)
+echo                           From PowerShell use --llm-device=CPU if the value token is dropped.
 echo   --vlm-device DEVICE   Recorded for docs; VLM OVMS uses model subconfig.json
 echo   Optional --            End launcher parsing; remaining tokens go to the model script
 echo.
