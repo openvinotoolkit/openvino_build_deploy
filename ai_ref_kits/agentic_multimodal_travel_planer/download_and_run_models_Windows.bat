@@ -227,6 +227,9 @@ set "PORT_VALUE="
 goto :eof
 
 :after_validation_subroutines
+REM setupvars.bat may overwrite LLM_DEVICE ^(same name as OpenVINO env vars^) — stash and restore after call
+set "OVMS_STASH_LLM=!LLM_DEVICE!"
+
 REM Download and extract OVMS package
 if not exist "%OVMS_DIR%" (
     echo Downloading OpenVINO Model Server package...
@@ -244,6 +247,12 @@ if exist "%SETUP_SCRIPT%" (
     call "%SETUP_SCRIPT%" 2>nul || set PATH="%OVMS_DIR%;%PATH%"
 ) else (
     set PATH="%OVMS_DIR%;%PATH%"
+)
+
+if not "!OVMS_STASH_LLM!"=="" set "LLM_DEVICE=!OVMS_STASH_LLM!"
+if "!LLM_DEVICE!"=="" if defined TRAVEL_PLANNER_LLM_DEVICE (
+    set "LLM_DEVICE=!TRAVEL_PLANNER_LLM_DEVICE!"
+    set "LLM_DEVICE_FROM_FLAG=1"
 )
 
 REM Find OVMS binary
