@@ -80,7 +80,7 @@ goto parse_args
 
 :collect_model_args
 if "%~1"=="" goto args_done
-set "MODEL_ARGS=!MODEL_ARGS! %~1"
+set "MODEL_ARGS=!MODEL_ARGS! %1"
 shift
 goto collect_model_args
 
