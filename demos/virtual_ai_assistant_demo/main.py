@@ -238,9 +238,11 @@ def _gradio_content_to_plain_text(content: Any) -> str:
     if isinstance(content, str):
         return content
     if isinstance(content, dict):
-        if "text" in content:
-            return str(content["text"])
-        return str(content)
+        if content.get("type") == "text" and "text" in content:
+            return _gradio_content_to_plain_text(content["text"])
+        if "type" not in content and "text" in content:
+            return _gradio_content_to_plain_text(content["text"])
+        return ""
     if isinstance(content, list):
         return "".join(_gradio_content_to_plain_text(part) for part in content)
     return str(content)
