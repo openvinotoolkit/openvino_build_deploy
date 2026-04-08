@@ -17,6 +17,7 @@ set PYTHON_SUPPORT=python_on
 set TARGET_DEVICE=
 set LLM_DEVICE=
 set VLM_DEVICE=
+set LLM_DEVICE_FROM_FLAG=
 set STOP_MODE=0
 
 :parse_args
@@ -69,8 +70,41 @@ if /I "%~1"=="--device" (
     shift
     goto parse_args
 )
+REM --llm-device: two argv, one argv with space, or --llm-device=VALUE (PowerShell often drops the value token)
+set "ARG1=%~1"
+if /I "!ARG1:~0,13!"=="--llm-device=" (
+    set "LLM_DEVICE=!ARG1:~13!"
+    if "!LLM_DEVICE!"=="" (
+        echo ERROR: --llm-device= needs a value ^(e.g. --llm-device=CPU^).
+        exit /b 1
+    )
+    set "LLM_DEVICE_FROM_FLAG=1"
+    shift
+    goto parse_args
+)
+REM Cannot GOTO from inside (...) blocks — use a flag and branch here
+set "LLM_ARG_SHIFT1="
+echo(!ARG1!| findstr /R /C:" " >nul && (
+    for /f "tokens=1* delims= " %%a in ("!ARG1!") do (
+        if /I "%%a"=="--llm-device" if not "%%b"=="" (
+            set "LLM_DEVICE=%%b"
+            set "LLM_DEVICE_FROM_FLAG=1"
+            set "LLM_ARG_SHIFT1=1"
+        )
+    )
+)
+if defined LLM_ARG_SHIFT1 (
+    set "LLM_ARG_SHIFT1="
+    shift
+    goto parse_args
+)
 if /I "%~1"=="--llm-device" (
+    if "%~2"=="" (
+        echo ERROR: --llm-device needs a value. Examples: --llm-device CPU   or   --llm-device=CPU
+        exit /b 1
+    )
     set "LLM_DEVICE=%~2"
+    set "LLM_DEVICE_FROM_FLAG=1"
     shift
     shift
     goto parse_args
@@ -88,6 +122,25 @@ exit /b 1
 
 :args_done
 if "%STOP_MODE%"=="1" goto stop_only
+
+REM Orphan flag when value never arrived ^(bare --llm-device= or dropped argv^)
+if defined LLM_DEVICE_FROM_FLAG if "!LLM_DEVICE!"=="" set "LLM_DEVICE_FROM_FLAG="
+REM run_all_windows.bat sets TRAVEL_PLANNER_LLM_DEVICE when argv to this script is broken ^(PowerShell^)
+if "!LLM_DEVICE!"=="" if defined TRAVEL_PLANNER_LLM_DEVICE (
+    set "LLM_DEVICE=!TRAVEL_PLANNER_LLM_DEVICE!"
+    set "LLM_DEVICE_FROM_FLAG=1"
+)
+
+call :sanitize_device_var TARGET_DEVICE
+call :sanitize_device_var LLM_DEVICE
+call :sanitize_device_var VLM_DEVICE
+
+REM Re-apply env if sanitize cleared LLM; drop orphan flag if still empty
+if "!LLM_DEVICE!"=="" if defined TRAVEL_PLANNER_LLM_DEVICE (
+    set "LLM_DEVICE=!TRAVEL_PLANNER_LLM_DEVICE!"
+    set "LLM_DEVICE_FROM_FLAG=1"
+)
+if defined LLM_DEVICE_FROM_FLAG if "!LLM_DEVICE!"=="" set "LLM_DEVICE_FROM_FLAG="
 
 REM Normalize device values once (cpu/gpu.0 -> CPU/GPU.0)
 call :to_upper TARGET_DEVICE
@@ -110,6 +163,15 @@ set "DEV_VALUE=%~2"
 
 REM Allow empty value (use default behavior if any)
 if "!DEV_VALUE!"=="" goto :validate_device_end
+
+REM Whitespace-only (space/tab/NBSP etc.): clear the caller var and skip — avoids bad User env LLM_DEVICE
+set "VDW="
+set "VD_CH=!DEV_VALUE!"
+for /f "delims=" %%Z in ('powershell -NoProfile -Command "if ([string]::IsNullOrWhiteSpace($env:VD_CH)) { Write-Output 1 } else { Write-Output 0 }"') do set "VDW=%%Z"
+if "!VDW!"=="1" (
+  set "%~1="
+  goto :validate_device_end
+)
 
 REM Allow CPU or GPU directly
 if /I "!DEV_VALUE!"=="CPU" goto :validate_device_end
@@ -165,6 +227,9 @@ set "PORT_VALUE="
 goto :eof
 
 :after_validation_subroutines
+REM setupvars.bat may overwrite LLM_DEVICE ^(same name as OpenVINO env vars^) — stash and restore after call
+set "OVMS_STASH_LLM=!LLM_DEVICE!"
+
 REM Download and extract OVMS package
 if not exist "%OVMS_DIR%" (
     echo Downloading OpenVINO Model Server package...
@@ -182,6 +247,12 @@ if exist "%SETUP_SCRIPT%" (
     call "%SETUP_SCRIPT%" 2>nul || set PATH="%OVMS_DIR%;%PATH%"
 ) else (
     set PATH="%OVMS_DIR%;%PATH%"
+)
+
+if not "!OVMS_STASH_LLM!"=="" set "LLM_DEVICE=!OVMS_STASH_LLM!"
+if "!LLM_DEVICE!"=="" if defined TRAVEL_PLANNER_LLM_DEVICE (
+    set "LLM_DEVICE=!TRAVEL_PLANNER_LLM_DEVICE!"
+    set "LLM_DEVICE_FROM_FLAG=1"
 )
 
 REM Find OVMS binary
@@ -204,9 +275,17 @@ if "%TARGET_DEVICE%"=="" (
     echo Base target device: %TARGET_DEVICE%
 )
 
-REM Resolve per-model devices
-if "%LLM_DEVICE%"=="" set "LLM_DEVICE=%TARGET_DEVICE%"
-if "%VLM_DEVICE%"=="" set "VLM_DEVICE=%TARGET_DEVICE%"
+REM LLM device: --llm-device overrides auto TARGET_DEVICE for OVMS LLM only; otherwise inherit TARGET_DEVICE
+if not defined LLM_DEVICE_FROM_FLAG (
+    if "!LLM_DEVICE!"=="" set "LLM_DEVICE=!TARGET_DEVICE!"
+)
+if defined LLM_DEVICE_FROM_FLAG (
+    if "!LLM_DEVICE!"=="" (
+        echo ERROR: --llm-device needs a value ^(CPU, GPU, or GPU.N^).
+        exit /b 1
+    )
+)
+if "!VLM_DEVICE!"=="" set "VLM_DEVICE=!TARGET_DEVICE!"
 
 echo Configuration:
 echo   LLM Model: %LLM_MODEL%
@@ -253,10 +332,8 @@ REM Start LLM service
 REM --port = gRPC, --rest_port = HTTP REST (chat/completions). Agents use HTTP, so REST must be on LLM_PORT.
 echo Starting LLM service (REST on %LLM_PORT%, gRPC on 8011)...
 set LLM_GRPC_PORT=8011
-set LLM_ARGS=--port %LLM_GRPC_PORT% --rest_port %LLM_PORT% --model_repository_path "%MODELS_DIR%" --source_model "%LLM_MODEL%" --tool_parser hermes3 --cache_size 0 --task text_generation 
-if not "%LLM_DEVICE%"=="" set LLM_ARGS=%LLM_ARGS% --target_device %LLM_DEVICE%
-REM Use PowerShell Start-Process to launch detached
-powershell -Command "Start-Process -FilePath '%OVMS_PATH%' -ArgumentList '%LLM_ARGS%' -RedirectStandardOutput '%LOGS_DIR%\ovms_llm.log' -RedirectStandardError '%LOGS_DIR%\ovms_llm.err' -WindowStyle Hidden" || (echo Failed to start LLM service && exit /b 1)
+REM Start-Process must use an argument array; a single -ArgumentList string is passed as ONE argv (OVMS would not see --target_device).
+powershell -NoProfile -Command "$al=@('--port',$env:LLM_GRPC_PORT,'--rest_port',$env:LLM_PORT,'--model_repository_path',$env:MODELS_DIR,'--source_model',$env:LLM_MODEL,'--tool_parser','hermes3','--cache_size','0','--task','text_generation'); if (-not [string]::IsNullOrWhiteSpace($env:LLM_DEVICE)) { $al+='--target_device'; $al+=$env:LLM_DEVICE }; Start-Process -FilePath $env:OVMS_PATH -ArgumentList $al -RedirectStandardOutput ([IO.Path]::Combine($env:LOGS_DIR,'ovms_llm.log')) -RedirectStandardError ([IO.Path]::Combine($env:LOGS_DIR,'ovms_llm.err')) -WindowStyle Hidden" || (echo Failed to start LLM service && exit /b 1)
 set "LLM_PID="
 for /L %%n in (1,1,25) do (
   if "!LLM_PID!"=="" (
@@ -270,10 +347,8 @@ REM Start VLM service
 REM --port = gRPC, --rest_port = HTTP REST. REST on VLM_PORT for clients.
 echo Starting VLM service (REST on %VLM_PORT%, gRPC on 8012)...
 set VLM_GRPC_PORT=8012
-set VLM_ARGS=--port %VLM_GRPC_PORT% --rest_port %VLM_PORT% --model_name "%VLM_MODEL%" --model_path "%VLM_MODEL_PATH%"
 REM Do not pass --target_device for VLM ^(MediaPipe^); OVMS expects device in model subconfig.json.
-REM Use PowerShell Start-Process to launch detached
-powershell -Command "Start-Process -FilePath '%OVMS_PATH%' -ArgumentList '%VLM_ARGS%' -RedirectStandardOutput '%LOGS_DIR%\ovms_vlm.log' -RedirectStandardError '%LOGS_DIR%\ovms_vlm.err' -WindowStyle Hidden" || (echo Failed to start VLM service && exit /b 1)
+powershell -NoProfile -Command "$al=@('--port',$env:VLM_GRPC_PORT,'--rest_port',$env:VLM_PORT,'--model_name',$env:VLM_MODEL,'--model_path',$env:VLM_MODEL_PATH); Start-Process -FilePath $env:OVMS_PATH -ArgumentList $al -RedirectStandardOutput ([IO.Path]::Combine($env:LOGS_DIR,'ovms_vlm.log')) -RedirectStandardError ([IO.Path]::Combine($env:LOGS_DIR,'ovms_vlm.err')) -WindowStyle Hidden" || (echo Failed to start VLM service && exit /b 1)
 set "VLM_PID="
 REM VLM (vision) often binds slower than LLM on CPU CI; allow ~3 min of polling
 for /L %%n in (1,1,90) do (
@@ -298,6 +373,24 @@ if defined VLM_PID (echo To stop VLM: taskkill /F /PID %VLM_PID%)
 echo.
 
 endlocal
+exit /b 0
+
+:sanitize_device_var
+setlocal EnableDelayedExpansion
+set "_vn=%~1"
+set "v=!%_vn%!"
+if "!v!"=="" endlocal & exit /b 0
+set "PSV=!v!"
+for /f "delims=" %%A in ('powershell -NoProfile -Command "$s=$env:PSV; if ([string]::IsNullOrWhiteSpace($s)) { 'CLR' } else { $s.Trim() }"') do set "RES=%%A"
+if "!RES!"=="CLR" (
+  endlocal
+  set "%~1="
+  exit /b 0
+)
+for %%E in ("!RES!") do (
+  endlocal
+  set "%~1=%%~E"
+)
 exit /b 0
 
 :to_upper
@@ -375,7 +468,8 @@ echo   --llm-port PORT        LLM REST port ^(default: %LLM_PORT%^)
 echo   --vlm-port PORT        VLM REST port ^(default: %VLM_PORT%^)
 echo   --models-dir DIR       Models directory ^(default: %MODELS_DIR%^)
 echo   --device DEVICE        Base device for both models ^(CPU, GPU, GPU.0, ...^)
-echo   --llm-device DEVICE    Device override for LLM
+echo   --llm-device DEVICE    Device override for LLM ^(also --llm-device=CPU^)
+echo   Env TRAVEL_PLANNER_LLM_DEVICE   If set, used when argv has no LLM device ^(run_all sets this^)
 echo   --vlm-device DEVICE    Not passed to VLM OVMS ^(use model subconfig.json^)
 echo.
 echo Examples:
