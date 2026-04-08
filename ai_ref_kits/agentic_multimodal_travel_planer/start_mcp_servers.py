@@ -5,6 +5,7 @@ functionality to start, stop, and download server scripts from GitHub.
 """
 
 import os
+import platform
 import subprocess  # nosec B404 - controlled argv lists, no shell=True usage
 import sys
 import time
@@ -19,8 +20,9 @@ from dotenv import find_dotenv, load_dotenv, set_key
 
 from utils.util import is_port_in_use, kill_processes_on_port
 
-CONFIG_PATH = Path("config/mcp_config.yaml")
-LOG_DIR = Path("logs")
+_KIT_ROOT = Path(__file__).resolve().parent
+CONFIG_PATH = _KIT_ROOT / "config" / "mcp_config.yaml"
+LOG_DIR = _KIT_ROOT / "logs"
 LOG_DIR.mkdir(exist_ok=True)
 
 # GitHub URLs for known MCP servers
@@ -191,8 +193,10 @@ def start_mcp_server(name: str, conf: Dict) -> bool:
             kill_processes_on_port(port)
             time.sleep(0.5)
 
-    # Resolve script path
+    # Resolve script path (relative paths = relative to kit root, not cwd)
     script_path = Path(script)
+    if not script_path.is_absolute():
+        script_path = (_KIT_ROOT / script_path).resolve()
     if not script_path.exists():
         print(f"Script for '{name}' not found: {script_path}")
         print(f"Attempting to download from GitHub...")
@@ -322,29 +326,16 @@ def stop_mcp_servers(
         targets: List of (server_name, config_dict) tuples to stop.
         kill_all: If True, aggressively kill by known process patterns.
     """
-    killed = 0
+    killed_ports = 0
     for name, section in targets:
         port = section.get("mcp_port")
         if port:
-            try:
-                result = subprocess.run(
-                    ["lsof", "-t", f"-i:{port}"],
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                )
-                for pid in result.stdout.strip().split("\n"):
-                    if pid:
-                        subprocess.run(["kill", "-9", pid], check=False)
-                        print(f"Killed process {pid} on port {port}")
-                        killed += 1
-            except FileNotFoundError:
-                # Best effort if lsof missing
-                pass
+            kill_processes_on_port(int(port))
+            killed_ports += 1
 
-        # Also try to kill by script name as a fallback
+        # Unix fallback: kill by script name (no reliable equivalent on Windows)
         script = section.get("script")
-        if script:
+        if script and platform.system() != "Windows":
             try:
                 subprocess.run(
                     ["pkill", "-f", str(Path(script).name)],
@@ -353,8 +344,8 @@ def stop_mcp_servers(
             except Exception:
                 pass
 
-    # Aggressive kill mode: try to kill by common MCP script patterns
-    if kill_all:
+    # Aggressive kill mode: try to kill by common MCP script patterns (Unix only)
+    if kill_all and platform.system() != "Windows":
         patterns = [
             "ai_builder_mcp_hotel_finder.py",
             "ai_builder_mcp_flights.py",
@@ -369,7 +360,7 @@ def stop_mcp_servers(
                 pass
 
     print(
-        f"Stopped {killed} process(es). All selected MCP servers stopped."
+        f"Cleared {killed_ports} MCP port(s). Selected MCP servers stopped."
     )
 
 
@@ -388,6 +379,8 @@ def download_mcp_servers(targets: List[Tuple[str, Dict]]) -> None:
             continue
 
         script_path = Path(script)
+        if not script_path.is_absolute():
+            script_path = (_KIT_ROOT / script_path).resolve()
 
         # Try to download
         if download_script_if_missing(name, script_path):
