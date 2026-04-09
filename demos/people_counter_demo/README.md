@@ -116,7 +116,7 @@ And you can run it on specific video input
 python main.py --stream input.mp4
 ```
 
-By default, the YOLOv8n model is used. To change this, select another model from the family:
+By default, the Ultralytics YOLO26n model is used. To change this, select another model from the family:
 
 ```shell
 python main.py --stream 0 --model_name yolo11x
