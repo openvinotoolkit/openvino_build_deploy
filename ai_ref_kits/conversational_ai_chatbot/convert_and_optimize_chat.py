@@ -3,8 +3,8 @@ from pathlib import Path
 
 import numpy as np
 import openvino as ov
-from openvino.runtime import opset10 as ops
-from openvino.runtime import passes
+import openvino.opset10 as ops
+from openvino import passes
 from optimum.intel import OVModelForCausalLM, OVModelForFeatureExtraction, OVWeightQuantizationConfig, OVConfig, \
     OVQuantizer, OVModelForSequenceClassification
 from transformers import AutoTokenizer
