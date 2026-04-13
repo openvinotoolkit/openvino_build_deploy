@@ -5,7 +5,7 @@ import sys
 import threading
 import time
 from pathlib import Path
-from typing import List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import chromadb
 import fitz
@@ -23,8 +23,8 @@ from llama_index.embeddings.huggingface_openvino import OpenVINOEmbedding
 from llama_index.llms.openvino_genai import OpenVINOGenAILLM
 from llama_index.postprocessor.openvino_rerank import OpenVINORerank
 from llama_index.vector_stores.chroma import ChromaVectorStore
-import openvino.opset10 as ops
-from openvino import passes
+from openvino.runtime import opset10 as ops
+from openvino.runtime import passes
 from optimum.exporters.openvino.convert import export_tokenizer
 from optimum.intel import OVModelForCausalLM, OVModelForFeatureExtraction, OVWeightQuantizationConfig, OVModelForSequenceClassification
 from transformers import AutoTokenizer
@@ -238,22 +238,23 @@ def generate_initial_greeting() -> str:
     return response
 
 
-def chat(history: List[List[str]]) -> Tuple[List[List[str]], float]:
-    # get token by token and merge to the final response
-    history[-1][1] = ""
+def chat(history: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], float]:
+    # get token by token and merge to the final response (Gradio 6+ messages format)
+    history[-1]["content"] = ""
+    user_prompt = utils.gradio_content_to_plain_text(history[-2]["content"])
     with inference_lock:
-        chat_streamer = ov_chat_engine.stream_chat(history[-1][0]).response_gen
+        chat_streamer = ov_chat_engine.stream_chat(user_prompt).response_gen
 
         # generate first token independently
         first_token = next(chat_streamer)
-        history[-1][1] += emphasize_thinking_mode(first_token)
+        history[-1]["content"] += emphasize_thinking_mode(first_token)
         yield history, 0.0
 
         # generate next tokens
         tokens = ov_chat_engine._llm._streamer.tokens_len
         start_time = time.time()
         for partial_text in chat_streamer:
-            history[-1][1] += emphasize_thinking_mode(partial_text)
+            history[-1]["content"] += emphasize_thinking_mode(partial_text)
             processing_time = time.time() - start_time
             tokens += ov_chat_engine._llm._streamer.tokens_len
             # "return" partial response
@@ -266,21 +267,23 @@ def chat(history: List[List[str]]) -> Tuple[List[List[str]], float]:
         yield history, round(tokens / processing_time, 2)
 
 
-def transcribe(prompt: str, conversation: List[List[str]]) -> List[List[str]]:
-    conversation.append([prompt, None])
+def transcribe(prompt: str, conversation: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    conversation.append({"role": "user", "content": prompt})
+    conversation.append({"role": "assistant", "content": ""})
     return conversation
 
 
-def extra_action(conversation: List) -> Tuple[str, float]:
-    conversation.append([chatbot_config["extra_action_prompt"], None])
+def extra_action(conversation: List[Dict[str, Any]]) -> Tuple[str, float]:
+    conversation.append({"role": "user", "content": chatbot_config["extra_action_prompt"]})
+    conversation.append({"role": "assistant", "content": ""})
     for partial_summary, performance in chat(conversation):
-        yield f"## Summary\n\n" + partial_summary[-1][1], performance
+        yield f"## Summary\n\n" + utils.gradio_content_to_plain_text(partial_summary[-1]["content"]), performance
 
 
 def create_UI(initial_message: str, action_name: str) -> gr.Blocks:
     qr_code = utils.get_qr_code("https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/demos/virtual_ai_assistant_demo", size=200)
 
-    with gr.Blocks(theme=utils.gradio_intel_theme(), title="Your Virtual AI Assistant") as demo:
+    with gr.Blocks(title="Your Virtual AI Assistant") as demo:
         utils.gradio_intel_header(chatbot_config["assistant_name"])
         with gr.Row():
             with gr.Column(scale=7):
@@ -290,8 +293,12 @@ def create_UI(initial_message: str, action_name: str) -> gr.Blocks:
         with gr.Row():
             file_uploader_ui = gr.Files(label="Additional context", file_types=[".pdf", ".txt"], scale=1)
             with gr.Column(scale=4):
-                chatbot_ui = gr.Chatbot(value=[[None, initial_message]], label="Chatbot", sanitize_html=False,
-                                        avatar_images=(None, "https://docs.openvino.ai/2025/_static/favicon.ico"))
+                chatbot_ui = gr.Chatbot(
+                    value=[{"role": "assistant", "content": initial_message}],
+                    label="Chatbot",
+                    sanitize_html=False,
+                    avatar_images=(None, "https://docs.openvino.ai/2025/_static/favicon.ico"),
+                )
                 with gr.Row():
                     input_text_ui = gr.Textbox(label="Your text input", scale=6)
                     submit_btn = gr.Button("Submit", variant="primary", interactive=False, scale=1)
@@ -307,10 +314,15 @@ def create_UI(initial_message: str, action_name: str) -> gr.Blocks:
         gr.on(triggers=input_text_ui.change, inputs=input_text_ui, outputs=submit_btn,
               fn=lambda x: gr.Button(interactive=True) if bool(x) else gr.Button(interactive=False))
 
-        file_uploader_ui.change(lambda: ([[None, initial_message]], None), outputs=[chatbot_ui, summary_ui]) \
-            .then(load_context, inputs=file_uploader_ui)
+        file_uploader_ui.change(
+            lambda: ([{"role": "assistant", "content": initial_message}], None),
+            outputs=[chatbot_ui, summary_ui],
+        ).then(load_context, inputs=file_uploader_ui)
 
-        clear_btn.click(lambda: ([[None, initial_message]], None, None), outputs=[chatbot_ui, summary_ui, tps_text_ui]) \
+        clear_btn.click(
+            lambda: ([{"role": "assistant", "content": initial_message}], None, None),
+            outputs=[chatbot_ui, summary_ui, tps_text_ui],
+        ) \
             .then(load_context, inputs=file_uploader_ui) \
             .then(lambda: gr.Button(interactive=False), outputs=extra_action_button)
 
@@ -347,7 +359,11 @@ def run(chat_model_name: str, embedding_model_name: str, reranker_model_name: st
     demo = create_UI(initial_message, chatbot_config["extra_action_name"])
     # launch demo
     print("Demo is ready!", flush=True) # Required for the CI to detect readiness
-    demo.queue().launch(server_name=server_name, share=public_interface)
+    demo.queue().launch(
+        server_name=server_name,
+        share=public_interface,
+        theme=utils.gradio_intel_theme(),
+    )
 
 
 if __name__ == "__main__":
