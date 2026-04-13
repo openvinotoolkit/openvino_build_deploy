@@ -8,7 +8,7 @@ import time
 import urllib.parse
 from os import PathLike
 from pathlib import Path
-from typing import Tuple, Dict
+from typing import Any, Dict, Tuple
 
 import numpy as np
 
@@ -304,6 +304,23 @@ def get_qr_code(text: str, size: int = 256, with_embedded_image: bool = False) -
 
     img = img.resize((size, size), resample=PIL.Image.LANCZOS)
     return np.array(img)
+
+
+def gradio_content_to_plain_text(content: Any) -> str:
+    """Gradio 6+ may send message content as a string or structured dicts (e.g. type=text, text=...). LlamaIndex stream_chat expects a str."""
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, dict):
+        if content.get("type") == "text" and "text" in content:
+            return gradio_content_to_plain_text(content["text"])
+        if "type" not in content and "text" in content:
+            return gradio_content_to_plain_text(content["text"])
+        return ""
+    if isinstance(content, list):
+        return "".join(gradio_content_to_plain_text(part) for part in content)
+    return str(content)
 
 
 def get_gradio_intel_color(name: str) -> "gr.themes.Color":
