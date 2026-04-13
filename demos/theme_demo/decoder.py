@@ -24,7 +24,8 @@ class OpenPoseDecoder:
 
     def __call__(self, heatmaps, pafs):
         batch_size, _, h, w = heatmaps.shape
-        assert batch_size == 1, 'Batch size of 1 only supported'
+        if batch_size != 1:
+            raise ValueError(f'Only batch_size=1 is supported, got batch_size={batch_size}')
 
         pooled_heatmaps = np.array(
             [[self.pool2d(h, kernel_size=3, stride=1, padding=1, pool_mode="max") for h in heatmaps[0]]]
@@ -80,8 +81,10 @@ class OpenPoseDecoder:
 
     def extract_points(self, heatmaps, nms_heatmaps):
         batch_size, channels_num, h, w = heatmaps.shape
-        assert batch_size == 1, 'Batch size of 1 only supported'
-        assert channels_num >= self.num_joints
+        if batch_size != 1:
+            raise ValueError(f'Only batch_size=1 is supported, got batch_size={batch_size}')
+        if channels_num < self.num_joints:
+            raise ValueError(f'channels_num ({channels_num}) must be >= num_joints ({self.num_joints})')
 
         xs, ys, scores = self.top_k(nms_heatmaps)
         masks = scores > self.score_threshold
@@ -347,7 +350,8 @@ class AssociativeEmbeddingDecoder:
             scores: Array of shape (N,) with pose confidence scores
         """
         batch_size = heatmaps.shape[0]
-        assert batch_size == 1, 'Batch size of 1 only supported'
+        if batch_size != 1:
+            raise ValueError(f'Only batch_size=1 is supported, got batch_size={batch_size}')
 
         # Remove batch dimension
         heatmaps = heatmaps[0]  # (17, H, W)

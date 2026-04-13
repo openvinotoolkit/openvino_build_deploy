@@ -32,14 +32,23 @@ Options:
   --skip-agents      Skip agent startup
   --skip-ui          Skip Gradio UI startup
 
-Model script arguments:
-  Any token that is not a launcher option above is forwarded to
-  download_and_run_models_linux.sh (same as run_all_windows.bat).
-  Optional '--' ends launcher parsing; everything after it is forwarded as-is.
+Model script arguments (forwarded to download_and_run_models_linux.sh):
+  --llm-model MODEL     LLM model id (e.g. OpenVINO/Qwen3-8B-int4-ov)
+  --vlm-model MODEL     VLM model id
+  --llm-port PORT       LLM REST port
+  --vlm-port PORT       VLM REST port
+  --models-dir DIR      Models directory
+  --device DEVICE       Base device for LLM/VLM defaults (CPU, GPU, GPU.0, ...)
+  --llm-device DEVICE   LLM-only device (overrides --device for LLM)
+  --vlm-device DEVICE   VLM-only device (overrides --device for VLM)
+  Any other token is also forwarded. Optional '--' ends launcher parsing;
+  everything after '--' is forwarded as-is.
 
 Examples:
   $0
   $0 --device CPU --llm-port 9001 --vlm-port 9002
+  $0 --llm-model OpenVINO/Qwen3-8B-int4-ov --llm-device GPU.0
+  $0 --vlm-model OpenVINO/Phi-3.5-vision-instruct-int4-ov --vlm-device CPU
   $0 -- --device CPU --llm-port 9001 --vlm-port 9002
   $0 --skip-ui
   $0 --stop

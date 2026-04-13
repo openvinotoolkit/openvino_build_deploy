@@ -123,9 +123,7 @@ To change the class to detect, use the `--class_name` option. By default, hazeln
 python main.py --stream 0 --class_name hazelnut --aux_classes nut "brown ball"
 ```
 
-```shell
-
-By default, the YOLOE-11M model is used. To change this, select another model from the family:
+By default, the yolov8m-worldv2 model is used. To change this, select another model from the family:
 
 ```shell
 python main.py --stream 0 --detection_model yoloe-11s-seg
