@@ -13,9 +13,12 @@ import yaml
 
 from utils.util import is_port_in_use, kill_processes_on_port
 
-CONFIG_PATH = Path("config/agents_config.yaml")
-AGENT_RUNNER = Path("agents/agent_runner.py")
-LOG_DIR = Path("logs")
+# Resolve paths from this script so logs/config match start_ui.py on Windows and Linux
+# regardless of the process current working directory.
+_KIT_ROOT = Path(__file__).resolve().parent
+CONFIG_PATH = _KIT_ROOT / "config" / "agents_config.yaml"
+AGENT_RUNNER = _KIT_ROOT / "agents" / "agent_runner.py"
+LOG_DIR = _KIT_ROOT / "logs"
 LOG_DIR.mkdir(exist_ok=True)
 
 
@@ -100,8 +103,19 @@ def start_agent(name, config):
 
 
 def stop_agents():
-    subprocess.run(["pkill", "-f", str(AGENT_RUNNER)], check=False)
-    print("All agents stopped.")
+    """Free agent ports using the same logic as Linux/Windows elsewhere (no pkill)."""
+    if not CONFIG_PATH.exists():
+        print(f"Config file not found: {CONFIG_PATH}")
+        return
+    with open(CONFIG_PATH, "r", encoding="utf-8") as file:
+        config = yaml.safe_load(file) or {}
+    for agent_conf in config.values():
+        if not isinstance(agent_conf, dict):
+            continue
+        port = agent_conf.get("port")
+        if port is not None:
+            kill_processes_on_port(int(port))
+    print("All agents stopped (configured ports cleared).")
 
 
 def main():

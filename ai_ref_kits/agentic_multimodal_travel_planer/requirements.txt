@@ -1,6 +1,6 @@
 gradio==6.7.0
-# litellm is quarantined on PyPI (no wheels listed); satisfy beeai-framework via GitHub
-litellm @ git+https://github.com/BerriAI/litellm.git@v1.80.15-stable
+# beeai-framework needs litellm>=1.80.11,<2; pin one release (avoid 1.82.7–1.82.8 on PyPI).
+litellm==1.83.0
 beeai-framework==0.1.75
 beeai-framework[a2a]==0.1.75
 uvicorn==0.37.0

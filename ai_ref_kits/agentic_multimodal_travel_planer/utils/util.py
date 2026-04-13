@@ -553,6 +553,13 @@ def save_uploaded_image(image_input, destination_dir, prefix="caption_image"):
     )
 
 
+def _normalize_log_line(line: str) -> str:
+    """Normalize a log line for parsing (CRLF vs LF, stray CR)."""
+    if not line:
+        return ""
+    return line.replace("\r", "").strip()
+
+
 def extract_agent_handoffs_from_log(
     log_path, cache: Dict[str, Dict[str, Iterable]]
 ):
@@ -568,7 +575,7 @@ def extract_agent_handoffs_from_log(
     # Extract source agent name from log filename (e.g., "travel_router.log" -> "Travel Router")
     source_agent_name = log_path.stem.replace("_", " ").title()
 
-    cache_key = str(log_path)
+    cache_key = str(log_path.resolve())
     cache.setdefault(cache_key, {"position": 0, "seen_handoffs": set()})
 
     new_steps = []
@@ -585,8 +592,9 @@ def extract_agent_handoffs_from_log(
             ) as handle:
                 handle.seek(last_position)
                 for line in handle:
-                    line = line.strip()
-                    if "--> 🔍 HandoffTool[" in line:
+                    line = _normalize_log_line(line)
+                    # BeeAI trajectory: legacy "--> 🔍 HandoffTool[" or current "--> ToolHandoffTool["
+                    if line.startswith("-->") and "HandoffTool[" in line:
                         parts = line.split("HandoffTool[")[1].split("]")
                         target_agent_name = parts[0].replace("_", " ").title()
                         handoff_id = f"{target_agent_name}_start"
@@ -608,7 +616,7 @@ def extract_agent_handoffs_from_log(
                                 f"&nbsp;&nbsp;&nbsp;&nbsp;⚙️  {target_agent_name} Agent: processing..."
                             )
                             seen_handoffs.add(handoff_id)
-                    elif "<-- 🔍 HandoffTool[" in line:
+                    elif line.startswith("<--") and "HandoffTool[" in line:
                         parts = line.split("HandoffTool[")[1].split("]")
                         target_agent_name = parts[0].replace("_", " ").title()
                         handoff_id = f"{target_agent_name}_complete"
@@ -663,7 +671,7 @@ def extract_mcp_tool_calls_from_logs(
             continue
             
         agent_name = log_file.stem.replace("_", " ").title()
-        cache_key = str(log_file)
+        cache_key = str(log_file.resolve())
         cache.setdefault(cache_key, {"position": 0, "seen_tools": set()})
         
         entry = cache[cache_key]
@@ -679,10 +687,10 @@ def extract_mcp_tool_calls_from_logs(
                 ) as handle:
                     handle.seek(last_position)
                     for line in handle:
-                        line = line.strip()
+                        line = _normalize_log_line(line)
                         
-                        # Extract MCP tool start events
-                        if "--> 🔍 MCPTool[" in line:
+                        # Extract MCP tool start events (legacy "--> 🔍 MCPTool[" or "--> ToolMCPTool[")
+                        if line.startswith("-->") and "MCPTool[" in line:
                             parts = line.split("MCPTool[")[1].split("]")
                             tool_name = parts[0]
                             tool_id = f"{agent_name}_{tool_name}_start"
@@ -698,7 +706,7 @@ def extract_mcp_tool_calls_from_logs(
                                 seen_tools.add(tool_id)
                         
                         # Extract MCP tool completion events
-                        elif "<-- 🔍 MCPTool[" in line:
+                        elif line.startswith("<--") and "MCPTool[" in line:
                             parts = line.split("MCPTool[")[1].split("]")
                             tool_name = parts[0]
                             status = parts[1].strip("[").strip("]")
