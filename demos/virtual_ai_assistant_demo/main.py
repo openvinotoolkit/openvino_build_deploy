@@ -283,7 +283,7 @@ def extra_action(conversation: List[Dict[str, Any]]) -> Tuple[str, float]:
 def create_UI(initial_message: str, action_name: str) -> gr.Blocks:
     qr_code = utils.get_qr_code("https://github.com/openvinotoolkit/openvino_build_deploy/tree/master/demos/virtual_ai_assistant_demo", size=200)
 
-    with gr.Blocks(title="Your Virtual AI Assistant") as demo:
+    with gr.Blocks(theme=utils.gradio_intel_theme(), title="Your Virtual AI Assistant") as demo:
         utils.gradio_intel_header(chatbot_config["assistant_name"])
         with gr.Row():
             with gr.Column(scale=7):
@@ -362,7 +362,6 @@ def run(chat_model_name: str, embedding_model_name: str, reranker_model_name: st
     demo.queue().launch(
         server_name=server_name,
         share=public_interface,
-        theme=utils.gradio_intel_theme(),
     )
 
 
