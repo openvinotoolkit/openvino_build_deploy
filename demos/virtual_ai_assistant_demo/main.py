@@ -231,23 +231,6 @@ def emphasize_thinking_mode(token: str) -> str:
     return token + "<em><small>" if "<think>" in token else "</small></em>" + token if "</think>" in token else token
 
 
-def _gradio_content_to_plain_text(content: Any) -> str:
-    """Gradio 6+ may send message content as a string or structured dicts (e.g. type=text, text=...). LlamaIndex stream_chat expects a str."""
-    if content is None:
-        return ""
-    if isinstance(content, str):
-        return content
-    if isinstance(content, dict):
-        if content.get("type") == "text" and "text" in content:
-            return _gradio_content_to_plain_text(content["text"])
-        if "type" not in content and "text" in content:
-            return _gradio_content_to_plain_text(content["text"])
-        return ""
-    if isinstance(content, list):
-        return "".join(_gradio_content_to_plain_text(part) for part in content)
-    return str(content)
-
-
 def generate_initial_greeting() -> str:
     response = ""
     for token in ov_chat_engine.stream_chat(chatbot_config["greet_the_user_prompt"]).response_gen:
@@ -258,7 +241,7 @@ def generate_initial_greeting() -> str:
 def chat(history: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], float]:
     # get token by token and merge to the final response (Gradio 6+ messages format)
     history[-1]["content"] = ""
-    user_prompt = _gradio_content_to_plain_text(history[-2]["content"])
+    user_prompt = utils.gradio_content_to_plain_text(history[-2]["content"])
     with inference_lock:
         chat_streamer = ov_chat_engine.stream_chat(user_prompt).response_gen
 
@@ -294,7 +277,7 @@ def extra_action(conversation: List[Dict[str, Any]]) -> Tuple[str, float]:
     conversation.append({"role": "user", "content": chatbot_config["extra_action_prompt"]})
     conversation.append({"role": "assistant", "content": ""})
     for partial_summary, performance in chat(conversation):
-        yield f"## Summary\n\n" + _gradio_content_to_plain_text(partial_summary[-1]["content"]), performance
+        yield f"## Summary\n\n" + utils.gradio_content_to_plain_text(partial_summary[-1]["content"]), performance
 
 
 def create_UI(initial_message: str, action_name: str) -> gr.Blocks:
