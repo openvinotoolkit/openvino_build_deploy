@@ -23,8 +23,8 @@ from llama_index.embeddings.huggingface_openvino import OpenVINOEmbedding
 from llama_index.llms.openvino_genai import OpenVINOGenAILLM
 from llama_index.postprocessor.openvino_rerank import OpenVINORerank
 from llama_index.vector_stores.chroma import ChromaVectorStore
-from openvino.runtime import opset10 as ops
-from openvino.runtime import passes
+import openvino.opset10 as ops
+from openvino import passes
 from optimum.exporters.openvino.convert import export_tokenizer
 from optimum.intel import OVModelForCausalLM, OVModelForFeatureExtraction, OVWeightQuantizationConfig, OVModelForSequenceClassification
 from transformers import AutoTokenizer
