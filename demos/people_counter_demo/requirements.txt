@@ -4,7 +4,7 @@ openvino==2026.0.0
 nncf==3.0.0
 ultralytics==8.4.2
 numpy==2.2.6
-pillow==12.1.1
+pillow==12.2.0
 opencv-python==4.12.0.88
 torch==2.9.0
 torchvision==0.24.0
