@@ -81,7 +81,7 @@ def _is_port_open(port: int, host: str = "localhost") -> bool:
 def _http_get_json(url: str, timeout: int = 20) -> dict:
     req = urllib.request.Request(url, method="GET")
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as response:
+        with urllib.request.urlopen(req, timeout=timeout) as response:   #nosec B310
             payload = response.read().decode("utf-8")
             return json.loads(payload) if payload else {}
     except urllib.error.URLError as exc:

@@ -150,7 +150,7 @@ def download_script_if_missing(name: str, script_path: Path) -> bool:
         # Create parent directory if needed
         script_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with urllib.request.urlopen(url, timeout=30) as response:
+        with urllib.request.urlopen(url, timeout=30) as response:    #nosec B310
             content = response.read()
 
         with open(script_path, "wb") as f:
