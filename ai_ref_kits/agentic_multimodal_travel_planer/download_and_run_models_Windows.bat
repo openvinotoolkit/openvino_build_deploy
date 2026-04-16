@@ -3,8 +3,9 @@ setlocal enabledelayedexpansion
 
 echo === OpenVINO Model Server: setup + start (Baremetal) ===
 
-REM Config
-set OVMS_VERSION=v2026.0
+REM OVMS: set semver ^(zip name^); GitHub tag is v + first two numbers ^(2026.1.0 -> v2026.1^).
+set OVMS_VERSION=2026.1.0
+for /f "tokens=1,2 delims=." %%a in ("%OVMS_VERSION%") do set "OVMS_GITHUB_TAG=v%%a.%%b"
 set OVMS_DIR=%CD%\ovms
 set MODELS_DIR=%CD%\models
 set LOGS_DIR=%CD%\logs
@@ -233,8 +234,8 @@ set "OVMS_STASH_LLM=!LLM_DEVICE!"
 REM Download and extract OVMS package
 if not exist "%OVMS_DIR%" (
     echo Downloading OpenVINO Model Server package...
-    set PACKAGE_NAME=ovms_windows_!PYTHON_SUPPORT!.zip
-    call set "DOWNLOAD_URL=https://github.com/openvinotoolkit/model_server/releases/download/!OVMS_VERSION!/!PACKAGE_NAME!"
+    set PACKAGE_NAME=ovms_windows_!OVMS_VERSION!_!PYTHON_SUPPORT!.zip
+    call set "DOWNLOAD_URL=https://github.com/openvinotoolkit/model_server/releases/download/!OVMS_GITHUB_TAG!/!PACKAGE_NAME!"
     curl -L -o "%CD%\ovms.zip" "!DOWNLOAD_URL!" || (echo Failed to download package && exit /b 1)
     powershell -Command "Expand-Archive -Path '%CD%\ovms.zip' -DestinationPath '%CD%' -Force" 2>nul || (echo Failed to extract package && exit /b 1)
     del "%CD%\ovms.zip" >nul 2>&1
