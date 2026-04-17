@@ -13,8 +13,8 @@ llama-index-vector-stores-chroma==0.5.3
 langchain-text-splitters==0.3.11
 chromadb==1.0.15
 
-onnx==1.18.0
-onnxruntime==1.20.1
+onnx==1.21.0
+onnxruntime==1.21.0
 torch==2.8.0
 
 transformers==4.53.3
