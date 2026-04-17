@@ -8,22 +8,22 @@ llama-index==0.13.0
 llama-index-llms-openvino==0.5.0
 llama-index-embeddings-openvino==0.6.0
 llama-index-postprocessor-openvino-rerank==0.5.0
-langchain-text-splitters==0.3.11
+langchain-text-splitters==1.1.2
 
-onnx==1.18.0
+onnx==1.21.0
 onnxruntime==1.20.1
 torch==2.8.0
 torchaudio==2.8.0
 numpy==2.2.6
 
-transformers==4.53.3
+transformers==5.0.0rc3
 datasets==4.0.0
 librosa==0.10.2
 pyyaml==6.0.1
 pymupdf==1.26.3
 setuptools==81.0.0
 
-gradio==5.35.0
+gradio==6.7.0
 
 # melotts dependencies
 cn2an==0.5.22
