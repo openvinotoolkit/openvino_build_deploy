@@ -1,4 +1,4 @@
-gradio==6.7.0
+gradio==6.13.0
 # beeai-framework needs litellm>=1.80.11,<2; pin one release (avoid 1.82.7–1.82.8 on PyPI).
 litellm==1.83.0
 beeai-framework==0.1.75
@@ -6,7 +6,7 @@ beeai-framework[a2a]==0.1.75
 uvicorn==0.37.0
 PyYAML==6.0.1
 fastapi==0.115.5
-python-dotenv==1.1.0
+python-dotenv==1.2.2
 mcp==1.23.0
 google-search-results==2.4.2
 openai==2.8.0
