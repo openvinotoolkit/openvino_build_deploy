@@ -4,9 +4,9 @@ import threading
 import time
 from pathlib import Path
 from threading import Thread
-from typing import Tuple, List, Optional, Set
+from typing import Any, Tuple, List, Optional, Set
 
-import fitz  # PyMuPDF
+import pymupdf as fitz  # PyPI: pymupdf
 import gradio as gr
 import librosa
 import numpy as np
@@ -44,6 +44,21 @@ ov_chat_engine: Optional[BaseChatEngine] = None
 ov_tts_model: Optional[torch.Tensor] = None
 
 chatbot_config = {}
+
+
+def _message_plain_text(content: Any) -> str:
+    """Plain text from Gradio Chatbot message content (string or normalized multimodal list)."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: List[str] = []
+        for item in content:
+            if isinstance(item, dict) and item.get("type") == "text":
+                parts.append(str(item.get("text", "")))
+            elif isinstance(item, str):
+                parts.append(item)
+        return "".join(parts)
+    return ""
 
 
 def get_available_devices() -> Set[str]:
@@ -270,41 +285,44 @@ def generate_initial_greeting() -> str:
     return ov_chat_engine.chat(chatbot_config["greet_the_user_prompt"]).response
 
 
-def chat(history: List[List[str]]) -> List[List[str]]:
+def chat(history: List[dict]) -> List[dict]:
     """
     Chat function. It generates response based on a prompt
 
     Params:
-        history: history of the messages (conversation) so far
+        history: OpenAI-style chat messages (role / content) from the Chatbot
     Returns:
         History with the latest chat's response (yields partial response)
     """
-    # no document is loaded
+    history = list(history)
     if isinstance(ov_chat_engine, SimpleChatEngine):
-        history[-1][1] = "No guide is provided, so I cannot answer this question. Please upload the hotel guide."
+        history.append({
+            "role": "assistant",
+            "content": "No guide is provided, so I cannot answer this question. Please upload the hotel guide.",
+        })
         yield history
         return
 
-    # get token by token and merge to the final response
-    history[-1][1] = ""
+    user_msg = _message_plain_text(history[-1].get("content")) if history and history[-1].get("role") == "user" else ""
+
+    history.append({"role": "assistant", "content": ""})
     with inference_lock:
         start_time = time.time()
 
-        chat_streamer = ov_chat_engine.stream_chat(history[-1][0]).response_gen
+        chat_streamer = ov_chat_engine.stream_chat(user_msg).response_gen
         for partial_text in chat_streamer:
-            history[-1][1] += partial_text
-            # "return" partial response
+            history[-1]["content"] += partial_text
             yield history
 
         end_time = time.time()
 
-        # 75 words ~= 100 tokens
-        tokens = len(history[-1][1].split(" ")) * 4 / 3
+        reply = _message_plain_text(history[-1].get("content"))
+        tokens = len(reply.split(" ")) * 4 / 3
         processing_time = end_time - start_time
         log.info(f"Chat model response time: {processing_time:.2f} seconds ({tokens / processing_time:.2f} tokens/s)")
 
 
-def transcribe(audio: Tuple[int, np.ndarray], prompt: str, conversation: List[List[str]]) -> List[List[str]]:
+def transcribe(audio: Tuple[int, np.ndarray], prompt: str, conversation: List[dict]) -> List[dict]:
     """
     Transcribe audio to text
 
@@ -333,11 +351,10 @@ def transcribe(audio: Tuple[int, np.ndarray], prompt: str, conversation: List[Li
         thread = Thread(target=asr_model.generate, kwargs={"input_features": input_features, "streamer": text_streamer})
         thread.start()
 
-        conversation.append(["", None])
-        # get token by token and merge to the final response
+        conversation = list(conversation)
+        conversation.append({"role": "user", "content": ""})
         for partial_text in text_streamer:
-            conversation[-1][0] += partial_text
-            # "return" partial response
+            conversation[-1]["content"] += partial_text
             yield conversation
 
         end_time = time.time()  # End time for ASR process
@@ -346,13 +363,14 @@ def transcribe(audio: Tuple[int, np.ndarray], prompt: str, conversation: List[Li
         # wait for the thread
         thread.join()
     else:
-        conversation.append([prompt, None])
+        conversation = list(conversation)
+        conversation.append({"role": "user", "content": prompt})
         yield conversation
 
     return conversation
 
 
-def synthesize(conversation: List[List[str]], audio: Tuple[int, np.ndarray]) -> Optional[Tuple[int, np.ndarray]]:
+def synthesize(conversation: List[dict], audio: Tuple[int, np.ndarray]) -> Optional[Tuple[int, np.ndarray]]:
     """
     Synthesizes speech from chatbot's response
 
@@ -366,7 +384,7 @@ def synthesize(conversation: List[List[str]], audio: Tuple[int, np.ndarray]) -> 
     if not audio:
         return None
 
-    prompt = conversation[-1][1]
+    prompt = _message_plain_text(conversation[-1].get("content")) if conversation else ""
 
     start_time = time.time()
     # English
@@ -388,12 +406,15 @@ def create_UI(initial_message: str, example_pdf_path: Path) -> gr.Blocks:
     Returns:
         Demo UI
     """
-    with gr.Blocks(theme="base", title="Adrishuo - the Conversational AI Chatbot") as demo:
+    with gr.Blocks(title="Adrishuo - the Conversational AI Chatbot") as demo:
         gr.Markdown(chatbot_config["instructions"])
         with gr.Row():
             file_uploader_ui = gr.File(label="Hotel guide", file_types=[".pdf", ".txt"], value=str(example_pdf_path), scale=1)
             with gr.Column(scale=4):
-                chatbot_ui = gr.Chatbot(value=[[None, initial_message]], label="Chatbot")
+                chatbot_ui = gr.Chatbot(
+                    value=[{"role": "assistant", "content": initial_message}],
+                    label="Chatbot",
+                )
                 with gr.Tab(label="Voice"):
                     with gr.Row():
                         input_audio_ui = gr.Audio(sources=["microphone"], label="Your voice input")
@@ -409,10 +430,12 @@ def create_UI(initial_message: str, example_pdf_path: Path) -> gr.Blocks:
         gr.on(triggers=[input_audio_ui.change, input_text_ui.change], inputs=[input_audio_ui, input_text_ui], outputs=submit_btn,
               fn=lambda x, y: gr.Button(interactive=True) if bool(x) ^ bool(y) else gr.Button(interactive=False))
 
-        file_uploader_ui.change(lambda: [[None, initial_message]], outputs=chatbot_ui) \
+        reset_chat = lambda: [{"role": "assistant", "content": initial_message}]
+
+        file_uploader_ui.change(reset_chat, outputs=chatbot_ui) \
             .then(load_context, inputs=file_uploader_ui)
 
-        clear_btn.click(lambda: [[None, initial_message]], outputs=chatbot_ui) \
+        clear_btn.click(reset_chat, outputs=chatbot_ui) \
             .then(lambda: gr.Button(interactive=False), outputs=clear_btn)
 
         # block buttons, clear output audio, do the transcription and conversation, clear input audio, unblock buttons
@@ -472,7 +495,7 @@ def run(asr_model_dir: Path, asr_model_device: str, chat_model_dir: Path, chat_m
 
     print("Demo is ready!", flush=True) # Required for the CI to detect readiness
     # launch demo
-    demo.queue().launch(share=public_interface)
+    demo.queue().launch(share=public_interface, theme="base")
 
 
 if __name__ == "__main__":
@@ -480,7 +503,7 @@ if __name__ == "__main__":
     parser.add_argument("--asr_model", type=str, default="model/distil-whisper-large-v3-FP16", help="Path of the automatic speech recognition model directory")
     parser.add_argument("--asr_model_device", type=str, default="CPU", choices=["AUTO", "GPU", "CPU", "NPU"], help="Device to run ASR model inference on")
     parser.add_argument("--chat_model", type=str, default="model/llama3.2-3B-INT4", help="Path to the chat model directory")
-    parser.add_argument("--chat_model_device", type=str, default="GPU", choices=["AUTO", "GPU", "CPU", "NPU"], help="Device to run chat model inference on")
+    parser.add_argument("--chat_model_device", type=str, default="CPU", choices=["AUTO", "GPU", "CPU", "NPU"], help="Device to run chat model inference on")
     parser.add_argument("--embedding_model", type=str, default="model/bge-small-FP32", help="Path to the embedding model directory")
     parser.add_argument("--embedding_model_device", type=str, default="CPU", choices=["AUTO", "GPU", "CPU", "NPU"], help="Device to run embedding model inference on")
     parser.add_argument("--reranker_model", type=str, default="model/bge-reranker-large-FP32", help="Path to the reranker model directory")
