@@ -3,7 +3,7 @@ import logging as log
 import time
 from pathlib import Path
 from threading import Thread
-from typing import Tuple, List, Optional, Set
+from typing import Any, Tuple, List, Optional, Set
 
 import gradio as gr
 import librosa
@@ -124,12 +124,27 @@ def respond(prompt: str, streamer: BaseStreamer | None = None) -> str:
     return chat_tokenizer.decode(tokens, skip_special_tokens=True)
 
 
-def get_conversation(history: List[List[str]]) -> str:
+def _message_plain_text(content: Any) -> str:
+    """Extract plain text from Gradio Chatbot message content (string or normalized multimodal list)."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: List[str] = []
+        for item in content:
+            if isinstance(item, dict) and item.get("type") == "text":
+                parts.append(str(item.get("text", "")))
+            elif isinstance(item, str):
+                parts.append(item)
+        return "".join(parts)
+    return ""
+
+
+def get_conversation(history: List[dict]) -> str:
     """
     Combines all messages into one string
 
     Params:
-        history: history of the messages (conversation) so far
+        history: OpenAI-style chat messages (role / content) from the Chatbot
     Returns:
         All messages combined into one string
     """
@@ -138,12 +153,15 @@ def get_conversation(history: List[List[str]]) -> str:
         {"role": "system", "content": SYSTEM_CONFIGURATION},
         {"role": "user", "content": GREET_THE_CUSTOMER}
     ]
-    # add prompts to the conversation
-    for user_prompt, assistant_response in history:
-        if user_prompt:
-            conversation.append({"role": "user", "content": user_prompt})
-        if assistant_response:
-            conversation.append({"role": "assistant", "content": assistant_response})
+    for msg in history:
+        if not isinstance(msg, dict):
+            continue
+        role = msg.get("role")
+        text = _message_plain_text(msg.get("content"))
+        if role == "user" and text:
+            conversation.append({"role": "user", "content": text})
+        elif role == "assistant" and text:
+            conversation.append({"role": "assistant", "content": text})
 
     # use a template specific to the model
     return chat_tokenizer.apply_chat_template(conversation, add_generation_prompt=True, tokenize=False)
@@ -156,11 +174,11 @@ def generate_initial_greeting() -> str:
     Returns:
         Generated greeting
     """
-    conv = get_conversation([[None, None]])
+    conv = get_conversation([])
     return respond(conv)
 
 
-def chat(history: List[List[str]]) -> List[List[str]]:
+def chat(history: List[dict]) -> List[dict]:
     """
     Chat function. It generates response based on a prompt
 
@@ -179,18 +197,16 @@ def chat(history: List[List[str]]) -> List[List[str]]:
     thread = Thread(target=respond, args=[conversation, chat_streamer])
     thread.start()
 
-    # get token by token and merge to the final response
-    history[-1][1] = ""
+    history = list(history)
+    history.append({"role": "assistant", "content": ""})
     for partial_text in chat_streamer:
-        history[-1][1] += partial_text
-        # "return" partial response
+        history[-1]["content"] += partial_text
         yield history
 
-    # wait for the thread
     thread.join()
 
 
-def transcribe(audio: Tuple[int, np.ndarray], conversation: List[List[str]]) -> List[List[str]]:
+def transcribe(audio: Tuple[int, np.ndarray], conversation: List[dict]) -> List[dict]:
     """
     Transcribe audio to text
 
@@ -216,11 +232,10 @@ def transcribe(audio: Tuple[int, np.ndarray], conversation: List[List[str]]) -> 
     thread = Thread(target=asr_model.generate, kwargs={"input_features": input_features, "streamer": text_streamer})
     thread.start()
 
-    conversation.append(["", None])
-    # get token by token and merge to the final response
+    conversation = list(conversation)
+    conversation.append({"role": "user", "content": ""})
     for partial_text in text_streamer:
-        conversation[-1][0] += partial_text
-        # "return" partial response
+        conversation[-1]["content"] += partial_text
         yield conversation
 
     end_time = time.time()  # End time for ASR process
@@ -232,7 +247,7 @@ def transcribe(audio: Tuple[int, np.ndarray], conversation: List[List[str]]) -> 
     return conversation
 
 
-def summarize(conversation: List) -> str:
+def summarize(conversation: List[dict]) -> str:
     """
     Summarize the patient case
 
@@ -241,9 +256,10 @@ def summarize(conversation: List) -> str:
     Returns:
         Summary
     """
-    conversation.append([SUMMARIZE_THE_CUSTOMER, None])
+    conversation = list(conversation)
+    conversation.append({"role": "user", "content": SUMMARIZE_THE_CUSTOMER})
     for partial_summary in chat(conversation):
-        yield partial_summary[-1][1]
+        yield _message_plain_text(partial_summary[-1].get("content"))
 
 
 def create_UI(initial_message: str) -> gr.Blocks:
@@ -255,7 +271,7 @@ def create_UI(initial_message: str) -> gr.Blocks:
     Returns:
         Demo UI
     """
-    with gr.Blocks(theme="base", title="Adrishuo - a custom AI assistant working as a healthcare assistant") as demo:
+    with gr.Blocks(title="Adrishuo - a custom AI assistant working as a healthcare assistant") as demo:
         gr.Markdown("""
         # Talk to Adrishuo - a custom AI assistant working today as a healthcare assistant
 
@@ -271,7 +287,10 @@ def create_UI(initial_message: str) -> gr.Blocks:
             submit_audio_btn = gr.Button("Submit", variant="primary", scale=1, interactive=False)
 
         # chatbot
-        chatbot_ui = gr.Chatbot(value=[[None, initial_message]], label="Chatbot")
+        chatbot_ui = gr.Chatbot(
+            value=[{"role": "assistant", "content": initial_message}],
+            label="Chatbot",
+        )
 
         # summarize
         summarize_button = gr.Button("Summarize", variant="primary", interactive=False)
@@ -328,7 +347,7 @@ def run(asr_model_dir: Path, asr_model_device: str, chat_model_dir: Path, chat_m
 
     print("Demo is ready!", flush=True) # Required for the CI to detect readiness
     # launch demo
-    demo.queue().launch(share=public_interface)
+    demo.queue().launch(share=public_interface, theme="base")
 
 
 if __name__ == '__main__':
@@ -336,7 +355,7 @@ if __name__ == '__main__':
     parser.add_argument('--asr_model_dir', type=str, default="model/distil-whisper-large-v3-FP16", help="Path to the automatic speech recognition model directory")
     parser.add_argument("--asr_model_device", type=str, default="CPU", choices=["AUTO", "GPU", "CPU", "NPU"], help="Device to run ASR model inference on")
     parser.add_argument('--chat_model_dir', type=str, default="model/llama3.2-3B-INT4", help="Path to the chat model directory")
-    parser.add_argument("--chat_model_device", type=str, default="GPU", choices=["AUTO", "GPU", "CPU", "NPU"], help="Device to run chat model inference on")
+    parser.add_argument("--chat_model_device", type=str, default="CPU", choices=["AUTO", "GPU", "CPU", "NPU"], help="Device to run chat model inference on")
     parser.add_argument('--public', default=False, action="store_true", help="Whether interface should be available publicly")
 
     args = parser.parse_args()
