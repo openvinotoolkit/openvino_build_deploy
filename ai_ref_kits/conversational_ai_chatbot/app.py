@@ -203,35 +203,36 @@ def load_tts_model() -> None:
     log.info(f"Running {type(ov_tts_model).__name__} on {ov_tts_model.device.__str__().upper()}")
 
 
-def load_file(file_path: Path) -> Document:
+def load_file(file_path: Path | str) -> Document:
     """
     Load text or pdf document using PyMuPDF for PDFs and standard reading for text files.
     
     Params:
-        file_path: the path to the document
+        file_path: the path to the document (``pathlib.Path`` or Gradio file value such as ``NamedString``)
     Returns:
         A document in LLama Index format
     """
-    ext = file_path.suffix
+    path = Path(str(file_path))
+    ext = path.suffix
     if ext == ".pdf":
         # Using PyMuPDF (fitz) to read PDF content
         text = ""
-        with fitz.open(file_path) as pdf:
+        with fitz.open(path) as pdf:
             for page in pdf:
                 text += page.get_text("text") + "\n"  # Extract text from each page
-            return Document(text=text, metadata={"file_name": file_path.name})
+            return Document(text=text, metadata={"file_name": path.name})
     
     elif ext == ".txt":
         # Reading text files as usual
-        with open(file_path) as f:
+        with open(path) as f:
             content = f.read()
-            return Document(text=content, metadata={"file_name": file_path.name})
+            return Document(text=content, metadata={"file_name": path.name})
     
     else:
         raise ValueError(f"{ext} file is not supported for now")
 
 
-def load_context(file_path: Path) -> None:
+def load_context(file_path: Path | str | None) -> None:
     """
     Load context (document) and create a RAG pipeline
     Params:
