@@ -1,5 +1,6 @@
 import argparse
 import logging as log
+import platform
 import threading
 import time
 from pathlib import Path
@@ -32,6 +33,8 @@ TARGET_AUDIO_SAMPLE_RATE = 16000
 TARGET_AUDIO_SAMPLE_RATE_TTS = 44100
 
 MODEL_DIR = Path("model")
+# Optimum-Intel uses one InferRequest per compiled model; concurrent Gradio threads (e.g. chat
+# streaming while file upload reloads RAG) must not call the same OV model at once.
 inference_lock = threading.Lock()
 
 # Initialize Model variables
@@ -61,6 +64,29 @@ def _message_plain_text(content: Any) -> str:
     return ""
 
 
+def _openvino_runtime_device(device: str) -> str:
+    """Normalize device for OpenVINO on Linux/arm64 CI hosts.
+
+    ``AUTO`` compiles through a scheduler path that can fail for Distil-Whisper FP16 IR on
+    aarch64 (oneDNN matmul primitive); compiling directly for ``CPU`` avoids that failure.
+    """
+    if device.upper() == "AUTO" and platform.machine().lower() in ("aarch64", "arm64"):
+        return "CPU"
+    return device
+
+
+def _asr_openvino_config() -> Optional[dict]:
+    """Extra compile hints for Whisper on ARM64 where FP16 matmul kernels may be unavailable."""
+    if platform.machine().lower() not in ("aarch64", "arm64"):
+        return None
+    return {
+        "PERFORMANCE_HINT": "LATENCY",
+        "NUM_STREAMS": "1",
+        "INFERENCE_PRECISION_HINT": "f32",
+        "CACHE_DIR": "",
+    }
+
+
 def get_available_devices() -> Set[str]:
     """
     List all devices available for inference
@@ -86,8 +112,13 @@ def load_asr_model(model_dir: Path, device: str) -> None:
         log.error(f"Cannot find {model_dir}. Did you run convert_and_optimize_asr.py first?")
         return
 
+    device = _openvino_runtime_device(device)
+    load_kw: dict = {"device": device}
+    ov_cfg = _asr_openvino_config()
+    if ov_cfg is not None:
+        load_kw["ov_config"] = ov_cfg
     # create a distil-whisper model and its processor
-    asr_model = OVModelForSpeechSeq2Seq.from_pretrained(model_dir, device=device)
+    asr_model = OVModelForSpeechSeq2Seq.from_pretrained(model_dir, **load_kw)
     asr_processor = AutoProcessor.from_pretrained(model_dir)
 
     model_name = model_dir.name
@@ -108,6 +139,7 @@ def load_chat_model(model_dir: Path, device: str) -> Optional[OpenVINOLLM]:
         log.error(f"Cannot find {model_dir}. Did you run convert_and_optimize_chat.py first?")
         return None
 
+    device = _openvino_runtime_device(device)
     ov_config = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1', "CACHE_DIR": ""}
     # load llama model and its tokenizer in the format of Llama Index
     return OpenVINOLLM(context_window=2048, model_id_or_path=str(model_dir), max_new_tokens=512, device_map=device,
@@ -128,6 +160,7 @@ def load_embedding_model(model_dir: Path, device: str) -> Optional[OpenVINOEmbed
         log.error(f"Cannot find {model_dir}. Did you run convert_and_optimize_chat.py first?")
         return None
 
+    device = _openvino_runtime_device(device)
     # load embedding model in the format of Llama Index
     return OpenVINOEmbedding(str(model_dir), device=device, embed_batch_size=1, model_kwargs={"dynamic_shapes": False})
 
@@ -146,6 +179,7 @@ def load_reranker_model(model_dir: Path, device: str) -> Optional[OpenVINORerank
         log.error(f"Cannot find {model_dir}. Did you run convert_and_optimize_chat.py first?")
         return None
 
+    device = _openvino_runtime_device(device)
     # load reranker model in the format of Llama Index
     return OpenVINORerank(model_id_or_path=str(model_dir), device=device, top_n=3)
 
@@ -258,23 +292,22 @@ def load_context(file_path: Path | str | None) -> None:
     # create a splitter to split the document into chunks
     splitter = LangchainNodeParser(RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100))
 
-    # set the embedding model
-    
-    # Create index using LlamaIndex's default vector store (in-memory) and the splitter
-    index = VectorStoreIndex.from_documents(
-        [document], 
-        transformations=[splitter], 
-        embed_model=ov_embedding
-    )
+    with inference_lock:
+        # Create index using LlamaIndex's default vector store (in-memory) and the splitter
+        index = VectorStoreIndex.from_documents(
+            [document],
+            transformations=[splitter],
+            embed_model=ov_embedding,
+        )
 
-    # Build RAG chat engine with reranker and memory
-    ov_chat_engine = index.as_chat_engine(
-        llm=ov_llm,
-        chat_mode=ChatMode.CONTEXT,
-        system_prompt=chatbot_config["system_configuration"],
-        memory=memory,
-        node_postprocessors=[ov_reranker]
-    )
+        # Build RAG chat engine with reranker and memory
+        ov_chat_engine = index.as_chat_engine(
+            llm=ov_llm,
+            chat_mode=ChatMode.CONTEXT,
+            system_prompt=chatbot_config["system_configuration"],
+            memory=memory,
+            node_postprocessors=[ov_reranker],
+        )
 
 def generate_initial_greeting() -> str:
     """
@@ -283,7 +316,8 @@ def generate_initial_greeting() -> str:
     Returns:
         Generated greeting
     """
-    return ov_chat_engine.chat(chatbot_config["greet_the_user_prompt"]).response
+    with inference_lock:
+        return ov_chat_engine.chat(chatbot_config["greet_the_user_prompt"]).response
 
 
 def chat(history: List[dict]) -> List[dict]:
@@ -348,8 +382,12 @@ def transcribe(audio: Tuple[int, np.ndarray], prompt: str, conversation: List[di
         # use streamer to show transcription word by word
         text_streamer = TextIteratorStreamer(asr_processor, skip_prompt=True, skip_special_tokens=True)
 
+        def _run_asr() -> None:
+            with inference_lock:
+                asr_model.generate(input_features=input_features, streamer=text_streamer)
+
         # transcribe in the background to deliver response token by token
-        thread = Thread(target=asr_model.generate, kwargs={"input_features": input_features, "streamer": text_streamer})
+        thread = Thread(target=_run_asr)
         thread.start()
 
         conversation = list(conversation)
@@ -388,8 +426,10 @@ def synthesize(conversation: List[dict], audio: Tuple[int, np.ndarray]) -> Optio
     prompt = _message_plain_text(conversation[-1].get("content")) if conversation else ""
 
     start_time = time.time()
-    # English
-    speech = ov_tts_model.tts_to_file(prompt, ov_tts_model.hps.data.spk2id['EN-US'], output_path=None, speed=1.0)
+    with inference_lock:
+        speech = ov_tts_model.tts_to_file(
+            prompt, ov_tts_model.hps.data.spk2id["EN-US"], output_path=None, speed=1.0
+        )
     end_time = time.time()
 
     log.info(f"TTS model response time: {end_time - start_time:.2f} seconds")
