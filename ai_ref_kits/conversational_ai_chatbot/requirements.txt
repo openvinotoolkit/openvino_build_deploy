@@ -2,14 +2,13 @@
 
 openvino==2026.1.0
 openvino-tokenizers==2026.1.0.0
-optimum-intel==1.25.2
-nncf==2.18.0
+nncf==3.1.0
 
-llama-index==0.13.0
-llama-index-llms-openvino==0.5.0
-llama-index-embeddings-openvino==0.6.0
-llama-index-postprocessor-openvino-rerank==0.5.0
-# >=1.1.2 fixes SSRF redirect bypass in HTMLHeaderTextSplitter.split_text_from_url (requires langchain-core>=1.2.31).
+transformers==5.0.0
+
+# Optimum-Intel with Transformers v5 support is currently only on main (not yet on PyPI).
+optimum-intel[openvino] @ git+https://github.com/huggingface/optimum-intel.git
+
 langchain-text-splitters==1.1.2
 
 onnx==1.21.0
@@ -18,7 +17,6 @@ torch==2.8.0
 torchaudio==2.8.0
 numpy==2.2.6
 
-transformers==4.53.3
 datasets==4.0.0
 librosa==0.10.2
 pyyaml==6.0.1
@@ -44,7 +42,7 @@ g2p_en==2.1.0
 anyascii==0.3.2
 jamo==0.4.1
 gruut[de,es,fr]==2.4.0
-cached_path==1.7.3
+cached_path==1.8.10
 eng_to_ipa==0.0.2
 g2pkk==0.1.2
 inflect==7.0.0

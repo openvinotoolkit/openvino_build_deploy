@@ -5,7 +5,8 @@ import threading
 import time
 from pathlib import Path
 from threading import Thread
-from typing import Any, Tuple, List, Optional, Set
+from dataclasses import dataclass
+from typing import Any, Tuple, List, Optional, Set, Dict
 
 import pymupdf as fitz  # PyPI: pymupdf
 import gradio as gr
@@ -16,16 +17,13 @@ import torch
 import yaml
 import nltk
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from llama_index.core import Document, VectorStoreIndex, Settings
-from llama_index.core.chat_engine import SimpleChatEngine
-from llama_index.core.chat_engine.types import BaseChatEngine, ChatMode
-from llama_index.core.memory import ChatMemoryBuffer
-from llama_index.core.node_parser import LangchainNodeParser
-from llama_index.embeddings.huggingface_openvino import OpenVINOEmbedding
-from llama_index.llms.openvino import OpenVINOLLM
-from llama_index.postprocessor.openvino_rerank import OpenVINORerank
-from optimum.intel import OVModelForSpeechSeq2Seq
-from transformers import AutoProcessor, TextIteratorStreamer
+from optimum.intel import (
+    OVModelForCausalLM,
+    OVModelForFeatureExtraction,
+    OVModelForSequenceClassification,
+    OVModelForSpeechSeq2Seq,
+)
+from transformers import AutoProcessor, AutoTokenizer, TextIteratorStreamer
 from melo.api import TTS
 
 # Global variables initialization
@@ -40,10 +38,19 @@ inference_lock = threading.Lock()
 # Initialize Model variables
 asr_model: Optional[OVModelForSpeechSeq2Seq] = None
 asr_processor: Optional[AutoProcessor] = None
-ov_llm: Optional[OpenVINOLLM] = None
-ov_embedding: Optional[OpenVINOEmbedding] = None
-ov_reranker: Optional[OpenVINORerank] = None
-ov_chat_engine: Optional[BaseChatEngine] = None
+chat_model: Optional[OVModelForCausalLM] = None
+chat_tokenizer: Optional[Any] = None
+embedding_model: Optional[OVModelForFeatureExtraction] = None
+embedding_tokenizer: Optional[Any] = None
+reranker_model: Optional[OVModelForSequenceClassification] = None
+reranker_tokenizer: Optional[Any] = None
+
+@dataclass(frozen=True)
+class _Chunk:
+    text: str
+    embedding: np.ndarray  # (dim,)
+
+rag_chunks: List[_Chunk] = []
 ov_tts_model: Optional[torch.Tensor] = None
 
 chatbot_config = {}
@@ -125,7 +132,7 @@ def load_asr_model(model_dir: Path, device: str) -> None:
     log.info(f"Running {model_name} on {','.join(asr_model.encoder.request.get_property('EXECUTION_DEVICES'))}")
 
 
-def load_chat_model(model_dir: Path, device: str) -> Optional[OpenVINOLLM]:
+def load_chat_model(model_dir: Path, device: str) -> Tuple[OVModelForCausalLM, Any]:
     """
     Load chat model
 
@@ -133,20 +140,23 @@ def load_chat_model(model_dir: Path, device: str) -> Optional[OpenVINOLLM]:
         model_dir: dir with the chat model
         device: device to run the model inference on
     Returns:
-        OpenVINO LLM model in LLama Index
+        (OpenVINO causal LM, tokenizer)
     """
     if not model_dir.exists():
         log.error(f"Cannot find {model_dir}. Did you run convert_and_optimize_chat.py first?")
-        return None
+        raise FileNotFoundError(model_dir)
 
     device = _openvino_runtime_device(device)
-    ov_config = {'PERFORMANCE_HINT': 'LATENCY', 'NUM_STREAMS': '1', "CACHE_DIR": ""}
-    # load llama model and its tokenizer in the format of Llama Index
-    return OpenVINOLLM(context_window=2048, model_id_or_path=str(model_dir), max_new_tokens=512, device_map=device,
-                       model_kwargs={"ov_config": ov_config}, generate_kwargs={"do_sample": True, "temperature": 0.7, "top_k": 50, "top_p": 0.95})
+    ov_config = {"PERFORMANCE_HINT": "LATENCY", "NUM_STREAMS": "1", "CACHE_DIR": ""}
+    tokenizer = AutoTokenizer.from_pretrained(model_dir)
+    model = OVModelForCausalLM.from_pretrained(model_dir, device=device, ov_config=ov_config)
+    log.info(
+        f"Running {model_dir} on {','.join(model.request.get_compiled_model().get_property('EXECUTION_DEVICES'))}"
+    )
+    return model, tokenizer
 
 
-def load_embedding_model(model_dir: Path, device: str) -> Optional[OpenVINOEmbedding]:
+def load_embedding_model(model_dir: Path, device: str) -> Tuple[OVModelForFeatureExtraction, Any]:
     """
     Load embedding model
 
@@ -154,34 +164,42 @@ def load_embedding_model(model_dir: Path, device: str) -> Optional[OpenVINOEmbed
         model_dir: dir with the embedding model
         device: device to run the model inference on
     Returns:
-        OpenVINO Embedding model in LLama Index
+        (OpenVINO feature extractor, tokenizer)
     """
     if not model_dir.exists():
         log.error(f"Cannot find {model_dir}. Did you run convert_and_optimize_chat.py first?")
-        return None
+        raise FileNotFoundError(model_dir)
 
     device = _openvino_runtime_device(device)
-    # load embedding model in the format of Llama Index
-    return OpenVINOEmbedding(str(model_dir), device=device, embed_batch_size=1, model_kwargs={"dynamic_shapes": False})
+    tokenizer = AutoTokenizer.from_pretrained(model_dir)
+    model = OVModelForFeatureExtraction.from_pretrained(model_dir, device=device)
+    log.info(
+        f"Running {model_dir} on {','.join(model.request.get_compiled_model().get_property('EXECUTION_DEVICES'))}"
+    )
+    return model, tokenizer
 
 
-def load_reranker_model(model_dir: Path, device: str) -> Optional[OpenVINORerank]:
+def load_reranker_model(model_dir: Path, device: str) -> Tuple[OVModelForSequenceClassification, Any]:
     """
-    Load embedding model
+    Load reranker model
 
     Params:
         model_dir: dir with the reranker model
         device: device to run the model inference on
     Returns:
-        OpenVINO Reranker model in LLama Index
+        (OpenVINO sequence classifier, tokenizer)
     """
     if not model_dir.exists():
         log.error(f"Cannot find {model_dir}. Did you run convert_and_optimize_chat.py first?")
-        return None
+        raise FileNotFoundError(model_dir)
 
     device = _openvino_runtime_device(device)
-    # load reranker model in the format of Llama Index
-    return OpenVINORerank(model_id_or_path=str(model_dir), device=device, top_n=3)
+    tokenizer = AutoTokenizer.from_pretrained(model_dir)
+    model = OVModelForSequenceClassification.from_pretrained(model_dir, device=device)
+    log.info(
+        f"Running {model_dir} on {','.join(model.request.get_compiled_model().get_property('EXECUTION_DEVICES'))}"
+    )
+    return model, tokenizer
 
 
 def load_rag_models(chat_model_dir: Path, chat_model_device: str, embedding_model_dir: Path, embedding_model_device: str, reranker_model_dir: Path, reranker_model_device: str, personality_file_path: Path) -> None:
@@ -197,26 +215,18 @@ def load_rag_models(chat_model_dir: Path, chat_model_device: str, embedding_mode
         reranker_model_device: device to run reranker model inference on
         personality_file_path: path to the chatbot personality specification file
     """
-    global ov_llm, ov_embedding, ov_reranker, ov_chat_engine, chatbot_config
+    global chat_model, chat_tokenizer, embedding_model, embedding_tokenizer, reranker_model, reranker_tokenizer, chatbot_config
 
     with open(personality_file_path) as f:
         chatbot_config = yaml.safe_load(f)
 
-    # embedding model
-    ov_embedding = load_embedding_model(embedding_model_dir, embedding_model_device)
-    log.info(f"Running {embedding_model_dir} on {','.join(ov_embedding._model.request.get_property('EXECUTION_DEVICES'))}")
-
-    # reranker model
-    ov_reranker = load_reranker_model(reranker_model_dir, reranker_model_device)
-    log.info(f"Running {reranker_model_dir} on {','.join(ov_reranker._model.request.get_property('EXECUTION_DEVICES'))}")
-
-    # chat model
-    ov_llm = load_chat_model(chat_model_dir, chat_model_device)
-    log.info(f"Running {chat_model_dir} on {','.join(ov_llm._model.request.get_compiled_model().get_property('EXECUTION_DEVICES'))}")
-
-    # chat engine
-    ov_chat_engine = SimpleChatEngine.from_defaults(llm=ov_llm, system_prompt=chatbot_config["system_configuration"],
-                                                    memory=ChatMemoryBuffer.from_defaults())
+    embedding_model, embedding_tokenizer = load_embedding_model(
+        embedding_model_dir, embedding_model_device
+    )
+    reranker_model, reranker_tokenizer = load_reranker_model(
+        reranker_model_dir, reranker_model_device
+    )
+    chat_model, chat_tokenizer = load_chat_model(chat_model_dir, chat_model_device)
 
 
 def load_tts_model() -> None:
@@ -237,14 +247,14 @@ def load_tts_model() -> None:
     log.info(f"Running {type(ov_tts_model).__name__} on {ov_tts_model.device.__str__().upper()}")
 
 
-def load_file(file_path: Path | str) -> Document:
+def load_file(file_path: Path | str) -> str:
     """
     Load text or pdf document using PyMuPDF for PDFs and standard reading for text files.
     
     Params:
         file_path: the path to the document (``pathlib.Path`` or Gradio file value such as ``NamedString``)
     Returns:
-        A document in LLama Index format
+        Full extracted text
     """
     path = Path(str(file_path))
     ext = path.suffix
@@ -254,16 +264,65 @@ def load_file(file_path: Path | str) -> Document:
         with fitz.open(path) as pdf:
             for page in pdf:
                 text += page.get_text("text") + "\n"  # Extract text from each page
-            return Document(text=text, metadata={"file_name": path.name})
+            return text
     
     elif ext == ".txt":
         # Reading text files as usual
         with open(path) as f:
-            content = f.read()
-            return Document(text=content, metadata={"file_name": path.name})
+            return f.read()
     
     else:
         raise ValueError(f"{ext} file is not supported for now")
+
+
+def _mean_pool(last_hidden_state: np.ndarray, attention_mask: np.ndarray) -> np.ndarray:
+    mask = attention_mask.astype(np.float32)
+    mask = np.expand_dims(mask, axis=-1)  # (bs, seq, 1)
+    summed = (last_hidden_state * mask).sum(axis=1)
+    denom = np.clip(mask.sum(axis=1), a_min=1e-9, a_max=None)
+    return summed / denom
+
+
+def _embed_texts(texts: List[str]) -> np.ndarray:
+    """Return embeddings shape (n, dim)."""
+    assert embedding_model is not None and embedding_tokenizer is not None
+    encoded = embedding_tokenizer(
+        texts, padding=True, truncation=True, max_length=512, return_tensors="np"
+    )
+    # Optimum-Intel OpenVINO models accept numpy arrays and return numpy arrays
+    outputs = embedding_model(**encoded)
+    # Feature-extraction models return last_hidden_state-like array as first output
+    last_hidden = outputs[0]
+    pooled = _mean_pool(last_hidden, encoded["attention_mask"])
+    # L2 normalize
+    norms = np.linalg.norm(pooled, axis=1, keepdims=True)
+    return pooled / np.clip(norms, 1e-12, None)
+
+
+def _cosine_top_k(query_emb: np.ndarray, mat: np.ndarray, k: int) -> List[int]:
+    # query_emb: (dim,), mat: (n, dim) already normalized => dot = cosine
+    scores = mat @ query_emb
+    if k >= scores.shape[0]:
+        return list(np.argsort(-scores))
+    idx = np.argpartition(-scores, kth=k - 1)[:k]
+    idx = idx[np.argsort(-scores[idx])]
+    return idx.tolist()
+
+
+def _rerank(query: str, candidates: List[str], top_n: int = 3) -> List[str]:
+    if reranker_model is None or reranker_tokenizer is None:
+        return candidates[:top_n]
+    pairs = [(query, c) for c in candidates]
+    encoded = reranker_tokenizer(
+        pairs, padding=True, truncation=True, max_length=512, return_tensors="np"
+    )
+    outputs = reranker_model(**encoded)
+    logits = outputs[0]
+    # assume higher logit => more relevant; handle (bs,1) or (bs,2)
+    scores = logits.reshape(logits.shape[0], -1)
+    scores = scores[:, -1]
+    order = np.argsort(-scores)
+    return [candidates[i] for i in order[:top_n]]
 
 
 def load_context(file_path: Path | str | None) -> None:
@@ -272,42 +331,20 @@ def load_context(file_path: Path | str | None) -> None:
     Params:
         file_path: the path to the document
     """
-    global ov_chat_engine
+    global rag_chunks
+    rag_chunks = []
 
-    # Create memory buffer for chat history
-    memory = ChatMemoryBuffer.from_defaults()
-
-    # if no file is provided, use the default chat engine (not RAG based)
     if not file_path:
-        ov_chat_engine = SimpleChatEngine.from_defaults(
-            llm=ov_llm,
-            system_prompt=chatbot_config["system_configuration"],
-            memory=memory
-        )
         return
 
-    # load the document
-    document = load_file(file_path)
-
-    # create a splitter to split the document into chunks
-    splitter = LangchainNodeParser(RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100))
+    raw_text = load_file(file_path)
+    splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
+    chunks = [c.strip() for c in splitter.split_text(raw_text) if c.strip()]
 
     with inference_lock:
-        # Create index using LlamaIndex's default vector store (in-memory) and the splitter
-        index = VectorStoreIndex.from_documents(
-            [document],
-            transformations=[splitter],
-            embed_model=ov_embedding,
-        )
+        embs = _embed_texts(chunks)
 
-        # Build RAG chat engine with reranker and memory
-        ov_chat_engine = index.as_chat_engine(
-            llm=ov_llm,
-            chat_mode=ChatMode.CONTEXT,
-            system_prompt=chatbot_config["system_configuration"],
-            memory=memory,
-            node_postprocessors=[ov_reranker],
-        )
+    rag_chunks = [_Chunk(text=t, embedding=embs[i]) for i, t in enumerate(chunks)]
 
 def generate_initial_greeting() -> str:
     """
@@ -316,8 +353,8 @@ def generate_initial_greeting() -> str:
     Returns:
         Generated greeting
     """
-    with inference_lock:
-        return ov_chat_engine.chat(chatbot_config["greet_the_user_prompt"]).response
+    # simple, non-RAG greeting
+    return chatbot_config.get("greeting", "Hello! How can I help you today?")
 
 
 def chat(history: List[dict]) -> List[dict]:
@@ -330,31 +367,72 @@ def chat(history: List[dict]) -> List[dict]:
         History with the latest chat's response (yields partial response)
     """
     history = list(history)
-    if isinstance(ov_chat_engine, SimpleChatEngine):
-        history.append({
-            "role": "assistant",
-            "content": "No guide is provided, so I cannot answer this question. Please upload the hotel guide.",
-        })
-        yield history
-        return
+    user_msg = (
+        _message_plain_text(history[-1].get("content"))
+        if history and history[-1].get("role") == "user"
+        else ""
+    )
 
-    user_msg = _message_plain_text(history[-1].get("content")) if history and history[-1].get("role") == "user" else ""
+    # retrieve context
+    context_blocks: List[str] = []
+    if rag_chunks and user_msg:
+        with inference_lock:
+            q = _embed_texts([user_msg])[0]
+        mat = np.stack([c.embedding for c in rag_chunks], axis=0)
+        top_idx = _cosine_top_k(q, mat, k=6)
+        candidates = [rag_chunks[i].text for i in top_idx]
+        context_blocks = _rerank(user_msg, candidates, top_n=3)
+
+    sys_prompt = chatbot_config.get("system_configuration", "")
+    context_text = "\n\n".join(
+        f"[CONTEXT {i+1}]\n{t}" for i, t in enumerate(context_blocks)
+    )
+    if context_text:
+        sys_prompt = f"{sys_prompt}\n\nUse the following context to answer:\n{context_text}".strip()
+
+    messages: List[Dict[str, str]] = []
+    if sys_prompt:
+        messages.append({"role": "system", "content": sys_prompt})
+    for m in history:
+        role = m.get("role")
+        if role in ("user", "assistant"):
+            messages.append({"role": role, "content": _message_plain_text(m.get('content'))})
+
+    assert chat_model is not None and chat_tokenizer is not None
+    prompt = chat_tokenizer.apply_chat_template(
+        messages, tokenize=False, add_generation_prompt=True
+    )
+
+    streamer = TextIteratorStreamer(chat_tokenizer, skip_prompt=True, skip_special_tokens=True)
+
+    gen_kwargs = dict(
+        inputs=chat_tokenizer(prompt, return_tensors="np")["input_ids"],
+        streamer=streamer,
+        max_new_tokens=512,
+        do_sample=True,
+        temperature=0.7,
+        top_p=0.95,
+        top_k=50,
+    )
 
     history.append({"role": "assistant", "content": ""})
-    with inference_lock:
-        start_time = time.time()
 
-        chat_streamer = ov_chat_engine.stream_chat(user_msg).response_gen
-        for partial_text in chat_streamer:
-            history[-1]["content"] += partial_text
-            yield history
+    def _run_generate() -> None:
+        with inference_lock:
+            chat_model.generate(**gen_kwargs)
 
-        end_time = time.time()
-
-        reply = _message_plain_text(history[-1].get("content"))
-        tokens = len(reply.split(" ")) * 4 / 3
-        processing_time = end_time - start_time
-        log.info(f"Chat model response time: {processing_time:.2f} seconds ({tokens / processing_time:.2f} tokens/s)")
+    thread = Thread(target=_run_generate)
+    start_time = time.time()
+    thread.start()
+    for token in streamer:
+        history[-1]["content"] += token
+        yield history
+    thread.join()
+    end_time = time.time()
+    reply = _message_plain_text(history[-1].get("content"))
+    tokens = len(reply.split(" ")) * 4 / 3
+    processing_time = end_time - start_time
+    log.info(f"Chat model response time: {processing_time:.2f} seconds ({tokens / processing_time:.2f} tokens/s)")
 
 
 def transcribe(audio: Tuple[int, np.ndarray], prompt: str, conversation: List[dict]) -> List[dict]:
@@ -524,7 +602,15 @@ def run(asr_model_dir: Path, asr_model_device: str, chat_model_dir: Path, chat_m
     # load tts model
     load_tts_model()
 
-    if asr_model is None or ov_llm is None or ov_embedding is None:
+    if (
+        asr_model is None
+        or chat_model is None
+        or chat_tokenizer is None
+        or embedding_model is None
+        or embedding_tokenizer is None
+        or reranker_model is None
+        or reranker_tokenizer is None
+    ):
         log.error("Required models are not loaded. Exiting...")
         return
 
