@@ -150,9 +150,15 @@ def load_chat_model(model_dir: Path, device: str) -> Tuple[OVModelForCausalLM, A
     ov_config = {"PERFORMANCE_HINT": "LATENCY", "NUM_STREAMS": "1", "CACHE_DIR": ""}
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
     model = OVModelForCausalLM.from_pretrained(model_dir, device=device, ov_config=ov_config)
-    log.info(
-        f"Running {model_dir} on {','.join(model.request.get_compiled_model().get_property('EXECUTION_DEVICES'))}"
-    )
+    exec_devs = None
+    try:
+        req = getattr(model, "request", None)
+        compiled = req.get_compiled_model() if hasattr(req, "get_compiled_model") else req
+        if compiled is not None and hasattr(compiled, "get_property"):
+            exec_devs = compiled.get_property("EXECUTION_DEVICES")
+    except Exception:
+        exec_devs = None
+    log.info(f"Running {model_dir} on {','.join(exec_devs) if exec_devs else device}")
     return model, tokenizer
 
 
@@ -173,9 +179,15 @@ def load_embedding_model(model_dir: Path, device: str) -> Tuple[OVModelForFeatur
     device = _openvino_runtime_device(device)
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
     model = OVModelForFeatureExtraction.from_pretrained(model_dir, device=device)
-    log.info(
-        f"Running {model_dir} on {','.join(model.request.get_compiled_model().get_property('EXECUTION_DEVICES'))}"
-    )
+    exec_devs = None
+    try:
+        req = getattr(model, "request", None)
+        compiled = req.get_compiled_model() if hasattr(req, "get_compiled_model") else req
+        if compiled is not None and hasattr(compiled, "get_property"):
+            exec_devs = compiled.get_property("EXECUTION_DEVICES")
+    except Exception:
+        exec_devs = None
+    log.info(f"Running {model_dir} on {','.join(exec_devs) if exec_devs else device}")
     return model, tokenizer
 
 
@@ -196,9 +208,15 @@ def load_reranker_model(model_dir: Path, device: str) -> Tuple[OVModelForSequenc
     device = _openvino_runtime_device(device)
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
     model = OVModelForSequenceClassification.from_pretrained(model_dir, device=device)
-    log.info(
-        f"Running {model_dir} on {','.join(model.request.get_compiled_model().get_property('EXECUTION_DEVICES'))}"
-    )
+    exec_devs = None
+    try:
+        req = getattr(model, "request", None)
+        compiled = req.get_compiled_model() if hasattr(req, "get_compiled_model") else req
+        if compiled is not None and hasattr(compiled, "get_property"):
+            exec_devs = compiled.get_property("EXECUTION_DEVICES")
+    except Exception:
+        exec_devs = None
+    log.info(f"Running {model_dir} on {','.join(exec_devs) if exec_devs else device}")
     return model, tokenizer
 
 
@@ -240,9 +258,6 @@ def load_tts_model() -> None:
 
     # CPU is sufficient for real-time inference.
     ov_tts_model = TTS(language='EN', device='cpu')
-    
-    # Compile the model with OpenVINO backend for accelerated inference
-    ov_tts_model.model.infer = torch.compile(ov_tts_model.model.infer, backend='openvino')
 
     log.info(f"Running {type(ov_tts_model).__name__} on {ov_tts_model.device.__str__().upper()}")
 
@@ -405,8 +420,10 @@ def chat(history: List[dict]) -> List[dict]:
 
     streamer = TextIteratorStreamer(chat_tokenizer, skip_prompt=True, skip_special_tokens=True)
 
+    model_inputs = chat_tokenizer(prompt, return_tensors="pt")
     gen_kwargs = dict(
-        inputs=chat_tokenizer(prompt, return_tensors="np")["input_ids"],
+        input_ids=model_inputs["input_ids"],
+        attention_mask=model_inputs.get("attention_mask"),
         streamer=streamer,
         max_new_tokens=512,
         do_sample=True,
