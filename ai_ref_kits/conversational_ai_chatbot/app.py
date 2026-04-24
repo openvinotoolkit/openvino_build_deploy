@@ -450,7 +450,10 @@ def create_UI(initial_message: str, example_pdf_path: Path) -> gr.Blocks:
     with gr.Blocks(title="Adrishuo - the Conversational AI Chatbot") as demo:
         gr.Markdown(chatbot_config["instructions"])
         with gr.Row():
-            file_uploader_ui = gr.File(label="Hotel guide", file_types=[".pdf", ".txt"], value=str(example_pdf_path), scale=1)
+            file_uploader_ui = gr.File(
+                label="Hotel guide", file_types=[".pdf", ".txt"], value=str(example_pdf_path), scale=1
+            )
+
             with gr.Column(scale=4):
                 chatbot_ui = gr.Chatbot(
                     value=[{"role": "assistant", "content": initial_message}],
