@@ -1,12 +1,12 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 
-jupyterlab==4.4.8
+jupyterlab==4.5.7
 
 openvino==2025.2.0
 nncf==2.17.0
 
 ultralytics==8.3.38
-onnx==1.18.0
+onnx==1.21.0
 supervision==0.18.0
 
 numpy==2.2.6
