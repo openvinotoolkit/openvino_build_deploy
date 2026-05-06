@@ -1,14 +1,13 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 
-openvino==2025.4
-optimum-intel==1.25.2
-nncf==2.19.0
+# Transformers v5 + ONNX 1.21: PyPI optimum-intel still caps transformers<5; this git pin needs OpenVINO 2026 (see HF optimum-intel main).
+openvino==2026.1.0
+optimum-intel @ git+https://github.com/huggingface/optimum-intel.git@f50a0b326df82d4b05c461a9184a97f616bfa63a
+nncf==3.1.0
 
-onnx==1.18.0
-onnxruntime==1.20.1
+onnx==1.21.0
 torch==2.8.0
+transformers==5.0.0
 
-transformers==4.53.3
+gradio==6.7.0
 librosa==0.10.2
-
-gradio==5.35.0
