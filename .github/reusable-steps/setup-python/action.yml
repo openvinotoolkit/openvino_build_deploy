@@ -32,4 +32,4 @@ runs:
     - name: Install dependencies
       shell: bash
       run: |
-        uv pip install -r ${{ inputs.project }}/requirements.txt --index-strategy first-index --system
+        uv pip install -r ${{ inputs.project }}/requirements.txt --index-strategy unsafe-best-match --system
