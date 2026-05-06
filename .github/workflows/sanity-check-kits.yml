@@ -315,6 +315,7 @@ jobs:
           python: ${{ matrix.python }}
           project: ${{ matrix.subproject }}
       - name: Run Notebook
+        if: runner.arch != 'ARM64' || !contains(matrix.subproject, 'defect_detection_anomalib')
         shell: bash
         timeout-minutes: 30
         run: |
