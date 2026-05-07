@@ -1,4 +1,5 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
+--pre
 
 openvino-genai==2026.0.0
 nncf==3.0.0
@@ -6,6 +7,7 @@ optimum-intel==1.27.0
 onnx==1.21.0
 huggingface-hub==0.36.0
 diffusers==0.38.0
+safetensors==0.8.0rc0
 transformers==4.57.1
 torch==2.8.0
 torchvision==0.23.0
