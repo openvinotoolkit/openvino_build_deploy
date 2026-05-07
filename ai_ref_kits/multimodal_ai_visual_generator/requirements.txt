@@ -9,7 +9,7 @@ nncf==2.18.0
 # Model + Tokenizer Management
 transformers==4.53.3
 diffusers==0.38.0
-huggingface-hub==0.30.2
+huggingface-hub==0.36.0
 sentencepiece==0.2.1
 protobuf==6.33.5
 peft==0.15.2
