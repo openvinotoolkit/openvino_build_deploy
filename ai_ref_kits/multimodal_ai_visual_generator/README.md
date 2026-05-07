@@ -129,7 +129,7 @@ Authenticate gated models on Hugging Face. To authenticate, enter the same email
 To use the model, authenticate using the Hugging Face CLI:
 
 ```shell
-huggingface-cli login
+hf auth login
 ```
 When prompted to add the token as a git credential, respond with 'n'. This step ensures that you are logged into the Hugging Face API and ready to download the model.
 
@@ -144,11 +144,11 @@ Use the provided scripts to export and optimize the models. When you run them, b
 
 Download the pre-optimized LLMs model
 ```shell
-huggingface-cli download OpenVINO/Qwen2.5-7B-Instruct-int4-ov --local-dir models/Qwen2.5-7B-Instruct-INT4
+hf download OpenVINO/Qwen2.5-7B-Instruct-int4-ov --local-dir models/Qwen2.5-7B-Instruct-INT4
 ```
 Download the pre-optimized image generation model
 ```shell
-huggingface-cli download OpenVINO/FLUX.1-schnell-int4-ov --local-dir models/FLUX.1-schnell-INT4
+hf download OpenVINO/FLUX.1-schnell-int4-ov --local-dir models/FLUX.1-schnell-INT4
 ```
 
 ## Convert and Optimize the Model (Option 2)
