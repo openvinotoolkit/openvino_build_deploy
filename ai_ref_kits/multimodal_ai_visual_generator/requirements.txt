@@ -7,7 +7,7 @@ optimum-intel==1.25.2
 nncf==2.18.0
 
 # Model + Tokenizer Management
-transformers==4.53.3
+transformers==4.57.1
 diffusers==0.38.0
 safetensors==0.8.0rc0
 huggingface-hub==0.36.0
