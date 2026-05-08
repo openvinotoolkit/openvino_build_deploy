@@ -1,18 +1,18 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
-
 # Core Inference & Optimization
-openvino==2025.3.0
-openvino-genai==2025.3.0
-optimum-intel==1.25.2
+openvino==2025.4
+openvino-genai==2025.4
+optimum-intel==1.27.0
 nncf==2.18.0
 
 # Model + Tokenizer Management
-transformers==4.53.3
-diffusers==0.33.1
-huggingface-hub==0.30.2
+transformers==4.57.1
+diffusers==0.38.0
+safetensors==0.8.0rc0
+huggingface-hub==0.36.0
 sentencepiece==0.2.1
 protobuf==6.33.5
-peft==0.15.2
+peft==0.17.0
 torch==2.8.0
 
 # Streamlit Frontend
