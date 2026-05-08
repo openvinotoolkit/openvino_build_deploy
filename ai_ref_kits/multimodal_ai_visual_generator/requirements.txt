@@ -1,7 +1,7 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 # Core Inference & Optimization
-openvino==2025.3.0
-openvino-genai==2025.3.0
+openvino==2025.4
+openvino-genai==2025.4
 optimum-intel==1.27.0
 nncf==2.18.0
 
