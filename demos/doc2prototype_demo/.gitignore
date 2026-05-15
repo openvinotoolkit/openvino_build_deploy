@@ -1,0 +1,8 @@
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+_cache/
+ov_paddleocr_vl_model
+ov_paddleocr_vl_model/
+outputs/mvp_*_text_smoke/

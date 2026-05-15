@@ -1,0 +1,16 @@
+openvino==2026.1.0
+transformers==4.54.0
+torch==2.8.0
+torchvision==0.23.0
+nncf==3.1.0
+pillow==10.4.0
+opencv-python==4.11.0.86
+numpy==1.26.4
+requests==2.33.1
+tqdm==4.67.3
+datasets==4.8.5
+sentencepiece==0.2.1
+protobuf==7.34.1
+einops==0.8.2
+modelscope==1.36.3
+huggingface-hub==0.36.2

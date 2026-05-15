@@ -1,0 +1,110 @@
+{
+  "schema_version": "doc2prototype.mvp_run.v1",
+  "created_at": "2026-05-15T18:52:41.940679+00:00",
+  "command": "main.py examples/flowchart_sample.png --task flowchart --device CPU --output-dir outputs/mvp_flow_image_smoke",
+  "input": {
+    "source": "examples/flowchart_sample.png",
+    "task": "flowchart"
+  },
+  "openvino": {
+    "uses_openvino": true,
+    "device": "CPU",
+    "model_path": "ov_paddleocr_vl_model",
+    "version": "2026.1.0-21367-63e31528c62-releases/2026/1"
+  },
+  "parse": {
+    "raw_text": "Login Flow\n\nStep 1: Start - User opens login page\nStep 2: Enter credentials\nStep 3: Validate input - is the form empty?\nStep 4: Send authentication request\nStep 5: Success - show dashboard\nStep 6: End\n\nStart -> Enter credentials\nEnter credentials -> Validate input\nValidate input -> Send authentication request\nSend authentication request -> Success\nSuccess -> End",
+    "task": "flowchart",
+    "prompt": "Please analyze this flowchart and describe all nodes, connections, and the flow logic in detail.",
+    "inference_time": 13.358274459838867,
+    "image_path": "examples/flowchart_sample.png",
+    "source_path": "examples/flowchart_sample.png",
+    "parser": "PaddleOCR-VL OpenVINO",
+    "uses_openvino": true
+  },
+  "structured": {
+    "schema_version": "doc2prototype.mvp.v1",
+    "document_type": "flowchart",
+    "title": "Extracted Flowchart",
+    "nodes": [
+      {
+        "id": "node_1",
+        "label": "Start - User opens login page",
+        "type": "start"
+      },
+      {
+        "id": "node_2",
+        "label": "Enter credentials",
+        "type": "process"
+      },
+      {
+        "id": "node_3",
+        "label": "Validate input - is the form empty?",
+        "type": "decision"
+      },
+      {
+        "id": "node_4",
+        "label": "Send authentication request",
+        "type": "process"
+      },
+      {
+        "id": "node_5",
+        "label": "Success - show dashboard",
+        "type": "process"
+      },
+      {
+        "id": "node_6",
+        "label": "End",
+        "type": "end"
+      }
+    ],
+    "edges": [
+      {
+        "from": "node_1",
+        "to": "node_2"
+      },
+      {
+        "from": "node_2",
+        "to": "node_3"
+      },
+      {
+        "from": "node_3",
+        "to": "node_4"
+      },
+      {
+        "from": "node_4",
+        "to": "node_5"
+      },
+      {
+        "from": "node_5",
+        "to": "node_6"
+      }
+    ],
+    "raw_analysis": "Login Flow\n\nStep 1: Start - User opens login page\nStep 2: Enter credentials\nStep 3: Validate input - is the form empty?\nStep 4: Send authentication request\nStep 5: Success - show dashboard\nStep 6: End\n\nStart -> Enter credentials\nEnter credentials -> Validate input\nValidate input -> Send authentication request\nSend authentication request -> Success\nSuccess -> End"
+  },
+  "generated": {
+    "code_type": "mermaid_diagram",
+    "generation_time": 7.3909759521484375e-06,
+    "backend": "deterministic template"
+  },
+  "metrics": {
+    "model_load": 3.9547960979998606,
+    "openvino_inference": 13.358274459838867,
+    "structure_extraction": 0.0011619039996730862,
+    "generation": 7.380600072792731e-05,
+    "total": 17.574934574999133
+  },
+  "artifacts": {
+    "raw_parse": "outputs/mvp_flow_image_smoke/raw_parse.md",
+    "structured_json": "outputs/mvp_flow_image_smoke/structured.json",
+    "generated": "outputs/mvp_flow_image_smoke/generated_flowchart.mmd",
+    "run_json": "outputs/mvp_flow_image_smoke/run.json",
+    "markdown_report": "outputs/mvp_flow_image_smoke/result.md",
+    "structured_mermaid": "outputs/mvp_flow_image_smoke/structured_flowchart.mmd",
+    "metrics_svg": "outputs/mvp_flow_image_smoke/metrics.svg",
+    "flowchart_svg": "outputs/mvp_flow_image_smoke/flowchart.svg",
+    "layout_overlay": "outputs/mvp_flow_image_smoke/layout_overlay.png",
+    "text_heatmap": "outputs/mvp_flow_image_smoke/text_heatmap.png",
+    "visual_report": "outputs/mvp_flow_image_smoke/visual_report.html"
+  }
+}

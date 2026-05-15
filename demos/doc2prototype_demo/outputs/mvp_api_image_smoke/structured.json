@@ -1,0 +1,83 @@
+{
+  "schema_version": "doc2prototype.mvp.v1",
+  "document_type": "api_doc",
+  "title": "Extracted API Documentation",
+  "base_url": "",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/orders",
+      "description": "List orders with optional filters.",
+      "parameters": [],
+      "response": {
+        "status": "success",
+        "data": "object"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/orders",
+      "description": "Create a new order.",
+      "parameters": [],
+      "response": {
+        "status": "success",
+        "data": "object"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/orders/{order_id}",
+      "description": "Read one order by ID.",
+      "parameters": [
+        {
+          "name": "order_id",
+          "type": "string",
+          "required": true,
+          "location": "path",
+          "description": "Path parameter `order_id`."
+        }
+      ],
+      "response": {
+        "status": "success",
+        "data": "object"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/orders/{order_id}",
+      "description": "Update order status.",
+      "parameters": [
+        {
+          "name": "order_id",
+          "type": "string",
+          "required": true,
+          "location": "path",
+          "description": "Path parameter `order_id`."
+        }
+      ],
+      "response": {
+        "status": "success",
+        "data": "object"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/orders/{order_id}",
+      "description": "Cancel an order.",
+      "parameters": [
+        {
+          "name": "order_id",
+          "type": "string",
+          "required": true,
+          "location": "path",
+          "description": "Path parameter `order_id`."
+        }
+      ],
+      "response": {
+        "status": "success",
+        "data": "object"
+      }
+    }
+  ],
+  "raw_analysis": "Order Service API\nBase URL: https://api.example.com\nGET /api/orders - List orders with optional filters.\nPOST /api/orders - Create a new order.\nGET /api/orders/{order_id} - Read one order by ID.\nPATCH /api/orders/{order_id} - Update order status.\nDELETE /api/orders/{order_id} - Cancel an order.\nRequest fields:\n- customer_id: string, required\n- sku: string, required\n- quantity: integer, required\n- status: string, optional\nResponse:\n- status: success\n- data: order object"
+}
