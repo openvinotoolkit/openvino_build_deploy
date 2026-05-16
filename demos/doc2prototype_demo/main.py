@@ -24,7 +24,7 @@ from code_generator import CodeGenerator
 from structure_extractor import extract_structure, to_json_string, to_mermaid
 
 
-SUPPORTED_TASKS = ("api_doc", "flowchart")
+SUPPORTED_TASKS = ("api_doc", "flowchart", "technical_doc")
 TEXT_SUFFIXES = {".txt", ".md", ".markdown"}
 
 
@@ -101,6 +101,8 @@ def _parse_input(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, fl
 def _default_code_type(task: str) -> str:
     if task == "flowchart":
         return "mermaid_diagram"
+    if task == "technical_doc":
+        return "markdown_summary"
     return "api_skeleton"
 
 
@@ -109,6 +111,8 @@ def _artifact_name(task: str, code_type: str) -> str:
         return "generated_api.py"
     if code_type == "mermaid_diagram":
         return "generated_flowchart.mmd"
+    if code_type == "markdown_summary":
+        return "generated_summary.md"
     if code_type == "test_cases":
         return "generated_tests.py"
     if code_type == "frontend_page":

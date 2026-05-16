@@ -241,6 +241,56 @@ def render_flowchart_svg(structured: dict[str, Any]) -> str:
 """
 
 
+def render_document_svg(structured: dict[str, Any]) -> str:
+    sections = structured.get("sections", [])
+    raw_analysis = structured.get("raw_analysis", "")
+    preview_lines = [line.strip() for line in str(raw_analysis).splitlines() if line.strip()]
+    rows = []
+    width = 980
+    card_h = 84
+    gap = 14
+    top = 86
+    items = sections[:6] or [{"heading": "OCR Preview", "content": " ".join(preview_lines[:4])}]
+    height = top + max(1, len(items)) * (card_h + gap) + 34
+
+    for i, section in enumerate(items):
+        y = top + i * (card_h + gap)
+        heading = section.get("heading") or f"Section {i + 1}"
+        content = " ".join(str(section.get("content", "")).split())
+        wrapped = _wrap(content or "No body text detected.", width=82)[:2]
+        body = "".join(
+            f'<text x="56" y="{y + 47 + idx * 18}" class="desc">{_esc(line)}</text>'
+            for idx, line in enumerate(wrapped)
+        )
+        rows.append(
+            f"""
+  <rect x="34" y="{y}" width="{width - 68}" height="{card_h}" rx="8" class="card"/>
+  <text x="56" y="{y + 28}" class="heading">{_esc(heading)}</text>
+  {body}
+"""
+        )
+
+    if not sections and not preview_lines:
+        rows.append('<text x="40" y="116" class="empty">No document sections extracted.</text>')
+
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">
+  <style>
+    .title {{ font: 700 25px Arial, sans-serif; fill: #172033; }}
+    .subtitle {{ font: 400 14px Arial, sans-serif; fill: #64748b; }}
+    .card {{ fill: #ffffff; stroke: #d7dee8; }}
+    .heading {{ font: 700 17px Arial, sans-serif; fill: #0f172a; }}
+    .desc {{ font: 400 13px Arial, sans-serif; fill: #475569; }}
+    .empty {{ font: 500 16px Arial, sans-serif; fill: #64748b; }}
+    .panel {{ fill: #f8fafc; stroke: #d7dee8; }}
+  </style>
+  <rect x="1" y="1" width="{width - 2}" height="{height - 2}" rx="8" class="panel"/>
+  <text x="36" y="40" class="title">Extracted Document Summary</text>
+  <text x="36" y="62" class="subtitle">{len(sections)} section(s) from structured JSON</text>
+  {"".join(rows)}
+</svg>
+"""
+
+
 def _render_html(run: dict[str, Any], output_dir: Path, artifacts: dict[str, str]) -> str:
     structured = run.get("structured", {})
     task = run.get("input", {}).get("task", "")
@@ -250,7 +300,12 @@ def _render_html(run: dict[str, Any], output_dir: Path, artifacts: dict[str, str
         source_path = Path.cwd() / source_path
     source_link = _relative_link(output_dir, source_path) if source and source_path.exists() else ""
 
-    visual = "api_endpoints.svg" if task == "api_doc" else "flowchart.svg"
+    if task == "flowchart":
+        visual = "flowchart.svg"
+    elif task == "technical_doc":
+        visual = "document_summary.svg"
+    else:
+        visual = "api_endpoints.svg"
     generated_link = Path(artifacts.get("generated", "")).name if artifacts.get("generated") else ""
 
     layout_links = []
@@ -447,6 +502,10 @@ def create_visualizations(run: dict[str, Any], output_dir: Path, project_root: P
         visual_path = output_dir / "flowchart.svg"
         visual_path.write_text(render_flowchart_svg(structured), encoding="utf-8")
         artifacts["flowchart_svg"] = str(visual_path)
+    elif task == "technical_doc":
+        visual_path = output_dir / "document_summary.svg"
+        visual_path.write_text(render_document_svg(structured), encoding="utf-8")
+        artifacts["document_summary_svg"] = str(visual_path)
     else:
         visual_path = output_dir / "api_endpoints.svg"
         visual_path.write_text(render_api_svg(structured), encoding="utf-8")

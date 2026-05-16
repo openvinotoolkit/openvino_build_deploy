@@ -6,3 +6,5 @@ _cache/
 ov_paddleocr_vl_model
 ov_paddleocr_vl_model/
 outputs/mvp_*_text_smoke/
+examples/official_paddleocr_vl_sample.png
+outputs/mvp_official_reference/

@@ -7,6 +7,8 @@ The current scope is intentionally narrow:
 - API documentation image -> PaddleOCR-VL with OpenVINO -> structured endpoint JSON -> FastAPI skeleton
 - Flowchart image -> PaddleOCR-VL with OpenVINO -> structured nodes/edges JSON -> Mermaid flowchart
 
+An optional official/reference sample path is included for sanity-checking general PaddleOCR-VL document recognition with a Markdown technical summary.
+
 The demo also writes a static visual report with timing charts, extracted structure diagrams, document layout overlays, and text-density heatmaps.
 
 ## Requirements
@@ -62,6 +64,24 @@ python main.py examples/api_doc_sample.md --task api_doc --output-dir outputs/mv
 python main.py examples/flowchart_sample.md --task flowchart --output-dir outputs/mvp_flow_text_smoke
 ```
 
+## Run an Official Reference Sample
+
+The MVP scenarios above use project-specific API and flowchart inputs. To also show that the OpenVINO PaddleOCR-VL path works on an official/reference document image, prepare the sample image:
+
+```bash
+python scripts/prepare_official_sample.py
+```
+
+The script first tries to copy the OpenVINO Notebooks PaddleOCR-VL sample from `openvino_notebooks/notebooks/paddleocr_vl/test.png`. If that checkout is not available, it downloads the public PaddleOCR-VL demo image.
+
+Run the reference sample as a generic technical document:
+
+```bash
+python main.py examples/official_paddleocr_vl_sample.png --task technical_doc --prompt "OCR:" --device CPU --output-dir outputs/mvp_official_reference
+```
+
+This produces structured section JSON, a Markdown technical summary, OpenVINO timing data, and the same visual report format used by the MVP scenarios.
+
 ## Outputs
 
 Each run writes:
@@ -71,6 +91,7 @@ Each run writes:
 - `generated_api.py` or `generated_flowchart.mmd`: downstream prototype artifact
 - `metrics.svg`: pipeline timing chart
 - `api_endpoints.svg` or `flowchart.svg`: extracted structure visualization
+- `document_summary.svg`: extracted section visualization for the optional technical document reference sample
 - `layout_overlay.png`: document layout overlay with OpenVINO watermark
 - `text_heatmap.png`: text density heatmap with OpenVINO watermark
 - `visual_report.html`: single-page report linking all artifacts

@@ -73,6 +73,19 @@ Generate a project structure with:
 5. README.md
 
 Output the code organized by file paths (e.g., 'backend/main.py'), no explanations.""",
+
+    "markdown_summary": """You are a technical writer. Based on the following extracted document structure, generate a concise Markdown technical summary.
+
+Document:
+{structured_data}
+
+Requirements:
+1. Summarize the document purpose
+2. List the detected sections
+3. Preserve important OCR details that may need manual review
+4. Keep the output concise
+
+Output ONLY Markdown.""",
 }
 
 
@@ -178,7 +191,7 @@ class CodeGenerator:
         Args:
             structured_data: Structured JSON from document parser
             code_type: One of 'api_skeleton', 'frontend_page', 'mermaid_diagram',
-                       'test_cases', 'full_scaffold'
+                       'test_cases', 'full_scaffold', 'markdown_summary'
             custom_prompt: Custom prompt override
 
         Returns:
@@ -238,6 +251,8 @@ class CodeGenerator:
             return self._template_test_cases(structured_data)
         elif code_type == "full_scaffold":
             return self._template_full_scaffold(structured_data)
+        elif code_type == "markdown_summary":
+            return self._template_markdown_summary(structured_data)
         else:
             return self._template_api_skeleton(structured_data)
 
@@ -501,6 +516,44 @@ class Test{class_name}:
         parts.append(self._template_test_cases(data))
 
         return "\n".join(parts)
+
+    def _template_markdown_summary(self, data: dict) -> str:
+        """Generate a concise Markdown summary from generic document structure."""
+        title = data.get("title", "Extracted Technical Document")
+        sections = data.get("sections", [])
+        raw_analysis = data.get("raw_analysis", "")
+
+        lines = [
+            f"# {title}",
+            "",
+            "## Summary",
+        ]
+
+        if sections:
+            first_content = sections[0].get("content", "").strip()
+            summary = " ".join(first_content.split())[:420]
+            lines.append(summary or "The document was parsed into structured sections for downstream review.")
+        else:
+            summary = " ".join(str(raw_analysis).split())[:420]
+            lines.append(summary or "No readable content was extracted from the document.")
+
+        lines.extend(["", "## Detected Sections"])
+        if sections:
+            for index, section in enumerate(sections, start=1):
+                heading = section.get("heading") or f"Section {index}"
+                content = " ".join(section.get("content", "").split())
+                preview = content[:180] + ("..." if len(content) > 180 else "")
+                lines.append(f"- **{heading}**: {preview or 'No body text detected.'}")
+        else:
+            lines.append("- No explicit sections detected.")
+
+        raw_lines = [line.strip() for line in str(raw_analysis).splitlines() if line.strip()]
+        if raw_lines:
+            lines.extend(["", "## OCR Review Notes"])
+            for line in raw_lines[:8]:
+                lines.append(f"- {line[:220]}")
+
+        return "\n".join(lines)
 
 
 def download_code_model(
