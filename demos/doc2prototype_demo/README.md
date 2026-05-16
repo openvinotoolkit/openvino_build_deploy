@@ -81,6 +81,28 @@ Example reports are included under:
 - `outputs/mvp_api_image_smoke/visual_report.html`
 - `outputs/mvp_flow_image_smoke/visual_report.html`
 
+## View Reports and Capture Screenshots
+
+After running the demo, open `visual_report.html` in a browser to inspect the full result.
+
+If the project is running in WSL on Windows, the example reports can be opened from File Explorer or a browser with:
+
+```text
+\\wsl.localhost\Ubuntu\root\Doc2Prototype\openvino_build_deploy\demos\doc2prototype_demo\outputs\mvp_api_image_smoke\visual_report.html
+```
+
+```text
+\\wsl.localhost\Ubuntu\root\Doc2Prototype\openvino_build_deploy\demos\doc2prototype_demo\outputs\mvp_flow_image_smoke\visual_report.html
+```
+
+Recommended screenshots for reporting:
+
+- API document report: run summary, pipeline timing, extracted API surface, layout overlay, and text heatmap.
+- Flowchart report: run summary, pipeline timing, extracted flowchart, layout overlay, and text heatmap.
+- Pull request page: PR number, open status, and successful checks.
+
+On Windows, press `Win + Shift + S`, select the browser region, and save the screenshots for the weekly report.
+
 ## OpenVINO Value Shown
 
 - PaddleOCR-VL inference runs through an OpenVINO IR model.
