@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Doc2Prototype MVP Visual Report</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --text: #172033;
+      --muted: #64748b;
+      --line: #d7dee8;
+      --accent: #0f766e;
+    }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, sans-serif;
+    }
+    main {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: flex-start;
+      margin-bottom: 22px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      letter-spacing: 0;
+    }
+    .muted { color: var(--muted); }
+    .pill {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #e6f4f1;
+      color: #0f766e;
+      font-weight: 700;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+      margin: 16px 0;
+    }
+    h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+    .kv {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 8px 14px;
+      font-size: 14px;
+    }
+    .kv b { color: #334155; }
+    img, object {
+      max-width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: white;
+    }
+    figure { margin: 0; }
+    figcaption {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    pre {
+      overflow: auto;
+      max-height: 360px;
+      padding: 14px;
+      background: #0f172a;
+      color: #e2e8f0;
+      border-radius: 6px;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    a { color: var(--accent); font-weight: 700; }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>Doc2Prototype MVP Visual Report</h1>
+      <div class="muted">Static visualization generated from <code>run.json</code>.</div>
+    </div>
+    <span class="pill">flowchart</span>
+  </header>
+
+  <section>
+    <h2>Run Summary</h2>
+    <div class="kv">
+      <b>Source</b><span><a href="../../examples/flowchart_sample.png">examples/flowchart_sample.png</a></span>
+      <b>OpenVINO</b><span>True</span>
+      <b>Device</b><span>CPU</span>
+      <b>Schema</b><span>doc2prototype.mvp.v1</span>
+      <b>Generated</b><span><a href="generated_flowchart.mmd">generated_flowchart.mmd</a></span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Pipeline Timing</h2>
+    <object data="metrics.svg" type="image/svg+xml"></object>
+  </section>
+
+  <section>
+    <h2>Structured Visualization</h2>
+    <object data="flowchart.svg" type="image/svg+xml"></object>
+  </section>
+
+  <section><h2>Document Layout</h2><div class="grid"><figure><img src="layout_overlay.png" alt="Layout Overlay"><figcaption>Layout Overlay</figcaption></figure><figure><img src="text_heatmap.png" alt="Text Density Heatmap"><figcaption>Text Density Heatmap</figcaption></figure></div></section>
+
+  <section>
+    <h2>Structured JSON Preview</h2>
+    <pre>{
+  &quot;schema_version&quot;: &quot;doc2prototype.mvp.v1&quot;,
+  &quot;document_type&quot;: &quot;flowchart&quot;,
+  &quot;title&quot;: &quot;Extracted Flowchart&quot;,
+  &quot;nodes&quot;: [
+    {
+      &quot;id&quot;: &quot;node_1&quot;,
+      &quot;label&quot;: &quot;Start - User opens login page&quot;,
+      &quot;type&quot;: &quot;start&quot;
+    },
+    {
+      &quot;id&quot;: &quot;node_2&quot;,
+      &quot;label&quot;: &quot;Enter credentials&quot;,
+      &quot;type&quot;: &quot;process&quot;
+    },
+    {
+      &quot;id&quot;: &quot;node_3&quot;,
+      &quot;label&quot;: &quot;Validate input - is the form empty?&quot;,
+      &quot;type&quot;: &quot;decision&quot;
+    },
+    {
+      &quot;id&quot;: &quot;node_4&quot;,
+      &quot;label&quot;: &quot;Send authentication request&quot;,
+      &quot;type&quot;: &quot;process&quot;
+    },
+    {
+      &quot;id&quot;: &quot;node_5&quot;,
+      &quot;label&quot;: &quot;Success - show dashboard&quot;,
+      &quot;type&quot;: &quot;process&quot;
+    },
+    {
+      &quot;id&quot;: &quot;node_6&quot;,
+      &quot;label&quot;: &quot;End&quot;,
+      &quot;type&quot;: &quot;end&quot;
+    }
+  ],
+  &quot;edges&quot;: [
+    {
+      &quot;from&quot;: &quot;node_1&quot;,
+      &quot;to&quot;: &quot;node_2&quot;
+    },
+    {
+      &quot;from&quot;: &quot;node_2&quot;,
+      &quot;to&quot;: &quot;node_3&quot;
+    },
+    {
+      &quot;from&quot;: &quot;node_3&quot;,
+      &quot;to&quot;: &quot;node_4&quot;
+    },
+    {
+      &quot;from&quot;: &quot;node_4&quot;,
+      &quot;to&quot;: &quot;node_5&quot;
+    },
+    {
+      &quot;from&quot;: &quot;node_5&quot;,
+      &quot;to&quot;: &quot;node_6&quot;
+    }
+  ],
+  &quot;raw_analysis&quot;: &quot;Login Flow\n\nStep 1: Start - User opens login page\nStep 2: Enter credentials\nStep 3: Validate input - is the form empty?\nStep 4: Send authentication request\nStep 5: Success - show dashboard\nStep 6: End\n\nStart -&gt; Enter credentials\nEnter credentials -&gt; Validate input\nValidate input -&gt; Send authentication request\nSend authentication request -&gt; Success\nSuccess -&gt; End&quot;
+}</pre>
+  </section>
+</main>
+</body>
+</html>

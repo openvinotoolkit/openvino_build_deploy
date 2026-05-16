@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="556" viewBox="0 0 1040 556">
+  <style>
+    .title { font: 700 25px Arial, sans-serif; fill: #172033; }
+    .subtitle { font: 400 14px Arial, sans-serif; fill: #64748b; }
+    .card { fill: #ffffff; stroke: #d7dee8; }
+    .method { font: 700 14px Arial, sans-serif; fill: white; }
+    .path { font: 700 18px Arial, sans-serif; fill: #0f172a; }
+    .desc { font: 400 14px Arial, sans-serif; fill: #475569; }
+    .params { font: 600 13px Arial, sans-serif; fill: #64748b; }
+    .empty { font: 500 16px Arial, sans-serif; fill: #64748b; }
+    .panel { fill: #f8fafc; stroke: #d7dee8; }
+  </style>
+  <rect x="1" y="1" width="1038" height="554" rx="8" class="panel"/>
+  <text x="36" y="40" class="title">Extracted API Surface</text>
+  <text x="36" y="62" class="subtitle">5 endpoint(s) generated from structured JSON</text>
+  
+  <rect x="34" y="82" width="972" height="74" rx="8" class="card"/>
+  <rect x="54" y="103" width="82" height="32" rx="5" fill="#2563eb"/>
+  <text x="95" y="124" class="method" text-anchor="middle">GET</text>
+  <text x="158" y="113" class="path">/api/orders</text>
+  <text x="158" y="137" class="desc">List orders with optional filters.</text>
+  <text x="780" y="127" class="params">params: none</text>
+
+  <rect x="34" y="170" width="972" height="74" rx="8" class="card"/>
+  <rect x="54" y="191" width="82" height="32" rx="5" fill="#059669"/>
+  <text x="95" y="212" class="method" text-anchor="middle">POST</text>
+  <text x="158" y="201" class="path">/api/orders</text>
+  <text x="158" y="225" class="desc">Create a new order.</text>
+  <text x="780" y="215" class="params">params: none</text>
+
+  <rect x="34" y="258" width="972" height="74" rx="8" class="card"/>
+  <rect x="54" y="279" width="82" height="32" rx="5" fill="#2563eb"/>
+  <text x="95" y="300" class="method" text-anchor="middle">GET</text>
+  <text x="158" y="289" class="path">/api/orders/{order_id}</text>
+  <text x="158" y="313" class="desc">Read one order by ID.</text>
+  <text x="780" y="303" class="params">params: order_id</text>
+
+  <rect x="34" y="346" width="972" height="74" rx="8" class="card"/>
+  <rect x="54" y="367" width="82" height="32" rx="5" fill="#7c3aed"/>
+  <text x="95" y="388" class="method" text-anchor="middle">PATCH</text>
+  <text x="158" y="377" class="path">/api/orders/{order_id}</text>
+  <text x="158" y="401" class="desc">Update order status.</text>
+  <text x="780" y="391" class="params">params: order_id</text>
+
+  <rect x="34" y="434" width="972" height="74" rx="8" class="card"/>
+  <rect x="54" y="455" width="82" height="32" rx="5" fill="#dc2626"/>
+  <text x="95" y="476" class="method" text-anchor="middle">DELETE</text>
+  <text x="158" y="465" class="path">/api/orders/{order_id}</text>
+  <text x="158" y="489" class="desc">Cancel an order.</text>
+  <text x="780" y="479" class="params">params: order_id</text>
+
+</svg>

@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Doc2Prototype MVP Visual Report</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --text: #172033;
+      --muted: #64748b;
+      --line: #d7dee8;
+      --accent: #0f766e;
+    }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, sans-serif;
+    }
+    main {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: flex-start;
+      margin-bottom: 22px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      letter-spacing: 0;
+    }
+    .muted { color: var(--muted); }
+    .pill {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #e6f4f1;
+      color: #0f766e;
+      font-weight: 700;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+      margin: 16px 0;
+    }
+    h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+    .kv {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 8px 14px;
+      font-size: 14px;
+    }
+    .kv b { color: #334155; }
+    img, object {
+      max-width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: white;
+    }
+    figure { margin: 0; }
+    figcaption {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    pre {
+      overflow: auto;
+      max-height: 360px;
+      padding: 14px;
+      background: #0f172a;
+      color: #e2e8f0;
+      border-radius: 6px;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    a { color: var(--accent); font-weight: 700; }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>Doc2Prototype MVP Visual Report</h1>
+      <div class="muted">Static visualization generated from <code>run.json</code>.</div>
+    </div>
+    <span class="pill">api_doc</span>
+  </header>
+
+  <section>
+    <h2>Run Summary</h2>
+    <div class="kv">
+      <b>Source</b><span><a href="../../examples/api_doc_sample.png">examples/api_doc_sample.png</a></span>
+      <b>OpenVINO</b><span>True</span>
+      <b>Device</b><span>CPU</span>
+      <b>Schema</b><span>doc2prototype.mvp.v1</span>
+      <b>Generated</b><span><a href="generated_api.py">generated_api.py</a></span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Pipeline Timing</h2>
+    <object data="metrics.svg" type="image/svg+xml"></object>
+  </section>
+
+  <section>
+    <h2>Structured Visualization</h2>
+    <object data="api_endpoints.svg" type="image/svg+xml"></object>
+  </section>
+
+  <section><h2>Document Layout</h2><div class="grid"><figure><img src="layout_overlay.png" alt="Layout Overlay"><figcaption>Layout Overlay</figcaption></figure><figure><img src="text_heatmap.png" alt="Text Density Heatmap"><figcaption>Text Density Heatmap</figcaption></figure></div></section>
+
+  <section>
+    <h2>Structured JSON Preview</h2>
+    <pre>{
+  &quot;schema_version&quot;: &quot;doc2prototype.mvp.v1&quot;,
+  &quot;document_type&quot;: &quot;api_doc&quot;,
+  &quot;title&quot;: &quot;Extracted API Documentation&quot;,
+  &quot;base_url&quot;: &quot;&quot;,
+  &quot;endpoints&quot;: [
+    {
+      &quot;method&quot;: &quot;GET&quot;,
+      &quot;path&quot;: &quot;/api/orders&quot;,
+      &quot;description&quot;: &quot;List orders with optional filters.&quot;,
+      &quot;parameters&quot;: [],
+      &quot;response&quot;: {
+        &quot;status&quot;: &quot;success&quot;,
+        &quot;data&quot;: &quot;object&quot;
+      }
+    },
+    {
+      &quot;method&quot;: &quot;POST&quot;,
+      &quot;path&quot;: &quot;/api/orders&quot;,
+      &quot;description&quot;: &quot;Create a new order.&quot;,
+      &quot;parameters&quot;: [],
+      &quot;response&quot;: {
+        &quot;status&quot;: &quot;success&quot;,
+        &quot;data&quot;: &quot;object&quot;
+      }
+    },
+    {
+      &quot;method&quot;: &quot;GET&quot;,
+      &quot;path&quot;: &quot;/api/orders/{order_id}&quot;,
+      &quot;description&quot;: &quot;Read one order by ID.&quot;,
+      &quot;parameters&quot;: [
+        {
+          &quot;name&quot;: &quot;order_id&quot;,
+          &quot;type&quot;: &quot;string&quot;,
+          &quot;required&quot;: true,
+          &quot;location&quot;: &quot;path&quot;,
+          &quot;description&quot;: &quot;Path parameter `order_id`.&quot;
+        }
+      ],
+      &quot;response&quot;: {
+        &quot;status&quot;: &quot;success&quot;,
+        &quot;data&quot;: &quot;object&quot;
+      }
+    },
+    {
+      &quot;method&quot;: &quot;PATCH&quot;,
+      &quot;path&quot;: &quot;/api/orders/{order_id}&quot;,
+      &quot;description&quot;: &quot;Update order status.&quot;,
+      &quot;parameters&quot;: [
+        {
+          &quot;name&quot;: &quot;order_id&quot;,
+          &quot;type&quot;: &quot;string&quot;,
+          &quot;required&quot;: true,
+          &quot;location&quot;: &quot;path&quot;,
+          &quot;description&quot;: &quot;Path parameter `order_id`.&quot;
+        }
+      ],
+      &quot;response&quot;: {
+        &quot;status&quot;: &quot;success&quot;,
+        &quot;data&quot;: &quot;object&quot;
+      }
+    },
+    {
+      &quot;method&quot;: &quot;DELETE&quot;,
+      &quot;path&quot;: &quot;/api/orders/{order_id}&quot;,
+      &quot;description&quot;: &quot;Cancel an order.&quot;,
+      &quot;parameters&quot;: [
+        {
+          &quot;name&quot;: &quot;order_id&quot;,
+          &quot;type&quot;: &quot;string&quot;,
+          &quot;required&quot;: true,
+          &quot;location&quot;: &quot;path&quot;,
+          &quot;description&quot;: &quot;Path parameter `order_id`.&quot;
+        }
+      ],
+      &quot;response&quot;: {
+        &quot;status&quot;: &quot;success&quot;,
+        &quot;data&quot;: &quot;object&quot;
+      }
+    }
+  ],
+  &quot;raw_analysis&quot;: &quot;Order Service API\nBase URL: https://api.example.com\nGET /api/orders - List orders with optional filters.\nPOST /api/orders - Create a new order.\nGET /api/orders/{order_id} - Read one order by ID.\nPATCH /api/orders/{order_id} - Update order status.\nDELETE /api/orders/{order_id} - Cancel an order.\nRequest fields:\n- customer_id: string, required\n- sku: string, required\n- quantity: integer, required\n- status: string, optional\nResponse:\n- status: success\n- data: order object&quot;
+}</pre>
+  </section>
+</main>
+</body>
+</html>

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="344" viewBox="0 0 920 344">
+  <style>
+    .title { font: 700 24px Arial, sans-serif; fill: #172033; }
+    .subtitle { font: 400 14px Arial, sans-serif; fill: #64748b; }
+    .label { font: 600 15px Arial, sans-serif; fill: #334155; }
+    .value { font: 600 14px Arial, sans-serif; fill: #0f172a; }
+    .bar-bg { fill: #e2e8f0; }
+    .bar { fill: #0f766e; }
+    .panel { fill: #ffffff; stroke: #d7dee8; }
+  </style>
+  <rect x="1" y="1" width="918" height="342" rx="8" class="panel"/>
+  <text x="36" y="38" class="title">MVP Pipeline Timing</text>
+  <text x="36" y="59" class="subtitle">Total: 17.575s, device: CPU</text>
+  
+  <text x="36" y="97" class="label">Model load</text>
+  <rect x="220" y="72" width="560" height="30" rx="4" class="bar-bg"/>
+  <rect x="220" y="72" width="165" height="30" rx="4" class="bar"/>
+  <text x="802" y="94" class="value">3.955s</text>
+
+  <text x="36" y="151" class="label">OpenVINO inference</text>
+  <rect x="220" y="126" width="560" height="30" rx="4" class="bar-bg"/>
+  <rect x="220" y="126" width="560" height="30" rx="4" class="bar"/>
+  <text x="802" y="148" class="value">13.358s</text>
+
+  <text x="36" y="205" class="label">Structure extraction</text>
+  <rect x="220" y="180" width="560" height="30" rx="4" class="bar-bg"/>
+  <rect x="220" y="180" width="3" height="30" rx="4" class="bar"/>
+  <text x="802" y="202" class="value">0.001s</text>
+
+  <text x="36" y="259" class="label">Generation</text>
+  <rect x="220" y="234" width="560" height="30" rx="4" class="bar-bg"/>
+  <rect x="220" y="234" width="3" height="30" rx="4" class="bar"/>
+  <text x="802" y="256" class="value">0.000s</text>
+
+</svg>

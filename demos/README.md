@@ -54,6 +54,18 @@ run_container.sh -e no_proxy=$NO_PROXY -e http_proxy=$http_proxy -e https_proxy=
 
 Currently, the following demos are tested for Python :warning:3.10-3.13 :warning: only:
 
+### Doc2Prototype
+
+The demo parses technical document images with PaddleOCR-VL exported to OpenVINO IR, converts the parser output into structured JSON, and generates downstream prototype artifacts such as FastAPI skeletons or Mermaid flowcharts.
+
+[![image](doc2prototype_demo/outputs/mvp_api_image_smoke/api_endpoints.svg)](doc2prototype_demo)
+
+| [Doc2Prototype](doc2prototype_demo) |                                                            |
+|-------------------------------------|------------------------------------------------------------|
+| Related AI concepts                 | multimodal document understanding, OCR-VL, code generation |
+| Platforms                           | Client (CPU, GPU, NPU, AUTO), Cloud (CPU, GPU)             |
+| Owner                               | [@Dryoung95](https://github.com/Dryoung95)                 |
+
 ### 🎨 Paint Your Dreams
 
 The demo generates images in a reasonable time (seconds) on Intel hardware.

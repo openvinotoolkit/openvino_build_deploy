@@ -1,0 +1,355 @@
+{
+  "image_size": [
+    1280,
+    720
+  ],
+  "grid": [
+    6,
+    4
+  ],
+  "total_segments": 12,
+  "regions": [
+    {
+      "row": 0,
+      "col": 0,
+      "bbox": [
+        0,
+        0,
+        320,
+        120
+      ],
+      "type": "header",
+      "confidence": 1.0,
+      "segment_count": 1,
+      "text_preview": "Login Flow"
+    },
+    {
+      "row": 0,
+      "col": 1,
+      "bbox": [
+        320,
+        0,
+        640,
+        120
+      ],
+      "type": "header",
+      "confidence": 1.0,
+      "segment_count": 1,
+      "text_preview": "Step 1: Start - User opens login page"
+    },
+    {
+      "row": 0,
+      "col": 2,
+      "bbox": [
+        640,
+        0,
+        960,
+        120
+      ],
+      "type": "unknown",
+      "confidence": 0.0,
+      "segment_count": 0,
+      "text_preview": ""
+    },
+    {
+      "row": 0,
+      "col": 3,
+      "bbox": [
+        960,
+        0,
+        1280,
+        120
+      ],
+      "type": "unknown",
+      "confidence": 0.0,
+      "segment_count": 0,
+      "text_preview": ""
+    },
+    {
+      "row": 1,
+      "col": 0,
+      "bbox": [
+        0,
+        120,
+        320,
+        240
+      ],
+      "type": "header",
+      "confidence": 1.0,
+      "segment_count": 1,
+      "text_preview": "Step 2: Enter credentials"
+    },
+    {
+      "row": 1,
+      "col": 1,
+      "bbox": [
+        320,
+        120,
+        640,
+        240
+      ],
+      "type": "body",
+      "confidence": 1.0,
+      "segment_count": 1,
+      "text_preview": "Step 3: Validate input - is the form empty?"
+    },
+    {
+      "row": 1,
+      "col": 2,
+      "bbox": [
+        640,
+        120,
+        960,
+        240
+      ],
+      "type": "unknown",
+      "confidence": 0.0,
+      "segment_count": 0,
+      "text_preview": ""
+    },
+    {
+      "row": 1,
+      "col": 3,
+      "bbox": [
+        960,
+        120,
+        1280,
+        240
+      ],
+      "type": "unknown",
+      "confidence": 0.0,
+      "segment_count": 0,
+      "text_preview": ""
+    },
+    {
+      "row": 2,
+      "col": 0,
+      "bbox": [
+        0,
+        240,
+        320,
+        360
+      ],
+      "type": "unknown",
+      "confidence": 0.0,
+      "segment_count": 0,
+      "text_preview": ""
+    },
+    {
+      "row": 2,
+      "col": 1,
+      "bbox": [
+        320,
+        240,
+        640,
+        360
+      ],
+      "type": "body",
+      "confidence": 1.0,
+      "segment_count": 2,
+      "text_preview": "Step 4: Send authentication request"
+    },
+    {
+      "row": 2,
+      "col": 2,
+      "bbox": [
+        640,
+        240,
+        960,
+        360
+      ],
+      "type": "unknown",
+      "confidence": 0.0,
+      "segment_count": 0,
+      "text_preview": ""
+    },
+    {
+      "row": 2,
+      "col": 3,
+      "bbox": [
+        960,
+        240,
+        1280,
+        360
+      ],
+      "type": "unknown",
+      "confidence": 0.0,
+      "segment_count": 0,
+      "text_preview": ""
+    },
+    {
+      "row": 3,
+      "col": 0,
+      "bbox": [
+        0,
+        360,
+        320,
+        480
+      ],
+      "type": "body",
+      "confidence": 1.0,
+      "segment_count": 2,
+      "text_preview": "Step 6: End"
+    },
+    {
+      "row": 3,
+      "col": 1,
+      "bbox": [
+        320,
+        360,
+        640,
+        480
+      ],
+      "type": "unknown",
+      "confidence": 0.0,
+      "segment_count": 0,
+      "text_preview": ""
+    },
+    {
+      "row": 3,
+      "col": 2,
+      "bbox": [
+        640,
+        360,
+        960,
+        480
+      ],
+      "type": "unknown",
+      "confidence": 0.0,
+      "segment_count": 0,
+      "text_preview": ""
+    },
+    {
+      "row": 3,
+      "col": 3,
+      "bbox": [
+        960,
+        360,
+        1280,
+        480
+      ],
+      "type": "unknown",
+      "confidence": 0.0,
+      "segment_count": 0,
+      "text_preview": ""
+    },
+    {
+      "row": 4,
+      "col": 0,
+      "bbox": [
+        0,
+        480,
+        320,
+        600
+      ],
+      "type": "unknown",
+      "confidence": 0.0,
+      "segment_count": 0,
+      "text_preview": ""
+    },
+    {
+      "row": 4,
+      "col": 1,
+      "bbox": [
+        320,
+        480,
+        640,
+        600
+      ],
+      "type": "body",
+      "confidence": 1.0,
+      "segment_count": 2,
+      "text_preview": "Enter credentials -> Validate input"
+    },
+    {
+      "row": 4,
+      "col": 2,
+      "bbox": [
+        640,
+        480,
+        960,
+        600
+      ],
+      "type": "unknown",
+      "confidence": 0.0,
+      "segment_count": 0,
+      "text_preview": ""
+    },
+    {
+      "row": 4,
+      "col": 3,
+      "bbox": [
+        960,
+        480,
+        1280,
+        600
+      ],
+      "type": "unknown",
+      "confidence": 0.0,
+      "segment_count": 0,
+      "text_preview": ""
+    },
+    {
+      "row": 5,
+      "col": 0,
+      "bbox": [
+        0,
+        600,
+        320,
+        720
+      ],
+      "type": "body",
+      "confidence": 1.0,
+      "segment_count": 1,
+      "text_preview": "Success -> End"
+    },
+    {
+      "row": 5,
+      "col": 1,
+      "bbox": [
+        320,
+        600,
+        640,
+        720
+      ],
+      "type": "body",
+      "confidence": 1.0,
+      "segment_count": 1,
+      "text_preview": "Send authentication request -> Success"
+    },
+    {
+      "row": 5,
+      "col": 2,
+      "bbox": [
+        640,
+        600,
+        960,
+        720
+      ],
+      "type": "unknown",
+      "confidence": 0.0,
+      "segment_count": 0,
+      "text_preview": ""
+    },
+    {
+      "row": 5,
+      "col": 3,
+      "bbox": [
+        960,
+        600,
+        1280,
+        720
+      ],
+      "type": "unknown",
+      "confidence": 0.0,
+      "segment_count": 0,
+      "text_preview": ""
+    }
+  ],
+  "element_counts": {
+    "header": 3,
+    "unknown": 0,
+    "body": 9
+  },
+  "dominant_type": "body"
+}

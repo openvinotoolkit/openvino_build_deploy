@@ -1,0 +1,132 @@
+{
+  "schema_version": "doc2prototype.mvp_run.v1",
+  "created_at": "2026-05-15T18:52:23.632710+00:00",
+  "command": "main.py examples/api_doc_sample.png --task api_doc --device CPU --output-dir outputs/mvp_api_image_smoke",
+  "input": {
+    "source": "examples/api_doc_sample.png",
+    "task": "api_doc"
+  },
+  "openvino": {
+    "uses_openvino": true,
+    "device": "CPU",
+    "model_path": "ov_paddleocr_vl_model",
+    "version": "2026.1.0-21367-63e31528c62-releases/2026/1"
+  },
+  "parse": {
+    "raw_text": "Order Service API\nBase URL: https://api.example.com\nGET /api/orders - List orders with optional filters.\nPOST /api/orders - Create a new order.\nGET /api/orders/{order_id} - Read one order by ID.\nPATCH /api/orders/{order_id} - Update order status.\nDELETE /api/orders/{order_id} - Cancel an order.\nRequest fields:\n- customer_id: string, required\n- sku: string, required\n- quantity: integer, required\n- status: string, optional\nResponse:\n- status: success\n- data: order object",
+    "task": "api_doc",
+    "prompt": "Please extract all API endpoints, parameters, request/response formats from this document.",
+    "inference_time": 18.83016562461853,
+    "image_path": "examples/api_doc_sample.png",
+    "source_path": "examples/api_doc_sample.png",
+    "parser": "PaddleOCR-VL OpenVINO",
+    "uses_openvino": true
+  },
+  "structured": {
+    "schema_version": "doc2prototype.mvp.v1",
+    "document_type": "api_doc",
+    "title": "Extracted API Documentation",
+    "base_url": "",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/orders",
+        "description": "List orders with optional filters.",
+        "parameters": [],
+        "response": {
+          "status": "success",
+          "data": "object"
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/orders",
+        "description": "Create a new order.",
+        "parameters": [],
+        "response": {
+          "status": "success",
+          "data": "object"
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/orders/{order_id}",
+        "description": "Read one order by ID.",
+        "parameters": [
+          {
+            "name": "order_id",
+            "type": "string",
+            "required": true,
+            "location": "path",
+            "description": "Path parameter `order_id`."
+          }
+        ],
+        "response": {
+          "status": "success",
+          "data": "object"
+        }
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/orders/{order_id}",
+        "description": "Update order status.",
+        "parameters": [
+          {
+            "name": "order_id",
+            "type": "string",
+            "required": true,
+            "location": "path",
+            "description": "Path parameter `order_id`."
+          }
+        ],
+        "response": {
+          "status": "success",
+          "data": "object"
+        }
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/orders/{order_id}",
+        "description": "Cancel an order.",
+        "parameters": [
+          {
+            "name": "order_id",
+            "type": "string",
+            "required": true,
+            "location": "path",
+            "description": "Path parameter `order_id`."
+          }
+        ],
+        "response": {
+          "status": "success",
+          "data": "object"
+        }
+      }
+    ],
+    "raw_analysis": "Order Service API\nBase URL: https://api.example.com\nGET /api/orders - List orders with optional filters.\nPOST /api/orders - Create a new order.\nGET /api/orders/{order_id} - Read one order by ID.\nPATCH /api/orders/{order_id} - Update order status.\nDELETE /api/orders/{order_id} - Cancel an order.\nRequest fields:\n- customer_id: string, required\n- sku: string, required\n- quantity: integer, required\n- status: string, optional\nResponse:\n- status: success\n- data: order object"
+  },
+  "generated": {
+    "code_type": "api_skeleton",
+    "generation_time": 0.0001862049102783203,
+    "backend": "deterministic template"
+  },
+  "metrics": {
+    "model_load": 3.86246009199931,
+    "openvino_inference": 18.83016562461853,
+    "structure_extraction": 0.0012324620001891162,
+    "generation": 0.0002791110000543995,
+    "total": 22.98771073500029
+  },
+  "artifacts": {
+    "raw_parse": "outputs/mvp_api_image_smoke/raw_parse.md",
+    "structured_json": "outputs/mvp_api_image_smoke/structured.json",
+    "generated": "outputs/mvp_api_image_smoke/generated_api.py",
+    "run_json": "outputs/mvp_api_image_smoke/run.json",
+    "markdown_report": "outputs/mvp_api_image_smoke/result.md",
+    "metrics_svg": "outputs/mvp_api_image_smoke/metrics.svg",
+    "api_endpoints_svg": "outputs/mvp_api_image_smoke/api_endpoints.svg",
+    "layout_overlay": "outputs/mvp_api_image_smoke/layout_overlay.png",
+    "text_heatmap": "outputs/mvp_api_image_smoke/text_heatmap.png",
+    "visual_report": "outputs/mvp_api_image_smoke/visual_report.html"
+  }
+}

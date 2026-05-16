@@ -1,0 +1,356 @@
+{
+  "image_size": [
+    1280,
+    788
+  ],
+  "grid": [
+    6,
+    4
+  ],
+  "total_segments": 15,
+  "regions": [
+    {
+      "row": 0,
+      "col": 0,
+      "bbox": [
+        0,
+        0,
+        320,
+        131
+      ],
+      "type": "header",
+      "confidence": 1.0,
+      "segment_count": 1,
+      "text_preview": "Order Service API"
+    },
+    {
+      "row": 0,
+      "col": 1,
+      "bbox": [
+        320,
+        0,
+        640,
+        131
+      ],
+      "type": "code",
+      "confidence": 0.5,
+      "segment_count": 2,
+      "text_preview": "Base URL: https://api.example.com"
+    },
+    {
+      "row": 0,
+      "col": 2,
+      "bbox": [
+        640,
+        0,
+        960,
+        131
+      ],
+      "type": "unknown",
+      "confidence": 0.0,
+      "segment_count": 0,
+      "text_preview": ""
+    },
+    {
+      "row": 0,
+      "col": 3,
+      "bbox": [
+        960,
+        0,
+        1280,
+        131
+      ],
+      "type": "unknown",
+      "confidence": 0.0,
+      "segment_count": 0,
+      "text_preview": ""
+    },
+    {
+      "row": 1,
+      "col": 0,
+      "bbox": [
+        0,
+        131,
+        320,
+        262
+      ],
+      "type": "unknown",
+      "confidence": 0.0,
+      "segment_count": 0,
+      "text_preview": ""
+    },
+    {
+      "row": 1,
+      "col": 1,
+      "bbox": [
+        320,
+        131,
+        640,
+        262
+      ],
+      "type": "header",
+      "confidence": 0.5,
+      "segment_count": 2,
+      "text_preview": "POST /api/orders - Create a new order."
+    },
+    {
+      "row": 1,
+      "col": 2,
+      "bbox": [
+        640,
+        131,
+        960,
+        262
+      ],
+      "type": "unknown",
+      "confidence": 0.0,
+      "segment_count": 0,
+      "text_preview": ""
+    },
+    {
+      "row": 1,
+      "col": 3,
+      "bbox": [
+        960,
+        131,
+        1280,
+        262
+      ],
+      "type": "unknown",
+      "confidence": 0.0,
+      "segment_count": 0,
+      "text_preview": ""
+    },
+    {
+      "row": 2,
+      "col": 0,
+      "bbox": [
+        0,
+        262,
+        320,
+        393
+      ],
+      "type": "body",
+      "confidence": 1.0,
+      "segment_count": 1,
+      "text_preview": "Request fields:"
+    },
+    {
+      "row": 2,
+      "col": 1,
+      "bbox": [
+        320,
+        262,
+        640,
+        393
+      ],
+      "type": "code",
+      "confidence": 1.0,
+      "segment_count": 2,
+      "text_preview": "PATCH /api/orders/{order_id} - Update order status."
+    },
+    {
+      "row": 2,
+      "col": 2,
+      "bbox": [
+        640,
+        262,
+        960,
+        393
+      ],
+      "type": "unknown",
+      "confidence": 0.0,
+      "segment_count": 0,
+      "text_preview": ""
+    },
+    {
+      "row": 2,
+      "col": 3,
+      "bbox": [
+        960,
+        262,
+        1280,
+        393
+      ],
+      "type": "unknown",
+      "confidence": 0.0,
+      "segment_count": 0,
+      "text_preview": ""
+    },
+    {
+      "row": 3,
+      "col": 0,
+      "bbox": [
+        0,
+        393,
+        320,
+        524
+      ],
+      "type": "body",
+      "confidence": 1.0,
+      "segment_count": 1,
+      "text_preview": "- sku: string, required"
+    },
+    {
+      "row": 3,
+      "col": 1,
+      "bbox": [
+        320,
+        393,
+        640,
+        524
+      ],
+      "type": "body",
+      "confidence": 1.0,
+      "segment_count": 1,
+      "text_preview": "- customer_id: string, required"
+    },
+    {
+      "row": 3,
+      "col": 2,
+      "bbox": [
+        640,
+        393,
+        960,
+        524
+      ],
+      "type": "unknown",
+      "confidence": 0.0,
+      "segment_count": 0,
+      "text_preview": ""
+    },
+    {
+      "row": 3,
+      "col": 3,
+      "bbox": [
+        960,
+        393,
+        1280,
+        524
+      ],
+      "type": "unknown",
+      "confidence": 0.0,
+      "segment_count": 0,
+      "text_preview": ""
+    },
+    {
+      "row": 4,
+      "col": 0,
+      "bbox": [
+        0,
+        524,
+        320,
+        655
+      ],
+      "type": "body",
+      "confidence": 1.0,
+      "segment_count": 2,
+      "text_preview": "- status: string, optional"
+    },
+    {
+      "row": 4,
+      "col": 1,
+      "bbox": [
+        320,
+        524,
+        640,
+        655
+      ],
+      "type": "body",
+      "confidence": 1.0,
+      "segment_count": 1,
+      "text_preview": "- quantity: integer, required"
+    },
+    {
+      "row": 4,
+      "col": 2,
+      "bbox": [
+        640,
+        524,
+        960,
+        655
+      ],
+      "type": "unknown",
+      "confidence": 0.0,
+      "segment_count": 0,
+      "text_preview": ""
+    },
+    {
+      "row": 4,
+      "col": 3,
+      "bbox": [
+        960,
+        524,
+        1280,
+        655
+      ],
+      "type": "unknown",
+      "confidence": 0.0,
+      "segment_count": 0,
+      "text_preview": ""
+    },
+    {
+      "row": 5,
+      "col": 0,
+      "bbox": [
+        0,
+        655,
+        320,
+        788
+      ],
+      "type": "body",
+      "confidence": 1.0,
+      "segment_count": 2,
+      "text_preview": "- status: success"
+    },
+    {
+      "row": 5,
+      "col": 1,
+      "bbox": [
+        320,
+        655,
+        640,
+        788
+      ],
+      "type": "unknown",
+      "confidence": 0.0,
+      "segment_count": 0,
+      "text_preview": ""
+    },
+    {
+      "row": 5,
+      "col": 2,
+      "bbox": [
+        640,
+        655,
+        960,
+        788
+      ],
+      "type": "unknown",
+      "confidence": 0.0,
+      "segment_count": 0,
+      "text_preview": ""
+    },
+    {
+      "row": 5,
+      "col": 3,
+      "bbox": [
+        960,
+        655,
+        1280,
+        788
+      ],
+      "type": "unknown",
+      "confidence": 0.0,
+      "segment_count": 0,
+      "text_preview": ""
+    }
+  ],
+  "element_counts": {
+    "header": 3,
+    "code": 4,
+    "unknown": 0,
+    "body": 8
+  },
+  "dominant_type": "body"
+}
