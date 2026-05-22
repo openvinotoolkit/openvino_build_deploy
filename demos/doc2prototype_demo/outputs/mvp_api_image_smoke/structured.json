@@ -79,5 +79,5 @@
       }
     }
   ],
-  "raw_analysis": "Order Service API\nBase URL: https://api.example.com\nGET /api/orders - List orders with optional filters.\nPOST /api/orders - Create a new order.\nGET /api/orders/{order_id} - Read one order by ID.\nPATCH /api/orders/{order_id} - Update order status.\nDELETE /api/orders/{order_id} - Cancel an order.\nRequest fields:\n- customer_id: string, required\n- sku: string, required\n- quantity: integer, required\n- status: string, optional\nResponse:\n- status: success\n- data: order object"
+  "raw_analysis": "Order Service API\n\nBase URL: https://api.example.com\n\nGET /api/orders - List orders with optional filters.\nPOST /api/orders - Create a new order.\nGET /api/orders/{order_id} - Read one order by ID.\nPATCH /api/orders/{order_id} - Update order status.\nDELETE /api/orders/{order_id} - Cancel an order.\n\nRequest fields:\n- customer_id: string, required\n- sku: string, required\n- quantity: integer, required\n- status: string, optional\n\nResponse:\n- status: success\n- data: order object"
 }

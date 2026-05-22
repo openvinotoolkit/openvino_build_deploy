@@ -91,6 +91,8 @@ Each run writes:
 - `raw_parse.md`: PaddleOCR-VL parser output
 - `structured.json`: structured schema output
 - `generated_api.py` or `generated_flowchart.mmd`: downstream prototype artifact
+- `agent_trace.json`: structured downstream agent workflow trace
+- `agent_review.md`: downstream coverage review result
 - `metrics.svg`: pipeline timing chart
 - `api_endpoints.svg` or `flowchart.svg`: extracted structure visualization
 - `document_summary.svg`: extracted section visualization for the optional technical document reference sample
@@ -103,6 +105,36 @@ Example reports are included under:
 
 - `outputs/mvp_api_image_smoke/visual_report.html`
 - `outputs/mvp_flow_image_smoke/visual_report.html`
+
+## Effect Display
+
+The tracked smoke reports demonstrate the complete path from document/visual understanding to downstream agent processing.
+
+API document image to FastAPI skeleton:
+
+![Doc2Prototype API report](assets/doc2prototype_api_report.png)
+
+Flowchart image to Mermaid diagram:
+
+![Doc2Prototype flowchart report](assets/doc2prototype_flowchart_report.png)
+
+## Reviewer Quick Reproduction
+
+From this demo directory, the following commands reproduce the two primary smoke reports used for PR review:
+
+```bash
+python prepare_model.py --device CPU
+python scripts/make_sample_images.py
+python main.py examples/api_doc_sample.png --task api_doc --device CPU --output-dir outputs/mvp_api_image_smoke
+python main.py examples/flowchart_sample.png --task flowchart --device CPU --output-dir outputs/mvp_flow_image_smoke
+```
+
+The expected high-level results are:
+
+| Scenario | OpenVINO | Device | Structured output | Downstream artifact | Agent review |
+| --- | --- | --- | --- | --- | --- |
+| API document image | yes | CPU | 5 endpoints | `generated_api.py` | pass |
+| Flowchart image | yes | CPU | 6 nodes / 5 edges | `generated_flowchart.mmd` | pass |
 
 ## View Reports and Capture Screenshots
 
@@ -135,7 +167,7 @@ On Windows, press `Win + Shift + S`, select the browser region, and save the scr
 
 ## Notes
 
-The downstream code generation path is deterministic by default so the MVP remains reproducible without downloading a second LLM. The `--code-model-path` option is reserved for a local code model path when a Coder model is prepared separately.
+The downstream code generation path is deterministic by default so the MVP remains reproducible without downloading a second LLM. When a local Coder model is prepared separately, pass `--code-model-path` and select `--code-model-backend hf|openvino|auto`.
 
 ## Downstream Agent Flow
 

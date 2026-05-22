@@ -7,7 +7,7 @@
 ## Input
 
 - Task: `api_doc`
-- Source: `examples/api_doc_sample.png`
+- Source: `examples\api_doc_sample.png`
 - Parser: `PaddleOCR-VL OpenVINO`
 - OpenVINO device: `CPU`
 - OpenVINO version: `2026.1.0-21367-63e31528c62-releases/2026/1`
@@ -17,11 +17,11 @@
 
 | Stage | Seconds |
 | --- | ---: |
-| model_load | 3.862 |
-| openvino_inference | 18.830 |
+| model_load | 12.280 |
+| openvino_inference | 25.702 |
 | structure_extraction | 0.001 |
-| generation | 0.000 |
-| total | 22.988 |
+| generation | 0.001 |
+| total | 39.746 |
 
 ## Structured Output
 
@@ -111,14 +111,14 @@
       }
     }
   ],
-  "raw_analysis": "Order Service API\nBase URL: https://api.example.com\nGET /api/orders - List orders with optional filters.\nPOST /api/orders - Create a new order.\nGET /api/orders/{order_id} - Read one order by ID.\nPATCH /api/orders/{order_id} - Update order status.\nDELETE /api/orders/{order_id} - Cancel an order.\nRequest fields:\n- customer_id: string, required\n- sku: string, required\n- quantity: integer, required\n- status: string, optional\nResponse:\n- status: success\n- data: order object"
+  "raw_analysis": "Order Service API\n\nBase URL: https://api.example.com\n\nGET /api/orders - List orders with optional filters.\nPOST /api/orders - Create a new order.\nGET /api/orders/{order_id} - Read one order by ID.\nPATCH /api/orders/{order_id} - Update order status.\nDELETE /api/orders/{order_id} - Cancel an order.\n\nRequest fields:\n- customer_id: string, required\n- sku: string, required\n- quantity: integer, required\n- status: string, optional\n\nResponse:\n- status: success\n- data: order object"
 }
 ```
 
 ## Generated Artifact
 
 - Type: `api_skeleton`
-- Generation backend: `deterministic template`
+- Generation backend: `deterministic agent workflow with template generator`
 
 ```
 """Auto-generated FastAPI skeleton from Doc2Prototype."""
@@ -220,3 +220,11 @@ if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
 
 ```
+
+## Downstream Agent Workflow
+
+- Workflow: `structured_output_to_downstream_agent`
+- Backend: `deterministic agent workflow with template generator`
+- Review status: `pass`
+- Agent review: `agent_review.md`
+- Agent trace: `agent_trace.json`

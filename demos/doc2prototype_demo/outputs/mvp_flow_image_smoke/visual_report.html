@@ -60,10 +60,18 @@
       font-size: 18px;
       letter-spacing: 0;
     }
+    h3 {
+      margin: 14px 0 8px;
+      font-size: 15px;
+      letter-spacing: 0;
+    }
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       gap: 16px;
+    }
+    .compact {
+      margin-top: 12px;
     }
     .kv {
       display: grid;
@@ -94,6 +102,17 @@
       font-size: 13px;
       line-height: 1.45;
     }
+    ul {
+      margin: 0;
+      padding-left: 18px;
+      color: #334155;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .status {
+      color: #0f766e;
+      font-weight: 700;
+    }
     a { color: var(--accent); font-weight: 700; }
   </style>
 </head>
@@ -110,13 +129,36 @@
   <section>
     <h2>Run Summary</h2>
     <div class="kv">
-      <b>Source</b><span><a href="../../examples/flowchart_sample.png">examples/flowchart_sample.png</a></span>
+      <b>Source</b><span><a href="../../examples/flowchart_sample.png">examples\flowchart_sample.png</a></span>
       <b>OpenVINO</b><span>True</span>
       <b>Device</b><span>CPU</span>
       <b>Schema</b><span>doc2prototype.mvp.v1</span>
       <b>Generated</b><span><a href="generated_flowchart.mmd">generated_flowchart.mmd</a></span>
     </div>
   </section>
+
+  
+  <section>
+    <h2>Downstream Agent Workflow</h2>
+    <div class="kv">
+      <b>Workflow</b><span>structured_output_to_downstream_agent</span>
+      <b>Backend</b><span>deterministic agent workflow with template generator</span>
+      <b>Goal</b><span>Generate a Mermaid diagram from extracted flowchart nodes and edges.</span>
+      <b>Review</b><span class="status">pass</span>
+      <b>Artifacts</b><span><a href="agent_review.md">agent_review.md</a>, <a href="agent_trace.json">agent_trace.json</a></span>
+    </div>
+    <div class="grid compact">
+      <div>
+        <h3>Agent Steps</h3>
+        <ul><li><b>PlannerAgent</b>: derive_downstream_plan (<span class="status">completed</span>)</li><li><b>GeneratorAgent</b>: generate_artifact (<span class="status">completed</span>)</li><li><b>ReviewAgent</b>: review_artifact_coverage (<span class="status">pass</span>)</li></ul>
+      </div>
+      <div>
+        <h3>Passed Checks</h3>
+        <ul><li>All 6 extracted nodes are represented in the generated diagram.</li><li>The structured input contains 5 directed edges for downstream diagram generation.</li></ul>
+      </div>
+    </div>
+  </section>
+
 
   <section>
     <h2>Pipeline Timing</h2>

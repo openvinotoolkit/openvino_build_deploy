@@ -7,7 +7,7 @@
 ## Input
 
 - Task: `flowchart`
-- Source: `examples/flowchart_sample.png`
+- Source: `examples\flowchart_sample.png`
 - Parser: `PaddleOCR-VL OpenVINO`
 - OpenVINO device: `CPU`
 - OpenVINO version: `2026.1.0-21367-63e31528c62-releases/2026/1`
@@ -17,11 +17,11 @@
 
 | Stage | Seconds |
 | --- | ---: |
-| model_load | 3.955 |
-| openvino_inference | 13.358 |
-| structure_extraction | 0.001 |
+| model_load | 10.177 |
+| openvino_inference | 19.255 |
+| structure_extraction | 0.002 |
 | generation | 0.000 |
-| total | 17.575 |
+| total | 30.126 |
 
 ## Structured Output
 
@@ -96,7 +96,7 @@
 ## Generated Artifact
 
 - Type: `mermaid_diagram`
-- Generation backend: `deterministic template`
+- Generation backend: `deterministic agent workflow with template generator`
 
 ```
 flowchart TD
@@ -112,3 +112,11 @@ flowchart TD
     node_4 --> node_5
     node_5 --> node_6
 ```
+
+## Downstream Agent Workflow
+
+- Workflow: `structured_output_to_downstream_agent`
+- Backend: `deterministic agent workflow with template generator`
+- Review status: `pass`
+- Agent review: `agent_review.md`
+- Agent trace: `agent_trace.json`

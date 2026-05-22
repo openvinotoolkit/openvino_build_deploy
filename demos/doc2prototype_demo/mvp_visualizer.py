@@ -307,6 +307,48 @@ def _render_html(run: dict[str, Any], output_dir: Path, artifacts: dict[str, str
     else:
         visual = "api_endpoints.svg"
     generated_link = Path(artifacts.get("generated", "")).name if artifacts.get("generated") else ""
+    agent = run.get("agent", {})
+    agent_review_link = Path(artifacts.get("agent_review", "")).name if artifacts.get("agent_review") else ""
+    agent_trace_link = Path(artifacts.get("agent_trace", "")).name if artifacts.get("agent_trace") else ""
+
+    agent_section = ""
+    if agent:
+        steps = agent.get("steps", [])
+        step_items = "".join(
+            f'<li><b>{_esc(step.get("agent", ""))}</b>: {_esc(step.get("action", ""))} '
+            f'(<span class="status">{_esc(step.get("status", ""))}</span>)</li>'
+            for step in steps
+        )
+        review = agent.get("review", {})
+        passed_checks = review.get("passed_checks", [])
+        passed_items = "".join(f"<li>{_esc(item)}</li>" for item in passed_checks)
+        agent_links = []
+        if agent_review_link:
+            agent_links.append(f'<a href="{_esc(agent_review_link)}">agent_review.md</a>')
+        if agent_trace_link:
+            agent_links.append(f'<a href="{_esc(agent_trace_link)}">agent_trace.json</a>')
+        agent_section = f"""
+  <section>
+    <h2>Downstream Agent Workflow</h2>
+    <div class="kv">
+      <b>Workflow</b><span>{_esc(agent.get("workflow", ""))}</span>
+      <b>Backend</b><span>{_esc(agent.get("backend", ""))}</span>
+      <b>Goal</b><span>{_esc(agent.get("plan", {}).get("goal", ""))}</span>
+      <b>Review</b><span class="status">{_esc(review.get("status", ""))}</span>
+      <b>Artifacts</b><span>{", ".join(agent_links)}</span>
+    </div>
+    <div class="grid compact">
+      <div>
+        <h3>Agent Steps</h3>
+        <ul>{step_items}</ul>
+      </div>
+      <div>
+        <h3>Passed Checks</h3>
+        <ul>{passed_items}</ul>
+      </div>
+    </div>
+  </section>
+"""
 
     layout_links = []
     for key, label in (("layout_overlay", "Layout Overlay"), ("text_heatmap", "Text Density Heatmap")):
@@ -375,10 +417,18 @@ def _render_html(run: dict[str, Any], output_dir: Path, artifacts: dict[str, str
       font-size: 18px;
       letter-spacing: 0;
     }}
+    h3 {{
+      margin: 14px 0 8px;
+      font-size: 15px;
+      letter-spacing: 0;
+    }}
     .grid {{
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       gap: 16px;
+    }}
+    .compact {{
+      margin-top: 12px;
     }}
     .kv {{
       display: grid;
@@ -409,6 +459,17 @@ def _render_html(run: dict[str, Any], output_dir: Path, artifacts: dict[str, str
       font-size: 13px;
       line-height: 1.45;
     }}
+    ul {{
+      margin: 0;
+      padding-left: 18px;
+      color: #334155;
+      font-size: 14px;
+      line-height: 1.5;
+    }}
+    .status {{
+      color: #0f766e;
+      font-weight: 700;
+    }}
     a {{ color: var(--accent); font-weight: 700; }}
   </style>
 </head>
@@ -432,6 +493,8 @@ def _render_html(run: dict[str, Any], output_dir: Path, artifacts: dict[str, str
       <b>Generated</b><span>{f'<a href="{_esc(generated_link)}">{_esc(generated_link)}</a>' if generated_link else ""}</span>
     </div>
   </section>
+
+  {agent_section}
 
   <section>
     <h2>Pipeline Timing</h2>

@@ -1,0 +1,50 @@
+{
+  "schema_version": "doc2prototype.agent_trace.v1",
+  "workflow": "structured_output_to_downstream_agent",
+  "backend": "deterministic agent workflow with template generator",
+  "requested_model_backend": "auto",
+  "loaded_model_backend": "template",
+  "generation_backend": "template",
+  "device": "CPU",
+  "model_path": "",
+  "plan": {
+    "agent": "PlannerAgent",
+    "goal": "Generate a FastAPI skeleton from extracted API endpoints.",
+    "input_summary": {
+      "document_type": "api_doc",
+      "endpoint_count": 5
+    },
+    "output_type": "api_skeleton",
+    "handoff": "Pass the structured JSON to the generator, then review generated artifact coverage."
+  },
+  "steps": [
+    {
+      "agent": "PlannerAgent",
+      "action": "derive_downstream_plan",
+      "status": "completed",
+      "summary": "Prepared `api_skeleton` generation plan for `api_doc`."
+    },
+    {
+      "agent": "GeneratorAgent",
+      "action": "generate_artifact",
+      "status": "completed",
+      "summary": "Generated `api_skeleton` using deterministic agent workflow with template generator."
+    },
+    {
+      "agent": "ReviewAgent",
+      "action": "review_artifact_coverage",
+      "status": "pass",
+      "summary": "Reviewed generated artifact against structured extraction results."
+    }
+  ],
+  "review": {
+    "agent": "ReviewAgent",
+    "status": "pass",
+    "code_type": "api_skeleton",
+    "passed_checks": [
+      "All 5 extracted endpoints are represented in the generated artifact."
+    ],
+    "findings": []
+  },
+  "elapsed": 0.0011837000492960215
+}
