@@ -97,6 +97,7 @@ class CodeGenerator:
         model_path: Optional[str] = None,
         device: str = "CPU",
         use_openvino: bool = True,
+        backend: str = "auto",
         max_new_tokens: int = 4096,
     ):
         self.model_path = model_path
@@ -104,13 +105,26 @@ class CodeGenerator:
         self.max_new_tokens = max_new_tokens
         self._model = None
         self._tokenizer = None
+        self._hf_device = None
+        self.loaded_backend = "template"
 
-        if model_path and use_openvino:
+        if not model_path or backend == "template":
+            return
+
+        if not use_openvino and backend == "auto":
+            backend = "hf"
+
+        if backend == "openvino":
             self._load_openvino_model(model_path, device)
-        elif model_path:
+        elif backend == "hf":
             self._load_hf_model(model_path)
+        elif backend == "auto":
+            if not self._load_openvino_model(model_path, device):
+                self._load_hf_model(model_path)
+        else:
+            raise ValueError(f"Unsupported code model backend: {backend}")
 
-    def _load_openvino_model(self, model_path: str, device: str):
+    def _load_openvino_model(self, model_path: str, device: str) -> bool:
         """Load model using OpenVINO."""
         try:
             from optimum.intel import OVModelForCausalLM
@@ -127,24 +141,42 @@ class CodeGenerator:
 
             elapsed = time.time() - start
             print(f"[CodeGenerator] Model loaded in {elapsed:.2f}s")
+            self.loaded_backend = "openvino"
+            return True
         except Exception as e:
             print(f"[CodeGenerator] Failed to load OpenVINO model: {e}")
-            print("[CodeGenerator] Falling back to template-based generation")
+            self._model = None
+            self._tokenizer = None
+            return False
 
-    def _load_hf_model(self, model_path: str):
+    def _load_hf_model(self, model_path: str) -> bool:
         """Load model using HuggingFace transformers."""
         try:
+            import torch
             from transformers import AutoModelForCausalLM, AutoTokenizer
 
             print(f"[CodeGenerator] Loading HuggingFace model from {model_path}...")
+            start = time.time()
+            self._hf_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             self._model = AutoModelForCausalLM.from_pretrained(
                 model_path,
-                device_map="auto",
                 trust_remote_code=True,
+                torch_dtype=torch.float16 if self._hf_device.type == "cuda" else torch.float32,
             )
+            self._model.to(self._hf_device)
+            self._model.eval()
             self._tokenizer = AutoTokenizer.from_pretrained(model_path)
+            if self._tokenizer.pad_token_id is None:
+                self._tokenizer.pad_token = self._tokenizer.eos_token
+            elapsed = time.time() - start
+            print(f"[CodeGenerator] HF model loaded in {elapsed:.2f}s on {self._hf_device}")
+            self.loaded_backend = "hf"
+            return True
         except Exception as e:
             print(f"[CodeGenerator] Failed to load HF model: {e}")
+            self._model = None
+            self._tokenizer = None
+            return False
 
     @staticmethod
     def _safe_identifier(value: str, fallback: str = "endpoint") -> str:
@@ -207,9 +239,14 @@ class CodeGenerator:
 
         start = time.time()
 
+        actual_backend = self.loaded_backend
         if self._model and self._tokenizer:
             code = self._generate_with_model(prompt)
+            if not code.strip():
+                actual_backend = "template_fallback"
+                code = self._generate_template(structured_data, code_type)
         else:
+            actual_backend = "template"
             code = self._generate_template(structured_data, code_type)
 
         elapsed = time.time() - start
@@ -219,24 +256,45 @@ class CodeGenerator:
             "code_type": code_type,
             "generation_time": elapsed,
             "structured_input": structured_data,
+            "backend": actual_backend,
         }
 
     def _generate_with_model(self, prompt: str) -> str:
         """Generate code using loaded LLM."""
         try:
-            inputs = self._tokenizer(prompt, return_tensors="pt")
-            outputs = self._model.generate(
-                **inputs,
-                max_new_tokens=self.max_new_tokens,
-                temperature=0.7,
-                top_p=0.9,
-                do_sample=True,
-            )
-            response = self._tokenizer.decode(outputs[0], skip_special_tokens=True)
-            # Extract only the generated part
-            response = response[len(prompt):]
+            import torch
+
+            if hasattr(self._tokenizer, "apply_chat_template") and self._tokenizer.chat_template:
+                messages = [{"role": "user", "content": prompt}]
+                inputs = self._tokenizer.apply_chat_template(
+                    messages,
+                    add_generation_prompt=True,
+                    return_tensors="pt",
+                    return_dict=True,
+                )
+            else:
+                inputs = self._tokenizer(prompt, return_tensors="pt")
+
+            if self._hf_device is not None:
+                inputs = {key: value.to(self._hf_device) for key, value in inputs.items()}
+
+            input_length = inputs["input_ids"].shape[-1]
+            pad_token_id = self._tokenizer.pad_token_id or self._tokenizer.eos_token_id
+            with torch.no_grad():
+                outputs = self._model.generate(
+                    **inputs,
+                    max_new_tokens=self.max_new_tokens,
+                    do_sample=False,
+                    pad_token_id=pad_token_id,
+                )
+            generated_ids = outputs[0][input_length:]
+            response = self._tokenizer.decode(generated_ids, skip_special_tokens=True)
             return response.strip()
         except Exception as e:
+            if self.loaded_backend != "template":
+                print(f"[CodeGenerator] Model generation failed: {e}")
+                print("[CodeGenerator] Falling back to template-based generation")
+                return ""
             return f"// Generation error: {e}\n// Falling back to template"
 
     def _generate_template(self, structured_data: dict, code_type: str) -> str:

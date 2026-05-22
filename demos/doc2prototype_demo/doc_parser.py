@@ -20,7 +20,9 @@ PROMPTS = {
     "chart": "Chart Recognition:",
     "layout": "Layout Recognition:",
     "flowchart": "Please analyze this flowchart and describe all nodes, connections, and the flow logic in detail.",
-    "api_doc": "Please extract all API endpoints, parameters, request/response formats from this document.",
+    # API documents are parsed more reliably by first asking PaddleOCR-VL for
+    # plain OCR text, then applying deterministic endpoint extraction rules.
+    "api_doc": "OCR:",
     "ui_mockup": "Please analyze this UI mockup and describe all components, layout structure, and interactive elements.",
     "technical_doc": "Please analyze this technical document and extract all key information including sections, tables, code snippets, and relationships.",
 }

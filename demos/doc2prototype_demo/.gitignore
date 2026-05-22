@@ -3,8 +3,17 @@ venv/
 __pycache__/
 *.py[cod]
 _cache/
+_models/
 ov_paddleocr_vl_model
 ov_paddleocr_vl_model/
 outputs/mvp_*_text_smoke/
+outputs/*_smoke_venv/
+outputs/*_smoke_gpu*_arg/
+outputs/*_local/
+outputs/*_agent_smoke/
+outputs/*_backend_regression/
+outputs/*_hf_coder*/
+outputs/*_fixed/
+outputs/*_prompt_probe/
 examples/official_paddleocr_vl_sample.png
 outputs/mvp_official_reference/

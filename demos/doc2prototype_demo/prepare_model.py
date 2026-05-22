@@ -84,7 +84,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--model-id", default="PaddlePaddle/PaddleOCR-VL-1.5")
     parser.add_argument("--cache-dir", default="_cache")
     parser.add_argument("--output-dir", default="ov_paddleocr_vl_model")
-    parser.add_argument("--device", default="CPU", choices=("CPU", "GPU", "NPU", "AUTO"))
+    parser.add_argument(
+        "--device",
+        default="CPU",
+        help="OpenVINO device used during model conversion, for example CPU, GPU, GPU.0, GPU.1, NPU, or AUTO.",
+    )
     parser.add_argument("--int4", action="store_true", help="Use INT4 LLM compression instead of INT8.")
     parser.add_argument("--vision-int8", action="store_true", help="Enable vision model INT8 quantization.")
     return parser

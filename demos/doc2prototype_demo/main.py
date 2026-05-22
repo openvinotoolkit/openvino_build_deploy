@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from code_generator import CodeGenerator
+from downstream_agent import DownstreamAgentPipeline, build_agent_review_markdown
 from structure_extractor import extract_structure, to_json_string, to_mermaid
 
 
@@ -181,6 +181,21 @@ def _build_markdown_report(run: dict[str, Any], structured_json: str, generated_
             "```",
         ]
     )
+    agent_trace = run.get("agent")
+    if agent_trace:
+        review = agent_trace.get("review", {})
+        lines.extend(
+            [
+                "",
+                "## Downstream Agent Workflow",
+                "",
+                f"- Workflow: `{agent_trace.get('workflow', '')}`",
+                f"- Backend: `{agent_trace.get('backend', '')}`",
+                f"- Review status: `{review.get('status', '')}`",
+                f"- Agent review: `agent_review.md`",
+                f"- Agent trace: `agent_trace.json`",
+            ]
+        )
     return "\n".join(lines) + "\n"
 
 
@@ -197,6 +212,8 @@ def _write_outputs(
     generated_path = output_dir / _artifact_name(run["input"]["task"], run["generated"]["code_type"])
     run_path = output_dir / "run.json"
     report_path = output_dir / "result.md"
+    agent_trace_path = output_dir / "agent_trace.json"
+    agent_review_path = output_dir / "agent_review.md"
 
     raw_path.write_text(run["parse"]["raw_text"], encoding="utf-8")
     structured_path.write_text(structured_json + "\n", encoding="utf-8")
@@ -211,6 +228,12 @@ def _write_outputs(
         "run_json": str(run_path),
         "markdown_report": str(report_path),
     }
+
+    if run.get("agent"):
+        agent_trace_path.write_text(json.dumps(run["agent"], indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        agent_review_path.write_text(build_agent_review_markdown(run["agent"]), encoding="utf-8")
+        artifacts["agent_trace"] = str(agent_trace_path)
+        artifacts["agent_review"] = str(agent_review_path)
 
     if run["input"]["task"] == "flowchart" and run["structured"].get("nodes"):
         mermaid_path = output_dir / "structured_flowchart.mmd"
@@ -230,13 +253,18 @@ def run_mvp(args: argparse.Namespace) -> dict[str, Any]:
     timings["structure_extraction"] = time.perf_counter() - structure_start
 
     code_type = args.code_type or _default_code_type(args.task)
-    generator = CodeGenerator(model_path=args.code_model_path, device=args.device)
+    downstream_agent = DownstreamAgentPipeline(
+        model_path=args.code_model_path,
+        device=args.device,
+        model_backend=args.code_model_backend,
+        max_new_tokens=args.code_max_new_tokens,
+    )
     gen_start = time.perf_counter()
-    generated = generator.generate(structured, code_type=code_type)
+    generated = downstream_agent.run(structured, task=args.task, code_type=code_type)
     timings["generation"] = time.perf_counter() - gen_start
     timings["total"] = time.perf_counter() - total_start
 
-    backend = "OpenVINO/HF model" if args.code_model_path else "deterministic template"
+    backend = generated["backend"]
     generated_code = generated["code"]
 
     run = {
@@ -258,8 +286,10 @@ def run_mvp(args: argparse.Namespace) -> dict[str, Any]:
         "generated": {
             "code_type": generated["code_type"],
             "generation_time": generated["generation_time"],
+            "agent_time": generated["agent_time"],
             "backend": backend,
         },
+        "agent": generated["trace"],
         "metrics": timings,
     }
 
@@ -305,12 +335,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--device",
-        choices=("CPU", "GPU", "NPU", "AUTO"),
         default="CPU",
-        help="OpenVINO device for image parsing and optional code model.",
+        help="OpenVINO device for image parsing, for example CPU, GPU, GPU.0, GPU.1, NPU, or AUTO.",
     )
     parser.add_argument("--ov-model-path", default="ov_paddleocr_vl_model")
     parser.add_argument("--code-model-path", default=None, help="Optional local OpenVINO/HF coder model path.")
+    parser.add_argument(
+        "--code-model-backend",
+        choices=("auto", "openvino", "hf", "template"),
+        default="auto",
+        help="Backend for --code-model-path. Use hf for a local Transformers model, openvino for an OpenVINO model, or template for deterministic generation.",
+    )
+    parser.add_argument("--code-max-new-tokens", type=int, default=512, help="Maximum new tokens for local Coder model generation.")
     parser.add_argument("--code-type", default=None, help="Override generated artifact type.")
     parser.add_argument("--output-dir", default=None, help="Output directory. Defaults to outputs/mvp_<timestamp>.")
     parser.add_argument("--prompt", default=None, help="Optional custom PaddleOCR-VL prompt for image input.")

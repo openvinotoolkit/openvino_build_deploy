@@ -14,7 +14,7 @@ The demo also writes a static visual report with timing charts, extracted struct
 ## Requirements
 
 - Python 3.10-3.12
-- OpenVINO-compatible CPU. GPU/NPU/AUTO can be selected with `--device` when available.
+- OpenVINO-compatible CPU. GPU/NPU/AUTO can be selected with `--device` when available. Use exact device IDs such as `GPU.0` or `GPU.1` when multiple GPU plugins are visible.
 - Enough disk space for PaddleOCR-VL and converted OpenVINO IR files. Model files are not committed to this repository.
 
 ## Setup
@@ -50,6 +50,8 @@ Run the API documentation scenario:
 ```bash
 python main.py examples/api_doc_sample.png --task api_doc --device CPU --output-dir outputs/mvp_api_image_smoke
 ```
+
+For API document images, the default parser prompt is `OCR:`. The endpoint schema is then extracted deterministically from the OCR text, which is more stable than asking the vision-language model to directly infer the API schema.
 
 Run the flowchart scenario:
 
@@ -127,10 +129,40 @@ On Windows, press `Win + Shift + S`, select the browser region, and save the scr
 ## OpenVINO Value Shown
 
 - PaddleOCR-VL inference runs through an OpenVINO IR model.
-- The CLI exposes device selection with `--device CPU|GPU|NPU|AUTO`.
+- The CLI exposes device selection with `--device CPU|GPU|GPU.0|GPU.1|NPU|AUTO`.
 - Each run records model load time, OpenVINO inference time, structure extraction time, generation time, and total time.
 - Visual outputs include OpenVINO watermarking.
 
 ## Notes
 
 The downstream code generation path is deterministic by default so the MVP remains reproducible without downloading a second LLM. The `--code-model-path` option is reserved for a local code model path when a Coder model is prepared separately.
+
+## Downstream Agent Flow
+
+After PaddleOCR-VL parsing and structured JSON extraction, the CLI routes the result through a downstream agent workflow:
+
+1. `PlannerAgent` summarizes the structured input and selects the downstream artifact target.
+2. `GeneratorAgent` invokes the code/summary generator. By default this uses deterministic templates for reproducibility; when `--code-model-path` is provided, the same workflow can call a local OpenVINO/HF Coder model. Select the backend with `--code-model-backend openvino|hf|auto|template`.
+3. `ReviewAgent` checks whether the generated artifact covers the extracted endpoints, flowchart nodes, or document sections.
+
+Each run writes:
+
+- `agent_trace.json`: machine-readable agent plan, steps, backend, and review status.
+- `agent_review.md`: human-readable review of the downstream generation result.
+
+This makes the required handoff from document understanding to downstream intelligent processing explicit and reproducible without forcing users to download a second LLM for the default MVP path.
+
+Example local HuggingFace Coder run:
+
+```bash
+python -c "from code_generator import download_code_model; print(download_code_model('Qwen/Qwen2.5-Coder-0.5B-Instruct'))"
+python main.py examples/api_doc_sample.md --task api_doc --code-model-path <printed-model-path> --code-model-backend hf --code-max-new-tokens 768 --output-dir outputs/mvp_api_text_hf_coder
+```
+
+For example, ModelScope may print a local path similar to `_models\Qwen\Qwen2___5-Coder-0___5B-Instruct` on Windows.
+
+To validate the full image-to-Coder path:
+
+```bash
+python main.py examples/api_doc_sample.png --task api_doc --device CPU --code-model-path <printed-model-path> --code-model-backend hf --code-max-new-tokens 768 --output-dir outputs/mvp_api_image_hf_coder
+```
