@@ -16,6 +16,7 @@ The demo also writes a static visual report with timing charts, extracted struct
 - Python 3.10-3.12
 - OpenVINO-compatible CPU. GPU/NPU/AUTO can be selected with `--device` when available. Use exact device IDs such as `GPU.0` or `GPU.1` when multiple GPU plugins are visible.
 - Enough disk space for PaddleOCR-VL and converted OpenVINO IR files. Model files are not committed to this repository.
+- `openvino-genai` is used by the recommended local OpenVINO Coder backend.
 
 ## Setup
 
@@ -110,13 +111,23 @@ Example reports are included under:
 
 The tracked smoke reports demonstrate the complete path from document/visual understanding to downstream agent processing.
 
-API document image to FastAPI skeleton:
+API document image to deterministic FastAPI skeleton:
 
 ![Doc2Prototype API report](assets/doc2prototype_api_report.png)
+
+This report uses `examples/api_doc_sample.png` as input. PaddleOCR-VL runs through OpenVINO, extracts the order-service API text, and the deterministic structure extractor creates a JSON schema with five endpoints. The downstream Agent workflow then checks that the generated FastAPI skeleton covers all five endpoints. The timing chart separates model load, OpenVINO inference, structure extraction, and generation time. The layout overlay marks detected text regions, and the heatmap shows where text density is concentrated in the input image.
+
+API document image to OpenVINO Coder model:
+
+![Doc2Prototype API OpenVINO Coder report](assets/doc2prototype_api_openvino_coder_report.png)
+
+This report uses the same API document image but switches the downstream generator to `OpenVINO/Qwen2.5-Coder-0.5B-Instruct-int4-ov` through the `openvino` backend. It shows the full OpenVINO path: PaddleOCR-VL OpenVINO parsing first, then OpenVINO GenAI Coder generation inside the Agent workflow. A successful result should show `OpenVINO: True`, `Backend: OpenVINO Coder model inside agent workflow`, five extracted endpoints, and Agent review status `pass`.
 
 Flowchart image to Mermaid diagram:
 
 ![Doc2Prototype flowchart report](assets/doc2prototype_flowchart_report.png)
+
+This report uses `examples/flowchart_sample.png` as input. PaddleOCR-VL runs through OpenVINO, the structure extractor creates a JSON schema with six nodes and five directed edges, and the downstream Agent generates a Mermaid diagram. A successful result should show all extracted nodes in the structured visualization and Agent review status `pass`.
 
 ## Reviewer Quick Reproduction
 
@@ -135,6 +146,30 @@ The expected high-level results are:
 | --- | --- | --- | --- | --- | --- |
 | API document image | yes | CPU | 5 endpoints | `generated_api.py` | pass |
 | Flowchart image | yes | CPU | 6 nodes / 5 edges | `generated_flowchart.mmd` | pass |
+
+## Recommended OpenVINO Coder Backend
+
+The default generator remains deterministic so the MVP is quick to reproduce without downloading a second model. For the real local Coder model path, the recommended backend is OpenVINO GenAI with a pre-converted OpenVINO Coder model. HuggingFace Transformers remains available only as a fallback or comparison backend.
+
+Download the OpenVINO Coder model:
+
+```bash
+python -c "from code_generator import download_openvino_code_model; print(download_openvino_code_model())"
+```
+
+This downloads [`OpenVINO/Qwen2.5-Coder-0.5B-Instruct-int4-ov`](https://huggingface.co/OpenVINO/Qwen2.5-Coder-0.5B-Instruct-int4-ov), a pre-converted INT4 OpenVINO IR model, to `_models/OpenVINO/Qwen2.5-Coder-0.5B-Instruct-int4-ov`.
+
+Run the full image-to-OpenVINO-Coder path:
+
+```bash
+python main.py examples/api_doc_sample.png --task api_doc --device CPU --code-model-path _models/OpenVINO/Qwen2.5-Coder-0.5B-Instruct-int4-ov --code-model-backend openvino --code-max-new-tokens 768 --output-dir outputs/mvp_api_image_ov_coder
+```
+
+Validated local result:
+
+| Scenario | Parser backend | Coder backend | Device | Structured output | Agent review | Total |
+| --- | --- | --- | --- | --- | --- | ---: |
+| API image + OpenVINO Coder | PaddleOCR-VL OpenVINO | OpenVINO GenAI Coder | CPU | 5 endpoints | pass | 27.162 s |
 
 ## View Reports and Capture Screenshots
 
@@ -161,20 +196,32 @@ On Windows, press `Win + Shift + S`, select the browser region, and save the scr
 ## OpenVINO Value Shown
 
 - PaddleOCR-VL inference runs through an OpenVINO IR model.
+- The recommended local Coder path uses a pre-converted OpenVINO GenAI model with `--code-model-backend openvino`.
 - The CLI exposes device selection with `--device CPU|GPU|GPU.0|GPU.1|NPU|AUTO`.
 - Each run records model load time, OpenVINO inference time, structure extraction time, generation time, and total time.
 - Visual outputs include OpenVINO watermarking.
 
+## Hardware Validation Scope
+
+The validation focus is Intel hardware and OpenVINO deployment. The local development machine used for this round exposes Intel CPU, Intel iGPU, Intel NPU, and an NVIDIA dGPU through OpenVINO device discovery. Results and recommendations should be interpreted as follows:
+
+- `CPU`: primary reproducible path for this PR.
+- `GPU.0`: Intel iGPU path; useful for optional Intel GPU validation.
+- `NPU` and `AUTO`: visible but currently limited by the stateful/dynamic-shape LLM path in the PaddleOCR-VL export, so they are documented as limitations rather than successful benchmarks.
+- `GPU.1`: NVIDIA dGPU on this local machine; it is not used as a project highlight or primary benchmark for the Intel/OpenVINO task.
+
+If final validation needs to match the provided GMK Intel Core Ultra mini PC more closely, run the same branch and commands on that device and report CPU / Intel iGPU / NPU behavior there.
+
 ## Notes
 
-The downstream code generation path is deterministic by default so the MVP remains reproducible without downloading a second LLM. When a local Coder model is prepared separately, pass `--code-model-path` and select `--code-model-backend hf|openvino|auto`.
+The downstream code generation path is deterministic by default so the MVP remains reproducible without downloading a second LLM. For real local Coder inference, prefer the OpenVINO backend shown above. The HuggingFace backend can still be selected with `--code-model-backend hf` for fallback or comparison runs.
 
 ## Downstream Agent Flow
 
 After PaddleOCR-VL parsing and structured JSON extraction, the CLI routes the result through a downstream agent workflow:
 
 1. `PlannerAgent` summarizes the structured input and selects the downstream artifact target.
-2. `GeneratorAgent` invokes the code/summary generator. By default this uses deterministic templates for reproducibility; when `--code-model-path` is provided, the same workflow can call a local OpenVINO/HF Coder model. Select the backend with `--code-model-backend openvino|hf|auto|template`.
+2. `GeneratorAgent` invokes the code/summary generator. By default this uses deterministic templates for reproducibility; when `--code-model-path` is provided, the recommended path is a local OpenVINO GenAI Coder model with `--code-model-backend openvino`. Select `hf` only as a fallback or comparison backend.
 3. `ReviewAgent` checks whether the generated artifact covers the extracted endpoints, flowchart nodes, or document sections.
 
 Each run writes:
@@ -184,7 +231,7 @@ Each run writes:
 
 This makes the required handoff from document understanding to downstream intelligent processing explicit and reproducible without forcing users to download a second LLM for the default MVP path.
 
-Example local HuggingFace Coder run:
+Fallback local HuggingFace Coder run:
 
 ```bash
 python -c "from code_generator import download_code_model; print(download_code_model('Qwen/Qwen2.5-Coder-0.5B-Instruct'))"
@@ -193,7 +240,7 @@ python main.py examples/api_doc_sample.md --task api_doc --code-model-path <prin
 
 For example, ModelScope may print a local path similar to `_models\Qwen\Qwen2___5-Coder-0___5B-Instruct` on Windows.
 
-To validate the full image-to-Coder path:
+To validate the full image-to-HuggingFace-Coder fallback path:
 
 ```bash
 python main.py examples/api_doc_sample.png --task api_doc --device CPU --code-model-path <printed-model-path> --code-model-backend hf --code-max-new-tokens 768 --output-dir outputs/mvp_api_image_hf_coder

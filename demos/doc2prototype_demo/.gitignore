@@ -13,6 +13,7 @@ outputs/*_local/
 outputs/*_agent_smoke/
 outputs/*_backend_regression/
 outputs/*_hf_coder*/
+outputs/*_ov_coder*/
 outputs/*_fixed/
 outputs/*_prompt_probe/
 examples/official_paddleocr_vl_sample.png

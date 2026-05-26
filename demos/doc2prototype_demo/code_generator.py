@@ -4,6 +4,7 @@ Uses downstream LLM to generate code prototypes from structured document data.
 """
 
 import json
+import os
 import re
 import time
 from typing import Optional
@@ -106,6 +107,7 @@ class CodeGenerator:
         self._model = None
         self._tokenizer = None
         self._hf_device = None
+        self._runtime = "template"
         self.loaded_backend = "template"
 
         if not model_path or backend == "template":
@@ -125,28 +127,37 @@ class CodeGenerator:
             raise ValueError(f"Unsupported code model backend: {backend}")
 
     def _load_openvino_model(self, model_path: str, device: str) -> bool:
-        """Load model using OpenVINO."""
+        """Load a pre-converted OpenVINO GenAI Coder model."""
         try:
-            from optimum.intel import OVModelForCausalLM
-            from transformers import AutoTokenizer
+            from pathlib import Path
 
-            print(f"[CodeGenerator] Loading OpenVINO model from {model_path}...")
+            model_dir = Path(model_path)
+            if not (model_dir / "openvino_model.xml").exists():
+                print(
+                    "[CodeGenerator] OpenVINO Coder backend expects a pre-converted "
+                    "OpenVINO GenAI model directory containing openvino_model.xml."
+                )
+                return False
+
+            import openvino_genai as ov_genai
+
+            os.environ.setdefault("OV_DISABLE_TELEMETRY", "1")
+            print(f"[CodeGenerator] Loading OpenVINO GenAI model from {model_path} on {device}...")
             start = time.time()
 
-            self._model = OVModelForCausalLM.from_pretrained(
-                model_path,
-                device=device,
-            )
-            self._tokenizer = AutoTokenizer.from_pretrained(model_path)
+            self._model = ov_genai.LLMPipeline(str(model_dir), device)
+            self._tokenizer = self._model.get_tokenizer()
 
             elapsed = time.time() - start
             print(f"[CodeGenerator] Model loaded in {elapsed:.2f}s")
+            self._runtime = "openvino_genai"
             self.loaded_backend = "openvino"
             return True
         except Exception as e:
             print(f"[CodeGenerator] Failed to load OpenVINO model: {e}")
             self._model = None
             self._tokenizer = None
+            self._runtime = "template"
             return False
 
     def _load_hf_model(self, model_path: str) -> bool:
@@ -170,12 +181,14 @@ class CodeGenerator:
                 self._tokenizer.pad_token = self._tokenizer.eos_token
             elapsed = time.time() - start
             print(f"[CodeGenerator] HF model loaded in {elapsed:.2f}s on {self._hf_device}")
+            self._runtime = "hf"
             self.loaded_backend = "hf"
             return True
         except Exception as e:
             print(f"[CodeGenerator] Failed to load HF model: {e}")
             self._model = None
             self._tokenizer = None
+            self._runtime = "template"
             return False
 
     @staticmethod
@@ -242,6 +255,7 @@ class CodeGenerator:
         actual_backend = self.loaded_backend
         if self._model and self._tokenizer:
             code = self._generate_with_model(prompt)
+            code = self._clean_model_output(code)
             if not code.strip():
                 actual_backend = "template_fallback"
                 code = self._generate_template(structured_data, code_type)
@@ -259,8 +273,22 @@ class CodeGenerator:
             "backend": actual_backend,
         }
 
+    @staticmethod
+    def _clean_model_output(response: str) -> str:
+        """Extract the primary code block when an instruction model adds Markdown fences."""
+        response = response.strip()
+        fenced = re.search(r"```(?:[A-Za-z0-9_+.-]+)?\s*\n(.*?)```", response, flags=re.DOTALL)
+        if fenced:
+            return fenced.group(1).strip()
+        response = re.sub(r"^```(?:[A-Za-z0-9_+.-]+)?\s*", "", response)
+        response = re.sub(r"\s*```$", "", response)
+        return response.strip()
+
     def _generate_with_model(self, prompt: str) -> str:
         """Generate code using loaded LLM."""
+        if self._runtime == "openvino_genai":
+            return self._generate_with_openvino_genai(prompt)
+
         try:
             import torch
 
@@ -296,6 +324,25 @@ class CodeGenerator:
                 print("[CodeGenerator] Falling back to template-based generation")
                 return ""
             return f"// Generation error: {e}\n// Falling back to template"
+
+    def _generate_with_openvino_genai(self, prompt: str) -> str:
+        """Generate code using an OpenVINO GenAI LLMPipeline."""
+        try:
+            model_prompt = prompt
+            if self._tokenizer is not None and getattr(self._tokenizer, "chat_template", None):
+                messages = [{"role": "user", "content": prompt}]
+                model_prompt = self._tokenizer.apply_chat_template(messages, True)
+
+            response = self._model.generate(
+                model_prompt,
+                max_new_tokens=self.max_new_tokens,
+                do_sample=False,
+            )
+            return str(response).strip()
+        except Exception as e:
+            print(f"[CodeGenerator] OpenVINO GenAI generation failed: {e}")
+            print("[CodeGenerator] Falling back to template-based generation")
+            return ""
 
     def _generate_template(self, structured_data: dict, code_type: str) -> str:
         """Template-based code generation when no LLM is available."""
@@ -643,3 +690,26 @@ def download_code_model(
         return local_dir
     except Exception as e:
         raise RuntimeError(f"Failed to download model: {e}")
+
+
+def download_openvino_code_model(
+    model_id: str = "OpenVINO/Qwen2.5-Coder-0.5B-Instruct-int4-ov",
+    cache_dir: str = "./_models",
+) -> str:
+    """Download a pre-converted OpenVINO Coder model for local inference."""
+    from pathlib import Path
+
+    cache_path = Path(cache_dir)
+    cache_path.mkdir(parents=True, exist_ok=True)
+    namespace, _, repo_name = model_id.partition("/")
+    local_dir = cache_path / namespace / repo_name if repo_name else cache_path / model_id
+
+    try:
+        from huggingface_hub import snapshot_download
+
+        return snapshot_download(
+            repo_id=model_id,
+            local_dir=str(local_dir),
+        )
+    except Exception as e:
+        raise RuntimeError(f"Failed to download OpenVINO model {model_id}: {e}")
