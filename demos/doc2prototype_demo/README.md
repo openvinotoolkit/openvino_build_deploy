@@ -107,6 +107,17 @@ Example reports are included under:
 - `outputs/mvp_api_image_smoke/visual_report.html`
 - `outputs/mvp_flow_image_smoke/visual_report.html`
 
+## Low-Quality Input Behavior
+
+Blurry, low-resolution, or text-sparse images should not crash the demo. The pipeline still writes the normal output files so users can inspect what happened:
+
+- `raw_parse.md` contains whatever text PaddleOCR-VL could read.
+- `structured.json` may contain empty `endpoints`, `nodes`, or `sections` when there is not enough readable text.
+- `agent_review.md` reports `needs_attention` instead of `pass` when coverage cannot be verified.
+- `visual_report.html` still shows timing, the structured preview, and any available layout overlay or text heatmap.
+
+Use `agent_review.md` as the main quality signal for weak OCR runs. For example, an API document with no extracted endpoints or a flowchart with no extracted nodes is considered a run that needs manual review, not a successful extraction.
+
 ## Effect Display
 
 The tracked smoke reports demonstrate the complete path from document/visual understanding to downstream agent processing.
