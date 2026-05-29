@@ -114,7 +114,8 @@ Blurry, low-resolution, or text-sparse images should not crash the demo. The pip
 - `raw_parse.md` contains whatever text PaddleOCR-VL could read.
 - `structured.json` may contain empty `endpoints`, `nodes`, or `sections` when there is not enough readable text.
 - `agent_review.md` reports `needs_attention` instead of `pass` when coverage cannot be verified.
-- `visual_report.html` still shows timing, the structured preview, and any available layout overlay or text heatmap.
+- The CLI prints `[mvp] warning:` lines when very little text or no task structure is extracted.
+- `visual_report.html` shows a Warnings section, plus timing, the structured preview, and any available layout overlay or text heatmap.
 
 Use `agent_review.md` as the main quality signal for weak OCR runs. For example, an API document with no extracted endpoints or a flowchart with no extracted nodes is considered a run that needs manual review, not a successful extraction.
 

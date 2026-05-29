@@ -124,6 +124,7 @@ def _build_markdown_report(run: dict[str, Any], structured_json: str, generated_
     metrics = run["metrics"]
     parse = run["parse"]
     structured = run["structured"]
+    warnings = run.get("warnings", [])
 
     lines = [
         "# Doc2Prototype MVP Run",
@@ -141,11 +142,20 @@ def _build_markdown_report(run: dict[str, Any], structured_json: str, generated_
         f"- OpenVINO version: `{run['openvino']['version']}`",
         f"- OpenVINO model: `{run['openvino']['model_path']}`",
         "",
-        "## Timings",
-        "",
-        "| Stage | Seconds |",
-        "| --- | ---: |",
     ]
+    if warnings:
+        lines.extend(["## Warnings", ""])
+        lines.extend(f"- {warning}" for warning in warnings)
+        lines.append("")
+
+    lines.extend(
+        [
+            "## Timings",
+            "",
+            "| Stage | Seconds |",
+            "| --- | ---: |",
+        ]
+    )
     for key in ("model_load", "openvino_inference", "structure_extraction", "generation", "total"):
         lines.append(f"| {key} | {metrics.get(key, 0.0):.3f} |")
 
@@ -243,6 +253,46 @@ def _write_outputs(
     return artifacts
 
 
+def _extraction_warning_target(task: str) -> tuple[str, str]:
+    if task == "flowchart":
+        return "nodes", "flowchart nodes"
+    if task == "technical_doc":
+        return "sections", "document sections"
+    return "endpoints", "API endpoints"
+
+
+def _build_quality_warnings(
+    parse_result: dict[str, Any],
+    structured: dict[str, Any],
+    trace: dict[str, Any],
+    task: str,
+) -> list[str]:
+    warnings: list[str] = []
+    raw_text = str(parse_result.get("raw_text", "")).strip()
+    word_count = len(raw_text.split())
+    char_count = len(raw_text)
+    key, label = _extraction_warning_target(task)
+
+    if word_count < 8 and char_count < 80:
+        warnings.append(
+            f"Very little OCR text was extracted ({word_count} word(s), {char_count} character(s)); input quality may be affecting the result."
+        )
+    if not structured.get(key):
+        warnings.append(f"No {label} were extracted; please review the input image quality or parser output.")
+
+    review = trace.get("review", {})
+    if review.get("status") == "needs_attention":
+        findings = review.get("findings", [])
+        detail = f" {' '.join(findings)}" if findings else ""
+        warnings.append(f"Downstream review returned needs_attention.{detail}")
+
+    deduped: list[str] = []
+    for warning in warnings:
+        if warning not in deduped:
+            deduped.append(warning)
+    return deduped
+
+
 def run_mvp(args: argparse.Namespace) -> dict[str, Any]:
     total_start = time.perf_counter()
 
@@ -266,6 +316,7 @@ def run_mvp(args: argparse.Namespace) -> dict[str, Any]:
 
     backend = generated["backend"]
     generated_code = generated["code"]
+    warnings = _build_quality_warnings(parse_result, structured, generated["trace"], args.task)
 
     run = {
         "schema_version": "doc2prototype.mvp_run.v1",
@@ -290,6 +341,7 @@ def run_mvp(args: argparse.Namespace) -> dict[str, Any]:
             "backend": backend,
         },
         "agent": generated["trace"],
+        "warnings": warnings,
         "metrics": timings,
     }
 
@@ -367,6 +419,8 @@ def main() -> None:
     print("[mvp] completed")
     print(f"[mvp] task: {result['input']['task']}")
     print(f"[mvp] openvino: {result['openvino']['uses_openvino']} device={result['openvino']['device']}")
+    for warning in result.get("warnings", []):
+        print(f"[mvp] warning: {warning}")
     print(f"[mvp] total_time: {result['metrics']['total']:.3f}s")
     print(f"[mvp] report: {artifacts['markdown_report']}")
     print(f"[mvp] structured_json: {artifacts['structured_json']}")

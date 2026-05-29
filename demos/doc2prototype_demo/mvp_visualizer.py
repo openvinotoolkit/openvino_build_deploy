@@ -310,6 +310,7 @@ def _render_html(run: dict[str, Any], output_dir: Path, artifacts: dict[str, str
     agent = run.get("agent", {})
     agent_review_link = Path(artifacts.get("agent_review", "")).name if artifacts.get("agent_review") else ""
     agent_trace_link = Path(artifacts.get("agent_trace", "")).name if artifacts.get("agent_trace") else ""
+    warnings = run.get("warnings", [])
 
     agent_section = ""
     if agent:
@@ -347,6 +348,16 @@ def _render_html(run: dict[str, Any], output_dir: Path, artifacts: dict[str, str
         <ul>{passed_items}</ul>
       </div>
     </div>
+  </section>
+"""
+
+    warning_section = ""
+    if warnings:
+        warning_items = "".join(f"<li>{_esc(warning)}</li>" for warning in warnings)
+        warning_section = f"""
+  <section class="warning">
+    <h2>Warnings</h2>
+    <ul>{warning_items}</ul>
   </section>
 """
 
@@ -411,6 +422,10 @@ def _render_html(run: dict[str, Any], output_dir: Path, artifacts: dict[str, str
       border-radius: 8px;
       padding: 18px;
       margin: 16px 0;
+    }}
+    section.warning {{
+      border-color: #f59e0b;
+      background: #fffbeb;
     }}
     h2 {{
       margin: 0 0 14px;
@@ -493,6 +508,8 @@ def _render_html(run: dict[str, Any], output_dir: Path, artifacts: dict[str, str
       <b>Generated</b><span>{f'<a href="{_esc(generated_link)}">{_esc(generated_link)}</a>' if generated_link else ""}</span>
     </div>
   </section>
+
+  {warning_section}
 
   {agent_section}
 
