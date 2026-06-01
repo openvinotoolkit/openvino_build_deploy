@@ -49,7 +49,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025]
+        os: [ubuntu-24.04, windows-2025]
         python: ["3.10", "3.13"]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.gradio) }}
     steps:
@@ -247,7 +247,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025]
+        os: [ubuntu-24.04, windows-2025]
         python: ["3.10", "3.13"]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.webcam) }}
     steps:
@@ -272,26 +272,10 @@ jobs:
   python:
     needs: find-subprojects
     if: ${{ needs.find-subprojects.outputs.python != '[]' }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025]
-        python: ["3.10", "3.13"]
-        subproject: ${{ fromJson(needs.find-subprojects.outputs.python) }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/reusable-steps/setup-os
-      - uses: ./.github/reusable-steps/setup-python
-        with:
-          python: ${{ matrix.python }}
-          project: ${{ matrix.subproject }}
-      - name: Run Python
-        shell: bash
-        timeout-minutes: 10
-        run: |
-          cd ${{ matrix.subproject }}
-          python main.py
+    uses: ./.github/workflows/reusable-sanity-python.yml
+    with:
+      subprojects: ${{ needs.find-subprojects.outputs.python }}
+      python_versions: '["3.10", "3.13"]'
 
   notebook:
     needs: find-subprojects
@@ -300,7 +284,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025]
+        os: [ubuntu-24.04, windows-2025]
         python: ["3.10", "3.13"]
         subproject: ${{ fromJson(needs.find-subprojects.outputs.notebook) }}
     steps:

@@ -1,0 +1,43 @@
+name: Reusable Sanity Python Job
+
+on:
+  workflow_call:
+    inputs:
+      subprojects:
+        required: true
+        type: string
+      python_versions:
+        required: true
+        type: string
+
+jobs:
+  run-python:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+        python: ${{ fromJson(inputs.python_versions) }}
+        subproject: ${{ fromJson(inputs.subprojects) }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/reusable-steps/setup-os
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - uses: ./.github/reusable-steps/setup-python
+        with:
+          python: ${{ matrix.python }}
+          project: ${{ matrix.subproject }}
+
+      - name: Run Python project
+        shell: bash
+        run: |
+          cd ${{ matrix.subproject }}
+          python main.py
