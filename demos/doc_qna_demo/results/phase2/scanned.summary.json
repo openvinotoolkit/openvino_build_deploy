@@ -1,0 +1,20 @@
+{
+  "doc_name": "scanned",
+  "timings": {
+    "total_ms": 4204.8934000013105,
+    "ocr_ms": 4158.671099998173,
+    "num_pages": 2,
+    "num_ocr_pages": 2
+  },
+  "chunk_stats": {
+    "total": 1,
+    "by_kind": {
+      "text": 1
+    },
+    "avg_chars": 77.0
+  },
+  "outputs": {
+    "markdown": "scanned.markdown",
+    "chunks_jsonl": "scanned.chunks.jsonl"
+  }
+}

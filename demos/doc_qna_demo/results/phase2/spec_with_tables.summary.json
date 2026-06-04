@@ -1,0 +1,22 @@
+{
+  "doc_name": "spec_with_tables",
+  "timings": {
+    "total_ms": 0.11110000195913017,
+    "ocr_ms": 0.0,
+    "num_pages": 1,
+    "num_ocr_pages": 0
+  },
+  "chunk_stats": {
+    "total": 7,
+    "by_kind": {
+      "text": 3,
+      "table_header": 1,
+      "table": 3
+    },
+    "avg_chars": 41.857142857142854
+  },
+  "outputs": {
+    "markdown": "spec_with_tables.markdown",
+    "chunks_jsonl": "spec_with_tables.chunks.jsonl"
+  }
+}

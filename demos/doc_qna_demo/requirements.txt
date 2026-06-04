@@ -1,0 +1,25 @@
+# OpenVINO Runtime + GenAI (PaddleOCR-VL inference)
+openvino>=2025.4.0
+openvino-genai>=2025.4.0
+openvino-tokenizers>=2025.4.0
+
+# Image / PDF
+Pillow>=10.0.0
+pypdfium2>=4.0.0           # 推荐：自带二进制，免装 poppler
+pdf2image>=1.17.0          # 备用：需要 poppler 二进制
+pdfplumber>=0.11.0
+
+# OCR baselines for comparison
+pytesseract>=0.3.10            # 需另装 tesseract-ocr 二进制
+paddleocr>=2.7.0; platform_system != "Darwin" or platform_machine != "arm64"
+
+# RAG / embedding (Phase 3 — 端到端 RAG 已实装)
+chromadb>=0.5.0
+huggingface_hub>=0.24.0       # 拉取 Qwen3 LLM / Embedding 的 OpenVINO IR
+transformers>=4.54.0          # Qwen3 tokenizer + chat_template (enable_thinking=False)
+certifi>=2024.0               # macOS 系统 Python SSL 证书（download_eval_materials.py）
+
+# 工具
+numpy>=1.26
+tqdm>=4.66
+rich>=13.7

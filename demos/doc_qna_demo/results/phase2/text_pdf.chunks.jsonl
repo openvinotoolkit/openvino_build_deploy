@@ -1,0 +1,4 @@
+{"text": "文字 PDF 测试样本 本节用于验证 pdfplumber 文字层抽取路径。", "metadata": {"doc_name": "text_pdf", "page": 1, "kind": "text"}}
+{"text": "## 工作原理\n\nPaddleOCR-VL 接收图片输入并输出结构化 Markdown， 包括标题、段落、表格、公式等区块的语义信息。", "metadata": {"doc_name": "text_pdf", "page": 1, "section_title": "工作原理", "kind": "text"}}
+{"text": "## 注意事项\n\n若 PDF 含可抽取文字层，则应直接复用文字层， 避免不必要的 OCR 开销。", "metadata": {"doc_name": "text_pdf", "page": 1, "section_title": "注意事项", "kind": "text"}}
+{"text": "## 第二页\n\n本页用于验证多页解析。", "metadata": {"doc_name": "text_pdf", "page": 2, "section_title": "第二页", "kind": "text"}}

@@ -1,0 +1,20 @@
+{
+  "doc_name": "text_pdf",
+  "timings": {
+    "total_ms": 2051.1959999967075,
+    "ocr_ms": 2029.107099999237,
+    "num_pages": 2,
+    "num_ocr_pages": 1
+  },
+  "chunk_stats": {
+    "total": 4,
+    "by_kind": {
+      "text": 4
+    },
+    "avg_chars": 43.0
+  },
+  "outputs": {
+    "markdown": "text_pdf.markdown",
+    "chunks_jsonl": "text_pdf.chunks.jsonl"
+  }
+}

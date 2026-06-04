@@ -1,0 +1,22 @@
+{
+  "doc_name": "gb_t_2423_1",
+  "timings": {
+    "total_ms": 309633.36719998915,
+    "ocr_ms": 309216.2153999816,
+    "num_pages": 14,
+    "num_ocr_pages": 14
+  },
+  "chunk_stats": {
+    "total": 87,
+    "by_kind": {
+      "text": 80,
+      "table_header": 1,
+      "table": 6
+    },
+    "avg_chars": 129.22988505747125
+  },
+  "outputs": {
+    "markdown": "gb_t_2423_1.markdown",
+    "chunks_jsonl": "gb_t_2423_1.chunks.jsonl"
+  }
+}

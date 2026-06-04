@@ -1,0 +1,7 @@
+{"text": "产品规格书（含表格）", "metadata": {"doc_name": "spec_with_tables", "page": 1, "kind": "text"}}
+{"text": "## 主要参数", "metadata": {"doc_name": "spec_with_tables", "page": 1, "section_title": "主要参数", "kind": "text"}}
+{"text": "| 型号 | 功率 | 工作温度 |\n| --- | --- | --- |", "metadata": {"doc_name": "spec_with_tables", "page": 1, "section_title": "主要参数", "kind": "table_header", "row_count": 3}}
+{"text": "| 型号 | 功率 | 工作温度 |\n| --- | --- | --- |\n| A100 | 300W | -20~70℃ |", "metadata": {"doc_name": "spec_with_tables", "page": 1, "section_title": "主要参数", "kind": "table", "row_index": 1}}
+{"text": "| 型号 | 功率 | 工作温度 |\n| --- | --- | --- |\n| A200 | 400W | -10~60℃ |", "metadata": {"doc_name": "spec_with_tables", "page": 1, "section_title": "主要参数", "kind": "table", "row_index": 2}}
+{"text": "| 型号 | 功率 | 工作温度 |\n| --- | --- | --- |\n| A300 | 500W | 0~50℃ |", "metadata": {"doc_name": "spec_with_tables", "page": 1, "section_title": "主要参数", "kind": "table", "row_index": 3}}
+{"text": "## 故障代码\n\n请参考下表常见故障代码与处理方式。 如遇代码 E01/E02 请立即联系售后。", "metadata": {"doc_name": "spec_with_tables", "page": 1, "section_title": "故障代码", "kind": "text"}}
