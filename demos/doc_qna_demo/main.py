@@ -16,6 +16,8 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -27,10 +29,31 @@ try:
 except Exception:
     pass
 
-from src.embedding import OpenVINOEmbedder, EmbedTiming
-from src.llm import QwenLLM
-from src.rag import RAGPipeline
-from src.vector_store import ChromaStore, iter_chunks_jsonl
+# Windows 环境变量
+os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS", "1")
+os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
+
+
+def _ensure_dependencies():
+    """检查关键依赖，缺失则自动 pip install"""
+    try:
+        import openvino  # noqa: F401
+        import chromadb  # noqa: F401
+        import huggingface_hub  # noqa: F401
+    except ImportError:
+        print("[自动安装] 检测到缺失依赖，正在执行 pip install -r requirements.txt ...")
+        req = Path(__file__).parent / "requirements.txt"
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", str(req), "-q"])
+        print("[自动安装] 依赖安装完成\n")
+
+
+_ensure_dependencies()
+
+from src.embedding import OpenVINOEmbedder, EmbedTiming  # noqa: E402
+from src.llm import QwenLLM  # noqa: E402
+from src.rag import RAGPipeline  # noqa: E402
+from src.vector_store import ChromaStore, iter_chunks_jsonl  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,

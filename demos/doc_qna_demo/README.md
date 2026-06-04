@@ -6,6 +6,8 @@ Intelligent document understanding and question answering system powered by Padd
 
 All inference runs on **OpenVINO** — no PyTorch or external API needed.
 
+![Demo Screenshot](demo.png)
+
 ## Demo Output
 
 ```
@@ -41,33 +43,20 @@ wget https://raw.githubusercontent.com/openvinotoolkit/openvino_build_deploy/mas
 chmod +x install.sh && ./install.sh
 ```
 
-## Manual Setup
+## Manual Setup (One Command)
 
 Supported Python versions: 3.10, 3.11, 3.12
 
-### Step 1. Install dependencies
-
 ```bash
 cd demos/doc_qna_demo
-python -m venv venv
-# Windows: venv\Scripts\activate
-# Linux/macOS: source venv/bin/activate
-pip install -r requirements.txt
-```
-
-### Step 2. Run the demo
-
-```bash
-# Windows: set these environment variables first
-# set PYTHONIOENCODING=utf-8
-# set HF_HUB_DISABLE_SYMLINKS=1
-
 python main.py
 ```
 
-On first run, the Embedding model (~600 MB) and LLM model (~1 GB) are automatically downloaded from HuggingFace.
+That's it. `main.py` **auto-installs** missing dependencies and **auto-downloads** models on first run. No separate `pip install` step needed.
 
-### Step 3. Customize
+Windows users: if you see encoding errors, run `set PYTHONIOENCODING=utf-8` first.
+
+### Customize
 
 ```bash
 # Single question
