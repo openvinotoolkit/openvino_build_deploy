@@ -83,6 +83,10 @@ def render_metrics_svg(run: dict[str, Any]) -> str:
         )
 
     total = float(metrics.get("total", 0.0))
+    openvino = run.get("openvino", {})
+    requested_device = openvino.get("requested_device", openvino.get("device", "CPU"))
+    effective_device = openvino.get("device", "CPU")
+    device_label = effective_device if requested_device == effective_device else f"{requested_device} -> {effective_device}"
     return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">
   <style>
     .title {{ font: 700 24px Arial, sans-serif; fill: #172033; }}
@@ -95,7 +99,7 @@ def render_metrics_svg(run: dict[str, Any]) -> str:
   </style>
   <rect x="1" y="1" width="{width - 2}" height="{height - 2}" rx="8" class="panel"/>
   <text x="36" y="38" class="title">MVP Pipeline Timing</text>
-  <text x="36" y="59" class="subtitle">Total: {total:.3f}s, device: {_esc(run.get("openvino", {}).get("device", "CPU"))}</text>
+  <text x="36" y="59" class="subtitle">Total: {total:.3f}s, device: {_esc(device_label)}</text>
   {"".join(rows)}
 </svg>
 """
@@ -311,6 +315,16 @@ def _render_html(run: dict[str, Any], output_dir: Path, artifacts: dict[str, str
     agent_review_link = Path(artifacts.get("agent_review", "")).name if artifacts.get("agent_review") else ""
     agent_trace_link = Path(artifacts.get("agent_trace", "")).name if artifacts.get("agent_trace") else ""
     warnings = run.get("warnings", [])
+    openvino = run.get("openvino", {})
+    requested_device = openvino.get("requested_device", openvino.get("device", ""))
+    fallback = openvino.get("fallback")
+    fallback_rows = ""
+    if fallback:
+        fallback_rows = (
+            f'<b>Requested</b><span>{_esc(requested_device)}</span>'
+            f'<b>Fallback</b><span>{_esc(fallback.get("from", ""))} -> {_esc(fallback.get("to", ""))}</span>'
+            f'<b>Reason</b><span>{_esc(fallback.get("reason", ""))}</span>'
+        )
 
     agent_section = ""
     if agent:
@@ -504,6 +518,7 @@ def _render_html(run: dict[str, Any], output_dir: Path, artifacts: dict[str, str
       <b>Source</b><span>{f'<a href="{_esc(source_link)}">{_esc(source)}</a>' if source_link else _esc(source or "raw text")}</span>
       <b>OpenVINO</b><span>{_esc(run.get("openvino", {}).get("uses_openvino", False))}</span>
       <b>Device</b><span>{_esc(run.get("openvino", {}).get("device", ""))}</span>
+      {fallback_rows}
       <b>Schema</b><span>{_esc(structured.get("schema_version", ""))}</span>
       <b>Generated</b><span>{f'<a href="{_esc(generated_link)}">{_esc(generated_link)}</a>' if generated_link else ""}</span>
     </div>

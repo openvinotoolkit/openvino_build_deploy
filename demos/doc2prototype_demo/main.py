@@ -80,12 +80,22 @@ def _parse_input(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, fl
             "Run run_demo.py once to prepare ov_paddleocr_vl_model, or use a .md/.txt input for a structure-only smoke test."
         )
 
+    return _parse_image_with_device(args, input_path, model_path, args.device)
+
+
+def _parse_image_with_device(
+    args: argparse.Namespace,
+    input_path: Path,
+    model_path: Path,
+    device: str,
+) -> tuple[dict[str, Any], dict[str, float]]:
     from doc_parser import DocParser
 
+    timings: dict[str, float] = {"model_load": 0.0, "openvino_inference": 0.0}
     load_start = time.perf_counter()
     parser = DocParser(
         ov_model_path=str(model_path),
-        device=args.device,
+        device=device,
         max_new_tokens=args.max_new_tokens,
     )
     timings["model_load"] = time.perf_counter() - load_start
@@ -94,6 +104,8 @@ def _parse_input(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, fl
     parse_result["source_path"] = str(input_path)
     parse_result["parser"] = "PaddleOCR-VL OpenVINO"
     parse_result["uses_openvino"] = True
+    parse_result["requested_device"] = args.device
+    parse_result["effective_device"] = device
     timings["openvino_inference"] = float(parse_result.get("inference_time", 0.0))
     return parse_result, timings
 
@@ -138,11 +150,21 @@ def _build_markdown_report(run: dict[str, Any], structured_json: str, generated_
         f"- Task: `{run['input']['task']}`",
         f"- Source: `{run['input']['source'] or 'raw text argument'}`",
         f"- Parser: `{parse['parser']}`",
-        f"- OpenVINO device: `{run['openvino']['device']}`",
+        f"- OpenVINO effective device: `{run['openvino']['device']}`",
+        f"- OpenVINO requested device: `{run['openvino'].get('requested_device', run['openvino']['device'])}`",
         f"- OpenVINO version: `{run['openvino']['version']}`",
         f"- OpenVINO model: `{run['openvino']['model_path']}`",
         "",
     ]
+    fallback = run.get("openvino", {}).get("fallback")
+    if fallback:
+        lines.extend(
+            [
+                f"- Device fallback: `{fallback.get('from')}` -> `{fallback.get('to')}`",
+                f"- Fallback reason: `{fallback.get('reason')}`",
+                "",
+            ]
+        )
     if warnings:
         lines.extend(["## Warnings", ""])
         lines.extend(f"- {warning}" for warning in warnings)
@@ -293,19 +315,91 @@ def _build_quality_warnings(
     return deduped
 
 
+def _needs_fallback(structured: dict[str, Any], task: str) -> bool:
+    key, _ = _extraction_warning_target(task)
+    return not bool(structured.get(key))
+
+
+def _fallback_device(args: argparse.Namespace) -> str:
+    if args.no_device_fallback:
+        return ""
+    if not args.fallback_device:
+        return ""
+    requested = args.device.upper()
+    fallback = args.fallback_device.upper()
+    if requested == fallback:
+        return ""
+    return args.fallback_device
+
+
+def _try_fallback_parse(
+    args: argparse.Namespace,
+    input_path: Path,
+    model_path: Path,
+    reason: str,
+    primary: dict[str, Any] | None = None,
+) -> tuple[dict[str, Any], dict[str, float], dict[str, Any]]:
+    fallback = _fallback_device(args)
+    if not fallback:
+        raise RuntimeError(reason)
+
+    fallback_start = time.perf_counter()
+    parse_result, timings = _parse_image_with_device(args, input_path, model_path, fallback)
+    timings["fallback_total"] = time.perf_counter() - fallback_start
+    parse_result["fallback_from_device"] = args.device
+    parse_result["fallback_reason"] = reason
+    return parse_result, timings, {
+        "from": args.device,
+        "to": fallback,
+        "reason": reason,
+        "primary": primary or {},
+    }
+
+
 def run_mvp(args: argparse.Namespace) -> dict[str, Any]:
     total_start = time.perf_counter()
 
-    parse_result, timings = _parse_input(args)
+    input_path = Path(args.input)
+    model_path = Path(args.ov_model_path)
+    fallback_info: dict[str, Any] | None = None
+
+    try:
+        parse_result, timings = _parse_input(args)
+    except Exception as exc:
+        if args.raw_text or input_path.suffix.lower() in TEXT_SUFFIXES:
+            raise
+        if not _fallback_device(args):
+            raise
+        reason = f"{args.device} parse failed: {type(exc).__name__}: {exc}"
+        parse_result, timings, fallback_info = _try_fallback_parse(args, input_path, model_path, reason)
 
     structure_start = time.perf_counter()
     structured = extract_structure(parse_result["raw_text"], args.task)
     timings["structure_extraction"] = time.perf_counter() - structure_start
 
+    if (
+        fallback_info is None
+        and bool(parse_result.get("uses_openvino"))
+        and _fallback_device(args)
+        and _needs_fallback(structured, args.task)
+    ):
+        _, label = _extraction_warning_target(args.task)
+        reason = f"{args.device} produced no extracted {label}"
+        primary = {
+            "device": args.device,
+            "metrics": dict(timings),
+            "raw_text_length": len(str(parse_result.get("raw_text", ""))),
+            "raw_text_preview": str(parse_result.get("raw_text", ""))[:240],
+        }
+        parse_result, timings, fallback_info = _try_fallback_parse(args, input_path, model_path, reason, primary=primary)
+        structure_start = time.perf_counter()
+        structured = extract_structure(parse_result["raw_text"], args.task)
+        timings["structure_extraction"] = time.perf_counter() - structure_start
+
     code_type = args.code_type or _default_code_type(args.task)
     downstream_agent = DownstreamAgentPipeline(
         model_path=args.code_model_path,
-        device=args.device,
+        device=parse_result.get("effective_device", args.device),
         model_backend=args.code_model_backend,
         max_new_tokens=args.code_max_new_tokens,
     )
@@ -317,6 +411,11 @@ def run_mvp(args: argparse.Namespace) -> dict[str, Any]:
     backend = generated["backend"]
     generated_code = generated["code"]
     warnings = _build_quality_warnings(parse_result, structured, generated["trace"], args.task)
+    if fallback_info:
+        warnings.insert(
+            0,
+            f"Device fallback used: requested {fallback_info['from']} -> effective {fallback_info['to']}. Reason: {fallback_info['reason']}",
+        )
 
     run = {
         "schema_version": "doc2prototype.mvp_run.v1",
@@ -328,7 +427,10 @@ def run_mvp(args: argparse.Namespace) -> dict[str, Any]:
         },
         "openvino": {
             "uses_openvino": bool(parse_result.get("uses_openvino")),
-            "device": args.device,
+            "device": parse_result.get("effective_device", args.device),
+            "requested_device": args.device,
+            "fallback_device": args.fallback_device,
+            "fallback": fallback_info,
             "model_path": args.ov_model_path,
             "version": _openvino_version(),
         },
@@ -390,6 +492,16 @@ def build_parser() -> argparse.ArgumentParser:
         default="CPU",
         help="OpenVINO device for image parsing, for example CPU, GPU, GPU.0, GPU.1, NPU, or AUTO.",
     )
+    parser.add_argument(
+        "--fallback-device",
+        default="CPU",
+        help="Fallback OpenVINO device for image runs when the requested device fails or extracts no task structure. Use an empty string to disable.",
+    )
+    parser.add_argument(
+        "--no-device-fallback",
+        action="store_true",
+        help="Disable hardware-aware fallback and fail or warn on the requested device only.",
+    )
     parser.add_argument("--ov-model-path", default="ov_paddleocr_vl_model")
     parser.add_argument("--code-model-path", default=None, help="Optional local OpenVINO/HF coder model path.")
     parser.add_argument(
@@ -418,7 +530,11 @@ def main() -> None:
     artifacts = result["artifacts"]
     print("[mvp] completed")
     print(f"[mvp] task: {result['input']['task']}")
-    print(f"[mvp] openvino: {result['openvino']['uses_openvino']} device={result['openvino']['device']}")
+    requested_device = result["openvino"].get("requested_device", result["openvino"]["device"])
+    print(
+        f"[mvp] openvino: {result['openvino']['uses_openvino']} "
+        f"device={result['openvino']['device']} requested={requested_device}"
+    )
     for warning in result.get("warnings", []):
         print(f"[mvp] warning: {warning}")
     print(f"[mvp] total_time: {result['metrics']['total']:.3f}s")

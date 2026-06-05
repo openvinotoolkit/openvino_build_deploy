@@ -54,6 +54,19 @@ python main.py examples/api_doc_sample.png --task api_doc --device CPU --output-
 
 For API document images, the default parser prompt is `OCR:`. The endpoint schema is then extracted deterministically from the OCR text, which is more stable than asking the vision-language model to directly infer the API schema.
 
+On Intel Core Ultra systems, `GPU`, `NPU`, and `AUTO` may be visible through OpenVINO but can be less stable for this stateful PaddleOCR-VL LLM path than CPU. Image runs therefore use a hardware-aware fallback by default:
+
+- The requested `--device` is tried first.
+- If that device fails, or if it produces no task structure such as API endpoints or flowchart nodes, the CLI retries with `--fallback-device CPU`.
+- `run.json`, `result.md`, `metrics.svg`, and `visual_report.html` record both the requested and effective devices.
+- Use `--no-device-fallback` to benchmark only the requested device and preserve failures.
+
+Example Intel iGPU probe with quality fallback:
+
+```bash
+python main.py examples/api_doc_sample.png --task api_doc --device GPU.0 --fallback-device CPU --output-dir outputs/mvp_api_gpu0_probe
+```
+
 Run the flowchart scenario:
 
 ```bash
@@ -218,8 +231,8 @@ On Windows, press `Win + Shift + S`, select the browser region, and save the scr
 The validation focus is Intel hardware and OpenVINO deployment. The local development machine used for this round exposes Intel CPU, Intel iGPU, Intel NPU, and an NVIDIA dGPU through OpenVINO device discovery. Results and recommendations should be interpreted as follows:
 
 - `CPU`: primary reproducible path for this PR.
-- `GPU.0`: Intel iGPU path; useful for optional Intel GPU validation.
-- `NPU` and `AUTO`: visible but currently limited by the stateful/dynamic-shape LLM path in the PaddleOCR-VL export, so they are documented as limitations rather than successful benchmarks.
+- `GPU.0`: Intel iGPU path; useful for optional Intel GPU validation, with CPU fallback enabled when OCR quality is insufficient.
+- `NPU` and `AUTO`: visible but currently limited by the stateful/dynamic-shape LLM path in the PaddleOCR-VL export, so the CLI records failures and falls back to CPU unless `--no-device-fallback` is set.
 - `GPU.1`: NVIDIA dGPU on this local machine; it is not used as a project highlight or primary benchmark for the Intel/OpenVINO task.
 
 If final validation needs to match the provided GMK Intel Core Ultra mini PC more closely, run the same branch and commands on that device and report CPU / Intel iGPU / NPU behavior there.
