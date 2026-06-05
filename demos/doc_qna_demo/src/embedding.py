@@ -94,6 +94,7 @@ class OpenVINOEmbedder:
                 snapshot_download(
                     repo_id=model_id,
                     cache_dir=str(cache_dir) if cache_dir else None,
+                    local_dir_use_symlinks=False,
                 )
             )
         self.ir_dir = ir_dir
