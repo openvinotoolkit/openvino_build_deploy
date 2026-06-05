@@ -6,7 +6,11 @@ Intelligent document understanding and question answering system powered by Padd
 
 All inference runs on **OpenVINO** — no PyTorch or external API needed.
 
-![Demo Screenshot](demo.png)
+![Index Build](demo1.png)
+![QA Results](demo2.png)
+![QA Results](demo3.png)
+![QA Results](demo4.png)
+![Performance Report](demo5.png)
 
 ## Demo Output
 
