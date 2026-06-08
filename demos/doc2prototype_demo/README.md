@@ -235,7 +235,11 @@ The validation focus is Intel hardware and OpenVINO deployment. The GMK Intel Co
 - `NPU` and `AUTO`: visible but currently limited by the stateful/dynamic-shape LLM path in the PaddleOCR-VL export, so the CLI records failures and falls back to CPU unless `--no-device-fallback` is set.
 - `GPU.1`: optional exact GPU device ID. On the GMK reproduction machine this device is not available, so the CLI records the device error and falls back to CPU unless `--no-device-fallback` is set.
 
-If final validation needs to match the provided GMK Intel Core Ultra mini PC more closely, run the same branch and commands on that device and report CPU / Intel iGPU / NPU behavior there.
+GMK reproduction has been completed on the same branch. See [GMK_repro_summary.md](../../GMK_repro_summary.md) for the command results, device explanations, and fallback validation.
+
+GMK CPU reproduction report:
+
+![GMK CPU reproduction report](assets/gmk_opt_api_cpu_visual_report.png)
 
 ## Notes
 
