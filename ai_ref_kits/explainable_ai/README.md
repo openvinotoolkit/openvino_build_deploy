@@ -111,7 +111,7 @@ _NOTE: Datumaro contains C++ and Rust implementations to improve Python performa
 
 ## Running the Application
 
-You can run [explainable_ai.ipynb](explainable_ai.ipynb) to learn more about the inference process. This notebook contains detailed instructions to run the Explainable AI application, load and analyze a short data section with data quality metrics, and generate saliency maps with an OpenVINO YOLOv8 model using Ultralytics. For the data quality metrics generation, we leverage the open-source toolkit datumaro, including specifically the tutorial [here](https://github.com/openvinotoolkit/datumaro/blob/develop/notebooks/11_validate.ipynb). This edge AI reference kit focuses on a specific digital transportation use case, with an analysis of only a few data quality metrics—please visit the [Datumaro tutorials](https://github.com/openvinotoolkit/datumaro/tree/develop/notebooks) for resources on how to perform advanced data exploration, and explore and remediate more types of data quality issues.
+You can run [explainable_ai.ipynb](explainable_ai.ipynb) to learn more about the inference process. This notebook contains detailed instructions to run the Explainable AI application, load and analyze a short data section with data quality metrics, and generate saliency maps with an OpenVINO Ultralytics YOLOv8 model. For the data quality metrics generation, we leverage the open-source toolkit datumaro, including specifically the tutorial [here](https://github.com/openvinotoolkit/datumaro/blob/develop/notebooks/11_validate.ipynb). This edge AI reference kit focuses on a specific digital transportation use case, with an analysis of only a few data quality metrics—please visit the [Datumaro tutorials](https://github.com/openvinotoolkit/datumaro/tree/develop/notebooks) for resources on how to perform advanced data exploration, and explore and remediate more types of data quality issues.
 
 Congratulations! You have successfully set up and run the Explainable AI kit.
 
@@ -123,10 +123,10 @@ Benchmarking provides insight into your model's real-world performance. Performa
 
 ### Benchmark Results 
 
-![YOLOv8m Benchmark Results](https://github.com/openvinotoolkit/openvino_notebooks/assets/109281183/2d59819e-61b7-4995-bdf3-a6d1090afdd4)
+![Ultralytics YOLOv8m Benchmark Results](https://github.com/openvinotoolkit/openvino_notebooks/assets/109281183/2d59819e-61b7-4995-bdf3-a6d1090afdd4)
 ![](https://github.com/openvinotoolkit/openvino_notebooks/assets/109281183/bed6fc01-f0d4-4f8e-af6a-703182947232)
 
-Benchmarking was performed on an Intel® Xeon® Platinum 8480+ (1 socket, 56 cores) running Ubuntu 22.04.2 LTS. The tests utilized the YOLOv8m model with OpenVINO 2023.0. For complete configuration, please check the Appendix section.
+Benchmarking was performed on an Intel® Xeon® Platinum 8480+ (1 socket, 56 cores) running Ubuntu 22.04.2 LTS. The tests utilized the Ultralytics YOLOv8m model with OpenVINO 2023.0. For complete configuration, please check the Appendix section.
 
 ### Running the Benchmark
 
@@ -137,11 +137,11 @@ Use the following command to run the benchmark:
 ```
 Replace `int8_model_det_path` with the path to your INT8 model and $device with the specific device you're using (CPU, GPU, etc.). This command performs inference on the model for 30 seconds. Run `benchmark_app --help` for additional command-line options.
 
-You can evaluate performance benchmarks for the YOLO model across a range of Intel® platforms using the [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html). The Model Hub is a curated resource for developers to explore OpenVINO-optimized models and assess their latency and throughput on Intel® CPUs, integrated GPUs, discrete GPUs, and NPUs.
+You can evaluate performance benchmarks for the Ultralytics YOLO model across a range of Intel® platforms using the [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html). The Model Hub is a curated resource for developers to explore OpenVINO-optimized models and assess their latency and throughput on Intel® CPUs, integrated GPUs, discrete GPUs, and NPUs.
 
 ### Appendix
 
-Platform Configurations for Performance Benchmarks for YOLOv8m Model
+Platform Configurations for Performance Benchmarks for Ultralytics YOLOv8m Model
 
 | Type Device | | CPU | | | GPU | |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
