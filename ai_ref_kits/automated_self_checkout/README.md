@@ -115,7 +115,7 @@ The demo incorporates a new Gradio-based UI (More about [Gradio](https://www.gra
 The following simple steps are all you need to start the demo:
 
 1. Go to the  ~/oneclickai folder
-2. Run the runDemo.sh script. The YOLO model will be automatically downloaded in case of required. You will see a similar to Figure 4.
+2. Run the runDemo.sh script. The Ultralytics YOLO model will be automatically downloaded in case of required. You will see a similar to Figure 4.
 
 ![Starting the Demo UI](https://github.com/user-attachments/assets/352b9b7b-ba50-43b8-beb3-b81139facefe)
 **Figure 4. Starting the Demo UI**
@@ -229,7 +229,7 @@ Benchmarking provides insight into your model's real-world performance. Performa
 ![YOLOv8m Benchmark Results - Latency](https://github.com/openvinotoolkit/openvino_notebooks/assets/109281183/bed6fc01-f0d4-4f8e-af6a-703182947232)
 **Figure 8. YOLOv8m Benchmark Results - Latency.**
 
-Benchmarking was performed on an Intel® Xeon® Platinum 8480+ (1 socket, 56 cores) running Ubuntu 22.04.2 LTS. The tests utilized the YOLOv8m model with OpenVINO 2023.0 (See Figures 7 and 8). For complete configuration, please check the Appendix section.
+Benchmarking was performed on an Intel® Xeon® Platinum 8480+ (1 socket, 56 cores) running Ubuntu 22.04.2 LTS. The tests utilized the Ultralytics YOLOv8m model with OpenVINO 2023.0 (See Figures 7 and 8). For complete configuration, please check the Appendix section.
 
 ### Running the Benchmark
 
@@ -243,11 +243,11 @@ Replace `int8_model_det_path` with the path to your INT8 model and $device with 
 
 Congratulations! You have successfully set up and run the Detection and Tracking for Automated Self-Checkout application with OpenVINO.
 
-You can evaluate performance benchmarks for the YOLO model across a range of Intel® platforms using the [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html). The Model Hub is a curated resource for developers to explore OpenVINO-optimized models and assess their latency and throughput on Intel® CPUs, integrated GPUs, discrete GPUs, and NPUs.
+You can evaluate performance benchmarks for the Ultralytics YOLO model across a range of Intel® platforms using the [OpenVINO™ Model Hub](https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/model-hub.html). The Model Hub is a curated resource for developers to explore OpenVINO-optimized models and assess their latency and throughput on Intel® CPUs, integrated GPUs, discrete GPUs, and NPUs.
 
 ### Appendix
 
-Platform Configurations for Performance Benchmarks for YOLOv8m Model
+Platform Configurations for Performance Benchmarks for Ultralytics YOLOv8m Model
 
 | Type Device | | CPU | | | GPU | |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
