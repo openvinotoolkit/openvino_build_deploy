@@ -8,14 +8,14 @@ onnx==1.21.0
 huggingface-hub==0.36.0
 diffusers==0.38.0
 safetensors==0.8.0rc0
-transformers==4.57.1
-torch==2.8.0
+transformers==5.3.0
+torch==2.12.0+cpu
 torchvision==0.23.0
 accelerate==1.2.1
 pillow==12.2.0
 opencv-python==4.10.0.84
 numpy==2.2.6
-gradio==6.7.0
+gradio==6.15.0
 tqdm==4.67.1
 qrcode[pil]==8.2
 sentencepiece==0.2.1
