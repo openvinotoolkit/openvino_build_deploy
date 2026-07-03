@@ -111,6 +111,7 @@ class RAGPipeline:
         top_k: int = 5,
         max_context_chars: int = 3500,
         max_new_tokens: int = 384,
+        min_score: float = 0.0,
     ):
         self.embedder = embedder
         self.store = store
@@ -118,6 +119,11 @@ class RAGPipeline:
         self.top_k = top_k
         self.max_context_chars = max_context_chars
         self.max_new_tokens = max_new_tokens
+        # 检索相似度下限：Top-K 中低于该值的命中不进 context，
+        # 全部低于则直接拒答，不再让 LLM 猜（对明显域外问题的兜底守卫）。
+        # 0.0 = 关闭。注意它无法拦截"域外实体 + 域内字段"的高相似度串台，
+        # 该限制见 README Known Limitations。
+        self.min_score = min_score
 
     def answer(
         self,
@@ -140,8 +146,23 @@ class RAGPipeline:
         qr: QueryResult = self.store.query(question, qvec, top_k=k, where=where)
         timing.retrieve_ms = (time.perf_counter() - t0) * 1000
 
+        # 2.5) 相似度守卫：过滤低置信命中
+        kept = [h for h in qr.hits if h.score >= self.min_score]
+        if qr.hits and not kept:
+            top = max(h.score for h in qr.hits)
+            timing.total_ms = (time.perf_counter() - t_total) * 1000
+            return RAGAnswer(
+                question=question,
+                answer=(
+                    f"文档中未提及。（检索最高相似度 {top:.3f} 低于阈值 "
+                    f"{self.min_score:.2f}，判定为文档未覆盖的问题）"
+                ),
+                hits=qr.hits,
+                timing=timing,
+            )
+
         # 3) LLM 生成
-        context = _build_context(qr.hits, max_chars=self.max_context_chars)
+        context = _build_context(kept, max_chars=self.max_context_chars)
         if not context:
             # 检索无命中：直接返回拒答，不浪费 LLM
             timing.total_ms = (time.perf_counter() - t_total) * 1000
@@ -171,6 +192,6 @@ class RAGPipeline:
         return RAGAnswer(
             question=question,
             answer=resp.text.strip(),
-            hits=qr.hits,
+            hits=kept,
             timing=timing,
         )

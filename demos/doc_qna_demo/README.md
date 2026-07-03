@@ -116,7 +116,7 @@ All models use pre-converted OpenVINO IR from HuggingFace (auto-downloaded on fi
 ## Key Features
 
 - **Table-aware chunking**: Each table row carries its header as context, enabling precise cell-level lookup (e.g., "A300 rated power → 500W")
-- **Anti-hallucination**: System prompt enforces strict grounding — answers only from retrieved context, refuses when evidence is absent
+- **Anti-hallucination**: System prompt enforces strict grounding — answers only from retrieved context, refuses when evidence is absent. A retrieval similarity floor (`--min_score`) additionally short-circuits clearly out-of-domain questions before they reach the LLM
 - **Source citations**: Every answer includes `[doc_name p.page]` traceable to the original document
 - **All-OpenVINO inference**: OCR, Embedding, and LLM all run through OpenVINO — no PyTorch dependency at inference time
 - **CPU-friendly**: Full pipeline runs at ~3.5s/question on Intel i5 (CPU-only)
@@ -131,14 +131,16 @@ All models use pre-converted OpenVINO IR from HuggingFace (auto-downloaded on fi
 | `--embed_model_id` | `OpenVINO/Qwen3-Embedding-0.6B-int8-ov` | Embedding model |
 | `--llm_model_id` | `OpenVINO/Qwen3-1.7B-int4-ov` | LLM model |
 | `--top_k` | `5` | Number of retrieved chunks |
+| `--min_score` | `0.35` | Retrieval similarity floor — refuse to answer when all Top-K hits fall below it (`0` disables) |
 | `--max_new_tokens` | `384` | Max generation length |
-| `--out` | `results/demo_run.json` | JSON output path |
-| `--out_md` | `results/demo_run.md` | Markdown report path |
+| `--out` | `results/demo_run.json` (`results/demo_run_single.json` in `--question` mode) | JSON output path |
+| `--out_md` | `results/demo_run.md` (`results/demo_run_single.md` in `--question` mode) | Markdown report path |
 
 ## Known Limitations
 
 1. **Conservative refusal on short answers**: The 1.7B LLM may refuse to answer when the retrieved evidence is a brief referral (e.g., "contact after-sales service") rather than a detailed procedure. Larger models (7B+) handle this better.
 2. **Retrieval miss on semantically diluted chunks**: When the target fact is buried in a chunk dominated by other content (e.g., English headers), the small embedding model may miss it. Mitigation: increase `--top_k` or add a reranker.
+3. **Entity confusion on semantically-adjacent out-of-domain questions**: Clearly unrelated questions (e.g., "height of Mount Everest") are correctly refused via strict prompting plus the `--min_score` similarity floor. However, a question mixing an out-of-domain entity with an in-domain field (e.g., "the Mars rover's rated power") retrieves the in-domain "rated power" chunk with elevated similarity, and the 1.7B model may silently drop the mismatched entity and answer with the device's spec. Measured on the bundled corpus (Qwen3-Embedding-0.6B-int8, 99 chunks): in-domain top-1 scores fall in [0.722, 0.840] while out-of-domain top-1 scores fall in [0.237, 0.465] (the Mars-rover question scores 0.465, the highest OOD case). The default `--min_score 0.35` blocks clearly unrelated questions; raising it to `0.5` also blocks the entity-confusion case on this corpus without affecting any in-domain question, though the safe threshold is corpus-dependent. A cross-encoder reranker or entity-consistency check would be needed to close this fully.
 
 ## License
 

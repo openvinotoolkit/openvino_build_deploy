@@ -41,6 +41,7 @@ def _ensure_dependencies():
         import openvino  # noqa: F401
         import chromadb  # noqa: F401
         import huggingface_hub  # noqa: F401
+        import jinja2  # noqa: F401  # transformers 5.x 不再传递依赖，chat_template 必需
     except ImportError:
         print("[自动安装] 检测到缺失依赖，正在执行 pip install -r requirements.txt ...")
         req = Path(__file__).parent / "requirements.txt"
@@ -90,12 +91,25 @@ def parse_args():
 
     # 检索
     p.add_argument("--top_k", type=int, default=5)
+    p.add_argument("--min_score", type=float, default=0.35,
+                   help="检索相似度下限，Top-K 全部低于该值时直接拒答（0 关闭）")
     p.add_argument("--max_new_tokens", type=int, default=384)
 
-    # 输出
-    p.add_argument("--out", type=str, default="results/demo_run.json")
-    p.add_argument("--out_md", type=str, default="results/demo_run.md")
+    # 输出（缺省时按运行模式选择，见 resolve_output_paths：
+    # 5 题 demo → results/demo_run.*；单题 --question → results/demo_run_single.*，
+    # 避免单题运行覆盖 5 题结果文件）
+    p.add_argument("--out", type=str, default=None)
+    p.add_argument("--out_md", type=str, default=None)
     return p.parse_args()
+
+
+def resolve_output_paths(args):
+    """--question 单题模式与默认 5 题 demo 使用不同的缺省输出文件，互不覆盖"""
+    stem = "demo_run_single" if args.question else "demo_run"
+    if args.out is None:
+        args.out = f"results/{stem}.json"
+    if args.out_md is None:
+        args.out_md = f"results/{stem}.md"
 
 
 def collect_questions(args):
@@ -202,6 +216,7 @@ def save_results(args, results, total_run, store_count):
             "llm_model_id": args.llm_model_id,
             "device": args.device,
             "top_k": args.top_k,
+            "min_score": args.min_score,
             "max_new_tokens": args.max_new_tokens,
         },
         "summary": {
@@ -273,6 +288,7 @@ def save_results(args, results, total_run, store_count):
 
 def main():
     args = parse_args()
+    resolve_output_paths(args)
 
     # 收集问题
     questions = collect_questions(args)
@@ -315,6 +331,7 @@ def main():
         llm=llm,
         top_k=args.top_k,
         max_new_tokens=args.max_new_tokens,
+        min_score=args.min_score,
     )
 
     # 运行问答
