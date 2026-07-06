@@ -26,8 +26,9 @@ DEFAULT_COLLECTION = "doc_chunks"
 class RetrievedChunk:
     text: str
     metadata: dict
-    score: float  # cosine similarity (1 - cosine_distance)
+    score: float  # cosine similarity (1 - cosine_distance)，bi-encoder 检索分
     chunk_id: str = ""
+    rerank_score: Optional[float] = None  # cross-encoder 重排分（sigmoid 0~1），未重排则 None
 
     def cite(self) -> str:
         """生成简洁的来源标注 [doc_name p.N]"""

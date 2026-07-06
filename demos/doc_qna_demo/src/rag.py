@@ -18,8 +18,11 @@ from typing import List, Optional
 
 import numpy as np
 
+from . import answer_grounding
 from .embedding import EmbedTiming, OpenVINOEmbedder
+from .entity_gate import EntityGate, check_grounding
 from .llm import GenTiming, QwenLLM
+from .reranker import OpenVINOReranker, RerankTiming
 from .vector_store import ChromaStore, QueryResult, RetrievedChunk
 
 logger = logging.getLogger(__name__)
@@ -51,6 +54,7 @@ def _build_context(hits: List[RetrievedChunk], max_chars: int = 3500) -> str:
 class RAGTiming:
     embed_query_ms: float = 0.0
     retrieve_ms: float = 0.0
+    rerank_ms: float = 0.0
     llm_ms: float = 0.0
     total_ms: float = 0.0
     new_tokens: int = 0
@@ -74,6 +78,7 @@ class RAGAnswer:
                     "page": h.metadata.get("page"),
                     "kind": h.metadata.get("kind"),
                     "score": round(h.score, 4),
+                    "rerank_score": round(h.rerank_score, 4) if h.rerank_score is not None else None,
                     "chunk_id": h.chunk_id,
                     "preview": h.text[:120].replace("\n", " "),
                 }
@@ -82,6 +87,7 @@ class RAGAnswer:
             "timing": {
                 "embed_query_ms": round(self.timing.embed_query_ms, 1),
                 "retrieve_ms": round(self.timing.retrieve_ms, 1),
+                "rerank_ms": round(self.timing.rerank_ms, 1),
                 "llm_ms": round(self.timing.llm_ms, 1),
                 "total_ms": round(self.timing.total_ms, 1),
                 "new_tokens": self.timing.new_tokens,
@@ -112,6 +118,12 @@ class RAGPipeline:
         max_context_chars: int = 3500,
         max_new_tokens: int = 384,
         min_score: float = 0.0,
+        reranker: Optional[OpenVINOReranker] = None,
+        entity_gate: Optional[EntityGate] = None,
+        retrieve_top_k: int = 20,
+        rerank_min_score: float = 0.30,
+        subject_grounding: bool = True,
+        answer_grounding: bool = True,
     ):
         self.embedder = embedder
         self.store = store
@@ -119,11 +131,29 @@ class RAGPipeline:
         self.top_k = top_k
         self.max_context_chars = max_context_chars
         self.max_new_tokens = max_new_tokens
-        # 检索相似度下限：Top-K 中低于该值的命中不进 context，
-        # 全部低于则直接拒答，不再让 LLM 猜（对明显域外问题的兜底守卫）。
-        # 0.0 = 关闭。注意它无法拦截"域外实体 + 域内字段"的高相似度串台，
-        # 该限制见 README Known Limitations。
+        # bi-encoder 检索相似度下限（粗筛）：低于该值的命中不进后续流程。
+        # 0.0 = 关闭。它拦得住明显域外题，但拦不住"域外实体 + 域内字段"的高相似度
+        # 串台——那由 reranker + entity_gate 负责（见下）。
         self.min_score = min_score
+
+        # 三级抗幻觉守卫（reranker 为主力，entity_gate 为确定性兜底）：
+        #   1) entity_gate：query 提到"域内形态但语料没有"的伪实体（A500 / 未知标准号）→ 直接拒答
+        #   2) reranker：cross-encoder 对 (query, passage) 联合打分，拦"语义主体串台"
+        #      （火星探测器的额定功率 → sigmoid 0.036，远低于域内 0.98+）
+        #   3) rerank_min_score：重排后 Top 全部低于该值 → 判定文档未覆盖，拒答
+        self.reranker = reranker
+        self.entity_gate = entity_gate
+        # 主体接地 / 答案数值接地是**独立**守卫（各自用 module 函数、不依赖 entity_gate 对象），
+        # 单独用开关控制——否则关掉实体码检查会连带把抗幻觉的答案接地也悄悄关了。
+        self.subject_grounding = subject_grounding
+        self.answer_grounding = answer_grounding
+        # bi-encoder 先召回这么多候选，再交给 reranker 精排（召回宽、精排准）
+        self.retrieve_top_k = max(retrieve_top_k, top_k)
+        self.rerank_min_score = rerank_min_score
+
+    def _refuse(self, question, answer, hits, timing, t_total) -> RAGAnswer:
+        timing.total_ms = (time.perf_counter() - t_total) * 1000
+        return RAGAnswer(question=question, answer=answer, hits=hits, timing=timing)
 
     def answer(
         self,
@@ -135,31 +165,79 @@ class RAGPipeline:
         timing = RAGTiming()
         t_total = time.perf_counter()
 
+        # 0) 实体一致性守卫（最便宜、确定性）：query 提到域内形态但语料没有的伪实体，
+        #    直接拒答，连 embedding 都不用跑。火星探测器/珠峰这类无实体码的题会放行。
+        if self.entity_gate is not None:
+            hit = self.entity_gate.check(question)
+            if hit is not None:
+                fam, ent = hit
+                return self._refuse(
+                    question, self.entity_gate.refusal_text(fam, ent), [], timing, t_total
+                )
+
         # 1) embed query
         et = EmbedTiming()
         t0 = time.perf_counter()
         qvec = self.embedder.encode_queries([question], timing=et)[0]
         timing.embed_query_ms = (time.perf_counter() - t0) * 1000
 
-        # 2) retrieve
+        # 2) retrieve —— 有 reranker 时召回更宽（retrieve_top_k），交给精排收敛
+        recall_k = self.retrieve_top_k if self.reranker is not None else k
         t0 = time.perf_counter()
-        qr: QueryResult = self.store.query(question, qvec, top_k=k, where=where)
+        qr: QueryResult = self.store.query(question, qvec, top_k=recall_k, where=where)
         timing.retrieve_ms = (time.perf_counter() - t0) * 1000
 
-        # 2.5) 相似度守卫：过滤低置信命中
+        # 2.5) bi-encoder 粗筛：过滤明显低置信命中
         kept = [h for h in qr.hits if h.score >= self.min_score]
         if qr.hits and not kept:
             top = max(h.score for h in qr.hits)
-            timing.total_ms = (time.perf_counter() - t_total) * 1000
-            return RAGAnswer(
-                question=question,
-                answer=(
-                    f"文档中未提及。（检索最高相似度 {top:.3f} 低于阈值 "
-                    f"{self.min_score:.2f}，判定为文档未覆盖的问题）"
-                ),
-                hits=qr.hits,
-                timing=timing,
+            return self._refuse(
+                question,
+                f"文档中未提及。（检索最高相似度 {top:.3f} 低于阈值 "
+                f"{self.min_score:.2f}，判定为文档未覆盖的问题）",
+                qr.hits[:k],
+                timing,
+                t_total,
             )
+
+        # 2.6) cross-encoder 精排 + 主体串台守卫
+        if self.reranker is not None and kept:
+            rt = RerankTiming()
+            order = self.reranker.rerank(question, [h.text for h in kept], timing=rt)
+            timing.rerank_ms = rt.total_ms
+            reranked = []
+            for idx, sc in order:
+                kept[idx].rerank_score = sc
+                reranked.append(kept[idx])
+            # 重排后按精排分过滤：全部低于阈值 → 语义上没有真正相关的段落（串台/域外）
+            survivors = [h for h in reranked if h.rerank_score >= self.rerank_min_score]
+            if not survivors:
+                top = reranked[0].rerank_score if reranked else 0.0
+                return self._refuse(
+                    question,
+                    f"文档中未提及。（重排后最高相关度 {top:.3f} 低于阈值 "
+                    f"{self.rerank_min_score:.2f}，判定为问题主体未被文档覆盖）",
+                    reranked[:k],
+                    timing,
+                    t_total,
+                )
+            kept = survivors[:k]
+        else:
+            kept = kept[:k]
+
+        # 2.7) 主体接地守卫：reranker 拦不住的强字段串台（特斯拉 Model 3 的工作温度，
+        #      精排 0.77 甚至高过弱召回的域内题）——若 query 的主体词全都没出现在证据里，
+        #      判定问的是文档没有的东西，拒答。极保守：只在"全未接地"时才拦。
+        if self.subject_grounding and kept:
+            ungrounded = check_grounding(question, [h.text for h in kept])
+            if ungrounded is not None:
+                return self._refuse(
+                    question,
+                    self.entity_gate.refusal_text("subject", ungrounded),
+                    kept,
+                    timing,
+                    t_total,
+                )
 
         # 3) LLM 生成
         context = _build_context(kept, max_chars=self.max_context_chars)
@@ -188,10 +266,19 @@ class RAGPipeline:
         timing.new_tokens = resp.timing.new_tokens
         timing.tokens_per_second = resp.timing.tokens_per_second
 
+        answer_text = resp.text.strip()
+
+        # 4) 答案数值接地：模型可能从"主体对、内容不含答案"的 chunk 里编出具体日期/数字
+        #    （Q5 实施日期即如此）——回答里的硬事实若无法在证据中核实，改判拒答。
+        if self.answer_grounding:
+            bad = answer_grounding.check_answer_grounding(answer_text, context, question)
+            if bad is not None:
+                answer_text = answer_grounding.refusal_text(bad)
+
         timing.total_ms = (time.perf_counter() - t_total) * 1000
         return RAGAnswer(
             question=question,
-            answer=resp.text.strip(),
+            answer=answer_text,
             hits=kept,
             timing=timing,
         )

@@ -11,9 +11,10 @@ pdfplumber>=0.11.0
 
 # RAG / embedding
 chromadb>=0.5.0
-huggingface_hub>=0.24.0       # 拉取 Qwen3 LLM / Embedding 的 OpenVINO IR
+huggingface_hub>=0.24.0       # 拉取 Qwen3 LLM / Embedding / bge-reranker 的 OpenVINO IR
 transformers>=4.54.0          # Qwen3 tokenizer + chat_template (enable_thinking=False)
 jinja2>=3.1                   # apply_chat_template 必需（transformers 5.x 不再自带）
+sentencepiece>=0.2.0          # bge-reranker (XLM-RoBERTa) tokenizer 必需，缺它 reranker 加载即崩
 certifi>=2024.0               # macOS 系统 Python SSL 证书
 
 # 可选：OCR 质量基线对比（src/inference.py TesseractBaseline），默认 demo 路径不依赖：

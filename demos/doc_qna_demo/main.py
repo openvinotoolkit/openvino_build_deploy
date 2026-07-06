@@ -42,6 +42,7 @@ def _ensure_dependencies():
         import chromadb  # noqa: F401
         import huggingface_hub  # noqa: F401
         import jinja2  # noqa: F401  # transformers 5.x 不再传递依赖，chat_template 必需
+        import sentencepiece  # noqa: F401  # bge-reranker (XLM-R) tokenizer 必需
     except ImportError:
         print("[自动安装] 检测到缺失依赖，正在执行 pip install -r requirements.txt ...")
         req = Path(__file__).parent / "requirements.txt"
@@ -52,8 +53,10 @@ def _ensure_dependencies():
 _ensure_dependencies()
 
 from src.embedding import OpenVINOEmbedder, EmbedTiming  # noqa: E402
+from src.entity_gate import EntityGate  # noqa: E402
 from src.llm import QwenLLM  # noqa: E402
 from src.rag import RAGPipeline  # noqa: E402
+from src.reranker import OpenVINOReranker  # noqa: E402
 from src.vector_store import ChromaStore, iter_chunks_jsonl  # noqa: E402
 
 logging.basicConfig(
@@ -88,11 +91,28 @@ def parse_args():
                    default="OpenVINO/Qwen3-Embedding-0.6B-int8-ov")
     p.add_argument("--llm_model_id", type=str,
                    default="OpenVINO/Qwen3-1.7B-int4-ov")
+    p.add_argument("--reranker_model_id", type=str,
+                   default="OpenVINO/bge-reranker-base-int8-ov",
+                   help="cross-encoder 重排模型（抗串台主力守卫）")
 
-    # 检索
-    p.add_argument("--top_k", type=int, default=5)
-    p.add_argument("--min_score", type=float, default=0.35,
-                   help="检索相似度下限，Top-K 全部低于该值时直接拒答（0 关闭）")
+    # 检索 + 抗幻觉守卫
+    p.add_argument("--top_k", type=int, default=5,
+                   help="最终进入 LLM 上下文的 chunk 数")
+    p.add_argument("--retrieve_top_k", type=int, default=20,
+                   help="bi-encoder 先召回的候选数（再交给 reranker 精排收敛到 top_k）")
+    p.add_argument("--min_score", type=float, default=None,
+                   help="bi-encoder 检索相似度粗筛下限（缺省：开重排=0.0 交给精排；"
+                        "--no_reranker 时=0.35 保留 bi-encoder 兜底拒答）")
+    p.add_argument("--rerank_min_score", type=float, default=0.30,
+                   help="reranker 精排相关度下限，重排后全部低于该值直接拒答（拦域外实体+域内字段串台）")
+    p.add_argument("--no_reranker", action="store_true",
+                   help="关闭 cross-encoder 重排（退回纯 bi-encoder + min_score 行为，min_score 缺省转 0.35）")
+    p.add_argument("--no_entity_check", action="store_true",
+                   help="仅关闭实体码一致性守卫（A500/未知标准号伪实体的确定性兜底）")
+    p.add_argument("--no_subject_check", action="store_true",
+                   help="关闭主体接地守卫（query 主体不在证据里则拒答）")
+    p.add_argument("--no_answer_check", action="store_true",
+                   help="关闭答案数值接地守卫（回答里的日期/数字须在证据中可核实，否则改判拒答）")
     p.add_argument("--max_new_tokens", type=int, default=384)
 
     # 输出（缺省时按运行模式选择，见 resolve_output_paths：
@@ -100,7 +120,12 @@ def parse_args():
     # 避免单题运行覆盖 5 题结果文件）
     p.add_argument("--out", type=str, default=None)
     p.add_argument("--out_md", type=str, default=None)
-    return p.parse_args()
+    args = p.parse_args()
+    # min_score 缺省随是否开重排而定：开重排交给精排（0.0 不预筛，免得误杀 bi-encoder
+    # 偏低但重排偏高的真答案）；关重排时必须保留 0.35 的 bi-encoder 兜底拒答网。
+    if args.min_score is None:
+        args.min_score = 0.35 if args.no_reranker else 0.0
+    return args
 
 
 def resolve_output_paths(args):
@@ -135,8 +160,16 @@ def collect_questions(args):
     return questions
 
 
-def build_index(args, embedder):
-    """构建或复用 ChromaDB 索引"""
+def load_corpus_chunks(args):
+    """加载 chunks.jsonl（供索引构建 + 实体守卫共用）。找不到返回空列表。"""
+    files = sorted(Path(args.chunks_dir).glob("*.chunks.jsonl"))
+    if not files:
+        return []
+    return iter_chunks_jsonl(files)
+
+
+def build_index(args, embedder, chunks):
+    """构建或复用 ChromaDB 索引（chunks 由调用方预加载）"""
     store = ChromaStore(persist_dir=args.persist_dir)
 
     # 检查是否已有数据
@@ -144,15 +177,11 @@ def build_index(args, embedder):
         logger.info(f"ChromaDB 已有 {store.count()} 条，复用现有索引")
         return store
 
-    # 从 chunks.jsonl 构建
-    chunks_dir = Path(args.chunks_dir)
-    files = sorted(chunks_dir.glob("*.chunks.jsonl"))
-    if not files:
-        logger.error(f"未找到 chunks 文件: {chunks_dir}/*.chunks.jsonl")
+    if not chunks:
+        logger.error(f"未找到 chunks 文件: {args.chunks_dir}/*.chunks.jsonl")
         sys.exit(1)
 
-    chunks = iter_chunks_jsonl(files)
-    logger.info(f"构建索引: {len(files)} 份文件, {len(chunks)} 个 chunks")
+    logger.info(f"构建索引: {len(chunks)} 个 chunks")
 
     store.reset_collection()
     texts = [c["text"] for c in chunks]
@@ -187,6 +216,7 @@ def run_qa(rag, questions):
         print(
             f"⏱  embed={fmt_ms(ans.timing.embed_query_ms)}ms  "
             f"retrieve={fmt_ms(ans.timing.retrieve_ms)}ms  "
+            f"rerank={fmt_ms(ans.timing.rerank_ms)}ms  "
             f"llm={fmt_ms(ans.timing.llm_ms)}ms  "
             f"total={fmt_ms(ans.timing.total_ms)}ms  "
             f"new_tokens={ans.timing.new_tokens}  "
@@ -194,7 +224,8 @@ def run_qa(rag, questions):
         )
         print("Top-K 命中:")
         for h in ans.hits:
-            print(f"  - {h.cite()} score={h.score:.3f}  "
+            rr = f" rerank={h.rerank_score:.3f}" if h.rerank_score is not None else ""
+            print(f"  - {h.cite()} score={h.score:.3f}{rr}  "
                   f"{h.text[:100].replace(chr(10), ' ')}")
 
         results.append({**q, **ans.to_dict()})
@@ -213,10 +244,16 @@ def save_results(args, results, total_run, store_count):
     out_json.write_text(json.dumps({
         "config": {
             "embed_model_id": args.embed_model_id,
+            "reranker_model_id": None if args.no_reranker else args.reranker_model_id,
             "llm_model_id": args.llm_model_id,
             "device": args.device,
             "top_k": args.top_k,
+            "retrieve_top_k": args.retrieve_top_k,
             "min_score": args.min_score,
+            "rerank_min_score": None if args.no_reranker else args.rerank_min_score,
+            "entity_check": not args.no_entity_check,
+            "subject_check": not args.no_subject_check,
+            "answer_check": not args.no_answer_check,
             "max_new_tokens": args.max_new_tokens,
         },
         "summary": {
@@ -300,8 +337,11 @@ def main():
     print("Doc-QnA Demo: PaddleOCR-VL + OpenVINO RAG Pipeline")
     print(f"{'='*78}")
     print(f"  Embedding: {args.embed_model_id}")
+    print(f"  Reranker:  {'(off)' if args.no_reranker else args.reranker_model_id}")
     print(f"  LLM:       {args.llm_model_id}")
     print(f"  Device:    {args.device}")
+    print(f"  守卫:      reranker={not args.no_reranker} (≥{args.rerank_min_score})  "
+          f"entity_check={not args.no_entity_check}")
     print(f"  Questions: {len(questions)}")
     print(f"{'='*78}\n")
 
@@ -312,9 +352,27 @@ def main():
         device=args.device,
     )
 
-    # 构建/复用索引
+    # 加载语料 chunks（索引 + 实体守卫共用）并构建/复用索引
     logger.info("准备向量索引...")
-    store = build_index(args, embedder)
+    corpus_chunks = load_corpus_chunks(args)
+    store = build_index(args, embedder, corpus_chunks)
+
+    # 抗串台守卫 ①：cross-encoder 重排器
+    reranker = None
+    if not args.no_reranker:
+        logger.info("加载 Reranker 模型...")
+        reranker = OpenVINOReranker(
+            model_id=args.reranker_model_id,
+            device=args.device,
+        )
+
+    # 抗串台守卫 ②：实体一致性守卫（需要语料 chunks 才能建已知实体集）
+    entity_gate = None
+    if not args.no_entity_check:
+        if corpus_chunks:
+            entity_gate = EntityGate.from_chunks(corpus_chunks)
+        else:
+            logger.warning("无法加载语料 chunks，实体一致性守卫已禁用")
 
     logger.info("加载 LLM 模型...")
     llm = QwenLLM(
@@ -332,6 +390,12 @@ def main():
         top_k=args.top_k,
         max_new_tokens=args.max_new_tokens,
         min_score=args.min_score,
+        reranker=reranker,
+        entity_gate=entity_gate,
+        retrieve_top_k=args.retrieve_top_k,
+        rerank_min_score=args.rerank_min_score,
+        subject_grounding=not args.no_subject_check,
+        answer_grounding=not args.no_answer_check,
     )
 
     # 运行问答
