@@ -13,11 +13,11 @@ huggingface-hub==0.36.0
 sentencepiece==0.2.1
 protobuf==6.33.5
 peft==0.17.0
-torch==2.8.0
+torch==2.12.1+cpu
 
 # Streamlit Frontend
 streamlit==1.54.0
-pillow==12.2.0
+pillow==12.3.0
 fpdf2==2.8.4
 qrcode[pil]==8.2
 

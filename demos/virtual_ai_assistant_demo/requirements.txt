@@ -15,12 +15,12 @@ chromadb==1.0.15
 
 onnx==1.21.0
 onnxruntime==1.21.0
-torch==2.8.0
+torch==2.12.1+cpu
 
 transformers==4.53.3
 datasets==4.0.0
 pymupdf==1.26.3
 pyyaml==6.0.1
 
-gradio==6.7.0
+gradio==6.15.1
 qrcode[pil]==8.2
