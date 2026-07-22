@@ -13,7 +13,7 @@ langchain-text-splitters==1.1.2
 
 onnx==1.21.0
 onnxruntime==1.21.0
-torch==2.8.0
+torch==2.12.1+cpu
 torchaudio==2.8.0
 numpy==2.2.6
 
@@ -21,7 +21,7 @@ datasets==4.0.0
 librosa==0.10.2
 pyyaml==6.0.1
 pymupdf==1.26.3
-setuptools==81.0.0
+setuptools==83.0.0
 
 gradio==6.7.0
 

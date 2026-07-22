@@ -6,7 +6,7 @@ optimum-intel @ git+https://github.com/huggingface/optimum-intel.git@f50a0b326df
 nncf==3.1.0
 
 onnx==1.21.0
-torch==2.8.0
+torch==2.12.1+cpu
 transformers==5.0.0
 
 gradio==6.7.0
